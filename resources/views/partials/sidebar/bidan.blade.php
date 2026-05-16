@@ -9,7 +9,7 @@
     $iconAktif = 'text-white drop-shadow-md';
     $iconPasif = 'text-slate-400 group-hover:text-cyan-500 transition-colors';
 
-    // Failsafe Query untuk menghitung antrian Meja 5 (Anti-Crash)
+    // Failsafe Query untuk menghitung antrian Pemeriksaan Klinis
     try {
         $pendingCount = \App\Models\Pemeriksaan::pending()->count();
     } catch (\Exception $e) {
@@ -34,44 +34,44 @@
         </div>
     </div>
     
-    {{-- 2. NAVIGASI UTAMA (DENGAN MICRO-INTERACTIONS) --}}
+    {{-- 2. NAVIGASI UTAMA --}}
     <nav class="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar space-y-8 bg-transparent">
         
-        {{-- Grup: Workspace --}}
+        {{-- Grup 1: Ikhtisar Sistem --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Dashboard Utama</p>
+            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Ikhtisar Sistem</p>
             <a href="{{ route('bidan.dashboard') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ $route == 'bidan.dashboard' ? $menuAktif : $menuPasif }}">
                 <div class="w-6 flex justify-center shrink-0"><i class="fas fa-chart-pie text-[18px] {{ $route == 'bidan.dashboard' ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                <span class="transition-transform duration-300 {{ $route != 'bidan.dashboard' ? 'group-hover:translate-x-1' : '' }}">Ringkasan Medis</span>
+                <span class="transition-transform duration-300 {{ $route != 'bidan.dashboard' ? 'group-hover:translate-x-1' : '' }}">Dashboard</span>
             </a>
         </div>
 
-        {{-- Grup: Tindakan Klinis --}}
+        {{-- Grup 2: Layanan Medis --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Tindakan Klinis (Meja 5)</p>
+            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Layanan Medis</p>
             <div class="space-y-2">
-                {{-- Antrian Pemeriksaan (Dengan Badge Notifikasi) --}}
+                {{-- Pemeriksaan Klinis --}}
                 <a href="{{ route('bidan.pemeriksaan.index') }}" class="spa-route group flex items-center justify-between px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'bidan.pemeriksaan') ? $menuAktif : $menuPasif }}">
                     <div class="flex items-center gap-4">
                         <div class="w-6 flex justify-center shrink-0"><i class="fas fa-stethoscope text-[18px] {{ Str::startsWith($route, 'bidan.pemeriksaan') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                        <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.pemeriksaan') ? 'group-hover:translate-x-1' : '' }}">Antrian Meja 5</span>
+                        <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.pemeriksaan') ? 'group-hover:translate-x-1' : '' }}">Pemeriksaan Klinis</span>
                     </div>
                     @if($pendingCount > 0)
                         <span class="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">{{ $pendingCount }}</span>
                     @endif
                 </a>
 
-                {{-- Vaksin & Imunisasi (E-Rujukan Dihapus) --}}
+                {{-- Vaksinasi & Imunisasi --}}
                 <a href="{{ route('bidan.imunisasi.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'bidan.imunisasi') ? $menuAktif : $menuPasif }}">
                     <div class="w-6 flex justify-center shrink-0"><i class="fas fa-syringe text-[18px] {{ Str::startsWith($route, 'bidan.imunisasi') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.imunisasi') ? 'group-hover:translate-x-1' : '' }}">Vaksinasi Warga</span>
+                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.imunisasi') ? 'group-hover:translate-x-1' : '' }}">Vaksinasi & Imunisasi</span>
                 </a>
             </div>
         </div>
 
-        {{-- Grup: Arsip Warga --}}
+        {{-- Grup 3: Arsip & Database --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Arsip & Data Warga</p>
+            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Arsip & Database</p>
             <div class="space-y-2">
                 {{-- Rekam Medis (EMR) --}}
                 <a href="{{ route('bidan.rekam-medis.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'bidan.rekam-medis') ? $menuAktif : $menuPasif }}">
@@ -81,17 +81,17 @@
             </div>
         </div>
 
-        {{-- Grup: Manajemen & Laporan --}}
+        {{-- Grup 4: Administrasi & Pelaporan --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Manajemen Posyandu</p>
+            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Administrasi & Pelaporan</p>
             <div class="space-y-2">
-                {{-- Jadwal Posyandu --}}
+                {{-- Kelola Jadwal --}}
                 <a href="{{ route('bidan.jadwal.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'bidan.jadwal') ? $menuAktif : $menuPasif }}">
                     <div class="w-6 flex justify-center shrink-0"><i class="fas fa-calendar-alt text-[18px] {{ Str::startsWith($route, 'bidan.jadwal') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.jadwal') ? 'group-hover:translate-x-1' : '' }}">Jadwal Operasional</span>
+                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.jadwal') ? 'group-hover:translate-x-1' : '' }}">Kelola Jadwal</span>
                 </a>
                 
-                {{-- Laporan Medis (Aman dari jebakan Kemenkes) --}}
+                {{-- Laporan Medis --}}
                 <a href="{{ route('bidan.laporan.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'bidan.laporan') ? $menuAktif : $menuPasif }}">
                     <div class="w-6 flex justify-center shrink-0"><i class="fas fa-print text-[18px] {{ Str::startsWith($route, 'bidan.laporan') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
                     <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'bidan.laporan') ? 'group-hover:translate-x-1' : '' }}">Laporan Medis</span>

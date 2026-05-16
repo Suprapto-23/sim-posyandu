@@ -9,18 +9,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
-// Memanggil Seluruh Model Kategori Warga
+// Memanggil Model yang relevan untuk Imunisasi KIA
 use App\Models\Kunjungan;
 use App\Models\Imunisasi;
 use App\Models\Balita;
 use App\Models\IbuHamil;
-use App\Models\Lansia;
-use App\Models\Remaja;
 
 class ImunisasiController extends Controller
 {
     /**
-     * 1. INDEX: Menampilkan Buku Register Vaksinasi
+     * 1. INDEX: Buku Register Imunisasi (Nexus Style)
      */
     public function index(Request $request)
     {
@@ -30,12 +28,11 @@ class ImunisasiController extends Controller
             $query = Imunisasi::with(['kunjungan.pasien', 'kunjungan.petugas'])
                               ->latest('tanggal_imunisasi');
             
-            // Pencarian Cerdas Polimorfik
             if ($search) {
                 $query->where(function($q) use ($search) {
                     $q->where('vaksin', 'like', "%{$search}%")
                       ->orWhereHas('kunjungan', function ($kunjunganQuery) use ($search) {
-                          $kunjunganQuery->whereHasMorph('pasien', [Balita::class, IbuHamil::class, Lansia::class, Remaja::class], function ($pasienQuery) use ($search) {
+                          $kunjunganQuery->whereHasMorph('pasien', [Balita::class, IbuHamil::class], function ($pasienQuery) use ($search) {
                               $pasienQuery->where('nama_lengkap', 'like', "%{$search}%")
                                           ->orWhere('nik', 'like', "%{$search}%");
                           });
@@ -49,45 +46,53 @@ class ImunisasiController extends Controller
 
         } catch (\Exception $e) {
             Log::error('BIDAN_IMUNISASI_INDEX_ERROR: ' . $e->getMessage());
-            abort(500, 'Gagal memuat Register Imunisasi.');
+            abort(500, 'Gagal memuat register imunisasi.');
         }
     }
 
     /**
-     * 2. CREATE: Form Input Log Imunisasi Baru
+     * 2. CREATE: Form Imunisasi dengan Fitur Prefill (Smart Bridge)
      */
-    public function create()
+    public function create(Request $request)
     {
-        // PERBAIKAN MUTLAK: Menarik seluruh entitas warga agar Stepper Form berfungsi sempurna
+        // Menangkap data lemparan dari "Jembatan Cerdas" di Meja 5
+        $prefill = [
+            'pasien_id'   => $request->get('pasien_id'),
+            'pasien_type' => $request->get('type'), // Berisi 'balita', 'bayi', atau 'ibu_hamil'
+        ];
+
+        // Optimasi: Hanya ambil kolom yang diperlukan untuk performa tinggi
         $balitas   = Balita::select('id', 'nama_lengkap', 'nik')->orderBy('nama_lengkap')->get();
         $ibuHamils = IbuHamil::select('id', 'nama_lengkap', 'nik')->orderBy('nama_lengkap')->get();
-        $lansias   = Lansia::select('id', 'nama_lengkap', 'nik')->orderBy('nama_lengkap')->get();
-        $remajas   = Remaja::select('id', 'nama_lengkap', 'nik')->orderBy('nama_lengkap')->get();
             
-        // Mengirimkan keempat variabel tersebut ke View
-        return view('bidan.imunisasi.create', compact('balitas', 'ibuHamils', 'lansias', 'remajas'));
+        return view('bidan.imunisasi.create', compact('balitas', 'ibuHamils', 'prefill'));
     }
 
     /**
-     * 3. STORE: Eksekusi Simpan Data EMR Imunisasi
+     * 3. STORE: Simpan Tindakan Imunisasi ke EMR
      */
     public function store(Request $request)
     {
         $request->validate([
-            'pasien_id'         => 'required|integer',
+            'pasien_id'         => 'required',
             'pasien_type'       => 'required|string',
-            'jenis_imunisasi'   => 'required|string|max:255',
-            'vaksin'            => 'required|string|max:255',
+            'jenis_imunisasi'   => 'required|string',
+            'vaksin'            => 'required|string',
+            'dosis'             => 'required|integer|min:1',
             'tanggal_imunisasi' => 'required|date',
+            'keterangan'        => 'nullable|string'
+        ], [
+            'dosis.required' => 'Urutan dosis vaksin wajib diisi.',
+            'dosis.min'      => 'Dosis minimal adalah 1.',
         ]);
 
         DB::beginTransaction();
         try {
-            // Deteksi Kunjungan Otomatis
+            // Cek atau buat kunjungan otomatis jika belum ada di hari yang sama
             $kunjungan = Kunjungan::firstOrCreate(
                 [
                     'pasien_id'         => $request->pasien_id,
-                    'pasien_type'       => $request->pasien_type,
+                    'pasien_type'       => ($request->pasien_type == 'ibu_hamil') ? 'App\Models\IbuHamil' : 'App\Models\Balita',
                     'tanggal_kunjungan' => $request->tanggal_imunisasi,
                 ],
                 [
@@ -102,46 +107,41 @@ class ImunisasiController extends Controller
                 'kunjungan_id'      => $kunjungan->id,
                 'jenis_imunisasi'   => $request->jenis_imunisasi,
                 'vaksin'            => $request->vaksin,
-                'dosis'             => $request->dosis ?? 'Sesuai Standar', 
+                'dosis'             => $request->dosis,
                 'tanggal_imunisasi' => $request->tanggal_imunisasi,
                 'keterangan'        => $request->keterangan ?? '-',
             ]);
 
             DB::commit();
             return redirect()->route('bidan.imunisasi.index')
-                             ->with('success', 'Tindakan Vaksinasi berhasil dicatat permanen ke Buku Register dan EMR Warga.');
+                             ->with('success', 'Tindakan imunisasi berhasil dicatat dalam rekam medis warga.');
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('BIDAN_IMUNISASI_STORE_ERROR: ' . $e->getMessage());
-            return back()->with('error', 'Gagal menyimpan rekam medis imunisasi: ' . $e->getMessage())->withInput();
+            return back()->with('error', 'Gagal menyimpan data imunisasi: ' . $e->getMessage())->withInput();
         }
     }
 
     /**
-     * 4. SHOW: Sertifikat & Detail Injeksi (Read Only)
+     * 4. SHOW: Detail Riwayat (Read Only)
      */
     public function show($id)
     {
-        try {
-            $imunisasi = Imunisasi::with(['kunjungan.pasien', 'kunjungan.petugas'])->findOrFail($id);
-            return view('bidan.imunisasi.show', compact('imunisasi'));
-        } catch (\Exception $e) {
-            return redirect()->route('bidan.imunisasi.index')->with('error', 'Data imunisasi tidak ditemukan.');
-        }
+        $imunisasi = Imunisasi::with(['kunjungan.pasien', 'kunjungan.petugas'])->findOrFail($id);
+        return view('bidan.imunisasi.show', compact('imunisasi'));
     }
 
     /**
-     * 5. DESTROY: Hapus Data Vaksinasi
+     * 5. DESTROY: Hapus Data
      */
     public function destroy($id)
     {
         try {
-            $imu = Imunisasi::findOrFail($id);
-            $imu->delete();
-            return redirect()->route('bidan.imunisasi.index')->with('success', 'Riwayat vaksinasi telah dicabut dari sistem EMR.');
+            Imunisasi::findOrFail($id)->delete();
+            return redirect()->route('bidan.imunisasi.index')->with('success', 'Data imunisasi telah dihapus.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal menghapus data imunisasi.');
+            return back()->with('error', 'Gagal menghapus data.');
         }
     }
 }

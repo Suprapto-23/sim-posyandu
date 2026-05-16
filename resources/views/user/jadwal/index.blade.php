@@ -3,25 +3,28 @@
 @section('content')
 <div class="p-4 md:p-8 font-poppins bg-[#f8fafc] min-h-screen">
     
-    <div class="mb-8">
+    {{-- HEADER (Gaya Minimalis Rata Tengah) --}}
+    <div class="mb-10 text-center max-w-3xl mx-auto animate-slide-up">
         <div class="inline-flex items-center gap-3 px-4 py-2 bg-white rounded-full shadow-sm border border-slate-100 mb-4">
             <span class="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></span>
             <span class="text-[11px] font-black tracking-widest uppercase text-slate-600">Agenda Posyandu</span>
         </div>
-        <h1 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Jadwal Kegiatan Anda 📅</h1>
-        <p class="text-sm font-medium text-slate-500 mt-2 max-w-2xl leading-relaxed">Berikut adalah daftar jadwal Posyandu yang relevan dengan Anda dan keluarga. Pastikan untuk datang tepat waktu.</p>
+        <h1 class="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-3">Jadwal Kegiatan Anda 📅</h1>
+        <p class="text-sm font-medium text-slate-500 leading-relaxed">Berikut adalah daftar jadwal Posyandu yang relevan dengan Anda dan keluarga. Pastikan untuk hadir tepat waktu.</p>
     </div>
 
-    <div class="flex overflow-x-auto custom-scrollbar pb-4 mb-6 gap-3">
+    {{-- FILTER TABS (Terpusat secara estetis pada layar besar, bisa di-scroll pada layar kecil) --}}
+    <div class="flex overflow-x-auto custom-scrollbar pb-4 mb-8 gap-3 justify-start md:justify-center animate-slide-up-1">
         
-        <a href="{{ route('user.jadwal.index', ['target' => 'semua']) }}" 
+        {{-- BUG FIX: Ubah 'target' menjadi 'filter' agar sesuai dengan JadwalController --}}
+        <a href="{{ route('user.jadwal.index', ['filter' => 'semua']) }}" 
            class="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-xs transition-all {{ $filterTarget == 'semua' ? 'bg-teal-600 text-white border-teal-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-teal-300 hover:bg-teal-50' }}">
             Semua Jadwal
             <span class="px-2 py-0.5 rounded-md text-[10px] {{ $filterTarget == 'semua' ? 'bg-teal-500 text-white' : 'bg-slate-100 text-slate-500' }}">{{ $summary['semua'] }}</span>
         </a>
 
         @if(in_array('balita', $hakAkses))
-            <a href="{{ route('user.jadwal.index', ['target' => 'balita']) }}" 
+            <a href="{{ route('user.jadwal.index', ['filter' => 'balita']) }}" 
                class="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-xs transition-all {{ $filterTarget == 'balita' ? 'bg-sky-500 text-white border-sky-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-sky-300 hover:bg-sky-50' }}">
                 <i class="fas fa-baby {{ $filterTarget == 'balita' ? 'text-white' : 'text-sky-500' }}"></i> Balita
                 <span class="px-2 py-0.5 rounded-md text-[10px] {{ $filterTarget == 'balita' ? 'bg-sky-400 text-white' : 'bg-slate-100 text-slate-500' }}">{{ $summary['balita'] }}</span>
@@ -29,7 +32,7 @@
         @endif
 
         @if(in_array('ibu_hamil', $hakAkses))
-            <a href="{{ route('user.jadwal.index', ['target' => 'ibu_hamil']) }}" 
+            <a href="{{ route('user.jadwal.index', ['filter' => 'ibu_hamil']) }}" 
                class="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-xs transition-all {{ $filterTarget == 'ibu_hamil' ? 'bg-pink-500 text-white border-pink-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-pink-300 hover:bg-pink-50' }}">
                 <i class="fas fa-female {{ $filterTarget == 'ibu_hamil' ? 'text-white' : 'text-pink-500' }}"></i> Ibu Hamil
                 <span class="px-2 py-0.5 rounded-md text-[10px] {{ $filterTarget == 'ibu_hamil' ? 'bg-pink-400 text-white' : 'bg-slate-100 text-slate-500' }}">{{ $summary['ibu_hamil'] }}</span>
@@ -37,7 +40,7 @@
         @endif
 
         @if(in_array('remaja', $hakAkses))
-            <a href="{{ route('user.jadwal.index', ['target' => 'remaja']) }}" 
+            <a href="{{ route('user.jadwal.index', ['filter' => 'remaja']) }}" 
                class="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-xs transition-all {{ $filterTarget == 'remaja' ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50' }}">
                 <i class="fas fa-user-graduate {{ $filterTarget == 'remaja' ? 'text-white' : 'text-indigo-500' }}"></i> Remaja
                 <span class="px-2 py-0.5 rounded-md text-[10px] {{ $filterTarget == 'remaja' ? 'bg-indigo-400 text-white' : 'bg-slate-100 text-slate-500' }}">{{ $summary['remaja'] }}</span>
@@ -45,7 +48,7 @@
         @endif
 
         @if(in_array('lansia', $hakAkses))
-            <a href="{{ route('user.jadwal.index', ['target' => 'lansia']) }}" 
+            <a href="{{ route('user.jadwal.index', ['filter' => 'lansia']) }}" 
                class="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-xs transition-all {{ $filterTarget == 'lansia' ? 'bg-orange-500 text-white border-orange-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:bg-orange-50' }}">
                 <i class="fas fa-wheelchair {{ $filterTarget == 'lansia' ? 'text-white' : 'text-orange-500' }}"></i> Lansia
                 <span class="px-2 py-0.5 rounded-md text-[10px] {{ $filterTarget == 'lansia' ? 'bg-orange-400 text-white' : 'bg-slate-100 text-slate-500' }}">{{ $summary['lansia'] }}</span>
@@ -53,7 +56,8 @@
         @endif
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {{-- KONTEN GRID JADWAL --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up-2">
         @forelse($jadwalKegiatan as $jadwal)
             @php
                 $tgl = \Carbon\Carbon::parse($jadwal->tanggal);
@@ -62,15 +66,15 @@
                 $isTerlewat = $tgl->isPast() && !$isHariIni;
                 
                 // Styling warna berdasarkan target peserta
-                $targetColor = 'text-teal-600 bg-teal-50';
+                $targetColor = 'text-teal-600 bg-teal-50 border-teal-100';
                 $targetLabel = 'Umum / Semua';
-                if($jadwal->target_peserta == 'balita') { $targetColor = 'text-sky-600 bg-sky-50'; $targetLabel = 'Posyandu Balita'; }
-                if($jadwal->target_peserta == 'ibu_hamil') { $targetColor = 'text-pink-600 bg-pink-50'; $targetLabel = 'Ibu Hamil'; }
-                if($jadwal->target_peserta == 'remaja') { $targetColor = 'text-indigo-600 bg-indigo-50'; $targetLabel = 'Posyandu Remaja'; }
-                if($jadwal->target_peserta == 'lansia') { $targetColor = 'text-orange-600 bg-orange-50'; $targetLabel = 'Posyandu Lansia'; }
+                if($jadwal->target_peserta == 'balita') { $targetColor = 'text-sky-600 bg-sky-50 border-sky-100'; $targetLabel = 'Posyandu Balita'; }
+                if($jadwal->target_peserta == 'ibu_hamil') { $targetColor = 'text-pink-600 bg-pink-50 border-pink-100'; $targetLabel = 'Ibu Hamil'; }
+                if($jadwal->target_peserta == 'remaja') { $targetColor = 'text-indigo-600 bg-indigo-50 border-indigo-100'; $targetLabel = 'Posyandu Remaja'; }
+                if($jadwal->target_peserta == 'lansia') { $targetColor = 'text-orange-600 bg-orange-50 border-orange-100'; $targetLabel = 'Posyandu Lansia'; }
             @endphp
 
-            <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col relative group {{ $isTerlewat ? 'opacity-70 grayscale-[30%]' : '' }}">
+            <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col relative group h-full {{ $isTerlewat ? 'opacity-70 grayscale-[30%]' : '' }}">
                 
                 @if($isHariIni)
                     <div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-bl-xl z-10 shadow-sm">
@@ -94,11 +98,12 @@
                         </div>
                         
                         <div>
-                            <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider mb-2 {{ $targetColor }}">{{ $targetLabel }}</span>
+                            <span class="inline-block px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider mb-2 border {{ $targetColor }}">{{ $targetLabel }}</span>
                             <h3 class="text-base font-black text-slate-800 leading-tight group-hover:text-teal-600 transition-colors">{{ $jadwal->judul }}</h3>
                         </div>
                     </div>
 
+                    {{-- mt-auto akan memaksa bagian informasi waktu dan lokasi selalu presisi di bagian bawah kartu --}}
                     <div class="space-y-3 mt-auto pt-4 border-t border-slate-100">
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
@@ -136,7 +141,7 @@
     </div>
 
     @if($jadwalKegiatan->hasPages())
-        <div class="mt-8">
+        <div class="mt-8 flex justify-center">
             {{ $jadwalKegiatan->links() }}
         </div>
     @endif

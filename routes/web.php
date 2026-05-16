@@ -157,10 +157,21 @@ Route::prefix('bidan')->name('bidan.')->middleware(['auth','checkstatus','role:b
     // Di sidebar, menu "Data Pasien" memakai bidan.pasien.index.
     // Active-state di sidebar menutup keduanya: bidan.pasien.* || bidan.rekam-medis.*
     // ---------------------------------------------------------------
-    Route::get('/pasien',                               [BidanRekamMedisController::class, 'index'])->name('pasien.index');
-    Route::get('/rekam-medis',                          [BidanRekamMedisController::class, 'index'])->name('rekam-medis.index');
-    Route::get('/rekam-medis/{pasien_type}/{pasien_id}',[BidanRekamMedisController::class, 'show'])->name('rekam-medis.show');
+    Route::prefix('pasien')->name('pasien.')->group(function () {
+        
+        Route::get('/balita', [App\Http\Controllers\Bidan\PasienController::class, 'balita'])->name('balita');
+        Route::get('/ibu-hamil', [App\Http\Controllers\Bidan\PasienController::class, 'ibuHamil'])->name('ibu_hamil');
+        Route::get('/remaja', [App\Http\Controllers\Bidan\PasienController::class, 'remaja'])->name('remaja');
+        Route::get('/lansia', [App\Http\Controllers\Bidan\PasienController::class, 'lansia'])->name('lansia');
+    });
 
+    // Rute Rekam Medis Utama (Gateway)
+    Route::prefix('rekam-medis')->name('rekam-medis.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Bidan\RekamMedisController::class, 'index'])->name('index');
+    
+    // Rute Show Detail Rekam Medis (PASANG INI)
+    Route::get('/show/{pasien_type}/{pasien_id}', [App\Http\Controllers\Bidan\RekamMedisController::class, 'show'])->name('show');
+});
     // ---------------------------------------------------------------
     // 6. KONSELING WARGA
     // Fitur chat antara warga dan bidan (bukan "catatan edukasi").
@@ -192,7 +203,9 @@ Route::prefix('bidan')->name('bidan.')->middleware(['auth','checkstatus','role:b
     Route::get('/laporan',             [\App\Http\Controllers\Bidan\LaporanController::class, 'index'])->name('laporan.index');
     Route::get('/laporan/cetak',       [\App\Http\Controllers\Bidan\LaporanController::class, 'cetak'])->name('laporan.cetak');
     Route::post('/laporan/upload-ttd', [\App\Http\Controllers\Bidan\LaporanController::class, 'uploadTtd'])->name('laporan.upload-ttd');
-
+Route::get('/notifikasi/fetch', [App\Http\Controllers\Bidan\NotifikasiController::class, 'fetchRecent'])->name('bidan.notifikasi.fetch');
+Route::get('/notifikasi', [App\Http\Controllers\Bidan\NotifikasiController::class, 'index'])->name('bidan.notifikasi.index');
+Route::post('/notifikasi/mark-all-read', [App\Http\Controllers\Bidan\NotifikasiController::class, 'markAllRead'])->name('bidan.notifikasi.markall');
     // ---------------------------------------------------------------
     // PROFIL BIDAN
     // Menggunakan route global 'profile.edit' (web.php baris 66) yang sudah ada.
@@ -307,65 +320,44 @@ Route::middleware(['auth', 'role:kader'])->prefix('kader')->name('kader.')->grou
 
 // ==================== USER (WARGA) ====================
 Route::prefix('user')->name('user.')->middleware(['auth','checkstatus','role:user'])->group(function () {
+    
+    // Redirect rute dasar ke Dashboard
     Route::get('/', fn() => redirect()->route('user.dashboard'));
  
-    // ── Dashboard (fallback untuk multi-peran / umum) ──────────────────
+    // ── 1. Beranda / Dashboard ──────────────────────────────────────────
     Route::get('/dashboard', [UserDashboard::class, 'index'])->name('dashboard');
- 
-    // PERBAIKAN: method getLatestNotifications() diganti getStats()
-    // (method lama getLatestNotifications() punya bug is_read vs read_at)
     Route::get('/stats', [UserDashboard::class, 'getStats'])->name('stats');
  
-    // ── Balita & Imunisasi ──────────────────────────────────────────────
-    Route::resource('balita', UserBalita::class)->only(['index', 'show']);
-    // route: user.balita.index, user.balita.show
-    Route::get('imunisasi', [UserBalita::class, 'imunisasi'])->name('imunisasi.index');
-    // route: user.imunisasi.index
- 
-    // ── Remaja ──────────────────────────────────────────────────────────
-    // PERBAIKAN: hapus route user.remaja.konseling (method tidak ada di RemajaController baru)
-    // Konseling sudah ditangani user.konseling.* di bawah
-    Route::get('remaja',          [UserRemaja::class, 'index'])->name('remaja.index');
-    Route::get('remaja/riwayat',  [UserRemaja::class, 'riwayat'])->name('remaja.riwayat');
-    // route: user.remaja.index, user.remaja.riwayat
- 
-    // ── Lansia ──────────────────────────────────────────────────────────
-    // PERBAIKAN: daftarkan route yang hilang (showKunjungan dll dihapus dari controller)
-    // Cukup 2 route: index + riwayat
-    Route::get('lansia',          [UserLansia::class, 'index'])->name('lansia.index');
-    Route::get('lansia/riwayat',  [UserLansia::class, 'riwayat'])->name('lansia.riwayat');
-    // route: user.lansia.index, user.lansia.riwayat
-
-    // ── Ibu Hamil ──────────────────────────────────────────────
-    Route::resource('ibu-hamil', UserIbuHamil::class)->only(['index', 'show']);
- 
-    // ── Jadwal Posyandu ─────────────────────────────────────────────────
+    // ── 2. Jadwal Posyandu ──────────────────────────────────────────────
     Route::get('/jadwal', [UserJadwal::class, 'index'])->name('jadwal.index');
-    // route: user.jadwal.index
+
+    // ── 3. Pantau Kesehatan (Monitoring Terpadu) ────────────────────────
+    Route::get('/monitoring', [\App\Http\Controllers\User\MonitoringController::class, 'index'])->name('monitoring.index');
  
-    // ── Notifikasi ──────────────────────────────────────────────────────
+    // ── 4. Buku Kesehatan Digital (Detail per Demografi) ────────────────
+    Route::get('/balita/{id}/show', [UserBalita::class, 'show'])->name('balita.show');
+    
+    // [TAMBAHAN BARU] Rute untuk melengkapi sistem monitoring
+    Route::get('/remaja/{id}/show', [\App\Http\Controllers\User\RemajaController::class, 'show'])->name('remaja.show');
+    Route::get('/lansia/{id}/show', [\App\Http\Controllers\User\LansiaController::class, 'show'])->name('lansia.show');
+    Route::get('/ibu-hamil/{id}/show', [\App\Http\Controllers\User\IbuHamilController::class, 'show'])->name('ibu_hamil.show');
+ 
+    // ── 5. Riwayat Rekam Medis Terpadu ──────────────────────────────────
+    Route::get('/riwayat', [RiwayatController::class, 'index'])->name('riwayat.index');
+ 
+    // ── 6. Notifikasi / Pesan Bidan ─────────────────────────────────────
     Route::prefix('notifikasi')->name('notifikasi.')->group(function () {
         Route::get('/',              [UserNotifikasi::class, 'index'])->name('index');
         Route::get('/fetch',         [UserNotifikasi::class, 'fetchRecent'])->name('fetch');
         Route::post('/mark-all-read',[UserNotifikasi::class, 'markAllRead'])->name('markall');
         Route::post('/{id}/read',    [UserNotifikasi::class, 'markRead'])->name('read');
     });
-    // route: user.notifikasi.index, .fetch, .markall, .read
  
-    // ── Profil Warga ────────────────────────────────────────────────────
+    // ── 7. Profil & Keamanan ────────────────────────────────────────────
     Route::get('/profile', [\App\Http\Controllers\User\ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [\App\Http\Controllers\User\ProfileController::class, 'update'])->name('profile.update');
-        Route::put('/profile/password', [\App\Http\Controllers\User\ProfileController::class, 'updatePassword'])->name('password.update');
-    // route: user.profile.edit, user.profile.update
- 
-    // ── Riwayat Rekam Medis (lintas kategori) ───────────────────────────
-    Route::get('riwayat', [RiwayatController::class, 'index'])->name('riwayat.index');
-    // route: user.riwayat.index
- 
-    // ── Konseling dengan Bidan ──────────────────────────────────────────
-    Route::prefix('konseling')->name('konseling.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\User\KonselingController::class, 'index'])->name('index');
-            Route::get('/fetch', [\App\Http\Controllers\User\KonselingController::class, 'fetchChat'])->name('fetch');
-            Route::post('/store', [\App\Http\Controllers\User\KonselingController::class, 'store'])->name('store');
-        });
+    Route::patch('/profile', [\App\Http\Controllers\User\ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\User\ProfileController::class, 'updatePassword'])->name('password.update');
+    
+    // Fallback URL jika user me-refresh halaman ganti sandi
+    Route::get('/profile/password', fn() => redirect()->route('user.profile.edit'));
 });

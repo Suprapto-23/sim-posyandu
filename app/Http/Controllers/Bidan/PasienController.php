@@ -8,128 +8,119 @@ use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
 use App\Models\Pemeriksaan;
+use App\Models\IbuHamil; // Pastikan model IbuHamil sudah Anda buat
 
 class PasienController extends Controller
 {
     // ========================================================================
-    //                              DATA BALITA
+    // 1. DATABASE BAYI & BALITA
     // ========================================================================
-    
-    public function indexBalita(Request $request)
+    public function balita(Request $request)
     {
-        $search = $request->get('search');
+        $query = Balita::with('pemeriksaan_terakhir');
 
-        $balitas = Balita::query()
-            ->when($search, function($q) use ($search) {
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('nik', 'like', "%{$search}%")
                   ->orWhere('nama_ibu', 'like', "%{$search}%");
-            })
-            ->with('pemeriksaan_terakhir') 
-            ->latest()
-            ->paginate(10);
-
-        if ($request->ajax()) {
-            return view('bidan.pasien.partials.table_balita', compact('balitas'))->render();
+            });
         }
+
+        // withQueryString() memastikan filter tidak hilang saat pindah halaman (Next/Prev)
+        $balitas = $query->latest()->paginate(10)->withQueryString();
 
         return view('bidan.pasien.balita', compact('balitas'));
     }
 
-    public function laporanBalita()
-    {
-        $balitas = Balita::with('pemeriksaan_terakhir')
-            ->orderBy('nama_lengkap', 'asc')
-            ->get();
 
-        return view('bidan.laporan.balita_print', compact('balitas'));
+    // ========================================================================
+    // 2. DATABASE IBU HAMIL (KIA)
+    // ========================================================================
+    public function ibuHamil(Request $request)
+    {
+        $query = IbuHamil::with('pemeriksaan_terakhir');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nama_lengkap', 'like', "%{$search}%")
+                  ->orWhere('nik', 'like', "%{$search}%");
+            });
+        }
+
+        $ibu_hamils = $query->latest()->paginate(10)->withQueryString();
+
+        return view('bidan.pasien.ibu_hamil', compact('ibu_hamils'));
     }
 
 
     // ========================================================================
-    //                              DATA REMAJA
+    // 3. DATABASE REMAJA
     // ========================================================================
-
-    public function indexRemaja(Request $request)
+    public function remaja(Request $request)
     {
-        $search = $request->get('search');
+        $query = Remaja::with('pemeriksaan_terakhir');
 
-        $remajas = Remaja::query()
-            ->when($search, function($q) use ($search) {
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('nik', 'like', "%{$search}%")
                   ->orWhere('sekolah', 'like', "%{$search}%");
-            })
-            ->with('pemeriksaan_terakhir')
-            ->latest()
-            ->paginate(10);
-
-        if ($request->ajax()) {
-            return view('bidan.pasien.partials.table_remaja', compact('remajas'))->render();
+            });
         }
+
+        $remajas = $query->latest()->paginate(10)->withQueryString();
 
         return view('bidan.pasien.remaja', compact('remajas'));
     }
 
-    public function laporanRemaja()
-    {
-        $remajas = Remaja::with('pemeriksaan_terakhir')
-            ->orderBy('nama_lengkap', 'asc')
-            ->get();
-
-        return view('bidan.laporan.remaja_print', compact('remajas'));
-    }
-
 
     // ========================================================================
-    //                              DATA LANSIA
+    // 4. DATABASE LANSIA (GERIATRI) - DENGAN LOGIKA FILTER KOMPLEKS
     // ========================================================================
-
-    public function indexLansia(Request $request)
+    public function lansia(Request $request)
     {
-        $search = $request->get('search');
-        $status = $request->get('status');
-
         $query = Lansia::with('pemeriksaan_terakhir')->latest();
 
-        // 1. Logika Pencarian (Search)
-        if ($search) {
+        // Logika Pencarian Menyeluruh (Termasuk mencari dari isi Diagnosa)
+        if ($request->filled('search')) {
+            $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('nama_lengkap', 'like', "%{$search}%")
                   ->orWhere('nik', 'like', "%{$search}%")
                   ->orWhere('alamat', 'like', "%{$search}%")
-                  // KEMBALI KE 'diagnosa'
                   ->orWhereHas('pemeriksaan_terakhir', function($sq) use ($search) {
                       $sq->where('diagnosa', 'like', "%{$search}%");
                   });
             });
         }
 
-        // 2. Logika Filter Status
-        if ($status) {
-            if ($status == 'hipertensi') {
-                $query->whereHas('pemeriksaan_terakhir', function($q) {
-                    // KEMBALI KE 'diagnosa'
+        // Logika Filter Status Kesehatan
+        if ($request->filled('status')) {
+            $status = $request->status;
+            
+            $query->whereHas('pemeriksaan_terakhir', function($q) use ($status) {
+                if ($status == 'hipertensi') {
                     $q->whereRaw("CAST(SUBSTRING_INDEX(tekanan_darah, '/', 1) AS UNSIGNED) >= 140")
+                      ->whereRaw("CAST(SUBSTRING_INDEX(tekanan_darah, '/', 1) AS UNSIGNED) < 180")
                       ->orWhere('diagnosa', 'like', '%hipertensi%');
-                });
-            } elseif ($status == 'diabetes') {
-                $query->whereHas('pemeriksaan_terakhir', function($q) {
-                    // KEMBALI KE 'diagnosa'
-                    $q->where('gula_darah', '>=', 200)
-                      ->orWhere('diagnosa', 'like', '%diabetes%')
-                      ->orWhere('diagnosa', 'like', '%gula%');
-                });
-            } elseif ($status == 'normal') {
-                $query->whereHas('pemeriksaan_terakhir', function($q) {
+                } elseif ($status == 'diabetes') { // Di tampilan labelnya adalah "Kritis (>180)"
+                    $q->whereRaw("CAST(SUBSTRING_INDEX(tekanan_darah, '/', 1) AS UNSIGNED) >= 180")
+                      ->orWhere('gula_darah', '>=', 200)
+                      ->orWhere('diagnosa', 'like', '%diabetes%');
+                } elseif ($status == 'normal') {
                     $q->whereRaw("CAST(SUBSTRING_INDEX(tekanan_darah, '/', 1) AS UNSIGNED) < 140");
-                });
-            }
+                }
+            });
         }
 
-        $lansias = $query->paginate(10);
+        $lansias = $query->paginate(10)->withQueryString();
 
-        // --- Statistik Ringkas untuk Dashboard Lansia ---
+        // --- Algoritma Statistik Cerdas ---
+        // Mengambil pemeriksaan paling akhir untuk setiap lansia
         $allPemeriksaan = Pemeriksaan::where('kategori_pasien', 'lansia')
             ->whereIn('id', function($q) {
                 $q->selectRaw('MAX(id)')->from('pemeriksaans')->groupBy('pasien_id');
@@ -138,39 +129,22 @@ class PasienController extends Controller
         $statistik = (object) [
             'normal' => $allPemeriksaan->filter(function($p) {
                 $tensi = intval(explode('/', $p->tekanan_darah)[0] ?? 0);
-                return $tensi > 0 && $tensi < 120;
+                return $tensi > 0 && $tensi < 140;
             })->count(),
 
             'hipertensi' => $allPemeriksaan->filter(function($p) {
                 $tensi = intval(explode('/', $p->tekanan_darah)[0] ?? 0);
-                // KEMBALI KE 'diagnosa'
                 $textDiagnosa = strtolower($p->diagnosa ?? '');
-                return $tensi >= 140 || str_contains($textDiagnosa, 'hipertensi');
+                return ($tensi >= 140 && $tensi < 180) || str_contains($textDiagnosa, 'hipertensi');
             })->count(),
 
             'kritis' => $allPemeriksaan->filter(function($p) {
                 $tensi = intval(explode('/', $p->tekanan_darah)[0] ?? 0);
-                return $tensi >= 180;
+                $textDiagnosa = strtolower($p->diagnosa ?? '');
+                return $tensi >= 180 || $p->gula_darah >= 200 || str_contains($textDiagnosa, 'diabetes');
             })->count(),
         ];
 
-        $lansiaBerisiko = Lansia::whereHas('pemeriksaan_terakhir', function($q) {
-            $q->whereRaw("CAST(SUBSTRING_INDEX(tekanan_darah, '/', 1) AS UNSIGNED) >= 140");
-        })->take(3)->get();
-        
-        if ($request->ajax()) {
-            return view('bidan.pasien.partials.table_lansia', compact('lansias'))->render();
-        }
-
-        return view('bidan.pasien.lansia', compact('lansias', 'statistik', 'lansiaBerisiko'));
-    }
-
-    public function laporanLansia()
-    {
-        $lansias = Lansia::with('pemeriksaan_terakhir')
-            ->orderBy('nama_lengkap', 'asc')
-            ->get();
-        
-        return view('bidan.laporan.lansia_print', compact('lansias'));
+        return view('bidan.pasien.lansia', compact('lansias', 'statistik'));
     }
 }

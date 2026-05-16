@@ -1,124 +1,184 @@
-@php 
-    $route = request()->route()->getName() ?? '';
+
+@php
+    $route = request()->route()->getName();
     $isDataWarga = Str::startsWith($route, 'kader.data.');
-    $isAbsensi = in_array($route, ['kader.absensi.index', 'kader.absensi.riwayat']);
     
-    // ========================================================================
-    // NEXUS ACTIVE STATE ENGINE
-    // ========================================================================
-    $menuAktif = 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-black shadow-[0_10px_20px_-5px_rgba(99,102,241,0.4)] border border-indigo-400/30 transform scale-[1.02]';
-    $menuPasif = 'text-slate-500 font-bold hover:bg-slate-50 hover:text-indigo-600 transition-all border border-transparent hover:border-slate-100';
-    $iconAktif = 'text-white drop-shadow-md';
-    $iconPasif = 'text-slate-400 group-hover:text-indigo-500 transition-colors';
+    // =================================================================================
+    // NEXUS PREMIUM COLOR THEME & 120FPS ANIMATION TUNING
+    // =================================================================================
+    
+    // Kurva animasi super gesit tapi mendarat halus (Out Expo)
+    $smoothBezier = 'ease-[cubic-bezier(0.16,1,0.3,1)]';
+
+    $navActive   = 'bg-white/90 backdrop-blur-md text-blue-600 shadow-[0_8px_30px_-4px_rgba(37,99,235,0.15)] border border-white/80 translate-x-1.5';
+    $navPassive  = 'text-slate-500 hover:text-slate-800 hover:bg-white/50 border border-transparent hover:translate-x-1.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)]';
+    
+    $iconActive  = 'text-blue-500 drop-shadow-[0_4px_10px_rgba(37,99,235,0.35)] scale-110';
+    $iconPassive = 'text-slate-400 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300 ' . $smoothBezier;
+
+    $subAktif    = 'flex items-center text-[13px] font-bold text-blue-600 py-2.5 transition-all duration-300 relative translate-x-1';
+    $subPasif    = 'flex items-center text-[13px] font-medium text-slate-500 hover:text-blue-600 py-2.5 transition-all duration-300 relative hover:translate-x-1';
 @endphp
 
-<aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-50 w-[280px] bg-white/95 backdrop-blur-xl border-r border-slate-100 transform xl:translate-x-0 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col shadow-[20px_0_50px_-20px_rgba(0,0,0,0.1)] xl:shadow-none">
-    
-    {{-- 1. BRAND LOGO PREMIUM --}}
-    <div class="h-[85px] flex items-center px-8 border-b border-slate-100/60 shrink-0 bg-transparent">
-        <div class="flex items-center gap-4 w-full cursor-pointer group" onclick="window.location.href='{{ route('kader.dashboard') }}'">
-            <div class="w-[42px] h-[42px] rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-[0_8px_15px_rgba(99,102,241,0.3)] shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                <svg class="w-6 h-6 drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                </svg>
+<aside id="sidebar" 
+    class="fixed inset-y-0 left-0 z-50 w-[290px] flex flex-col transition-transform duration-[600ms] {{ $smoothBezier }} bg-slate-50/60 backdrop-blur-[24px] border-r border-white/80 shadow-[8px_0_32px_rgba(0,0,0,0.03)] layer-gpu"
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'"
+>
+    {{-- EFEK CAHAYA --}}
+    <div class="absolute top-0 left-0 w-[300px] h-[300px] bg-blue-400/15 blur-[100px] rounded-full -ml-20 -mt-20 pointer-events-none"></div>
+    <div class="absolute bottom-0 right-0 w-[300px] h-[300px] bg-sky-300/15 blur-[100px] rounded-full -mr-20 -mb-20 pointer-events-none"></div>
+
+    {{-- 1. BRANDING LOGO --}}
+    <div class="h-24 flex items-center gap-4 px-8 shrink-0 relative z-10 border-b border-slate-200/50">
+        <a href="{{ route('kader.dashboard') }}" class="spa-route flex items-center gap-4 w-full group outline-none">
+            <div class="w-11 h-11 rounded-[14px] bg-gradient-to-br from-blue-500 to-sky-400 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(59,130,246,0.3)] group-hover:scale-105 group-hover:-rotate-3 group-hover:shadow-[0_12px_25px_rgba(59,130,246,0.4)] transition-all duration-300 {{ $smoothBezier }} border border-white/40 relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 {{ $smoothBezier }}"></div>
+                <i class="ph-fill ph-shield-check text-[24px] relative z-10"></i>
             </div>
-            <div class="flex-1 min-w-0 pt-0.5">
-                <h1 class="text-[22px] font-black text-slate-900 tracking-tight truncate font-poppins leading-none">Kader<span class="text-indigo-600">Care</span></h1>
+            <div class="flex flex-col">
+                <h1 class="text-[22px] font-black text-slate-800 tracking-tight font-poppins leading-none">Kader<span class="text-blue-500">Care</span></h1>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1.5 opacity-80">Sistem Pintar</p>
             </div>
-            <button @click.stop="sidebarOpen = false" class="xl:hidden w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors">
-                <i class="fas fa-times text-lg"></i>
-            </button>
-        </div>
+        </a>
     </div>
-    
-    {{-- 2. NAVIGASI UTAMA (DENGAN MICRO-INTERACTIONS) --}}
-    <nav class="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar space-y-8 bg-transparent">
+
+    {{-- 2. MENU NAVIGASI UTAMA --}}
+    <nav class="flex-1 overflow-y-auto px-5 py-8 space-y-8 relative z-10 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
-        {{-- Grup: Workspace --}}
+        {{-- SECTION 1: IKHTISAR --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Workspace Utama</p>
-            <a href="{{ route('kader.dashboard') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ $route == 'kader.dashboard' ? $menuAktif : $menuPasif }}">
-                <div class="w-6 flex justify-center shrink-0"><i class="fas fa-layer-group text-[18px] {{ $route == 'kader.dashboard' ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                <span class="transition-transform duration-300 {{ $route != 'kader.dashboard' ? 'group-hover:translate-x-1' : '' }}">Dashboard Operasional</span>
-            </a>
+            <p class="px-4 text-[10px] font-bold text-slate-400/80 uppercase tracking-[0.25em] mb-3">Ikhtisar Sistem</p>
+            <div class="space-y-1.5">
+                <a href="{{ route('kader.dashboard') }}" class="spa-route flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} group relative {{ $route == 'kader.dashboard' ? $navActive : $navPassive }}">
+                    @if($route == 'kader.dashboard')
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+                    @endif
+                    <i class="ph ph-stack text-[22px] w-6 text-center {{ $route == 'kader.dashboard' ? $iconActive : $iconPassive }}"></i>
+                    <span class="tracking-wide">Dashboard Utama</span>
+                </a>
+            </div>
         </div>
 
-        {{-- Grup: Manajemen Data --}}
+        {{-- SECTION 2: TUGAS LAPANGAN --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Manajemen Data</p>
-            
-            {{-- Dropdown Induk Database Warga --}}
-            <div class="space-y-1.5" x-data="{ openWarga: {{ $isDataWarga ? 'true' : 'false' }} }">
-                <button @click="openWarga = !openWarga" class="w-full group flex items-center justify-between px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 border {{ $isDataWarga ? 'bg-indigo-50 text-indigo-700 font-black shadow-inner border-indigo-100/50' : $menuPasif }}">
+            <p class="px-4 text-[10px] font-bold text-slate-400/80 uppercase tracking-[0.25em] mb-3">Tugas Lapangan</p>
+            <div class="space-y-1.5">
+                
+                {{-- 2.1 Registrasi Hadir --}}
+                <a href="{{ route('kader.absensi.index') }}" class="spa-route flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} group relative {{ $route == 'kader.absensi.index' ? $navActive : $navPassive }}">
+                    @if($route == 'kader.absensi.index')
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+                    @endif
+                    <i class="ph ph-user-check text-[22px] w-6 text-center {{ $route == 'kader.absensi.index' ? $iconActive : $iconPassive }}"></i>
+                    <span class="tracking-wide">Registrasi Hadir</span>
+                </a>
+
+                {{-- 2.2 Pengukuran Fisik --}}
+                <a href="{{ route('kader.pemeriksaan.index') }}" class="spa-route flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} group relative {{ Str::startsWith($route, 'kader.pemeriksaan') ? $navActive : $navPassive }}">
+                    @if(Str::startsWith($route, 'kader.pemeriksaan'))
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+                    @endif
+                    <i class="ph ph-stethoscope text-[22px] w-6 text-center {{ Str::startsWith($route, 'kader.pemeriksaan') ? $iconActive : $iconPassive }}"></i>
+                    <span class="tracking-wide">Pengukuran Fisik</span>
+                </a>
+
+                {{-- 2.3 Log Imunisasi (Read Only) --}}
+                <a href="{{ route('kader.imunisasi.index') }}" class="spa-route flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} group relative {{ Str::startsWith($route, 'kader.imunisasi') ? $navActive : $navPassive }}">
+                    @if(Str::startsWith($route, 'kader.imunisasi'))
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+                    @endif
+                    <i class="ph ph-syringe text-[22px] w-6 text-center {{ Str::startsWith($route, 'kader.imunisasi') ? $iconActive : $iconPassive }}"></i>
+                    <span class="tracking-wide">Log Imunisasi</span>
+                </a>
+
+            </div>
+        </div>
+
+        {{-- SECTION 3: DATABASE WARGA --}}
+        <div>
+            <p class="px-4 text-[10px] font-bold text-slate-400/80 uppercase tracking-[0.25em] mb-3">Database Warga</p>
+            <div class="space-y-1.5" x-data="{ openData: {{ $isDataWarga ? 'true' : 'false' }} }">
+                <button @click="openData = !openData" class="w-full group flex items-center justify-between px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} relative outline-none {{ $isDataWarga ? $navActive : $navPassive }}">
+                    @if($isDataWarga)
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"></div>
+                    @endif
                     <div class="flex items-center gap-4">
-                        <div class="w-6 flex justify-center shrink-0"><i class="fas fa-users-viewfinder text-[18px] {{ $isDataWarga ? 'text-indigo-600' : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                        <span class="transition-transform duration-300 {{ !$isDataWarga ? 'group-hover:translate-x-1' : '' }}">Database Warga</span>
+                        <i class="ph ph-address-book text-[22px] w-6 text-center {{ $isDataWarga ? $iconActive : $iconPassive }}"></i>
+                        <span class="tracking-wide">Data Pasien</span>
                     </div>
-                    <i class="fas fa-chevron-down text-[11px] transition-transform duration-300" :class="openWarga ? 'rotate-180 text-indigo-600' : 'text-slate-400'"></i>
+                    {{-- Animasi panah --}}
+                    <i class="ph ph-caret-down text-[14px] transition-transform duration-300 {{ $smoothBezier }}" :class="openData ? 'rotate-180 text-blue-500' : 'text-slate-400 group-hover:text-blue-400'"></i>
                 </button>
                 
-                {{-- Submenu Anak --}}
-                <div x-show="openWarga" x-collapse.duration.300ms class="overflow-hidden">
-                    <div class="pl-[54px] pr-2 py-2 space-y-1.5 relative before:absolute before:left-[32px] before:top-3 before:bottom-3 before:w-[2px] before:bg-slate-100 before:rounded-full">
+                {{-- Dropdown Collapse --}}
+                <div x-show="openData" 
+                     x-transition:enter="transition-all ease-[cubic-bezier(0.16,1,0.3,1)] duration-300" 
+                     x-transition:enter-start="opacity-0 max-h-0 -translate-y-2" 
+                     x-transition:enter-end="opacity-100 max-h-[300px] translate-y-0" 
+                     x-transition:leave="transition-all ease-[cubic-bezier(0.16,1,0.3,1)] duration-200"
+                     x-transition:leave-start="opacity-100 max-h-[300px] translate-y-0"
+                     x-transition:leave-end="opacity-0 max-h-0 -translate-y-2"
+                     class="overflow-hidden" x-cloak>
+                    
+                    <div class="pl-12 pr-2 py-2 mt-1 relative">
+                        <div class="absolute left-[26px] top-3 bottom-3 w-[2px] bg-slate-200/60 rounded-full"></div>
+                        
                         @foreach([
-                            ['route' => 'kader.data.balita.index', 'label' => 'Bayi & Balita', 'active' => Str::startsWith($route, 'kader.data.balita')],
+                            ['route' => 'kader.data.balita.index', 'label' => 'Balita & Anak', 'active' => Str::startsWith($route, 'kader.data.balita')],
                             ['route' => 'kader.data.ibu-hamil.index', 'label' => 'Ibu Hamil', 'active' => Str::startsWith($route, 'kader.data.ibu-hamil')],
                             ['route' => 'kader.data.remaja.index', 'label' => 'Remaja', 'active' => Str::startsWith($route, 'kader.data.remaja')],
                             ['route' => 'kader.data.lansia.index', 'label' => 'Lansia', 'active' => Str::startsWith($route, 'kader.data.lansia')],
                         ] as $item)
-                            <a href="{{ route($item['route']) }}" class="spa-route group/sub block px-4 py-3 text-[12.5px] rounded-[14px] transition-all relative before:absolute before:left-[calc(-25px)] before:top-1/2 before:-translate-y-1/2 before:w-[6px] before:h-[6px] before:rounded-full before:transition-all {{ $item['active'] ? 'font-black text-indigo-700 bg-white shadow-sm border border-slate-100 before:bg-indigo-500 before:ring-4 before:ring-indigo-100' : 'font-bold text-slate-500 hover:text-indigo-600 hover:bg-slate-50/80 before:bg-slate-200 hover:before:bg-indigo-400 border border-transparent' }}">
-                                <span class="inline-block transition-transform duration-300 {{ !$item['active'] ? 'group-hover/sub:translate-x-1' : '' }}">{{ $item['label'] }}</span>
-                            </a>
+                        <a href="{{ route($item['route']) }}" class="spa-route {{ $item['active'] ? $subAktif : $subPasif }}">
+                            <div class="absolute left-[-22px] top-1/2 -translate-y-1/2 rounded-full transition-all duration-300 {{ $smoothBezier }} z-10 {{ $item['active'] ? 'w-2.5 h-2.5 bg-blue-500 ring-4 ring-blue-100 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'w-1.5 h-1.5 bg-slate-300 left-[-21px]' }}"></div>
+                            <span class="tracking-wide">{{ $item['label'] }}</span>
+                        </a>
                         @endforeach
                     </div>
                 </div>
             </div>
-
-            <a href="{{ route('kader.absensi.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] mt-2 text-[13.5px] transition-all duration-300 {{ $isAbsensi ? $menuAktif : $menuPasif }}">
-                <div class="w-6 flex justify-center shrink-0"><i class="fas fa-clipboard-check text-[18px] {{ $isAbsensi ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                <span class="transition-transform duration-300 {{ !$isAbsensi ? 'group-hover:translate-x-1' : '' }}">Registrasi Kehadiran</span>
-            </a>
         </div>
 
-        {{-- Grup: Tugas Lapangan --}}
+        {{-- SECTION 4: MANAJEMEN --}}
         <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Tugas Lapangan</p>
-            <div class="space-y-2">
-                <a href="{{ route('kader.pemeriksaan.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'kader.pemeriksaan') ? $menuAktif : $menuPasif }}">
-                    <div class="w-6 flex justify-center shrink-0"><i class="fas fa-stethoscope text-[18px] {{ Str::startsWith($route, 'kader.pemeriksaan') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'kader.pemeriksaan') ? 'group-hover:translate-x-1' : '' }}">Pemeriksaan Fisik</span>
+            <p class="px-4 text-[10px] font-bold text-slate-400/80 uppercase tracking-[0.25em] mb-3">Manajemen</p>
+            <div class="space-y-1.5">
+                <a href="{{ route('kader.jadwal.index') }}" class="spa-route flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} group relative {{ Str::startsWith($route, 'kader.jadwal') ? $navActive : $navPassive }}">
+                    <i class="ph ph-calendar-check text-[22px] w-6 text-center {{ Str::startsWith($route, 'kader.jadwal') ? $iconActive : $iconPassive }}"></i>
+                    <span class="tracking-wide">Agenda Posyandu</span>
                 </a>
-                <a href="{{ route('kader.imunisasi.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'kader.imunisasi') ? $menuAktif : $menuPasif }}">
-                    <div class="w-6 flex justify-center shrink-0"><i class="fas fa-syringe text-[18px] {{ Str::startsWith($route, 'kader.imunisasi') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'kader.imunisasi') ? 'group-hover:translate-x-1' : '' }}">Catatan Imunisasi</span>
+                <a href="{{ route('kader.laporan.index') }}" class="spa-route flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13.5px] font-semibold transition-all duration-300 {{ $smoothBezier }} group relative {{ Str::startsWith($route, 'kader.laporan') ? $navActive : $navPassive }}">
+                    <i class="ph ph-file-text text-[22px] w-6 text-center {{ Str::startsWith($route, 'kader.laporan') ? $iconActive : $iconPassive }}"></i>
+                    <span class="tracking-wide">Laporan Admin</span>
                 </a>
             </div>
         </div>
-
-        {{-- Grup: Manajemen & Pelaporan --}}
-        <div>
-            <p class="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 font-poppins">Manajemen & Pelaporan</p>
-            <div class="space-y-2">
-                <a href="{{ route('kader.jadwal.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'kader.jadwal') ? $menuAktif : $menuPasif }}">
-                    <div class="w-6 flex justify-center shrink-0"><i class="fas fa-calendar-day text-[18px] {{ Str::startsWith($route, 'kader.jadwal') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'kader.jadwal') ? 'group-hover:translate-x-1' : '' }}">Jadwal Kegiatan</span>
-                </a>
-                <a href="{{ route('kader.laporan.index') }}" class="spa-route group flex items-center gap-4 px-4 py-3.5 rounded-[18px] text-[13.5px] transition-all duration-300 {{ Str::startsWith($route, 'kader.laporan') ? $menuAktif : $menuPasif }}">
-                    <div class="w-6 flex justify-center shrink-0"><i class="fas fa-file-invoice text-[18px] {{ Str::startsWith($route, 'kader.laporan') ? $iconAktif : $iconPasif }} transition-transform duration-300 group-hover:scale-110"></i></div>
-                    <span class="transition-transform duration-300 {{ !Str::startsWith($route, 'kader.laporan') ? 'group-hover:translate-x-1' : '' }}">Laporan Kemenkes</span>
-                </a>
-            </div>
-        </div>
+        
     </nav>
-    
-    {{-- 3. BOTTOM INDICATOR (ONLINE STATUS) --}}
-    <div class="p-6 bg-transparent border-t border-slate-100/60 flex justify-center items-center shrink-0">
-        <div class="px-5 py-2.5 rounded-full bg-emerald-50/50 border border-emerald-100/50 flex items-center gap-2.5 shadow-sm hover:shadow-md hover:bg-emerald-50 transition-all cursor-default">
-            <div class="relative flex h-2.5 w-2.5">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+
+    {{-- 3. BOTTOM WIDGET --}}
+    <div class="p-5 mt-auto relative z-10 shrink-0">
+        <div class="p-4 rounded-[22px] bg-white/60 border border-white/80 shadow-[0_8px_30px_-5px_rgba(0,0,0,0.05)] backdrop-blur-2xl hover:bg-white/90 hover:shadow-[0_15px_40px_-5px_rgba(37,99,235,0.12)] transition-all duration-300 {{ $smoothBezier }} group/widget">
+            
+            <div class="flex items-center gap-3 mb-4 px-1">
+                <div class="relative shrink-0 group/ava">
+                    <img src="{{ Auth::user()->profile_photo_url ?? 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->name ?? 'Kader').'&background=3b82f6&color=fff' }}" 
+                         class="w-11 h-11 rounded-[14px] object-cover ring-2 ring-white/80 shadow-sm transition-all duration-300 {{ $smoothBezier }} group-hover/ava:scale-110 group-hover/ava:rotate-2" alt="Profile">
+                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-sky-400 border-[2.5px] border-white rounded-full shadow-sm"></div>
+                </div>
+                <div class="flex-1 min-w-0 transition-transform duration-300 group-hover/widget:translate-x-1">
+                    <h4 class="text-[13px] font-bold text-slate-800 truncate font-poppins">{{ Auth::user()->name ?? 'Kader Aktif' }}</h4>
+                    <p class="text-[9px] font-bold text-blue-500 uppercase tracking-[0.2em] mt-0.5">Sistem Online</p>
+                </div>
             </div>
-            <p class="text-[11px] font-black text-emerald-600 uppercase tracking-widest">Sistem Online</p>
+
+            <form action="{{ route('logout') }}" method="POST" class="m-0">
+                @csrf
+                <button type="submit" @click="window.dispatchEvent(new CustomEvent('spa-start'))" class="w-full py-3 bg-rose-50/80 hover:bg-rose-500 text-rose-500 hover:text-white rounded-[14px] text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 {{ $smoothBezier }} border border-rose-100 hover:border-rose-500 hover:shadow-[0_8px_20px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2 group/btn active:scale-95">
+                    <i class="ph ph-power text-[16px] group-hover/btn:scale-110 transition-transform duration-300"></i>
+                    Akhiri Sesi
+                </button>
+            </form>
         </div>
     </div>
 </aside>

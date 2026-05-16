@@ -4,58 +4,89 @@
 
 @push('styles')
 <style>
-    /* Animasi Masuk Halaman yang Sangat Lembut */
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+    /* ====================================================================
+       NEXUS 144FPS ENGINE (SUCCESS STATE)
+       ==================================================================== */
+    .animate-slide-up { opacity: 0; animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; will-change: transform, opacity; }
+    @keyframes slideUpFade { from { opacity: 0; transform: translate3d(0, 40px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
 
-    /* Desain Kartu Glassmorphism (Kaca) 3D */
-    .glass-card {
-        background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
+    /* Desain Kartu Kaca (Hardware Accelerated) */
+    .nexus-success-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.8);
-        box-shadow: 
-            0 30px 60px -15px rgba(0, 0, 0, 0.05), 
-            0 0 0 1px rgba(16, 185, 129, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 1);
+        box-shadow: 0 30px 60px -15px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 1);
+        border-radius: 40px;
+        transform: translate3d(0,0,0);
     }
 
-    /* Efek Gradient pada Teks Heading */
+    /* ====================================================================
+       ANIMASI IKON SUKSES NATIVE CSS (ZERO LAG)
+       ==================================================================== */
+    .nexus-check-wrapper {
+        position: relative; width: 140px; height: 140px; margin: 0 auto 1.5rem auto;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .nexus-check-bg-1 {
+        position: absolute; inset: 0; background: rgba(16, 185, 129, 0.15); border-radius: 50%;
+        animation: pulseRing 3s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+        will-change: transform, opacity;
+    }
+    .nexus-check-bg-2 {
+        position: absolute; inset: 18px; background: rgba(16, 185, 129, 0.25); border-radius: 50%;
+        animation: pulseRing 2.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite reverse;
+        will-change: transform, opacity;
+    }
+    .nexus-check-core {
+        position: relative; z-index: 10; width: 80px; height: 80px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.6);
+        transform: scale(0); animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.2s;
+        will-change: transform;
+    }
+    .nexus-check-icon {
+        color: white; font-size: 2.2rem; opacity: 0; transform: translateY(10px);
+        animation: slideUpFade 0.4s ease forwards 0.5s;
+    }
+
+    @keyframes pulseRing {
+        0% { transform: scale(0.85); opacity: 0.4; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(0.85); opacity: 0.4; }
+    }
+    @keyframes popIn {
+        0% { transform: scale(0); }
+        100% { transform: scale(1); }
+    }
+
+    /* Efek Gradient pada Teks */
     .gradient-text {
         background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
 
-    /* Tombol Utama 3D */
-    .btn-primary-3d {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.2);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Tombol Utama (Aksi Lanjut) */
+    .btn-nexus-primary {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;
+        box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); transform: translate3d(0,0,0);
+        will-change: transform, box-shadow;
     }
-    .btn-primary-3d:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 25px -5px rgba(16, 185, 129, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.2);
-    }
-
-    /* Tombol Sekunder 3D */
-    .btn-secondary-3d {
-        background: #ffffff;
-        color: #475569;
-        border: 2px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .btn-secondary-3d:hover {
-        border-color: #cbd5e1;
-        background: #f8fafc;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.05);
+    .btn-nexus-primary:hover {
+        transform: translate3d(0, -3px, 0); box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.2);
     }
 
-    /* Pola Latar Belakang Lingkaran Bercahaya */
-    .glow-circle {
-        position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5; z-index: -1; pointer-events: none;
+    /* Tombol Sekunder */
+    .btn-nexus-secondary {
+        background: #ffffff; color: #475569; border: 2px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); transform: translate3d(0,0,0);
+    }
+    .btn-nexus-secondary:hover {
+        border-color: #cbd5e1; background: #f8fafc; color: #0f172a;
+        transform: translate3d(0, -2px, 0); box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.05);
     }
 </style>
 @endpush
@@ -63,46 +94,44 @@
 @section('content')
 <div class="relative max-w-4xl mx-auto animate-slide-up pb-10 flex flex-col items-center justify-center min-h-[75vh] z-10">
     
-    {{-- Latar Belakang Abstrak Bercahaya --}}
-    <div class="glow-circle w-[400px] h-[400px] bg-emerald-200 top-0 left-1/4 transform -translate-x-1/2 -translate-y-1/4"></div>
-    <div class="glow-circle w-[300px] h-[300px] bg-indigo-100 bottom-0 right-1/4 transform translate-x-1/4 translate-y-1/4"></div>
+    {{-- AURA BACKGROUND BEBAS LAG (GPU Layer) --}}
+    <div class="fixed w-[400px] h-[400px] bg-emerald-400/10 rounded-full blur-[100px] top-0 left-1/4 transform -translate-x-1/2 -translate-y-1/4 pointer-events-none -z-10 layer-gpu"></div>
+    <div class="fixed w-[300px] h-[300px] bg-indigo-400/10 rounded-full blur-[100px] bottom-0 right-1/4 transform translate-x-1/4 translate-y-1/4 pointer-events-none -z-10 layer-gpu"></div>
 
     {{-- KARTU UTAMA GLASSMORPHISM --}}
-    <div class="glass-card rounded-[40px] p-10 md:p-16 w-full text-center relative overflow-hidden">
+    <div class="nexus-success-card p-10 md:p-16 w-full text-center relative overflow-hidden layer-gpu">
         
-        {{-- ANIMASI LOTTIE (Link CDN Permanen & Stabil) --}}
-        <div class="flex justify-center mb-2 relative z-10">
-            <lottie-player 
-                src="https://assets8.lottiefiles.com/packages/lf20_touohxv0.json" 
-                background="transparent" 
-                speed="1" 
-                style="width: 220px; height: 220px;" 
-                autoplay
-                keep-last-frame>
-            </lottie-player>
+        {{-- ANIMASI IKON SUKSES MURNI CSS (Pengganti Piala) --}}
+        <div class="nexus-check-wrapper">
+            <div class="nexus-check-bg-1"></div>
+            <div class="nexus-check-bg-2"></div>
+            <div class="nexus-check-core">
+                <i class="fas fa-check nexus-check-icon"></i>
+            </div>
         </div>
 
         <div class="relative z-10">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest mb-4 shadow-sm">
-                <i class="fas fa-shield-check"></i> Enkripsi Database Aman
+            {{-- Lencana Status --}}
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-[10px] font-black uppercase tracking-widest mb-4 shadow-sm">
+                <i class="fas fa-shield-check"></i> Sinkronisasi Sistem Berhasil
             </div>
 
-            <h1 class="text-3xl md:text-4xl font-black gradient-text tracking-tight font-poppins mb-4">
-                Presensi Berhasil Disimpan!
+            <h1 class="text-3xl md:text-[38px] font-black gradient-text tracking-tight font-poppins mb-4">
+                Presensi Selesai Disimpan!
             </h1>
             
-            <p class="text-slate-500 font-medium text-[15px] leading-relaxed max-w-md mx-auto mb-10">
-                Luar biasa! Data kehadiran sesi Posyandu hari ini telah terekam dan disinkronisasi dengan aman ke dalam sistem <span class="font-bold text-slate-700">PosyanduCare</span>.
+            <p class="text-slate-500 font-medium text-[14px] leading-relaxed max-w-lg mx-auto mb-10">
+                Luar biasa! Data kehadiran sesi Posyandu hari ini telah terkunci dan tersinkronisasi secara otomatis ke dalam antrian <span class="font-bold text-indigo-600">KaderCare</span>.
             </p>
 
             {{-- TOMBOL AKSI --}}
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a href="{{ route('kader.absensi.index') }}" class="btn-secondary-3d w-full sm:w-auto px-8 py-4 text-[13px] font-black uppercase tracking-widest rounded-[20px] flex items-center justify-center gap-2">
-                    <i class="fas fa-redo-alt text-slate-400"></i> Input Kategori Lain
+                <a href="{{ route('kader.absensi.index') }}" class="btn-nexus-secondary w-full sm:w-auto px-8 py-4 text-[12px] font-black uppercase tracking-widest rounded-[16px] flex items-center justify-center gap-2">
+                    <i class="fas fa-redo-alt text-slate-400"></i> Absen Kategori Lain
                 </a>
                 
-                <a href="{{ route('kader.absensi.riwayat') }}" class="btn-primary-3d w-full sm:w-auto px-10 py-4 text-white text-[13px] font-black uppercase tracking-widest rounded-[20px] flex items-center justify-center gap-2">
-                    <i class="fas fa-list-ul"></i> Lihat Riwayat Absensi
+                <a href="{{ route('kader.absensi.riwayat') }}" class="btn-nexus-primary w-full sm:w-auto px-10 py-4 text-white text-[12px] font-black uppercase tracking-widest rounded-[16px] flex items-center justify-center gap-2">
+                    <i class="fas fa-list-ul"></i> Lihat Arsip Kehadiran
                 </a>
             </div>
         </div>
@@ -110,42 +139,42 @@
 </div>
 
 @push('scripts')
-{{-- Library Lottie Player --}}
-<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-
-{{-- Library Canvas Confetti untuk Efek Kembang Api --}}
+{{-- Library Canvas Confetti untuk Efek Kembang Api (Ini dipertahankan karena sangat ringan) --}}
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <script>
-    window.onload = function() {
-        var duration = 3 * 1000;
-        var animationEnd = Date.now() + duration;
-        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+    document.addEventListener('DOMContentLoaded', function() {
+        // Optimasi Confetti via requestAnimationFrame
+        requestAnimationFrame(() => {
+            var duration = 2.5 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
 
-        function randomInRange(min, max) {
-            return Math.random() * (max - min) + min;
-        }
-
-        var interval = setInterval(function() {
-            var timeLeft = animationEnd - Date.now();
-
-            if (timeLeft <= 0) {
-                return clearInterval(interval);
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
             }
 
-            var particleCount = 50 * (timeLeft / duration);
-            
-            // Konfeti menyembur dari dua sisi (kiri dan kanan bawah)
-            confetti(Object.assign({}, defaults, { 
-                particleCount, 
-                origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } 
-            }));
-            confetti(Object.assign({}, defaults, { 
-                particleCount, 
-                origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } 
-            }));
-        }, 250);
-    };
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                
+                // Konfeti menyembur dari dua sisi (kiri dan kanan)
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } 
+                }));
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } 
+                }));
+            }, 250);
+        });
+    });
 </script>
 @endpush
 @endsection

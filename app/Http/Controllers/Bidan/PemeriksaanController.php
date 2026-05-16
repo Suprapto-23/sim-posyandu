@@ -14,7 +14,7 @@ use App\Models\Pemeriksaan;
 class PemeriksaanController extends Controller
 {
     /**
-     * INDEX: Ruang Tunggu Validasi Bidan
+     * INDEX: Ruang Tunggu Validasi Bidan (Triase Meja 5)
      */
     public function index(Request $request)
     {
@@ -22,7 +22,6 @@ class PemeriksaanController extends Controller
             $tab = $request->get('tab', 'pending');
             $search = $request->get('search');
 
-            // Integrasi Akurat: Menarik data via pintu 'kunjungan.pasien'
             $query = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])->latest();
 
             if ($tab === 'verified') {
@@ -32,7 +31,6 @@ class PemeriksaanController extends Controller
                 $tab = 'pending';
             }
 
-            // Pencarian Cerdas (Nama Pasien atau NIK)
             if ($search) {
                 $query->whereHas('kunjungan.pasien', function($q) use ($search) {
                     $q->where('nama_lengkap', 'like', "%{$search}%")
@@ -47,59 +45,99 @@ class PemeriksaanController extends Controller
 
         } catch (\Exception $e) {
             Log::error('BIDAN_INDEX_ERROR: ' . $e->getMessage());
-            abort(500, 'Gagal memuat data antrian.');
+            abort(500, 'Sistem gagal memuat antrian pemeriksaan.');
         }
     }
 
     /**
-     * SHOW: Ruang Periksa (Meja 5)
-     * Di sini Bidan melihat input Kader, melakukan koreksi, dan diagnosa.
+     * SHOW: Ruang Konsultasi (Menampilkan data untuk divalidasi)
      */
     public function show($id)
     {
-        // Eager loading polimorfik agar lancar
         $pemeriksaan = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])->findOrFail($id);
         return view('bidan.pemeriksaan.show', compact('pemeriksaan'));
     }
 
     /**
-     * UPDATE: Eksekusi Finalisasi Medis
-     * Bidan mengunci data dan menyimpannya ke EMR permanen.
+     * UPDATE: Finalisasi & Pengesahan Medis (DENGAN LOGIKA JEMBATAN IMUNISASI)
      */
     public function update(Request $request, $id)
     {
+        $validated = $request->validate([
+            'suhu_tubuh'     => 'nullable|numeric|between:30,45',
+            'tekanan_darah'  => 'nullable|string|max:20',
+            'status_gizi'    => 'nullable|string|max:50',
+            'diagnosa'       => 'required|string|min:5',
+            'tindakan'       => 'required|string|min:5',
+        ], [
+            'diagnosa.required' => 'Hasil diagnosa klinis wajib diisi sebelum pengesahan.',
+            'tindakan.required' => 'Saran tindakan atau resep wajib diberikan.',
+        ]);
+
         DB::beginTransaction();
         try {
-            $pemeriksaan = Pemeriksaan::findOrFail($id);
+            $pemeriksaan = Pemeriksaan::with('kunjungan')->findOrFail($id);
             
-            // Ambil semua data. Bidan bisa mengubah angka fisik jika Kader salah input.
-            $data = $request->all();
+            $clinicalData = $request->only([
+                'suhu_tubuh', 
+                'tekanan_darah', 
+                'status_gizi', 
+                'diagnosa', 
+                'tindakan'
+            ]);
             
-            // Stempel Otoritas Bidan
-            $data['status_verifikasi'] = 'verified'; 
-            $data['verified_by']       = Auth::id();
-            $data['verified_at']       = Carbon::now();
+            // Stempel Otoritas Bidan mutlak
+            $clinicalData['status_verifikasi'] = 'verified'; 
+            $clinicalData['verified_by']       = Auth::id();
+            $clinicalData['verified_at']       = Carbon::now();
 
-            $pemeriksaan->update($data);
+            $pemeriksaan->update($clinicalData);
 
             DB::commit();
+            
+            // ====================================================================
+            // LOGIKA JEMBATAN CERDAS (SMART BRIDGE)
+            // Jika request datang dari AJAX (fetch API di view show), balas dgn JSON
+            // ====================================================================
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status'  => 'success',
+                    'message' => 'Pemeriksaan telah disahkan secara permanen.',
+                    'data'    => [
+                        'pasien_id'   => $pemeriksaan->pasien_id,
+                        'pasien_type' => class_basename($pemeriksaan->kunjungan->pasien_type ?? ''),
+                        'kategori'    => $pemeriksaan->kategori_pasien,
+                        'nama'        => $pemeriksaan->nama_pasien
+                    ]
+                ]);
+            }
+            
+            // Fallback jika browser tidak mendukung JS (Standard form submit)
             return redirect()->route('bidan.pemeriksaan.index', ['tab' => 'verified'])
-                             ->with('success', 'Data medis warga berhasil divalidasi dan disimpan.');
+                             ->with('success', 'Pemeriksaan telah disahkan secara permanen ke Rekam Medis (EMR).');
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('BIDAN_VALIDASI_ERROR: ' . $e->getMessage());
-            return back()->with('error', 'Gagal memproses data klinis.');
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            }
+            return back()->with('error', 'Gagal memproses validasi: ' . $e->getMessage())->withInput();
         }
     }
 
     /**
-     * DESTROY: Hapus Data (Emergency Only)
+     * DESTROY: Penghapusan Data (Emergency Only)
      */
     public function destroy($id)
     {
-        $pem = Pemeriksaan::findOrFail($id);
-        $pem->delete();
-        return back()->with('success', 'Data dihapus.');
+        try {
+            $pem = Pemeriksaan::findOrFail($id);
+            $pem->delete();
+            return back()->with('success', 'Data antrian berhasil dihapus.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal menghapus data.');
+        }
     }
 }

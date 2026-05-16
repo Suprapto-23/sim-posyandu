@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class IbuHamil extends Model
 {
@@ -13,24 +13,10 @@ class IbuHamil extends Model
     protected $table = 'ibu_hamils';
 
     protected $fillable = [
-        'user_id',
-        'kode_hamil',
-        'nama_lengkap',
-        'nik',
-        'tempat_lahir',
-        'tanggal_lahir',
-        'nama_suami',
-        'alamat',
-        'telepon_ortu',
-        'hpht',
-        'hpl',
-        'golongan_darah',
-        'riwayat_penyakit',
-        'berat_badan',
-        'tinggi_badan',
-        'imt',
-        'status',     // aktif | selesai
-        'created_by',
+        'user_id', 'kode_hamil', 'nama_lengkap', 'nik', 'tempat_lahir',
+        'tanggal_lahir', 'nama_suami', 'alamat', 'telepon_ortu', 
+        'hpht', 'hpl', 'golongan_darah', 'riwayat_penyakit',
+        'berat_badan', 'tinggi_badan', 'imt', 'status', 'created_by'
     ];
 
     protected $casts = [
@@ -42,96 +28,85 @@ class IbuHamil extends Model
         'imt'           => 'float',
     ];
 
-   // ── Relasi ──────────────────────────────────────────────────
+    // ── VIRTUAL ATTRIBUTES (LOGIKA KEHAMILAN CERDAS) ──────────────
+
+    /**
+     * Hitung Usia Kehamilan dalam Minggu.
+     * Berdasarkan HPHT (Hari Pertama Haid Terakhir).
+     */
+    public function getUsiaKehamilanMingguAttribute()
+    {
+        if (!$this->hpht) return 0;
+        return Carbon::parse($this->hpht)->diffInWeeks(Carbon::now());
+    }
+
+    /**
+     * Hitung Sisa Hari Kehamilan (Sisa hari ke HPL).
+     */
+    public function getSisaHariHplAttribute()
+    {
+        if (!$this->hpl) return 0;
+        $hpl = Carbon::parse($this->hpl);
+        $now = Carbon::now();
+        
+        if ($now->gt($hpl)) return 0; // Sudah lewat HPL
+        return $now->diffInDays($hpl);
+    }
+
+    /**
+     * Tentukan Trimester Kehamilan secara otomatis.
+     */
+    public function getTrimesterAttribute()
+    {
+        $minggu = $this->usia_kehamilan_minggu;
+
+        if ($minggu >= 1 && $minggu <= 12) {
+            return 'Trimester I';
+        } elseif ($minggu >= 13 && $minggu <= 27) {
+            return 'Trimester II';
+        } elseif ($minggu >= 28) {
+            return 'Trimester III';
+        }
+        
+        return 'Belum Terdeteksi';
+    }
+
+    /**
+     * Status IMT (Indeks Massa Tubuh) Ibu.
+     */
+    public function getStatusImtAttribute()
+    {
+        $imt = $this->imt;
+        if (!$imt) return '-';
+
+        if ($imt < 18.5) return 'Berat Badan Kurang';
+        if ($imt >= 18.5 && $imt <= 24.9) return 'Normal';
+        if ($imt >= 25 && $imt <= 29.9) return 'Kelebihan Berat Badan';
+        return 'Obesitas';
+    }
+
+    // ── RELASI ────────────────────────────────────────────────────
 
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    public function pencatat()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /** * MENGGUNAKAN SISTEM TERPADU: Relasi ke tabel Kunjungan
-     * (Nantinya Kunjungan yang akan membawa data Pemeriksaan) 
-     */
     public function kunjungans()
     {
-        // Tambahkan 'pasien_id' sebagai foreign key yang benar
-        return $this->hasMany(Kunjungan::class, 'pasien_id')
-                    ->orderBy('tanggal_kunjungan', 'desc');
+        return $this->morphMany(Kunjungan::class, 'pasien');
     }
 
-    /** Pemeriksaan terakhir */
+    public function pemeriksaans()
+    {
+        return $this->hasMany(Pemeriksaan::class, 'pasien_id')
+                    ->where('kategori_pasien', 'ibu_hamil');
+    }
+
     public function pemeriksaan_terakhir()
     {
-        return $this->hasOne(PemeriksaanIbuHamil::class, 'ibu_hamil_id')
-                    ->latest('tanggal_periksa');
-    }
-
-    // ── Accessor: Usia kehamilan dalam minggu ────────────────────
-
-    public function getUsiaKehamilanAttribute(): ?int
-    {
-        if (!$this->hpht) return null;
-        return (int) now()->diffInWeeks($this->hpht);
-    }
-
-    // ── Accessor: Nomor trimester (1/2/3) ────────────────────────
-
-    public function getTrimesterAngkaAttribute(): ?int
-    {
-        $minggu = $this->usia_kehamilan;
-        if ($minggu === null) return null;
-        if ($minggu <= 12) return 1;
-        if ($minggu <= 27) return 2;
-        return 3;
-    }
-
-    // ── Accessor: Label trimester ─────────────────────────────────
-
-    public function getTrimesterAttribute(): string
-    {
-        return match($this->trimester_angka) {
-            1       => 'Trimester I',
-            2       => 'Trimester II',
-            3       => 'Trimester III',
-            default => 'Belum Diisi',
-        };
-    }
-
-    // ── Accessor: Sisa hari menuju HPL ───────────────────────────
-
-    public function getSisaHariAttribute(): ?int
-    {
-        if (!$this->hpl) return null;
-        return (int) now()->diffInDays($this->hpl, false);
-    }
-
-    // ── Accessor: IMT dihitung otomatis ──────────────────────────
-
-    public function getImtHitungAttribute(): ?float
-    {
-        if (!$this->berat_badan || !$this->tinggi_badan || $this->tinggi_badan < 50) return null;
-        $tinggiM = $this->tinggi_badan / 100;
-        return round($this->berat_badan / ($tinggiM * $tinggiM), 2);
-    }
-
-    // ── Scope: Hanya yang masih aktif (hamil) ────────────────────
-
-    public function scopeAktif($query)
-    {
-        return $query->where('status', 'aktif');
-    }
-
-    // ── Scope: Hampir melahirkan (HPL dalam 30 hari) ─────────────
-
-    public function scopeHampirLahir($query, int $hari = 30)
-    {
-        return $query->whereNotNull('hpl')
-                     ->whereDate('hpl', '>=', now())
-                     ->whereDate('hpl', '<=', now()->addDays($hari));
+        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
+                    ->where('kategori_pasien', 'ibu_hamil')
+                    ->latestOfMany();
     }
 }

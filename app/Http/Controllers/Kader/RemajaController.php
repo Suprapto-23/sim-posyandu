@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kader;
 use App\Http\Controllers\Controller;
 use App\Models\Remaja;
 use App\Models\User;
+use App\Traits\SyncsUserAccount;
 use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,7 @@ use Illuminate\Support\Str;
  */
 class RemajaController extends Controller
 {
+   use SyncsUserAccount;
     /**
      * 1. INDEX: Direktori Remaja & Statistik
      */
@@ -52,7 +54,7 @@ class RemajaController extends Controller
     }
 
     /**
-     * 2. CREATE
+     * 2. CREATE: Tampilkan Form Pendaftaran
      */
     public function create()
     {
@@ -72,10 +74,13 @@ class RemajaController extends Controller
             'jenis_kelamin'  => 'required|in:L,P',
             'nama_ortu'      => 'required|string|max:191',
             'alamat'         => 'required|string',
-            'golongan_darah' => 'nullable|in:A,B,AB,O',
+            'sekolah'        => 'nullable|string|max:191',
+            'kelas'          => 'nullable|string|max:20',
+            'telepon_ortu'   => 'nullable|string|max:20',
         ], [
             'nik.unique' => 'NIK ini sudah terdaftar sebagai peserta Remaja.',
             'nik.digits' => 'Format NIK harus 16 digit angka.',
+            'tanggal_lahir.before' => 'Tanggal lahir tidak valid.',
         ]);
 
         DB::beginTransaction();
@@ -98,16 +103,17 @@ class RemajaController extends Controller
                 'nama_ortu'      => $request->nama_ortu,
                 'telepon_ortu'   => $request->telepon_ortu,
                 'alamat'         => $request->alamat,
-                'golongan_darah' => $request->golongan_darah,
                 'created_by'     => Auth::id(),
             ]);
 
             DB::commit();
-            return redirect()->route('kader.data.remaja.index')->with('success', 'Registrasi Berhasil! Data Remaja telah disimpan.');
+            return redirect()->route('kader.data.remaja.index')
+                ->with('success', 'Registrasi Berhasil! Data Remaja telah disimpan.');
+                
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('REMAJA_STORE_ERR: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Gagal menyimpan data ke sistem.');
+            return back()->withInput()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
 
@@ -128,7 +134,7 @@ class RemajaController extends Controller
     }
 
     /**
-     * 5. EDIT
+     * 5. EDIT: Form Koreksi Data
      */
     public function edit($id)
     {
@@ -146,8 +152,14 @@ class RemajaController extends Controller
         $request->validate([
             'nik'          => 'required|digits:16|unique:remajas,nik,' . $remaja->id,
             'nama_lengkap' => 'required|string|max:191',
-            'nama_ortu'    => 'required|string',
+            'tempat_lahir' => 'required|string|max:100',
+            'tanggal_lahir' => 'required|date|before:today',
+            'jenis_kelamin' => 'required|in:L,P',
+            'nama_ortu'    => 'required|string|max:191',
             'alamat'       => 'required|string',
+            'sekolah'      => 'nullable|string|max:191',
+            'kelas'        => 'nullable|string|max:20',
+            'telepon_ortu' => 'nullable|string|max:20',
         ]);
 
         DB::beginTransaction();
@@ -167,15 +179,16 @@ class RemajaController extends Controller
                 'nama_ortu'      => $request->nama_ortu,
                 'telepon_ortu'   => $request->telepon_ortu,
                 'alamat'         => $request->alamat,
-                'golongan_darah' => $request->golongan_darah,
             ]);
 
             DB::commit();
-            return redirect()->route('kader.data.remaja.show', $remaja->id)->with('success', 'Koreksi Berhasil! Data profil telah diperbarui.');
+            return redirect()->route('kader.data.remaja.show', $remaja->id)
+                ->with('success', 'Koreksi Berhasil! Data profil telah diperbarui.');
+                
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('REMAJA_UPDATE_ERR: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Gagal memperbarui data.');
+            return back()->withInput()->with('error', 'Gagal memperbarui data: ' . $e->getMessage());
         }
     }
 
@@ -237,28 +250,5 @@ class RemajaController extends Controller
         }
 
         return back()->with('error', 'Gagal! Akun Warga dengan NIK tersebut tidak ditemukan di sistem.');
-    }
-
-    /**
-     * 10. ENGINE: Pencarian User Efisien (Optimized Query)
-     */
-    private function findLinkedUser($nik, $nama_lengkap)
-    {
-        $cleanNik = preg_replace('/[^0-9]/', '', (string)$nik);
-        if (empty($cleanNik)) return null;
-
-        // Cari di tabel User utama (NIK / Username / Email)
-        $user = User::where('nik', $cleanNik)
-                    ->orWhere('username', $cleanNik)
-                    ->first();
-        if ($user) return $user;
-
-        // Cari di tabel Profil Sekunder (Jika ada)
-        if (Schema::hasTable('profiles')) {
-            $profile = Profile::where('nik', $cleanNik)->orWhere('no_ktp', $cleanNik)->first();
-            if ($profile && $profile->user) return $profile->user;
-        }
-
-        return null;
     }
 }

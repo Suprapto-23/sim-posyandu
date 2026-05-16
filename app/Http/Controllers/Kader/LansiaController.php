@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kader;
 use App\Http\Controllers\Controller;
 use App\Models\Lansia;
 use App\Models\User;
+use App\Traits\SyncsUserAccount;
 use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,7 @@ use Illuminate\Support\Str;
  */
 class LansiaController extends Controller
 {
+    use SyncsUserAccount;
     /**
      * 1. INDEX: Menampilkan Direktori Lansia
      */
@@ -53,7 +55,7 @@ class LansiaController extends Controller
     }
 
     /**
-     * 2. CREATE
+     * 2. CREATE: Tampilkan Form Pendaftaran
      */
     public function create()
     {
@@ -62,6 +64,8 @@ class LansiaController extends Controller
 
     /**
      * 3. STORE: Registrasi Baru dengan Kalkulasi IMT Otomatis
+     * FIXED: Hanya menggunakan kolom yang ADA di database lansias
+     * Kolom yang dihapus: 'telepon_keluarga', 'kemandirian', 'golongan_darah'
      */
     public function store(Request $request)
     {
@@ -71,12 +75,11 @@ class LansiaController extends Controller
             'tempat_lahir'     => 'required|string|max:100',
             'tanggal_lahir'    => 'required|date|before:-45 years', 
             'jenis_kelamin'    => 'required|in:L,P',
-            'kemandirian'      => 'required|string',
             'penyakit_bawaan'  => 'nullable|string',
-            'berat_badan'      => 'nullable|numeric|min:1',
-            'tinggi_badan'     => 'nullable|numeric|min:50',
-            'telepon_keluarga' => 'required|string|max:20',
+            'berat_badan'      => 'nullable|numeric|min:1|max:300',
+            'tinggi_badan'     => 'nullable|numeric|min:50|max:250',
             'alamat'           => 'required|string',
+            // HAPUS: 'kemandirian' dan 'telepon_keluarga' karena tidak ada di database
         ], [
             'nik.unique'           => 'Peringatan: NIK ini sudah terdaftar sebagai lansia.',
             'nik.digits'           => 'NIK harus terdiri dari 16 digit angka.',
@@ -88,9 +91,9 @@ class LansiaController extends Controller
             $kode_lansia = 'LNS-' . date('Ymd') . '-' . strtoupper(Str::random(4));
             $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
 
-            // Hitung IMT secara presisi di server (Backend Calculation)
+            // Hitung IMT secara presisi di server
             $imt = null;
-            if ($request->berat_badan && $request->tinggi_badan) {
+            if ($request->berat_badan && $request->tinggi_badan && $request->tinggi_badan > 0) {
                 $tinggiM = $request->tinggi_badan / 100;
                 $imt = round($request->berat_badan / ($tinggiM * $tinggiM), 2);
             }
@@ -103,22 +106,25 @@ class LansiaController extends Controller
                 'tempat_lahir'     => $request->tempat_lahir,
                 'tanggal_lahir'    => $request->tanggal_lahir,
                 'jenis_kelamin'    => $request->jenis_kelamin,
-                'kemandirian'      => $request->kemandirian,
+                'alamat'           => $request->alamat,
                 'penyakit_bawaan'  => $request->penyakit_bawaan,
                 'berat_badan'      => $request->berat_badan,
                 'tinggi_badan'     => $request->tinggi_badan,
                 'imt'              => $imt,
-                'telepon_keluarga' => $request->telepon_keluarga,
-                'alamat'           => $request->alamat,
+                // HAPUS: 'kemandirian' => $request->kemandirian,
+                // HAPUS: 'telepon_keluarga' => $request->telepon_keluarga,
+                // HAPUS: 'golongan_darah' => $request->golongan_darah,
                 'created_by'       => Auth::id(),
             ]);
 
             DB::commit();
-            return redirect()->route('kader.data.lansia.index')->with('success', 'Registrasi Selesai! Data Lansia berhasil ditambahkan ke direktori.');
+            return redirect()->route('kader.data.lansia.index')
+                ->with('success', 'Registrasi Selesai! Data Lansia berhasil ditambahkan ke direktori.');
+                
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('KADER_LANSIA_STORE_ERROR: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Kegagalan Sistem: Gagal menyimpan data ke server.');
+            return back()->withInput()->with('error', 'Kegagalan Sistem: ' . $e->getMessage());
         }
     }
 
@@ -127,7 +133,6 @@ class LansiaController extends Controller
      */
     public function show($id)
     {
-        // Polymorphic Terpadu: Memanggil Kunjungan + Pemeriksaan
         $lansia = Lansia::with([
             'user', 
             'kunjungans' => function($q) { $q->latest('tanggal_kunjungan'); },
@@ -138,7 +143,7 @@ class LansiaController extends Controller
     }
 
     /**
-     * 5. EDIT
+     * 5. EDIT: Form Koreksi Data
      */
     public function edit($id)
     {
@@ -159,11 +164,9 @@ class LansiaController extends Controller
             'tempat_lahir'     => 'required|string|max:100',
             'tanggal_lahir'    => 'required|date|before:-45 years',
             'jenis_kelamin'    => 'required|in:L,P',
-            'kemandirian'      => 'required|string',
             'penyakit_bawaan'  => 'nullable|string',
-            'berat_badan'      => 'nullable|numeric|min:1',
-            'tinggi_badan'     => 'nullable|numeric|min:50',
-            'telepon_keluarga' => 'required|string|max:20',
+            'berat_badan'      => 'nullable|numeric|min:1|max:300',
+            'tinggi_badan'     => 'nullable|numeric|min:50|max:250',
             'alamat'           => 'required|string',
         ]);
 
@@ -171,9 +174,9 @@ class LansiaController extends Controller
         try {
             $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
 
-            // Hitung ulang IMT jika berat/tinggi badan diubah
+            // Hitung ulang IMT
             $imt = $lansia->imt;
-            if ($request->berat_badan && $request->tinggi_badan) {
+            if ($request->berat_badan && $request->tinggi_badan && $request->tinggi_badan > 0) {
                 $tinggiM = $request->tinggi_badan / 100;
                 $imt = round($request->berat_badan / ($tinggiM * $tinggiM), 2);
             }
@@ -185,21 +188,21 @@ class LansiaController extends Controller
                 'tempat_lahir'     => $request->tempat_lahir,
                 'tanggal_lahir'    => $request->tanggal_lahir,
                 'jenis_kelamin'    => $request->jenis_kelamin,
-                'kemandirian'      => $request->kemandirian,
+                'alamat'           => $request->alamat,
                 'penyakit_bawaan'  => $request->penyakit_bawaan,
                 'berat_badan'      => $request->berat_badan,
                 'tinggi_badan'     => $request->tinggi_badan,
                 'imt'              => $imt,
-                'telepon_keluarga' => $request->telepon_keluarga,
-                'alamat'           => $request->alamat,
             ]);
 
             DB::commit();
-            return redirect()->route('kader.data.lansia.show', $lansia->id)->with('success', 'Koreksi Berhasil! Data Lansia telah diperbarui.');
+            return redirect()->route('kader.data.lansia.show', $lansia->id)
+                ->with('success', 'Koreksi Berhasil! Data Lansia telah diperbarui.');
+                
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('KADER_LANSIA_UPDATE_ERROR: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Gagal memperbarui data.');
+            return back()->withInput()->with('error', 'Gagal memperbarui data: ' . $e->getMessage());
         }
     }
 
@@ -211,7 +214,6 @@ class LansiaController extends Controller
         try {
             $lansia = Lansia::findOrFail($id);
             
-            // PROTEKSI: Tolak penghapusan jika lansia sudah pernah diukur/diperiksa
             if ($lansia->kunjungans()->count() > 0) {
                 return back()->with('error', 'Ditolak! Lansia ini sudah memiliki riwayat pemantauan medis. Data tidak boleh dihapus.');
             }
@@ -234,7 +236,6 @@ class LansiaController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data yang dicentang untuk dihapus!');
         }
         
-        // Cek jika ada yang memiliki rekam medis
         $terpakai = Lansia::whereIn('id', $ids)->has('kunjungans')->count();
         if ($terpakai > 0) {
             return back()->with('error', "Operasi Dibatalkan! {$terpakai} Lansia yang Anda pilih sudah memiliki jejak rekam medis.");
@@ -258,39 +259,8 @@ class LansiaController extends Controller
         
         if ($user) {
             $lansia->update(['user_id' => $user->id]);
-            return redirect()->back()->with('success', 'Integrasi Terkunci! Akun Lansia ini berhasil dihubungkan dengan perangkat pengguna: ' . $user->name);
+            return redirect()->back()->with('success', 'Akun Lansia berhasil dihubungkan dengan pengguna: ' . $user->name);
         }
-        return redirect()->back()->with('error', 'Sinkronisasi Gagal! Tidak ditemukan pengguna aplikasi Warga dengan NIK tersebut.');
-    }
-
-    /**
-     * 10. HELPER: Pencari Akun Taut 
-     */
-    private function findLinkedUser($nik, $nama_lengkap)
-    {
-        $cleanNik  = preg_replace('/[^0-9]/', '', (string)$nik);
-        $cleanName = trim((string)$nama_lengkap);
-
-        if (empty($cleanNik) && empty($cleanName)) return null;
-
-        if (!empty($cleanNik)) {
-            $user = User::where('nik', $cleanNik)
-                        ->orWhere('username', $cleanNik)
-                        ->orWhere('email', $cleanNik)
-                        ->first();
-            if ($user) return $user;
-
-            if (Schema::hasTable('profiles')) {
-                $profile = Profile::where('nik', $cleanNik)->orWhere('no_ktp', $cleanNik)->first();
-                if ($profile && $profile->user) return $profile->user;
-            }
-        }
-
-        if (!empty($cleanName)) {
-            $userByName = User::where('name', 'LIKE', "%{$cleanName}%")->first();
-            if ($userByName) return $userByName;
-        }
-
-        return null; 
+        return redirect()->back()->with('error', 'Tidak ditemukan pengguna dengan NIK tersebut.');
     }
 }

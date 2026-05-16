@@ -1,276 +1,186 @@
 @extends('layouts.bidan')
 
-@section('title', 'Buku Induk EMR')
-@section('page-name', 'Arsip Digital Warga')
+@section('title', 'Pusat Rekam Medis (EMR)')
+@section('page-name', 'Dashboard EMR')
 
 @push('styles')
 <style>
-    /* Animasi Masuk Halus */
-    .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; opacity: 0; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    /* ANIMASI MASUK HALUS */
+    .fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     
-    /* List Item Premium */
-    .emr-row { 
-        background: #ffffff; 
-        border-radius: 20px; 
-        border: 1px solid #f1f5f9; 
+    /* NEXUS HORIZONTAL DIRECTORY CARD */
+    .dir-card {
+        background: #ffffff; border-radius: 24px; border: 1px solid #f1f5f9;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative; overflow: hidden;
     }
-    .emr-row:hover { 
-        transform: translateY(-3px); 
-        border-color: #e0f2fe; 
-        box-shadow: 0 12px 35px -10px rgba(14, 165, 233, 0.15); 
+    .dir-card:hover {
+        transform: translateX(5px); border-color: #bae6fd;
+        box-shadow: 0 12px 30px -10px rgba(6, 182, 212, 0.15);
+        background: linear-gradient(to right, #ffffff, #f8fafc);
     }
 
-    /* Tab Switcher */
-    .emr-tab { transition: all 0.3s ease; }
-    .emr-tab.active { background: #0f172a; color: #ffffff; box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15); font-weight: 700; }
-    .emr-tab.inactive { background: #ffffff; color: #64748b; border: 1px solid #e2e8f0; font-weight: 600; }
-    .emr-tab.inactive:hover { background: #f8fafc; color: #334155; }
+    /* IKON KONTANER */
+    .icon-box { transition: all 0.4s ease; }
+    .dir-card:hover .icon-box { transform: scale(1.08) rotate(-3deg); }
 
-    /* Highlight Pencarian */
-    .mark-search { background-color: #fde047; color: #854d0e; padding: 0.1em 0.3em; border-radius: 4px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-
-    [x-cloak] { display: none !important; }
+    /* TOMBOL NAVIGASI */
+    .nav-btn { transition: all 0.3s ease; }
+    .dir-card:hover .nav-btn { background-color: #0ea5e9; color: #ffffff; border-color: #0ea5e9; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.2); }
 </style>
 @endpush
 
 @section('content')
-
-@php
-    function safeHighlight($text, $search) {
-        if (empty($text)) return '-';
-        if (!$search || strlen(trim($search)) < 1) return htmlspecialchars($text);
-        $pattern = '/' . preg_quote(trim($search), '/') . '/i';
-        return preg_replace($pattern, "<span class='mark-search'>$0</span>", htmlspecialchars($text));
-    }
-@endphp
-
-<div class="max-w-[1300px] mx-auto space-y-6 fade-in-up pb-24" x-data="emrSearchApp()">
-    
-    {{-- =================================================================
-         1. HERO HEADER MINIMALIS
-         ================================================================= --}}
-    <div class="flex items-center justify-between mb-4 px-2">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-[14px] bg-gradient-to-br from-cyan-400 to-blue-600 text-white flex items-center justify-center text-xl shadow-[0_8px_20px_rgba(6,182,212,0.3)] shrink-0">
-                <i class="fas fa-folder-open"></i>
-            </div>
-            <div>
-                <h1 class="text-[22px] font-black text-slate-800 tracking-tight leading-none mb-1">Buku Induk EMR</h1>
-                <p class="text-[13px] font-medium text-slate-500">Pusat Data Rekam Medis Elektronik Terpadu</p>
-            </div>
-        </div>
+{{-- Loader Sistem Nexus --}}
+<div id="smoothLoader" class="fixed inset-0 bg-slate-50/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center transition-all duration-300 opacity-0 pointer-events-none">
+    <div class="relative w-16 h-16 flex items-center justify-center mb-4">
+        <div class="absolute inset-0 border-4 border-cyan-100 rounded-full"></div>
+        <div class="absolute inset-0 border-4 border-cyan-600 rounded-full border-t-transparent animate-spin"></div>
+        <i class="fas fa-folder-open text-cyan-600 text-lg animate-pulse"></i>
     </div>
-
-    {{-- =================================================================
-         2. KONTROL PENCARIAN & FILTER (GRID MODERN)
-         ================================================================= --}}
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 items-center bg-white p-3 rounded-[24px] border border-slate-100 shadow-sm">
-        
-        {{-- Tabs --}}
-        <div class="xl:col-span-7 flex gap-2 overflow-x-auto hide-scrollbar px-1">
-            @php 
-                $tabs = [
-                    'balita'    => ['icon'=>'baby', 'label'=>'Bayi & Balita'], 
-                    'ibu_hamil' => ['icon'=>'female', 'label'=>'Ibu Hamil'], 
-                    'remaja'    => ['icon'=>'user-graduate', 'label'=>'Remaja'], 
-                    'lansia'    => ['icon'=>'user-clock', 'label'=>'Lansia']
-                ]; 
-            @endphp
-            
-            @foreach($tabs as $key => $t)
-                <button type="button" 
-                        @click="switchTab('{{ $key }}')" 
-                        class="emr-tab px-6 py-3 rounded-[16px] text-[12px] uppercase tracking-wide flex items-center gap-2 shrink-0"
-                        :class="currentType === '{{ $key }}' ? 'active' : 'inactive'">
-                    <i class="fas fa-{{ $t['icon'] }} text-[14px]"></i> {{ $t['label'] }}
-                </button>
-            @endforeach
-        </div>
-
-        {{-- Search Input Instan --}}
-        <div class="xl:col-span-5 relative px-1">
-            <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
-                <i class="fas fa-search transition-colors duration-300" :class="searchQuery.length > 0 ? 'text-cyan-500 text-[16px]' : 'text-slate-400 text-[14px]'"></i>
-            </div>
-            
-            <input type="text" 
-                   x-model="searchQuery" 
-                   placeholder="Ketik 1 huruf nama / NIK..." 
-                   class="w-full bg-slate-50 border-transparent rounded-[16px] pl-12 pr-12 py-3.5 text-[14px] font-semibold text-slate-700 focus:bg-white focus:border-cyan-300 focus:ring-4 focus:ring-cyan-50 outline-none transition-all placeholder:font-medium placeholder:text-slate-400">
-            
-            <div class="absolute inset-y-0 right-4 flex items-center gap-2">
-                <i class="fas fa-spinner fa-spin text-cyan-500" x-show="isSearching" x-cloak></i>
-                <button type="button" x-show="searchQuery !== '' && !isSearching" @click="clearSearch()" class="text-slate-400 hover:text-rose-500 transition-colors" x-cloak>
-                    <i class="fas fa-times-circle text-[18px]"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {{-- =================================================================
-         3. DAFTAR LIST (FLOW 1 FLEXBOX SEAMLESS)
-         ================================================================= --}}
-    <div id="emr-grid-container" class="relative transition-opacity duration-200" :class="isSearching ? 'opacity-60' : 'opacity-100'">
-        
-        <div class="flex flex-col gap-3">
-            @forelse($data as $row)
-            <div class="emr-row flex flex-col lg:flex-row lg:items-center justify-between p-4 md:p-5 gap-4 lg:gap-6 group relative overflow-hidden">
-                
-                {{-- Aksen Garis Kiri Saat Hover --}}
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-cyan-500 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-l-full"></div>
-
-                {{-- Bagian 1: Identitas (Kiri) --}}
-                <div class="flex items-center gap-4 min-w-[280px] pl-2">
-                    <div class="w-12 h-12 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-[20px] shrink-0 group-hover:bg-cyan-500 group-hover:text-white transition-all duration-300 shadow-sm">
-                        <i class="fas fa-{{ $type == 'balita' ? 'baby' : ($type == 'ibu_hamil' ? 'female' : 'user') }}"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <h3 class="text-[15px] font-bold text-slate-800 tracking-tight group-hover:text-cyan-600 transition-colors">
-                            {!! safeHighlight($row->nama_lengkap, $search) !!}
-                        </h3>
-                        <p class="text-[12px] font-medium text-slate-400 mt-0.5 font-mono">
-                            NIK: <span class="text-slate-500">{!! safeHighlight($row->nik, $search) !!}</span>
-                        </p>
-                    </div>
-                </div>
-
-                {{-- Bagian 2: Data Informasi Inline (Tengah) --}}
-                <div class="flex-1 flex flex-wrap md:flex-nowrap items-center gap-x-8 gap-y-3 px-2 lg:px-6">
-                    
-                    {{-- Gender --}}
-                    <div class="flex items-center gap-2.5 text-[13px] font-semibold text-slate-600 min-w-[110px]">
-                        <div class="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                            <i class="fas {{ $row->jenis_kelamin == 'L' ? 'fa-mars text-blue-500' : 'fa-venus text-pink-500' }}"></i>
-                        </div>
-                        {{ $row->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan' }}
-                    </div>
-
-                    {{-- Usia --}}
-                    <div class="flex items-center gap-2.5 text-[13px] font-semibold text-slate-600 min-w-[100px]">
-                        <div class="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        {{ $row->tanggal_lahir ? \Carbon\Carbon::parse($row->tanggal_lahir)->age : 0 }} Tahun
-                    </div>
-
-                    {{-- Dinamis: Nama Ibu / Alamat --}}
-                    <div class="flex items-center gap-2.5 text-[13px] font-semibold text-slate-600 truncate flex-1 min-w-[150px]">
-                        <div class="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
-                            <i class="fas {{ $type === 'balita' ? 'fa-user-nurse' : 'fa-map-marker-alt' }}"></i>
-                        </div>
-                        <span class="truncate">
-                            @if($type === 'balita')
-                                {!! safeHighlight($row->nama_ibu, $search) !!}
-                            @else
-                                {!! safeHighlight($row->alamat ?? '-', $search) !!}
-                            @endif
-                        </span>
-                    </div>
-
-                </div>
-
-                {{-- Bagian 3: Aksi & Meta (Kanan) --}}
-                <div class="flex items-center justify-between lg:justify-end gap-5 shrink-0 pl-2 lg:pl-0 border-t lg:border-none border-slate-50 pt-3 lg:pt-0 mt-2 lg:mt-0">
-                    <div class="hidden sm:flex items-center gap-2 text-[11px] font-medium text-slate-400">
-                        <i class="fas fa-clock"></i>
-                        {{ $row->updated_at ? $row->updated_at->diffForHumans() : 'Baru' }}
-                    </div>
-                    
-                    <a href="{{ route('bidan.rekam-medis.show', ['pasien_type' => $type, 'pasien_id' => $row->id]) }}" 
-                       class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan-50 text-cyan-600 rounded-[12px] text-[12px] font-bold tracking-wide hover:bg-cyan-500 hover:text-white transition-all duration-300 w-full sm:w-auto">
-                        BUKA EMR <i class="fas fa-arrow-right text-[10px]"></i>
-                    </a>
-                </div>
-
-            </div>
-            @empty
-            <div class="py-20 text-center bg-white rounded-[24px] border border-slate-100 shadow-sm flex flex-col items-center justify-center mt-2">
-                <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-5 border-[3px] border-white shadow-sm relative">
-                    <div class="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-10"></div>
-                    <i class="fas fa-search text-4xl text-slate-300 relative z-10"></i>
-                </div>
-                <h3 class="text-[18px] font-bold text-slate-800 font-poppins mb-2">Arsip Tidak Ditemukan</h3>
-                <p class="text-[14px] font-medium text-slate-500 max-w-md leading-relaxed">
-                    @if($search)
-                        Data rekam medis dengan kata kunci <b class="text-rose-500 bg-rose-50 px-2 py-0.5 rounded">"{{ $search }}"</b> tidak terdaftar di sistem.
-                    @else
-                        Belum ada data rekam medis yang masuk ke dalam kluster ini.
-                    @endif
-                </p>
-            </div>
-            @endforelse
-        </div>
-
-        {{-- =================================================================
-             4. PAGINATION
-             ================================================================= --}}
-        @if($data->hasPages())
-        <div class="mt-6 bg-white py-3 px-5 rounded-[20px] border border-slate-100 shadow-sm flex items-center justify-center">
-            {{ $data->links() }}
-        </div>
-        @endif
+    <div class="bg-white px-5 py-2 rounded-full shadow-sm border border-slate-100 flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-cyan-500 animate-ping"></div>
+        <p class="text-[10px] font-black text-cyan-700 uppercase tracking-[0.2em] font-poppins" id="loaderText">MEMBUKA DIREKTORI...</p>
     </div>
 </div>
 
+<div class="max-w-[1000px] mx-auto fade-in-up pb-20">
+
+    {{-- =================================================================
+         1. COMPACT HERO HEADER (Sleek & Professional)
+         ================================================================= --}}
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="absolute right-0 top-0 w-64 h-64 bg-cyan-50 rounded-full blur-3xl opacity-60 -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+        
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-16 h-16 rounded-[20px] bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center text-2xl shadow-[0_8px_20px_rgba(6,182,212,0.3)] shrink-0 border border-cyan-400">
+                <i class="fas fa-server"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <h1 class="text-[24px] font-black text-slate-800 tracking-tight font-poppins leading-none">Direktori EMR</h1>
+                    <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded-md border border-emerald-100 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Sinkron
+                    </span>
+                </div>
+                <p class="text-[13px] font-medium text-slate-500">Pilih direktori kluster pasien untuk melakukan verifikasi data klinis.</p>
+            </div>
+        </div>
+    </div>
+
+    {{-- =================================================================
+         2. DIRECTORY LIST (Presisi Horizontal Flexbox)
+         ================================================================= --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
+        {{-- KARTU 1: BAYI & BALITA --}}
+        <a href="{{ route('bidan.pasien.balita') }}" class="smooth-route block group">
+            <div class="dir-card p-5 flex items-center gap-5">
+                <div class="icon-box w-14 h-14 rounded-[16px] bg-rose-50 text-rose-500 border border-rose-100 flex items-center justify-center text-xl shrink-0">
+                    <i class="fas fa-baby"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-0.5">
+                        <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate">Bayi & Balita</h3>
+                    </div>
+                    <p class="text-[12px] font-medium text-slate-500 truncate">Pertumbuhan, Stunting & Imunisasi</p>
+                </div>
+                <div class="nav-btn w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shrink-0">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </div>
+        </a>
+
+        {{-- KARTU 2: IBU HAMIL --}}
+        <a href="{{ route('bidan.pasien.ibu_hamil') }}" class="smooth-route block group">
+            <div class="dir-card p-5 flex items-center gap-5">
+                <div class="icon-box w-14 h-14 rounded-[16px] bg-pink-50 text-pink-500 border border-pink-100 flex items-center justify-center text-xl shrink-0">
+                    <i class="fas fa-female"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-0.5">
+                        <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate">Ibu Hamil</h3>
+                    </div>
+                    <p class="text-[12px] font-medium text-slate-500 truncate">Manajemen ANC & Deteksi Risiko</p>
+                </div>
+                <div class="nav-btn w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shrink-0">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </div>
+        </a>
+
+        {{-- KARTU 3: REMAJA --}}
+        <a href="{{ route('bidan.pasien.remaja') }}" class="smooth-route block group">
+            <div class="dir-card p-5 flex items-center gap-5">
+                <div class="icon-box w-14 h-14 rounded-[16px] bg-indigo-50 text-indigo-500 border border-indigo-100 flex items-center justify-center text-xl shrink-0">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-0.5">
+                        <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate">Remaja</h3>
+                    </div>
+                    <p class="text-[12px] font-medium text-slate-500 truncate">Pemeriksaan Anemia & Edukasi</p>
+                </div>
+                <div class="nav-btn w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shrink-0">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </div>
+        </a>
+
+        {{-- KARTU 4: LANSIA --}}
+        <a href="{{ route('bidan.pasien.lansia') }}" class="smooth-route block group">
+            <div class="dir-card p-5 flex items-center gap-5">
+                <div class="icon-box w-14 h-14 rounded-[16px] bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center text-xl shrink-0">
+                    <i class="fas fa-wheelchair"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-0.5">
+                        <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate">Geriatri (Lansia)</h3>
+                    </div>
+                    <p class="text-[12px] font-medium text-slate-500 truncate">Pemantauan Hipertensi & PTM</p>
+                </div>
+                <div class="nav-btn w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shrink-0">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+            </div>
+        </a>
+
+    </div>
+
+    {{-- 3. INFORMASI SISTEM MINI --}}
+    <div class="mt-8 flex items-center justify-center gap-2 text-[11px] font-bold text-slate-400">
+        <i class="fas fa-lock text-slate-300"></i> Terenkripsi & Terintegrasi dengan Sistem Keamanan Posyandu
+    </div>
+
+</div>
+@endsection
+
 @push('scripts')
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('emrSearchApp', () => ({
-            searchQuery: '{{ $search ?? '' }}',
-            currentType: '{{ $type ?? 'balita' }}',
-            isSearching: false,
+    const showLoader = () => {
+        const loader = document.getElementById('smoothLoader');
+        if(loader) {
+            loader.style.display = 'flex';
+            loader.offsetHeight; 
+            loader.classList.remove('opacity-0', 'pointer-events-none');
+            loader.classList.add('opacity-100');
+        }
+    };
+    
+    document.querySelectorAll('.smooth-route').forEach(link => {
+        link.addEventListener('click', function(e) {
+            if(this.target !== '_blank' && !e.ctrlKey) showLoader();
+        });
+    });
 
-            init() {
-                // Kecepatan di-set menjadi 150ms agar benar-benar instan
-                this.$watch('searchQuery', Alpine.debounce((value) => {
-                    const trimmed = value.trim();
-                    if (trimmed.length >= 1 || trimmed.length === 0) {
-                        this.fetchData();
-                    }
-                }, 150));
-            },
-
-            switchTab(type) {
-                if(this.currentType === type) return; 
-                this.currentType = type;
-                this.searchQuery = ''; 
-                this.fetchData();
-            },
-
-            clearSearch() { 
-                this.searchQuery = ''; 
-            },
-
-            async fetchData() {
-                this.isSearching = true;
-                let url = new URL(window.location.origin + '{{ route('bidan.rekam-medis.index', [], false) }}');
-                url.searchParams.append('type', this.currentType);
-                if(this.searchQuery.trim() !== '') {
-                    url.searchParams.append('search', this.searchQuery.trim());
-                }
-                
-                window.history.pushState({}, '', url);
-
-                try {
-                    let response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                    if (!response.ok) throw new Error("Server Error");
-                    
-                    let html = await response.text();
-                    let parser = new DOMParser();
-                    let doc = parser.parseFromString(html, 'text/html');
-                    
-                    document.getElementById('emr-grid-container').innerHTML = doc.getElementById('emr-grid-container').innerHTML;
-                } catch (e) {
-                    console.error('AJAX Error:', e);
-                    window.location.reload(); 
-                } finally {
-                    this.isSearching = false;
-                }
-            }
-        }));
+    window.addEventListener('pageshow', () => {
+        const loader = document.getElementById('smoothLoader');
+        if(loader) {
+            loader.classList.remove('opacity-100');
+            loader.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => loader.style.display = 'none', 300);
+        }
     });
 </script>
 @endpush
-@endsection

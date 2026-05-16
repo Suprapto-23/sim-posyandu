@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kader;
 use App\Http\Controllers\Controller;
 use App\Models\IbuHamil;
 use App\Models\User;
+use App\Traits\SyncsUserAccount;
 use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,7 @@ use Illuminate\Support\Str;
  */
 class IbuHamilController extends Controller
 {
+    use SyncsUserAccount;
     /**
      * 1. INDEX: Menampilkan Direktori Ibu Hamil
      */
@@ -85,58 +87,78 @@ class IbuHamilController extends Controller
      * 3. STORE: Menyimpan Data Ibu Hamil Baru
      */
     public function store(Request $request)
-    {
-        $request->validate([
-            'nik'              => 'nullable|digits:16|unique:ibu_hamils,nik',
-            'nama_lengkap'     => 'required|string|max:191',
-            'tempat_lahir'     => 'required|string|max:100',
-            'tanggal_lahir'    => 'required|date|before:today',
-            'nama_suami'       => 'nullable|string|max:191',
-            'telepon'          => 'nullable|string|max:20',
-            'alamat'           => 'required|string',
-            'hpht'             => 'nullable|date|before_or_equal:today', // Hari Pertama Haid Terakhir
-            'hpl'              => 'nullable|date|after:today',           // Hari Perkiraan Lahir
-            'status'           => 'required|in:aktif,melahirkan,keguguran',
-        ], [
-            'nik.unique'       => 'Peringatan: NIK ibu ini sudah terdaftar di dalam database Bumil.',
-            'nik.digits'       => 'NIK harus terdiri dari 16 digit angka yang valid.',
-            'tanggal_lahir.before' => 'Tanggal lahir tidak valid.',
-            'hpl.after'        => 'Hari Perkiraan Lahir harus di masa depan.',
+{
+    // PERBAIKAN 1: Ubah validasi HPL
+    $request->validate([
+        'nik'              => 'nullable|digits:16|unique:ibu_hamils,nik',
+        'nama_lengkap'     => 'required|string|max:191',
+        'tempat_lahir'     => 'required|string|max:100',
+        'tanggal_lahir'    => 'required|date|before:today',
+        'nama_suami'       => 'nullable|string|max:191',
+        'telepon_ortu'     => 'nullable|string|max:20',  // ← Ganti dari 'telepon'
+        'alamat'           => 'required|string',
+        'hpht'             => 'nullable|date|before_or_equal:today',
+        'hpl'              => 'nullable|date',  // ← HAPUS 'after:today'
+        'status'           => 'required|in:aktif,selesai',  // ← Sesuaikan dengan DB
+        'golongan_darah'   => 'nullable|string|max:3',
+        'berat_badan'      => 'nullable|numeric|min:20|max:200',
+        'tinggi_badan'     => 'nullable|numeric|min:50|max:250',
+    ], [
+        'nik.unique'       => 'Peringatan: NIK ibu ini sudah terdaftar di dalam database Bumil.',
+        'nik.digits'       => 'NIK harus terdiri dari 16 digit angka yang valid.',
+        'tanggal_lahir.before' => 'Tanggal lahir tidak valid.',
+        'status.in'        => 'Status harus aktif atau selesai',  // ← Tambahkan
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Generate Kode Rekam Medis (perbaiki nama kolom)
+        $kode_hamil = 'BML-' . date('Ymd') . '-' . strtoupper(Str::random(4));
+
+        // Cari user terhubung
+        $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
+
+        // PERBAIKAN 2: Hitung IMT otomatis jika data tersedia
+        $imt = null;
+        if ($request->berat_badan && $request->tinggi_badan && $request->tinggi_badan > 0) {
+            $tinggiM = $request->tinggi_badan / 100;
+            $imt = round($request->berat_badan / ($tinggiM * $tinggiM), 2);
+        }
+
+        // PERBAIKAN 3: Masukkan SEMUA field ke dalam create
+        IbuHamil::create([
+            'kode_hamil'       => $kode_hamil,        // ← Ganti dari 'kode_bumil'
+            'user_id'          => $linkedUser ? $linkedUser->id : null,
+            'nik'              => $request->nik,
+            'nama_lengkap'     => $request->nama_lengkap,
+            'tempat_lahir'     => $request->tempat_lahir,
+            'tanggal_lahir'    => $request->tanggal_lahir,
+            'nama_suami'       => $request->nama_suami,
+            'telepon_ortu'     => $request->telepon_ortu,  // ← Ganti dari 'telepon'
+            'alamat'           => $request->alamat,
+            'hpht'             => $request->hpht,
+            'hpl'              => $request->hpl,
+            'golongan_darah'   => $request->golongan_darah,  // ← TAMBAHKAN
+            'riwayat_penyakit' => $request->riwayat_penyakit ?? null,
+            'berat_badan'      => $request->berat_badan,      // ← TAMBAHKAN
+            'tinggi_badan'     => $request->tinggi_badan,     // ← TAMBAHKAN
+            'imt'              => $imt,                       // ← TAMBAHKAN
+            'status'           => $request->status,
+            'created_by'       => Auth::id(),
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Generate Kode Rekam Medis Khusus Bumil (BML-YYYYMMDD-XXXX)
-            $kode_bumil = 'BML-' . date('Ymd') . '-' . strtoupper(Str::random(4));
-
-            // Engine Cerdas: Cari otomatis akun Warga (Ibu) yang memiliki NIK sama
-            $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
-
-            IbuHamil::create([
-                'kode_bumil'       => $kode_bumil,
-                'user_id'          => $linkedUser ? $linkedUser->id : null,
-                'nik'              => $request->nik,
-                'nama_lengkap'     => $request->nama_lengkap,
-                'tempat_lahir'     => $request->tempat_lahir,
-                'tanggal_lahir'    => $request->tanggal_lahir,
-                'nama_suami'       => $request->nama_suami,
-                'telepon'          => $request->telepon,
-                'alamat'           => $request->alamat,
-                'hpht'             => $request->hpht,
-                'hpl'              => $request->hpl,
-                'status'           => $request->status,
-                'created_by'       => Auth::id(), // ID Kader pencatat
-            ]);
-
-            DB::commit();
-            return redirect()->route('kader.data.ibu-hamil.index')->with('success', 'Registrasi Selesai! Data Ibu Hamil berhasil ditambahkan ke Direktori.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('KADER_BUMIL_STORE_ERROR: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Kegagalan Sistem: Data gagal disimpan. Silakan coba kembali.');
-        }
+        DB::commit();
+        return redirect()->route('kader.data.ibu-hamil.index')
+            ->with('success', 'Registrasi Selesai! Data Ibu Hamil berhasil ditambahkan ke Direktori.');
+            
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        Log::error('KADER_BUMIL_STORE_ERROR: ' . $e->getMessage());
+        
+        // Tampilkan error spesifik untuk debugging
+        return back()->withInput()->with('error', 'Kegagalan Sistem: ' . $e->getMessage());
     }
-
+}
    /**
      * 4. SHOW: Detail Buku KIA Bumil
      */
@@ -166,49 +188,65 @@ class IbuHamilController extends Controller
      * 6. UPDATE: Pembaruan Data
      */
     public function update(Request $request, $id)
-    {
-        $ibuHamil = IbuHamil::findOrFail($id);
+{
+    $ibuHamil = IbuHamil::findOrFail($id);
 
-        $request->validate([
-            'nik'              => 'nullable|digits:16|unique:ibu_hamils,nik,' . $ibuHamil->id,
-            'nama_lengkap'     => 'required|string|max:191',
-            'tempat_lahir'     => 'required|string|max:100',
-            'tanggal_lahir'    => 'required|date|before:today',
-            'nama_suami'       => 'nullable|string|max:191',
-            'telepon'          => 'nullable|string|max:20',
-            'alamat'           => 'required|string',
-            'hpht'             => 'nullable|date|before_or_equal:today',
-            'hpl'              => 'nullable|date', // Bisa di masa lalu jika sudah melahirkan
-            'status'           => 'required|in:aktif,melahirkan,keguguran',
+    $request->validate([
+        'nik'              => 'nullable|digits:16|unique:ibu_hamils,nik,' . $ibuHamil->id,
+        'nama_lengkap'     => 'required|string|max:191',
+        'tempat_lahir'     => 'required|string|max:100',
+        'tanggal_lahir'    => 'required|date|before:today',
+        'nama_suami'       => 'nullable|string|max:191',
+        'telepon_ortu'     => 'nullable|string|max:20',
+        'alamat'           => 'required|string',
+        'hpht'             => 'nullable|date|before_or_equal:today',
+        'hpl'              => 'nullable|date',  // ← HAPUS after:today
+        'status'           => 'required|in:aktif,selesai',
+        'golongan_darah'   => 'nullable|string|max:3',
+        'berat_badan'      => 'nullable|numeric',
+        'tinggi_badan'     => 'nullable|numeric',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Hitung ulang IMT
+        $imt = null;
+        if ($request->berat_badan && $request->tinggi_badan && $request->tinggi_badan > 0) {
+            $tinggiM = $request->tinggi_badan / 100;
+            $imt = round($request->berat_badan / ($tinggiM * $tinggiM), 2);
+        }
+
+        $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
+
+        $ibuHamil->update([
+            'user_id'          => $linkedUser ? $linkedUser->id : $ibuHamil->user_id,
+            'nik'              => $request->nik,
+            'nama_lengkap'     => $request->nama_lengkap,
+            'tempat_lahir'     => $request->tempat_lahir,
+            'tanggal_lahir'    => $request->tanggal_lahir,
+            'nama_suami'       => $request->nama_suami,
+            'telepon_ortu'     => $request->telepon_ortu,
+            'alamat'           => $request->alamat,
+            'hpht'             => $request->hpht,
+            'hpl'              => $request->hpl,
+            'golongan_darah'   => $request->golongan_darah,
+            'riwayat_penyakit' => $request->riwayat_penyakit ?? null,
+            'berat_badan'      => $request->berat_badan,
+            'tinggi_badan'     => $request->tinggi_badan,
+            'imt'              => $imt,
+            'status'           => $request->status,
         ]);
 
-        DB::beginTransaction();
-        try {
-            // Cek ulang sinkronisasi jika NIK / Nama berubah
-            $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
-
-            $ibuHamil->update([
-                'user_id'          => $linkedUser ? $linkedUser->id : $ibuHamil->user_id,
-                'nik'              => $request->nik,
-                'nama_lengkap'     => $request->nama_lengkap,
-                'tempat_lahir'     => $request->tempat_lahir,
-                'tanggal_lahir'    => $request->tanggal_lahir,
-                'nama_suami'       => $request->nama_suami,
-                'telepon'          => $request->telepon,
-                'alamat'           => $request->alamat,
-                'hpht'             => $request->hpht,
-                'hpl'              => $request->hpl,
-                'status'           => $request->status,
-            ]);
-
-            DB::commit();
-            return redirect()->route('kader.data.ibu-hamil.show', $ibuHamil->id)->with('success', 'Koreksi Disimpan! Data Ibu Hamil telah diperbarui.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('KADER_BUMIL_UPDATE_ERROR: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Kegagalan Sistem saat memperbarui data.');
-        }
+        DB::commit();
+        return redirect()->route('kader.data.ibu-hamil.show', $ibuHamil->id)
+            ->with('success', 'Koreksi Disimpan! Data Ibu Hamil telah diperbarui.');
+            
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        Log::error('KADER_BUMIL_UPDATE_ERROR: ' . $e->getMessage());
+        return back()->withInput()->with('error', 'Kegagalan Sistem: ' . $e->getMessage());
     }
+}
 
     /**
      * 7. DESTROY: Hapus Permanen 1 Data
@@ -271,43 +309,5 @@ class IbuHamilController extends Controller
         }
 
         return redirect()->back()->with('error', 'Gagal! Tidak ditemukan akun Warga dengan NIK tersebut. Pastikan Ibu sudah melakukan registrasi di portal Warga PosyanduCare.');
-    }
-
-    /**
-     * 10. HELPER: Pencari Akun Lintas Tabel (SQL Query - Anti Memory Leak)
-     */
-    private function findLinkedUser($nik, $nama_lengkap)
-    {
-        $cleanNik  = preg_replace('/[^0-9]/', '', (string)$nik);
-        $cleanName = trim((string)$nama_lengkap);
-
-        if (empty($cleanNik) && empty($cleanName)) return null;
-
-        // TAHAP 1: Cari berdasarkan NIK yang akurat
-        if (!empty($cleanNik)) {
-            $user = User::where('nik', $cleanNik)
-                        ->orWhere('username', $cleanNik)
-                        ->orWhere('email', $cleanNik)
-                        ->first();
-            if ($user) return $user;
-
-            if (Schema::hasTable('profiles')) {
-                $profile = Profile::where('nik', $cleanNik)->orWhere('no_ktp', $cleanNik)->first();
-                if ($profile && $profile->user) return $profile->user;
-            }
-        }
-
-        // TAHAP 2: Fallback dengan Fuzzy Search Nama
-        if (!empty($cleanName)) {
-            $userByName = User::where('name', 'LIKE', "%{$cleanName}%")->first();
-            if ($userByName) return $userByName;
-
-            if (Schema::hasTable('profiles')) {
-                $profileByName = Profile::where('full_name', 'LIKE', "%{$cleanName}%")->first();
-                if ($profileByName && $profileByName->user) return $profileByName->user;
-            }
-        }
-
-        return null;
     }
 }

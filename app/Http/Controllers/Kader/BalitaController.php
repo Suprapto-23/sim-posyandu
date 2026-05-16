@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kader;
 use App\Http\Controllers\Controller;
 use App\Models\Balita;
 use App\Models\User;
+use App\Traits\SyncsUserAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,7 @@ use Carbon\Carbon;
 
 class BalitaController extends Controller
 {
+    use SyncsUserAccount;
     /**
      * =========================================================================
      * 1. MENAMPILKAN DATABASE (INDEX) DENGAN FILTER UMUR CERDAS
@@ -56,28 +58,27 @@ class BalitaController extends Controller
 
     /**
      * =========================================================================
-     * 3. SIMPAN DATA REGISTRASI (DENGAN PROTEKSI UMUR)
+     * 3. SIMPAN DATA REGISTRASI (DENGAN PROTEKSI UMUR & 1:1 NIK)
      * =========================================================================
      */
     public function store(Request $request)
     {
-        // Validasi Aturan Form
+        // Validasi Aturan Form (NIK Ibu & Ayah dihapus dari kewajiban)
         $request->validate([
             'nama_lengkap'  => 'required|string|max:255',
-            'nik'           => 'nullable|numeric|digits:16|unique:balitas,nik',
+            'nik'           => 'required|numeric|digits:16|unique:balitas,nik', // NIK Anak Wajib & Unik
             'jenis_kelamin' => 'required|in:L,P',
             'tempat_lahir'  => 'required|string|max:100',
             'tanggal_lahir' => 'required|date|before_or_equal:today',
-            'nik_ibu'       => 'required|numeric|digits:16',
             'nama_ibu'      => 'required|string|max:255',
-            'nik_ayah'      => 'nullable|numeric|digits:16',
             'nama_ayah'     => 'nullable|string|max:255',
             'alamat'        => 'required|string',
             'berat_lahir'   => 'nullable|numeric|min:0',
             'panjang_lahir' => 'nullable|numeric|min:0',
         ], [
-            'nik.unique'          => 'NIK anak ini sudah terdaftar di sistem kami.',
-            'nik_ibu.digits'      => 'Format NIK Ibu harus berisi tepat 16 digit angka.',
+            'nik.required'        => 'NIK Anak wajib diisi sebagai kunci sistem.',
+            'nik.digits'          => 'NIK Anak harus berisi tepat 16 digit angka.',
+            'nik.unique'          => 'Sistem mendeteksi NIK anak ini sudah terdaftar sebelumnya.',
             'tanggal_lahir.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini (masa depan).',
         ]);
 
@@ -105,9 +106,9 @@ class BalitaController extends Controller
                 'tempat_lahir'  => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
                 'jenis_kelamin' => $request->jenis_kelamin,
-                'nik_ibu'       => $request->nik_ibu,
+                'nik_ibu'       => null, // Sengaja di-null-kan karena sudah pakai sistem 1:1
                 'nama_ibu'      => $request->nama_ibu,
-                'nik_ayah'      => $request->nik_ayah,
+                'nik_ayah'      => null, 
                 'nama_ayah'     => $request->nama_ayah,
                 'alamat'        => $request->alamat,
                 'berat_lahir'   => $request->berat_lahir,
@@ -115,8 +116,8 @@ class BalitaController extends Controller
                 'created_by'    => Auth::id(),
             ]);
 
-            // Deteksi Akun Warga Otomatis
-            $linkedUser = $this->findLinkedUser($request->nik_ibu, $request->nama_ibu);
+            // Deteksi Akun Warga Otomatis (MENGGUNAKAN NIK BALITA SECARA LANGSUNG)
+            $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
             if ($linkedUser) {
                 $balita->user_id = $linkedUser->id;
                 $balita->save(); 
@@ -126,10 +127,10 @@ class BalitaController extends Controller
             
             if ($linkedUser) {
                 return redirect()->route('kader.data.balita.index')
-                    ->with('success', 'Registrasi Sukses! Data anak tersimpan dan tersinkronisasi dengan akun Ibu di aplikasi Warga.');
+                    ->with('success', 'Registrasi Sukses! Data anak tersimpan dan otomatis terhubung dengan akun Login.');
             } else {
                 return redirect()->route('kader.data.balita.index')
-                    ->with('warning', "Registrasi Tersimpan! Namun belum ada akun Warga dengan NIK Ibu {$request->nik_ibu}. Anda dapat menyinkronkannya nanti jika Ibu sudah mendaftar.");
+                    ->with('warning', "Registrasi Tersimpan! Namun belum ada akun pengguna dengan NIK {$request->nik} di sistem. Integrasi tertunda sampai akun dibuat oleh Admin.");
             }
 
         } catch (\Exception $e) {
@@ -155,7 +156,8 @@ class BalitaController extends Controller
         
         $userTerhubung = $balita->user;
         if (!$userTerhubung) {
-            $userTerhubung = $this->findLinkedUser($balita->nik_ibu, $balita->nama_ibu);
+            // Lacak via NIK Balita
+            $userTerhubung = $this->findLinkedUser($balita->nik, $balita->nama_lengkap);
         }
 
         return view('kader.data.balita.show', [
@@ -190,20 +192,17 @@ class BalitaController extends Controller
             
         $request->validate([
             'nama_lengkap'  => 'required|string|max:255',
-            'nik'           => 'nullable|numeric|digits:16|unique:balitas,nik,' . $id,
+            'nik'           => 'required|numeric|digits:16|unique:balitas,nik,' . $id,
             'jenis_kelamin' => 'required|in:L,P',
             'tempat_lahir'  => 'required|string|max:100',
             'tanggal_lahir' => 'required|date|before_or_equal:today',
-            'nik_ibu'       => 'required|numeric|digits:16',
             'nama_ibu'      => 'required|string|max:255',
-            'nik_ayah'      => 'nullable|numeric|digits:16',
             'nama_ayah'     => 'nullable|string|max:255',
             'alamat'        => 'required|string',
             'berat_lahir'   => 'nullable|numeric|min:0',
             'panjang_lahir' => 'nullable|numeric|min:0',
         ]);
 
-        // 🔥 VALIDASI UMUR SAAT UPDATE
         $tanggalLahir = Carbon::parse($request->tanggal_lahir);
         $usiaBulan = $tanggalLahir->diffInMonths(now());
         
@@ -213,19 +212,20 @@ class BalitaController extends Controller
 
         DB::beginTransaction();
         try {
-            $balita->update($request->except(['_token', '_method', 'user_id']));
+            $updateData = $request->except(['_token', '_method', 'user_id', 'nik_ibu', 'nik_ayah']);
+            $balita->update($updateData);
 
-            // Cek ulang sinkronisasi akun, siapa tahu NIK Ibu baru saja dikoreksi
-            $linkedUser = $this->findLinkedUser($request->nik_ibu, $request->nama_ibu);
+            // Cek ulang sinkronisasi akun dengan NIK Balita yang baru diedit
+            $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
             $balita->user_id = $linkedUser ? $linkedUser->id : null;
             $balita->save();
 
             DB::commit();
 
             if ($linkedUser) {
-                return redirect()->route('kader.data.balita.index')->with('success', 'Pembaruan Berhasil! Data balita terkoreksi dan afirmasi akun warga terhubung.');
+                return redirect()->route('kader.data.balita.index')->with('success', 'Pembaruan Berhasil! Data terkoreksi dan afirmasi akses login warga terhubung.');
             } else {
-                return redirect()->route('kader.data.balita.index')->with('warning', 'Pembaruan Berhasil! Namun sinkronisasi akun Ibu terputus (NIK tidak ditemukan di sistem Warga).');
+                return redirect()->route('kader.data.balita.index')->with('warning', 'Pembaruan Berhasil! Namun sinkronisasi akun Login terputus (NIK tidak ditemukan di sistem).');
             }
                 
         } catch (\Exception $e) {
@@ -237,14 +237,13 @@ class BalitaController extends Controller
 
     /**
      * =========================================================================
-     * 7. HAPUS SATU DATA (DENGAN PROTEKSI RELASI MEDIS)
+     * 7. HAPUS SATU DATA
      * =========================================================================
      */
     public function destroy($id)
     {
         $balita = Balita::findOrFail($id);
         
-        // Proteksi Data Rekam Medis
         if ($balita->kunjungans()->count() > 0) {
             return back()->with('error', 'Tindakan Dilarang! Anak ini sudah memiliki rekam medis / riwayat kunjungan. Penghapusan akan merusak laporan Posyandu.');
         }
@@ -255,7 +254,7 @@ class BalitaController extends Controller
 
     /**
      * =========================================================================
-     * 8. HAPUS MASAL (BULK DELETE DENGAN PROTEKSI)
+     * 8. HAPUS MASAL
      * =========================================================================
      */
     public function bulkDelete(Request $request)
@@ -265,7 +264,6 @@ class BalitaController extends Controller
             return redirect()->back()->with('error', 'Misi Dibatalkan: Tidak ada data yang dicentang untuk dihapus.');
         }
 
-        // Cari tahu apakah dari ID yang dicentang ada anak yang sudah berobat
         $anakAktif = Balita::whereIn('id', $ids)->has('kunjungans')->count();
         
         if ($anakAktif > 0) {
@@ -292,55 +290,15 @@ class BalitaController extends Controller
     public function syncUser($id)
     {
         $balita = Balita::findOrFail($id);
-        $user = $this->findLinkedUser($balita->nik_ibu, $balita->nama_ibu);
+        // Lacak via NIK Anak
+        $user = $this->findLinkedUser($balita->nik, $balita->nama_lengkap);
         
         if ($user) {
             $balita->user_id = $user->id;
             $balita->save();
-            return redirect()->back()->with('success', "Integrasi Terkunci! Akun anak berhasil dihubungkan dengan perangkat Warga ({$user->name}).");
+            return redirect()->back()->with('success', "Integrasi Terkunci! Akun anak berhasil dihubungkan dengan perangkat akses NIK tersebut.");
         }
 
-        return redirect()->back()->with('error', 'Pencarian Gagal. Sistem tidak menemukan pengguna aplikasi dengan NIK Ibu tersebut.');
-    }
-
-    /**
-     * =========================================================================
-     * 10. ENGINE "RADAR SAPU JAGAT" UNTUK DETEKSI AKUN
-     * =========================================================================
-     */
-    private function findLinkedUser($nik_ibu, $nama_ibu)
-    {
-        $cleanNik = preg_replace('/[^0-9]/', '', (string)$nik_ibu);
-        $cleanName = trim((string)$nama_ibu);
-
-        // Geledah Tabel Users
-        $users = User::all();
-        foreach($users as $user) {
-            if (!empty($cleanNik)) {
-                if (($user->nik ?? '') === $cleanNik) return $user;
-                if (($user->username ?? '') === $cleanNik) return $user;
-                if (($user->email ?? '') === $cleanNik) return $user;
-            }
-            if (!empty($cleanName)) {
-                if (stripos($user->name, $cleanName) !== false) return $user;
-                if (stripos($user->username ?? '', $cleanName) !== false) return $user;
-            }
-        }
-
-        // Geledah Tabel Profiles (Jika aplikasi Warga Anda memakai tabel profil terpisah)
-        if (Schema::hasTable('profiles')) {
-            $profiles = DB::table('profiles')->get();
-            foreach($profiles as $p) {
-                if (!empty($cleanNik)) {
-                    if (($p->nik ?? '') === $cleanNik) return User::find($p->user_id);
-                    if (($p->no_ktp ?? '') === $cleanNik) return User::find($p->user_id);
-                }
-                if (!empty($cleanName)) {
-                    if (stripos($p->full_name ?? '', $cleanName) !== false) return User::find($p->user_id);
-                }
-            }
-        }
-
-        return null;
+        return redirect()->back()->with('error', 'Pencarian Gagal. Sistem tidak menemukan pengguna aplikasi dengan NIK Anak tersebut di database utama.');
     }
 }

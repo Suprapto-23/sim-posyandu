@@ -35,20 +35,20 @@
     @endif
 
     {{-- Info Alert Premium (Ocean Blue) --}}
-    <div class="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 mb-8 flex items-start gap-4 shadow-sm relative overflow-hidden">
-        <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-200/50 rounded-full blur-2xl pointer-events-none"></div>
-        <div class="w-12 h-12 rounded-2xl bg-white text-blue-600 flex items-center justify-center text-xl shrink-0 shadow-sm">
-            <i class="fas fa-info-circle"></i>
-        </div>
-        <div class="relative z-10">
-            <h5 class="text-sm font-black text-blue-800 mb-1.5 tracking-wide">Sistem Registrasi Warga</h5>
-            <ul class="text-[12px] text-blue-700/80 font-medium space-y-1 list-disc list-inside">
-                <li>Email sistem akan dibuat otomatis berdasarkan format: <span class="font-bold">NIK@posyandu.user</span></li>
-                <li>Password akan <span class="text-blue-600 font-bold">digenerate otomatis</span> oleh sistem.</li>
-                <li>Pastikan NIK 100% valid agar rekam medis balita/lansia dapat otomatis tersinkronisasi.</li>
-            </ul>
-        </div>
+<div class="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 mb-8 flex items-start gap-4 shadow-sm relative overflow-hidden">
+    <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-200/50 rounded-full blur-2xl pointer-events-none"></div>
+    <div class="w-12 h-12 rounded-2xl bg-white text-blue-600 flex items-center justify-center text-xl shrink-0 shadow-sm">
+        <i class="fas fa-id-card"></i>
     </div>
+    <div class="relative z-10">
+        <h5 class="text-sm font-black text-blue-800 mb-1.5 tracking-wide">Autentikasi Berbasis NIK</h5>
+        <ul class="text-[12px] text-blue-700/80 font-medium space-y-1 list-disc list-inside">
+            <li>Warga akan login menggunakan <span class="font-bold text-blue-600">Nomor Induk Kependudukan (NIK)</span> sebagai ID Pengguna.</li>
+            <li>Sistem <span class="text-blue-600 font-bold">tidak memerlukan email</span> untuk pendaftaran warga.</li>
+            <li>Password akan digenerate otomatis dan wajib diberikan kepada warga setelah pendaftaran selesai.</li>
+        </ul>
+    </div>
+</div>
 
     <form action="{{ route('admin.users.store') }}" method="POST" id="wargaForm">
         @csrf

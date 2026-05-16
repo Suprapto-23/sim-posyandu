@@ -143,20 +143,18 @@
                     @forelse($users ?? [] as $u)
                     <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors text-center">
                         
-                        {{-- Kolom 1: Nama Warga & Kategori Label --}}
-                        <td class="py-4 px-6 text-left">
-                            <div class="flex items-center gap-3 w-max">
-                                <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black shadow-sm shrink-0 border border-blue-200/50">
-                                    {{ strtoupper(substr($u->profile->full_name ?? $u->name, 0, 1)) }}
-                                </div>
-                                <div>
-                                    <div class="font-bold text-slate-800">{{ $u->profile->full_name ?? $u->name }}</div>
-                                    <div class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                                        <i class="fas fa-envelope"></i> {{ $u->email }}
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
+                       {{-- Kolom 1: Nama Warga --}}
+<td class="py-4 px-6 text-left">
+    <div class="flex items-center gap-3 w-max">
+        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black shadow-sm shrink-0 border border-blue-200/50">
+            {{ strtoupper(substr($u->profile->full_name ?? $u->name, 0, 1)) }}
+        </div>
+        <div class="flex flex-col justify-center">
+            <div class="font-bold text-slate-800 leading-tight">{{ $u->profile->full_name ?? $u->name }}</div>
+            <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-0.5">Warga Aktif</div>
+        </div>
+    </div>
+</td>
 
                         {{-- Kolom 2: NIK --}}
                         <td class="py-4 px-6">

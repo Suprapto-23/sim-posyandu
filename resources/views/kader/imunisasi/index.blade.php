@@ -1,250 +1,271 @@
 @extends('layouts.kader')
+
 @section('title', 'Tracker Imunisasi')
 @section('page-name', 'Log Vaksinasi Warga')
 
 @push('styles')
+{{-- Engine Ikon Phosphor --}}
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
-    /* =================================================================
-       NEXUS SAAS DESIGN SYSTEM (DASHBOARD EDITION)
-       ================================================================= */
+    /* ====================================================================
+       1. ULTRA-SMOOTH CHOREOGRAPHY (120FPS ANIMATION)
+       ==================================================================== */
+    .layer-gpu { transform: translateZ(0); backface-visibility: hidden; will-change: transform, opacity; }
     
-    /* Animasi Masuk Beruntun */
-    .animate-fade-in { opacity: 0; animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .delay-100 { animation-delay: 0.1s; } .delay-200 { animation-delay: 0.15s; } .delay-300 { animation-delay: 0.2s; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Kartu Widget Analitik (Depth & Precision) */
-    .stat-card {
-        background: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 1.5rem;
-        box-shadow: 0 4px 20px -10px rgba(15, 23, 42, 0.03); transition: all 0.3s ease;
-        display: flex; align-items: center; gap: 1.25rem; position: relative; overflow: hidden;
+    @keyframes swoopIn {
+        0% { opacity: 0; transform: translateY(20px) scale(0.995); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px -10px rgba(15, 23, 42, 0.06); border-color: #cbd5e1; }
+
+    .stagger-nexus > * { opacity: 0; animation: swoopIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .stagger-nexus > *:nth-child(1) { animation-delay: 40ms; }
+    .stagger-nexus > *:nth-child(2) { animation-delay: 100ms; }
+    .stagger-nexus > *:nth-child(3) { animation-delay: 160ms; }
+    .stagger-nexus > *:nth-child(4) { animation-delay: 220ms; }
+
+    /* ====================================================================
+       2. PREMIUM SAAS COMPONENTS (LIGHT & CLEAN)
+       ==================================================================== */
+    .nexus-panel {
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 4px 20px -5px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(226, 232, 240, 0.5);
+        transition: box-shadow 0.3s ease;
+    }
     
-    /* Filter Tabs (Segmented Control ala iOS) */
-    .segment-control { display: flex; background: #f1f5f9; padding: 0.35rem; border-radius: 16px; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; }
-    .segment-btn {
-        flex: 1; min-width: 130px; text-align: center; padding: 0.65rem 1rem; border-radius: 12px; 
-        font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; 
-        cursor: pointer; transition: all 0.2s ease; border: 1px solid transparent; white-space: nowrap;
+    .nexus-input {
+        width: 100%; padding: 0.85rem 1.25rem 0.85rem 2.75rem;
+        background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 14px; color: #334155; font-size: 13px; font-weight: 500;
+        transition: all 0.2s ease; outline: none;
     }
-    .segment-btn:hover { color: #334155; background: #e2e8f0; }
-    .segment-btn.active { background: #ffffff; color: #4f46e5; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+    .nexus-input:focus { background: #ffffff; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
-    /* Input Pencarian Kapsul */
-    .nexus-search {
-        width: 100%; background-color: #ffffff; border: 1px solid #cbd5e1; color: #1e293b;
-        font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500;
-        border-radius: 9999px; padding: 0.75rem 1.5rem 0.75rem 2.75rem; outline: none; transition: all 0.2s ease;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    /* iOS Segmented Control */
+    .ios-segment { display: flex; background: #f1f5f9; padding: 4px; border-radius: 16px; overflow-x: auto; }
+    .ios-segment::-webkit-scrollbar { display: none; }
+    .ios-btn { flex: 1; text-align: center; padding: 9px 16px; font-size: 12px; font-weight: 600; color: #64748b; transition: all 0.2s ease; white-space: nowrap; border-radius: 12px; cursor: pointer; border: 1px solid transparent; }
+    .ios-btn.active { background: #ffffff; color: #4f46e5; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border-color: #e2e8f0; }
+    .ios-btn:hover:not(.active) { color: #334155; background: rgba(255,255,255,0.4); }
+
+    /* ====================================================================
+       3. MASTERPIECE TABLE & MICRO-BADGES
+       ==================================================================== */
+    .tr-master { transition: all 0.2s ease; border-bottom: 1px solid #f1f5f9; }
+    .tr-master:hover { background-color: #f8fafc; transform: translateY(-1px); }
+    
+    .med-badge {
+        display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; border-radius: 6px; 
+        font-size: 11px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; 
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
-    .nexus-search:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
-    /* Tabel Nexus Seamless */
-    .nexus-table-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 28px; box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.04); overflow: hidden; }
-    .nexus-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .nexus-table th { background: #fcfcfd; color: #64748b; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 1.25rem 1.5rem; border-bottom: 1px solid #e2e8f0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
-    .nexus-table td { padding: 1.25rem 1.5rem; vertical-align: middle; border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s; }
-    .nexus-table tr:last-child td { border-bottom: none; }
-    .nexus-table tr:hover td { background-color: #f8fafc; }
-
-    /* Kapsul Dinamis */
-    .pill-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
+    .c-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+    .c-scroll::-webkit-scrollbar-track { background: transparent; }
+    .c-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .c-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
     /* AJAX Loader Mulus */
     #mainContentArea { transition: opacity 0.3s ease, transform 0.3s ease; }
-    .is-loading { opacity: 0.4; transform: scale(0.995); pointer-events: none; }
+    .is-loading { opacity: 0.5; transform: scale(0.995); pointer-events: none; }
 </style>
 @endpush
 
 @section('content')
-<div class="max-w-[1250px] mx-auto animate-fade-in pb-20 relative z-10 mt-2">
+<div class="max-w-[1450px] mx-auto stagger-nexus pb-20 layer-gpu mt-2">
 
-    {{-- AURA BACKGROUND (Eksklusif & Lembut) --}}
+    {{-- AURA BACKGROUND (Soft Ambient) --}}
     <div class="fixed top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
     <div class="fixed bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-    {{-- ==========================================================
-         1. HEADER & DASHBOARD ANALYTICS (WIDGETS)
-         ========================================================== --}}
-    <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-8">
+    {{-- 1. HERO HEADER & STATS WIDGETS --}}
+    <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-8 mb-8 px-2">
         
         {{-- Judul Halaman --}}
         <div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-md mb-3 shadow-sm">
+            <div class="inline-flex items-center gap-2 mb-1.5 px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-lg">
                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span class="text-[9px] font-bold uppercase tracking-widest">Wewenang Bidan (Read-Only)</span>
+                <span class="text-[9.5px] font-bold text-rose-600 uppercase tracking-widest">Wewenang Bidan (Read-Only)</span>
             </div>
-            <h1 class="text-3xl font-bold text-slate-900 tracking-tight font-poppins mb-1.5">Cakupan Imunisasi</h1>
-            <p class="text-slate-500 font-medium text-[13px]">Monitoring pelaksanaan imunisasi dasar balita dan tetanus ibu hamil.</p>
+            <div class="flex items-center gap-4 mt-2">
+                <div class="w-12 h-12 rounded-[14px] bg-gradient-to-br from-indigo-50 to-blue-50 text-indigo-600 flex items-center justify-center text-[24px] shrink-0 border border-indigo-100 shadow-sm">
+                    <i class="ph-fill ph-syringe"></i>
+                </div>
+                <div>
+                    <h1 class="text-[26px] md:text-[30px] font-bold text-slate-800 tracking-tight font-poppins leading-none mb-1">Cakupan Imunisasi</h1>
+                    <p class="text-slate-500 font-medium text-[13.5px]">Monitoring riwayat vaksinasi balita dan tetanus ibu hamil.</p>
+                </div>
+            </div>
         </div>
 
-        {{-- Widget Statistik (Didorong dari Scopes Controller) --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-auto shrink-0 animate-fade-in delay-100">
-            <div class="stat-card">
-                <div class="w-12 h-12 rounded-[14px] bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl border border-indigo-100 shrink-0"><i class="fas fa-syringe"></i></div>
+        {{-- Widget Statistik --}}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-auto shrink-0">
+            <div class="nexus-panel !rounded-[20px] p-4 flex items-center gap-4 min-w-[180px]">
+                <div class="w-11 h-11 rounded-[12px] bg-indigo-50 text-indigo-600 flex items-center justify-center text-[22px] shrink-0"><i class="ph-fill ph-calendar-check"></i></div>
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Bulan Ini</p>
-                    <p class="text-2xl font-bold text-slate-800 font-poppins leading-none">{{ $statBulanIni ?? 0 }} <span class="text-xs font-semibold text-slate-400 normal-case ml-1">Dosis</span></p>
+                    <p class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Bulan Ini</p>
+                    <p class="text-[20px] font-bold text-slate-800 font-poppins leading-none">{{ $statBulanIni ?? 0 }} <span class="text-[10px] font-semibold text-slate-400 normal-case ml-0.5">Dosis</span></p>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="w-12 h-12 rounded-[14px] bg-sky-50 text-sky-600 flex items-center justify-center text-xl border border-sky-100 shrink-0"><i class="fas fa-baby"></i></div>
+            <div class="nexus-panel !rounded-[20px] p-4 flex items-center gap-4 min-w-[180px]">
+                <div class="w-11 h-11 rounded-[12px] bg-sky-50 text-sky-600 flex items-center justify-center text-[22px] shrink-0"><i class="ph-fill ph-baby"></i></div>
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Cakupan Balita</p>
-                    <p class="text-2xl font-bold text-slate-800 font-poppins leading-none">{{ $statBalita ?? 0 }} <span class="text-xs font-semibold text-slate-400 normal-case ml-1">Anak</span></p>
+                    <p class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Cakupan Balita</p>
+                    <p class="text-[20px] font-bold text-slate-800 font-poppins leading-none">{{ $statBalita ?? 0 }} <span class="text-[10px] font-semibold text-slate-400 normal-case ml-0.5">Anak</span></p>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="w-12 h-12 rounded-[14px] bg-pink-50 text-pink-600 flex items-center justify-center text-xl border border-pink-100 shrink-0"><i class="fas fa-female"></i></div>
+            <div class="nexus-panel !rounded-[20px] p-4 flex items-center gap-4 min-w-[180px]">
+                <div class="w-11 h-11 rounded-[12px] bg-pink-50 text-pink-600 flex items-center justify-center text-[22px] shrink-0"><i class="ph-fill ph-person-simple-walk"></i></div>
                 <div>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaksin TT Bumil</p>
-                    <p class="text-2xl font-bold text-slate-800 font-poppins leading-none">{{ $statBumil ?? 0 }} <span class="text-xs font-semibold text-slate-400 normal-case ml-1">Ibu</span></p>
+                    <p class="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Vaksin TT Bumil</p>
+                    <p class="text-[20px] font-bold text-slate-800 font-poppins leading-none">{{ $statBumil ?? 0 }} <span class="text-[10px] font-semibold text-slate-400 normal-case ml-0.5">Ibu</span></p>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- ==========================================================
-         2. KENDALI PENCARIAN & FILTER (NEXUS SAAS)
-         ========================================================== --}}
-    <div class="bg-white/80 backdrop-blur-xl border border-slate-200 rounded-[20px] p-4 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-5 relative z-20 animate-fade-in delay-200">
-        
-        <form id="filterForm" action="{{ route('kader.imunisasi.index') }}" method="GET" class="w-full flex flex-col md:flex-row items-center justify-between gap-5">
+    {{-- 2. SMART FILTER BAR (AJAX ENABLED) --}}
+    <div class="nexus-panel p-3 mb-6">
+        <form id="filterForm" action="{{ route('kader.imunisasi.index') }}" method="GET" class="flex flex-col lg:flex-row gap-3 items-stretch">
             <input type="hidden" name="kategori" id="hiddenKategori" value="{{ request('kategori', 'semua') }}">
             
-            {{-- Segmented Tabs --}}
-            <div class="segment-control w-full md:w-auto">
+            {{-- iOS Segmented Control --}}
+            <div class="ios-segment flex-1 lg:max-w-[450px]">
                 @php $reqKat = request('kategori', 'semua'); @endphp
-                <div class="segment-btn {{ $reqKat === 'semua' ? 'active' : '' }}" data-kategori="semua">
-                    <i class="fas fa-border-all mr-1.5 opacity-70"></i> Semua Program
+                <div class="ios-btn segment-btn {{ $reqKat === 'semua' ? 'active' : '' }}" data-kategori="semua">
+                    Semua Program
                 </div>
-                <div class="segment-btn {{ $reqKat === 'balita' ? 'active' : '' }}" data-kategori="balita">
-                    <i class="fas fa-baby mr-1.5 opacity-70 text-sky-500"></i> Imunisasi Balita
+                <div class="ios-btn segment-btn {{ $reqKat === 'balita' ? 'active' : '' }}" data-kategori="balita">
+                    Balita
                 </div>
-                <div class="segment-btn {{ $reqKat === 'ibu_hamil' ? 'active' : '' }}" data-kategori="ibu_hamil">
-                    <i class="fas fa-shield-virus mr-1.5 opacity-70 text-pink-500"></i> Vaksin TT Bumil
+                <div class="ios-btn segment-btn {{ $reqKat === 'ibu_hamil' ? 'active' : '' }}" data-kategori="ibu_hamil">
+                    Ibu Hamil
                 </div>
             </div>
 
-            {{-- Live Search Kapsul --}}
-            <div class="relative w-full md:w-[350px]">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[0.8rem]"></i>
-                <input type="text" name="search" id="liveSearchInput" value="{{ request('search') }}" placeholder="Cari nama warga, NIK, atau jenis vaksin..." class="nexus-search" autocomplete="off">
+            {{-- Live Search Input --}}
+            <div class="flex-1 relative flex items-center min-w-[280px]">
+                <i class="ph-bold ph-magnifying-glass absolute left-4 text-slate-400 text-[16px]"></i>
+                <input type="text" name="search" id="liveSearchInput" value="{{ request('search') }}" placeholder="Cari nama warga, NIK, atau vaksin..." class="nexus-input w-full !bg-white border-slate-200 focus:!border-indigo-500" autocomplete="off">
                 <div id="searchSpinner" class="absolute right-4 top-1/2 -translate-y-1/2 hidden text-indigo-500">
-                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <i class="ph-bold ph-spinner-gap animate-spin text-[16px]"></i>
                 </div>
             </div>
         </form>
     </div>
 
-    {{-- ==========================================================
-         3. KANVAS TABEL / EMPTY STATE (DYNAMIC AREA)
-         ========================================================== --}}
-    <div id="mainContentArea" class="animate-fade-in delay-300">
+    {{-- 3. KANVAS TABEL / EMPTY STATE (DYNAMIC AREA) --}}
+    <div id="mainContentArea" class="nexus-panel overflow-hidden flex flex-col">
         
         @if(isset($imunisasis) && $imunisasis->count() > 0)
-            <div class="nexus-table-container flex flex-col min-h-[400px]">
-                <div class="overflow-x-auto overflow-y-auto custom-scroll flex-1 max-h-[650px]">
-                    <table class="nexus-table min-w-[1050px]">
-                        <thead>
-                            <tr>
-                                <th class="w-48 pl-6 text-center">Waktu Eksekusi</th>
-                                <th class="w-72">Identitas Penerima</th>
-                                <th>Detail Vaksinasi</th>
-                                <th class="w-56">Otoritas Medis</th>
-                                <th class="w-24 text-center pr-6">Arsip</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($imunisasis as $imun)
-                            @php
-                                // Mengambil properti virtual cerdas dari Model Imunisasi
-                                $nama = $imun->nama_penerima;
-                                $nik = $imun->nik_penerima;
-                                $kategori = $imun->kategori_sasaran; // "Balita", "Ibu Hamil", dll
-                                $badgeColor = $imun->kategori_vaksin_badge; // "sky", "pink", "indigo"
-                                
-                                // Ikon dinamis berdasarkan warna badge
-                                $icon = match($badgeColor) { 'sky' => 'fa-baby', 'pink' => 'fa-female', default => 'fa-syringe' };
-                            @endphp
-                            
-                            <tr>
-                                {{-- 1. WAKTU --}}
-                                <td class="pl-6 text-center border-r border-slate-50">
-                                    <span class="block text-[13px] font-bold text-slate-800">{{ $imun->tanggal_imunisasi->format('d M Y') }}</span>
-                                    <span class="block text-[10px] font-medium text-slate-500 mt-1"><i class="far fa-clock"></i> {{ $imun->created_at->format('H:i') }} WIB</span>
-                                </td>
+            <div class="overflow-x-auto c-scroll bg-white rounded-[24px] min-h-[400px]">
+                <table class="w-full text-left border-collapse min-w-[950px]">
+                    <thead>
+                        <tr>
+                            <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[15%] text-center border-b border-slate-100">Waktu Eksekusi</th>
+                            <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[28%] border-b border-slate-100">Identitas Penerima</th>
+                            <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[28%] border-b border-slate-100">Detail Vaksinasi</th>
+                            <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[20%] border-b border-slate-100">Otoritas Medis</th>
+                            <th class="py-4 px-6 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-right border-b border-slate-100">Arsip</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($imunisasis as $imun)
+                        @php
+                            $nama = $imun->nama_penerima;
+                            $nik = $imun->nik_penerima;
+                            $kategori = ucwords(str_replace('_', ' ', $imun->kategori_sasaran)); 
+                            $badgeColor = $imun->kategori_vaksin_badge; // "sky", "pink", "indigo"
+                            $icon = match($badgeColor) { 'sky' => 'ph-baby', 'pink' => 'ph-person-simple-walk', default => 'ph-syringe' };
+                        @endphp
+                        
+                        <tr class="tr-master group/row">
+                            {{-- 1. WAKTU --}}
+                            <td class="py-4 px-6 text-center align-middle">
+                                <div class="flex flex-col items-center justify-center">
+                                    <span class="text-[13.5px] font-bold text-slate-700">{{ $imun->tanggal_imunisasi->format('d M Y') }}</span>
+                                    <span class="text-[11px] font-medium text-slate-400 mt-0.5 flex items-center gap-1"><i class="ph-fill ph-clock"></i> {{ $imun->created_at->format('H:i') }} WIB</span>
+                                </div>
+                            </td>
 
-                                {{-- 2. IDENTITAS --}}
-                                <td>
-                                    <h4 class="text-[13px] font-semibold text-slate-800 truncate mb-1" title="{{ $nama }}">{{ $nama }}</h4>
-                                    <div class="flex items-center gap-1.5">
-                                        <i class="far fa-address-card text-slate-300 text-[10px]"></i>
-                                        <span class="text-[11px] font-mono text-slate-500 tracking-wide">{{ $nik }}</span>
+                            {{-- 2. IDENTITAS --}}
+                            <td class="py-4 px-6 align-middle">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 text-slate-500 flex items-center justify-center font-bold text-[16px] shrink-0 font-poppins group-hover/row:bg-indigo-50 group-hover/row:text-indigo-600 transition-colors">
+                                        {{ strtoupper(substr($nama, 0, 1)) }}
                                     </div>
-                                </td>
-
-                                {{-- 3. DETAIL VAKSIN (Dengan Smart Badging dari Model) --}}
-                                <td>
-                                    <div class="flex items-center gap-3.5">
-                                        <div class="w-10 h-10 rounded-xl bg-{{ $badgeColor }}-50 text-{{ $badgeColor }}-600 flex items-center justify-center text-sm border border-{{ $badgeColor }}-100 shrink-0 shadow-sm">
-                                            <i class="fas {{ $icon }}"></i>
-                                        </div>
-                                        <div>
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <h4 class="text-[14px] font-bold text-slate-800">{{ $imun->vaksin }}</h4>
-                                                <span class="text-[9px] font-bold text-{{ $badgeColor }}-700 bg-{{ $badgeColor }}-100 border border-{{ $badgeColor }}-200 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm">Dosis {{ $imun->dosis }}</span>
-                                            </div>
-                                            <p class="text-[11px] font-medium text-slate-500">{{ $imun->jenis_imunisasi }} &bull; Kategori: <span class="font-semibold">{{ $kategori }}</span></p>
+                                    <div class="min-w-0 flex flex-col items-start">
+                                        <h4 class="text-[14px] font-bold text-slate-800 truncate group-hover/row:text-indigo-600 transition-colors mb-0.5" title="{{ $nama }}">{{ $nama }}</h4>
+                                        <div class="flex items-center gap-1.5 text-[11px]">
+                                            <span class="text-slate-500 font-medium">{{ $kategori }}</span>
+                                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                            <span class="text-slate-400 font-mono">{{ $nik }}</span>
                                         </div>
                                     </div>
-                                </td>
+                                </div>
+                            </td>
 
-                                {{-- 4. OTORITAS --}}
-                                <td>
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 text-[10px] font-bold shrink-0">
-                                            {{ strtoupper(substr($imun->kunjungan?->petugas?->name ?? 'B', 0, 1)) }}
-                                        </div>
-                                        <div class="min-w-0">
-                                            <p class="text-[12px] font-semibold text-slate-700 truncate">{{ $imun->kunjungan?->petugas?->name ?? 'Bidan Desa' }}</p>
-                                            <p class="text-[9px] font-medium text-slate-400 uppercase tracking-widest truncate mt-0.5">{{ $imun->penyelenggara }}</p>
-                                        </div>
+                            {{-- 3. DETAIL VAKSIN --}}
+                            <td class="py-4 px-6 align-middle">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-{{ $badgeColor }}-50 text-{{ $badgeColor }}-600 flex items-center justify-center text-[18px] shrink-0">
+                                        <i class="ph-fill {{ $icon }}"></i>
                                     </div>
-                                </td>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 mb-0.5">
+                                            <h4 class="text-[13.5px] font-bold text-slate-800 truncate">{{ $imun->vaksin }}</h4>
+                                            <span class="text-[9px] font-bold text-{{ $badgeColor }}-700 bg-{{ $badgeColor }}-100/50 border border-{{ $badgeColor }}-200 px-2 py-0.5 rounded-md uppercase tracking-widest">Dosis {{ $imun->dosis }}</span>
+                                        </div>
+                                        <p class="text-[11px] font-medium text-slate-500 truncate">{{ $imun->jenis_imunisasi }}</p>
+                                    </div>
+                                </div>
+                            </td>
 
-                                {{-- 5. AKSI (READ ONLY) --}}
-                                <td class="text-center pr-6">
-                                    <a href="{{ route('kader.imunisasi.show', $imun->id) }}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 text-indigo-500 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 transition-colors shadow-sm" title="Lihat Sertifikat Vaksin">
-                                        <i class="fas fa-file-medical text-[13px]"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                            {{-- 4. OTORITAS --}}
+                            <td class="py-4 px-6 align-middle">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 text-[11px] font-bold shrink-0 font-poppins">
+                                        {{ strtoupper(substr($imun->kunjungan?->petugas?->name ?? 'B', 0, 1)) }}
+                                    </div>
+                                    <div class="min-w-0 flex flex-col items-start">
+                                        <p class="text-[12px] font-bold text-slate-700 truncate mb-0.5">{{ $imun->kunjungan?->petugas?->name ?? 'Bidan Desa' }}</p>
+                                        <span class="inline-block bg-slate-100 text-slate-500 text-[8.5px] font-bold uppercase px-2 py-0.5 rounded-md tracking-widest">
+                                            {{ $imun->penyelenggara }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            {{-- 5. AKSI (READ ONLY) --}}
+                            <td class="py-4 px-6 text-right align-middle">
+                                <a href="{{ route('kader.imunisasi.show', $imun->id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-[8px] bg-white border border-slate-200 text-indigo-500 hover:text-white hover:bg-indigo-600 hover:border-indigo-600 transition-all shadow-sm" title="Lihat Sertifikat Vaksin">
+                                    <i class="ph-bold ph-file-text text-[15px]"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
             {{-- Paginasi --}}
             @if($imunisasis->hasPages())
-            <div id="paginationArea" class="mt-6 flex justify-end">
+            <div id="paginationArea" class="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-end">
                 {{ $imunisasis->links() }}
             </div>
             @endif
 
         @else
             {{-- EMPTY STATE (Bersih & Elegan) --}}
-            <div class="bg-white/80 backdrop-blur-sm rounded-[28px] border border-slate-200 p-16 md:p-24 text-center shadow-sm">
-                <div class="relative w-24 h-24 mx-auto mb-5 flex items-center justify-center">
-                    <div class="absolute inset-0 bg-indigo-100 rounded-full blur-xl opacity-60"></div>
-                    <div class="w-16 h-16 bg-white rounded-[16px] flex items-center justify-center text-indigo-400 text-2xl border border-indigo-50 shadow-sm relative z-10 transform -rotate-3">
-                        <i class="fas fa-shield-virus"></i>
+            <div class="py-24 text-center bg-transparent">
+                <div class="flex flex-col items-center justify-center max-w-sm mx-auto">
+                    <div class="w-20 h-20 bg-slate-50 rounded-full border border-slate-100 flex items-center justify-center text-slate-300 text-[40px] mb-4 relative">
+                        <div class="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm text-indigo-400 text-sm animate-bounce"><i class="ph-fill ph-magnifying-glass"></i></div>
+                        <i class="ph-fill ph-syringe"></i>
                     </div>
+                    <h4 class="text-[16px] font-bold text-slate-700 font-poppins mb-1">Riwayat Kosong</h4>
+                    <p class="text-[13px] text-slate-500 font-medium">Sistem tidak menemukan arsip imunisasi yang cocok dengan filter atau kata pencarian Anda.</p>
                 </div>
-                <h4 class="text-[15px] font-bold text-slate-800 uppercase tracking-widest mb-2 font-poppins">Riwayat Kosong</h4>
-                <p class="text-[13px] text-slate-500 font-medium max-w-md mx-auto leading-relaxed">Sistem tidak menemukan arsip imunisasi yang cocok dengan filter atau kata pencarian Anda.</p>
             </div>
         @endif
     </div>
@@ -258,7 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const contentArea = document.getElementById('mainContentArea');
     const spinner = document.getElementById('searchSpinner');
     const form = document.getElementById('filterForm');
-    const hiddenSearch = document.getElementById('hiddenSearch');
     const hiddenKategori = document.getElementById('hiddenKategori');
 
     // ENGINE AJAX SUPER MULUS
@@ -278,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error("Gagal memuat data EHR:", error);
         } finally {
-            spinner.classList.add('hidden');
+            if(isSearch) spinner.classList.add('hidden');
             contentArea.classList.remove('is-loading');
         }
     }
@@ -287,7 +307,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if(searchInput) {
         searchInput.addEventListener('input', function(e) {
             clearTimeout(typingTimer);
-            hiddenSearch.value = e.target.value;
             typingTimer = setTimeout(() => {
                 const url = new URL(form.action);
                 url.searchParams.set('search', e.target.value);
@@ -310,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const url = new URL(form.action);
             url.searchParams.set('kategori', kat);
-            url.searchParams.set('search', hiddenSearch.value);
+            url.searchParams.set('search', searchInput ? searchInput.value : '');
             fetchRealTimeData(url.toString(), false);
         });
     });

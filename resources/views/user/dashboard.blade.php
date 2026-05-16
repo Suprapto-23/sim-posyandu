@@ -24,25 +24,23 @@
 @section('content')
 <div class="w-full pb-10">
 
-    {{-- 1. HERO SECTION (Lebar Penuh di Desktop, Padat di Mobile) --}}
-    <div class="animate-slide-up bg-gradient-to-r from-teal-600 to-emerald-500 rounded-[32px] p-8 md:p-10 shadow-[0_15px_40px_-10px_rgba(20,184,166,0.4)] relative overflow-hidden mb-8 text-white">
+    {{-- 1. HERO SECTION --}}
+    <div class="animate-slide-up bg-gradient-to-r from-teal-600 to-emerald-500 rounded-[32px] p-8 md:p-10 shadow-[0_15px_40px_-10px_rgba(20,184,166,0.4)] relative overflow-hidden mb-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 min-h-[200px]">
         <div class="absolute -right-20 -top-20 w-80 h-80 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute right-10 bottom-0 opacity-10 pointer-events-none hidden md:block">
             <i class="fas fa-heartbeat text-[150px]"></i>
         </div>
         
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-full border border-white/30 mb-4 shadow-sm">
-                    <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span> E-Posyandu Aktif
-                </span>
-                <h2 class="text-3xl md:text-4xl font-black tracking-tight leading-tight font-poppins mb-2">
-                    Halo, {{ explode(' ', Auth::user()->name)[0] }}! 👋
-                </h2>
-                <p class="text-teal-50 font-medium text-[13px] md:text-[14px] max-w-lg leading-relaxed">
-                    Selamat datang di Portal Warga. Pantau jadwal imunisasi, rekam medis, dan perkembangan kesehatan keluarga Anda secara mudah dalam satu layar.
-                </p>
-            </div>
+        <div class="relative z-10 w-full">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-full border border-white/30 mb-4 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span> E-Posyandu Aktif
+            </span>
+            <h2 class="text-3xl md:text-4xl font-black tracking-tight leading-tight font-poppins mb-2">
+                Halo, {{ ucwords(Auth::user()->name) }}! 👋
+            </h2>
+            <p class="text-teal-50 font-medium text-[13px] md:text-[14px] max-w-lg leading-relaxed">
+                Pantau jadwal posyandu, rekam medis, dan perkembangan kesehatan keluarga Anda secara presisi dalam satu layar.
+            </p>
         </div>
     </div>
 
@@ -65,55 +63,44 @@
     </div>
     @endif
 
-    {{-- 3. QUICK MENU GRID (Otomatis menyesuaikan jumlah) --}}
-    <div class="animate-slide-up-1 grid grid-cols-4 md:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5 mb-10">
+    {{-- 3. QUICK MENU GRID --}}
+    <div class="animate-slide-up-1 grid grid-cols-4 md:grid-cols-5 gap-3 sm:gap-5 mb-10">
         @php
             $menus = [
-                ['icon' => 'calendar-check', 'color' => 'teal', 'label' => 'Jadwal', 'route' => 'user.jadwal.index'],
+                ['icon' => 'heartbeat', 'color' => 'rose', 'label' => 'Pantau', 'route' => 'user.monitoring.index'],
                 ['icon' => 'file-medical', 'color' => 'sky', 'label' => 'Riwayat', 'route' => 'user.riwayat.index'],
+                ['icon' => 'calendar-check', 'color' => 'teal', 'label' => 'Jadwal', 'route' => 'user.jadwal.index'],
+                ['icon' => 'bell', 'color' => 'amber', 'label' => 'Pesan', 'route' => 'user.notifikasi.index'],
+                ['icon' => 'user-cog', 'color' => 'slate', 'label' => 'Profil', 'route' => 'user.profile.edit'],
             ];
-            
-            if(in_array('orang_tua', $peranUser)) {
-                $menus[] = ['icon' => 'baby', 'color' => 'rose', 'label' => 'KMS Anak', 'route' => 'user.balita.index'];
-                $menus[] = ['icon' => 'shield-virus', 'color' => 'indigo', 'label' => 'Imunisasi', 'route' => 'user.imunisasi.index'];
-            } elseif(in_array('remaja', $peranUser)) {
-                $menus[] = ['icon' => 'user-graduate', 'color' => 'emerald', 'label' => 'Remaja', 'route' => 'user.remaja.index'];
-                $menus[] = ['icon' => 'comments', 'color' => 'indigo', 'label' => 'Konsul', 'route' => 'user.konseling.index'];
-            } elseif(in_array('lansia', $peranUser)) {
-                $menus[] = ['icon' => 'wheelchair', 'color' => 'emerald', 'label' => 'Lansia', 'route' => 'user.lansia.index'];
-                $menus[] = ['icon' => 'heartbeat', 'color' => 'rose', 'label' => 'Tensi', 'route' => 'user.riwayat.index'];
-            } else {
-                $menus[] = ['icon' => 'bell', 'color' => 'amber', 'label' => 'Pesan', 'route' => 'user.notifikasi.index'];
-                $menus[] = ['icon' => 'user-cog', 'color' => 'slate', 'label' => 'Profil', 'route' => 'user.profile.edit'];
-            }
         @endphp
 
         @foreach($menus as $m)
-        <a href="{{ route($m['route']) }}" class="smooth-route bg-white border border-slate-100 rounded-[24px] p-4 flex flex-col items-center justify-center gap-3 quick-card">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-[16px] bg-{{ $m['color'] }}-50 border border-{{ $m['color'] }}-100 text-{{ $m['color'] }}-500 flex items-center justify-center text-xl sm:text-2xl quick-icon">
+        <a href="{{ route($m['route']) }}" class="smooth-route bg-white border border-slate-100 rounded-[24px] p-4 flex flex-col items-center justify-center gap-3 quick-card h-full">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-[16px] bg-{{ $m['color'] }}-50 border border-{{ $m['color'] }}-100 text-{{ $m['color'] }}-500 flex items-center justify-center text-xl sm:text-2xl quick-icon shrink-0">
                 <i class="fas fa-{{ $m['icon'] }}"></i>
             </div>
-            <span class="text-[10px] sm:text-[11px] font-black text-slate-600 uppercase tracking-widest text-center leading-tight">{{ $m['label'] }}</span>
+            <span class="text-[10px] sm:text-[11px] font-black text-slate-600 uppercase tracking-widest text-center leading-tight mt-auto">{{ $m['label'] }}</span>
         </a>
         @endforeach
     </div>
 
-    {{-- 4. KONTEN UTAMA (GRID KIRI & KANAN DI DESKTOP) --}}
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+    {{-- 4. KONTEN UTAMA (GRID PRESISI) --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {{-- KOLOM KIRI (Lebar: 7 Kolom) --}}
-        <div class="xl:col-span-7 space-y-8 animate-slide-up-2">
+        {{-- KOLOM KIRI (Jadwal & Ringkasan Medis) --}}
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-8 animate-slide-up-2 w-full">
             
             {{-- A. JADWAL TERDEKAT --}}
-            <div>
+            <div class="w-full">
                 <div class="flex items-center justify-between mb-4 px-1">
                     <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-calendar-day text-teal-500 mr-2"></i> Agenda Terdekat</h3>
                     <a href="{{ route('user.jadwal.index') }}" class="smooth-route text-[10px] font-black text-teal-600 bg-teal-50 hover:bg-teal-500 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Semua Jadwal</a>
                 </div>
                 
-                @if($jadwalTerdekat && $jadwalTerdekat->isNotEmpty())
+                @if(isset($jadwalTerdekat) && $jadwalTerdekat->isNotEmpty())
                     @php $jadwal = $jadwalTerdekat->first(); @endphp
-                    <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:border-teal-300 transition-colors">
+                    <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:border-teal-300 transition-colors w-full">
                         <div class="absolute right-0 top-0 w-2 h-full bg-teal-500"></div>
                         <div class="flex flex-col sm:flex-row sm:items-center gap-5">
                             <div class="w-16 h-16 bg-teal-50 text-teal-600 rounded-[18px] flex flex-col items-center justify-center shrink-0 border border-teal-100">
@@ -133,7 +120,7 @@
                         </div>
                     </div>
                 @else
-                    <div class="bg-white border-2 border-dashed border-slate-200 rounded-[24px] p-8 text-center">
+                    <div class="bg-white border-2 border-dashed border-slate-200 rounded-[24px] p-8 text-center w-full">
                         <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300 text-2xl">
                             <i class="fas fa-calendar-times"></i>
                         </div>
@@ -143,61 +130,102 @@
                 @endif
             </div>
 
-            {{-- B. STATUS KESEHATAN ANAK (KMS MINI) --}}
-            @if(isset($dataAnak) && $dataAnak->isNotEmpty())
-            <div>
-                <div class="flex items-center justify-between mb-4 px-1">
-                    <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-baby text-rose-500 mr-2"></i> Status Kesehatan Balita</h3>
+            {{-- B. STATUS KESEHATAN MULTI-ROLE (GRID PRESISI) --}}
+            @if((isset($dataAnak) && $dataAnak->isNotEmpty()) || isset($dataLansia) || isset($dataRemaja) || isset($dataBumil))
+            <div class="w-full flex flex-col h-full">
+                <div class="flex items-center justify-between mb-4 px-1 shrink-0">
+                    <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-file-medical-alt text-rose-500 mr-2"></i> Pantau Kesehatan</h3>
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    @foreach($dataAnak->take(2) as $anak)
-                    @php
-                        $lastPeriksa = \App\Models\Pemeriksaan::where('pasien_id', $anak->id)->where('kategori_pasien', 'balita')->where('status_verifikasi', 'verified')->latest('tanggal_periksa')->first();
-                        $umurThn = \Carbon\Carbon::parse($anak->tanggal_lahir)->diff(now())->y;
-                        $umurBln = \Carbon\Carbon::parse($anak->tanggal_lahir)->diff(now())->m;
-                    @endphp
+                {{-- items-stretch memastikan semua kolom di dalam grid memiliki tinggi maksimum yang sama --}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch flex-1">
                     
-                    <a href="{{ route('user.balita.show', $anak->id) }}" class="smooth-route block bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(244,63,94,0.1)] hover:border-rose-300 transition-all group">
-                        <div class="flex items-center justify-between mb-4 border-b border-slate-50 pb-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-lg border border-rose-100"><i class="fas fa-child"></i></div>
+                    {{-- 1. BALITA --}}
+                    @if(isset($dataAnak) && $dataAnak->isNotEmpty())
+                        @foreach($dataAnak->take(2) as $anak)
+                        <a href="{{ route('user.balita.show', $anak->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(244,63,94,0.1)] hover:border-rose-300 transition-all group">
+                            <div class="flex items-center gap-3 mb-4 flex-1">
+                                <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-lg shrink-0 border border-rose-100"><i class="fas fa-child"></i></div>
                                 <div>
-                                    <h4 class="text-[13px] font-black text-slate-800 leading-none group-hover:text-rose-600 transition-colors">{{ $anak->nama_lengkap }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1">{{ $umurThn }} Thn {{ $umurBln }} Bln</p>
+                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-rose-600 transition-colors line-clamp-1">{{ $anak->nama_lengkap }}</h4>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kategori: Balita</p>
                                 </div>
                             </div>
-                            <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-500 transition-colors"><i class="fas fa-arrow-right text-[10px]"></i></div>
-                        </div>
-                        
-                        <div class="flex justify-between items-center gap-2">
-                            <div class="flex-1 text-center">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Berat</p>
-                                <p class="text-[14px] font-black text-slate-700">{{ $lastPeriksa->berat_badan ?? '-' }} <span class="text-[10px] text-slate-400 font-bold">kg</span></p>
+                            {{-- mt-auto memaksa bagian ini menempel ke bawah secara presisi --}}
+                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Lihat KMS Buku KIA</span>
+                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
                             </div>
-                            <div class="w-px h-6 bg-slate-200"></div>
-                            <div class="flex-1 text-center">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Tinggi</p>
-                                <p class="text-[14px] font-black text-slate-700">{{ $lastPeriksa->tinggi_badan ?? '-' }} <span class="text-[10px] text-slate-400 font-bold">cm</span></p>
+                        </a>
+                        @endforeach
+                    @endif
+
+                    {{-- 2. IBU HAMIL --}}
+                    @if(isset($dataBumil) && $dataBumil)
+                        <a href="{{ route('user.ibu_hamil.show', $dataBumil->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(236,72,153,0.1)] hover:border-pink-300 transition-all group">
+                            <div class="flex items-center gap-3 mb-4 flex-1">
+                                <div class="w-10 h-10 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center text-lg shrink-0 border border-pink-100"><i class="fas fa-female"></i></div>
+                                <div>
+                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-pink-600 transition-colors line-clamp-1">{{ $dataBumil->nama_lengkap }}</h4>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kehamilan & Kandungan</p>
+                                </div>
                             </div>
-                        </div>
-                    </a>
-                    @endforeach
+                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Pantau Kehamilan</span>
+                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-pink-50 group-hover:text-pink-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
+                            </div>
+                        </a>
+                    @endif
+
+                    {{-- 3. LANSIA --}}
+                    @if(isset($dataLansia) && $dataLansia)
+                        <a href="{{ route('user.lansia.show', $dataLansia->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(249,115,22,0.1)] hover:border-orange-300 transition-all group">
+                            <div class="flex items-center gap-3 mb-4 flex-1">
+                                <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-lg shrink-0 border border-orange-100"><i class="fas fa-wheelchair"></i></div>
+                                <div>
+                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-orange-600 transition-colors line-clamp-1">{{ $dataLansia->nama_lengkap }}</h4>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kategori: Lansia</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Cek Gula & Tensi</span>
+                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
+                            </div>
+                        </a>
+                    @endif
+
+                    {{-- 4. REMAJA --}}
+                    @if(isset($dataRemaja) && $dataRemaja)
+                        <a href="{{ route('user.remaja.show', $dataRemaja->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(59,130,246,0.1)] hover:border-blue-300 transition-all group">
+                            <div class="flex items-center gap-3 mb-4 flex-1">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-lg shrink-0 border border-blue-100"><i class="fas fa-user-graduate"></i></div>
+                                <div>
+                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-blue-600 transition-colors line-clamp-1">{{ $dataRemaja->nama_lengkap }}</h4>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kategori: Remaja</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Cek IMT & Anemia</span>
+                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
+                            </div>
+                        </a>
+                    @endif
+
                 </div>
             </div>
             @endif
         </div>
 
-        {{-- KOLOM KANAN (Lebar: 5 Kolom) - KOTAK PENGUMUMAN REAL-TIME --}}
-        <div class="xl:col-span-5 animate-slide-up-2">
-            <div class="flex items-center justify-between mb-4 px-1">
-                <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-bullhorn text-indigo-500 mr-2"></i> Kotak Masuk Bidan</h3>
-                <a href="{{ route('user.notifikasi.index') }}" class="smooth-route text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-500 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Semua Pesan</a>
+        {{-- KOLOM KANAN (Kotak Masuk Notifikasi) --}}
+        <div class="lg:col-span-5 xl:col-span-4 w-full flex flex-col h-full animate-slide-up-2">
+            <div class="flex items-center justify-between mb-4 px-1 shrink-0">
+                <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-bullhorn text-indigo-500 mr-2"></i> Kotak Masuk</h3>
+                <a href="{{ route('user.notifikasi.index') }}" class="smooth-route text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-500 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Semua</a>
             </div>
             
-            {{-- WADAH REALTIME AJAX POLLING: ID main-notif-wrapper HARUS ADA! --}}
-            <div id="main-notif-wrapper" class="bg-white border border-slate-200 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden">
-                <div class="max-h-[500px] overflow-y-auto notif-scroll p-2 space-y-1">
+            <div id="main-notif-wrapper" class="bg-white border border-slate-200 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden flex-1 flex flex-col">
+                {{-- max-h dihapus dan diganti flex-1 agar tingginya adaptif dengan kolom kiri --}}
+                <div class="flex-1 overflow-y-auto notif-scroll p-2 space-y-1">
                     @forelse($notifikasiTerbaru ?? [] as $notif)
                         <a href="{{ route('user.notifikasi.index') }}" class="smooth-route block p-4 hover:bg-slate-50 transition-colors rounded-[18px] {{ !$notif['is_read'] ? 'bg-indigo-50/30 border border-indigo-100/50' : 'border border-transparent' }}">
                             <div class="flex gap-4">
@@ -217,7 +245,7 @@
                             </div>
                         </a>
                     @empty
-                        <div class="text-center py-16 px-4">
+                        <div class="text-center py-16 px-4 flex flex-col items-center justify-center h-full">
                             <div class="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-slate-300">
                                 <i class="fas fa-check-double"></i>
                             </div>

@@ -7,86 +7,92 @@ use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
 use App\Models\IbuHamil;
-use App\Models\Imunisasi;
+use App\Models\Kunjungan;
 use App\Models\JadwalPosyandu;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // 1. Statistik Utama (Kartu Atas)
-        $stats = [
-            'total_balita'     => Balita::count(),
-            'total_remaja'     => Remaja::count(),
-            'total_lansia'     => Lansia::count(),
-            'total_ibu_hamil'  => IbuHamil::count(),
-            'imunisasi_hari_ini' => Imunisasi::whereDate('tanggal_imunisasi', today())->count(),
-            'jadwal_hari_ini'  => JadwalPosyandu::whereDate('tanggal', today())
+        try {
+            // 1. LOGIKA CERDAS: Pemisahan Umur Bayi (<1 Tahun) & Balita (1-5 Tahun)
+            $batasBayi = Carbon::now()->subYear(1);
+
+            $totalBayi   = Balita::whereDate('tanggal_lahir', '>=', $batasBayi)->count();
+            $totalBalita = Balita::whereDate('tanggal_lahir', '<', $batasBayi)->count();
+
+            // 2. KUMPULAN METRIK UTAMA (Untuk 6 Kartu Statistik di Atas)
+            $stats = [
+                'total_bayi'         => $totalBayi,
+                'total_balita'       => $totalBalita,
+                'total_remaja'       => Remaja::count(),
+                'total_lansia'       => Lansia::count(),
+                'total_ibu_hamil'    => IbuHamil::where('status', 'aktif')->count(), // Pastikan hanya menghitung bumil aktif
+                'kehadiran_hari_ini' => Kunjungan::whereDate('tanggal_kunjungan', today())->count(),
+                'jadwal_hari_ini'    => JadwalPosyandu::whereDate('tanggal', today())
+                                        ->where('status', 'aktif')
+                                        ->count(),
+            ];
+
+            // 3. DATA GRAFIK KUNJUNGAN (7 Hari Terakhir)
+            $trendAbsensi = $this->getAbsensi7Hari();
+            $chartLabels  = $trendAbsensi['labels'];
+            $chartData    = $trendAbsensi['data'];
+
+            // 4. PENDAFTARAN WARGA BARU BULAN INI
+            $pendaftaran_bulan_ini = [
+                'bayi_balita' => Balita::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+                'remaja'      => Remaja::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+                'lansia'      => Lansia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+                'ibu_hamil'   => IbuHamil::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+            ];
+
+            // 5. LIST AKTIVITAS TERKINI (Balita yang baru didaftarkan)
+            $balita_baru = Balita::latest()->take(5)->get();
+
+            // 6. LIST AGENDA MENDATANG
+            $jadwal_mendatang = JadwalPosyandu::where('tanggal', '>=', today())
                 ->where('status', 'aktif')
-                ->count(),
-        ];
+                ->orderBy('tanggal', 'asc')
+                ->take(4)
+                ->get();
 
-        // 2. Data Grafik Absensi 7 Hari Terakhir
-        $trendAbsensi  = $this->getAbsensi7Hari();
-        $chartLabels   = $trendAbsensi['labels'];
-        $chartData     = $trendAbsensi['data'];
+            // 7. RENDER KE VIEW
+            return view('kader.dashboard', compact(
+                'stats',
+                'chartLabels',
+                'chartData',
+                'pendaftaran_bulan_ini',
+                'balita_baru',
+                'jadwal_mendatang'
+            ));
 
-        // 3. Pendaftaran Bulan Ini (untuk donut chart)
-        $pendaftaran_bulan_ini = $this->getPendaftaranBulanIni();
-
-        // 4. Aktivitas Terkini
-        $balita_baru = Balita::latest()->take(5)->get();
-
-        // 5. Jadwal Mendatang
-        $jadwal_mendatang = JadwalPosyandu::where('tanggal', '>=', today())
-            ->where('status', 'aktif')
-            ->orderBy('tanggal', 'asc')
-            ->take(4)
-            ->get();
-
-        return view('kader.dashboard', compact(
-            'stats',
-            'chartLabels',
-            'chartData',
-            'pendaftaran_bulan_ini',
-            'balita_baru',
-            'jadwal_mendatang'
-        ));
+        } catch (\Exception $e) {
+            // Jika terjadi error database, catat di log dan kembalikan dengan aman
+            Log::error('KADER_DASHBOARD_ERROR: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan sistem saat memuat data dashboard.');
+        }
     }
 
+    /**
+     * HELPER: Mengambil total kehadiran/kunjungan selama 7 hari terakhir secara mundur.
+     */
     private function getAbsensi7Hari()
     {
         $labels = [];
         $data   = [];
 
         for ($i = 6; $i >= 0; $i--) {
-            $date     = Carbon::today()->subDays($i);
-            $labels[] = $date->translatedFormat('d M');
-            // Menghitung total semua warga baru yang terdaftar per hari
-            // (bisa diganti model Absensi jika sudah ada)
-            $count = Balita::whereDate('created_at', $date->format('Y-m-d'))->count()
-                   + IbuHamil::whereDate('created_at', $date->format('Y-m-d'))->count()
-                   + Remaja::whereDate('created_at', $date->format('Y-m-d'))->count()
-                   + Lansia::whereDate('created_at', $date->format('Y-m-d'))->count();
+            $date = Carbon::today()->subDays($i);
+            $labels[] = $date->translatedFormat('d M'); // Contoh: 10 Mei
+            
+            $count = Kunjungan::whereDate('tanggal_kunjungan', $date->format('Y-m-d'))->count();
             $data[] = $count;
         }
 
         return ['labels' => $labels, 'data' => $data];
-    }
-
-    private function getPendaftaranBulanIni()
-    {
-        $bulan = now()->month;
-        $tahun = now()->year;
-
-        return [
-            'balita'    => Balita::whereMonth('created_at', $bulan)->whereYear('created_at', $tahun)->count(),
-            'remaja'    => Remaja::whereMonth('created_at', $bulan)->whereYear('created_at', $tahun)->count(),
-            'lansia'    => Lansia::whereMonth('created_at', $bulan)->whereYear('created_at', $tahun)->count(),
-            'ibu_hamil' => IbuHamil::whereMonth('created_at', $bulan)->whereYear('created_at', $tahun)->count(),
-        ];
     }
 }

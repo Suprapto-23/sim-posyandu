@@ -14,7 +14,7 @@ use App\Models\User;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil; // 👈 Pastikan Model IbuHamil di-import
+use App\Models\IbuHamil;
 
 class UserController extends Controller
 {
@@ -47,7 +47,8 @@ class UserController extends Controller
                     $q->whereIn('nik', Lansia::select('nik')->whereNotNull('nik'))
                       ->orWhereIn('id', Lansia::select('user_id')->whereNotNull('user_id'));
                 } elseif ($kat == 'balita') {
-                    $q->whereIn('nik', Balita::select('nik_ibu')->whereNotNull('nik_ibu'))
+                    $q->whereIn('nik', Balita::select('nik')->whereNotNull('nik'))
+                      ->orWhereIn('nik', Balita::select('nik_ibu')->whereNotNull('nik_ibu'))
                       ->orWhereIn('nik', Balita::select('nik_ayah')->whereNotNull('nik_ayah'))
                       ->orWhereIn('id', Balita::select('user_id')->whereNotNull('user_id'));
                 } elseif ($kat == 'bumil') {
@@ -69,60 +70,62 @@ class UserController extends Controller
         return view('admin.users.create');
     }
 
-    // ── STORE ───────────────────────────────────
-    public function store(Request $request)
-    {
-        $request->validate([
-            'full_name'     => 'required|string|max:191',
-            'nik'           => 'required|digits:16|unique:users,nik|unique:profiles,nik',
-            'jenis_kelamin' => 'required|in:L,P',
-            'telepon'       => 'required|string|max:20',
-            'alamat'        => 'required|string',
-            'tempat_lahir'  => 'required|string|max:100',
-            'tanggal_lahir' => 'required|date',
-            'status'        => 'required|in:active,inactive',
-        ], [
-            'nik.digits' => 'NIK harus tepat 16 digit angka.',
-            'nik.unique' => 'NIK ini sudah terdaftar di sistem.',
+    // PATH: app/Http/Controllers/Admin/UserController.php
+
+public function store(Request $request)
+{
+    $request->validate([
+        'full_name'     => 'required|string|max:191',
+        'nik'           => 'required|digits:16|unique:users,nik|unique:profiles,nik',
+        'jenis_kelamin' => 'required|in:L,P',
+        'telepon'       => 'required|string|max:20',
+        'alamat'        => 'required|string',
+        'tempat_lahir'  => 'required|string|max:100',
+        'tanggal_lahir' => 'required|date',
+        'status'        => 'required|in:active,inactive',
+    ], [
+        'nik.digits' => 'NIK harus tepat 16 digit angka.',
+        'nik.unique' => 'NIK ini sudah terdaftar di sistem.',
+    ]);
+
+    $password = $this->makePassword();
+
+    DB::beginTransaction();
+    try {
+        // [LOGIKA BARU]: Buat user TANPA email. NIK menjadi identitas utama.
+        $user = User::create([
+            'name'     => $request->full_name,
+            'email'    => null, // Kosongkan karena warga tidak pakai email
+            'nik'      => $request->nik,
+            'password' => Hash::make($password),
+            'role'     => 'user',
+            'status'   => $request->status,
         ]);
 
-        $password = $this->makePassword();
+        $user->profile()->create([
+            'user_id'       => $user->id,
+            'full_name'     => $request->full_name,
+            'nik'           => $request->nik,
+            'jenis_kelamin' => $request->jenis_kelamin,
+            'telepon'       => $request->telepon,
+            'alamat'        => $request->alamat,
+            'tempat_lahir'  => $request->tempat_lahir,
+            'tanggal_lahir' => $request->tanggal_lahir,
+        ]);
 
-        DB::beginTransaction();
-        try {
-            $user = User::create([
-                'name'     => $request->full_name,
-                'email'    => $request->nik . '@posyandu.user',
-                'nik'      => $request->nik,
-                'password' => Hash::make($password),
-                'role'     => 'user',
-                'status'   => $request->status,
-            ]);
-
-            $user->profile()->create([
-                'user_id'       => $user->id,
-                'full_name'     => $request->full_name,
-                'nik'           => $request->nik,
-                'jenis_kelamin' => $request->jenis_kelamin,
-                'telepon'       => $request->telepon,
-                'alamat'        => $request->alamat,
-                'tempat_lahir'  => $request->tempat_lahir,
-                'tanggal_lahir' => $request->tanggal_lahir,
-            ]);
-
-            DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('UserController::store — ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Gagal membuat akun. Silakan coba lagi.');
-        }
-
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Akun warga berhasil dibuat.')
-            ->with('generated_password', $password)
-            ->with('user_name', $request->full_name)
-            ->with('user_nik', $request->nik);
+        DB::commit();
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        Log::error('UserController::store — ' . $e->getMessage());
+        return back()->withInput()->with('error', 'Gagal memproses data ke database. Pastikan database mengizinkan email kosong.');
     }
+
+    return redirect()->route('admin.users.index')
+        ->with('success', 'Akun warga berhasil dibuat.')
+        ->with('generated_password', $password)
+        ->with('user_name', $request->full_name)
+        ->with('user_nik', $request->nik);
+}
 
     // ── SHOW ────────────────────────────────────
     public function show($id)
@@ -162,7 +165,6 @@ class UserController extends Controller
             $user->update([
                 'name'   => $request->full_name,
                 'nik'    => $request->nik,
-                'email'  => $request->nik . '@posyandu.user',
                 'status' => $request->status,
             ]);
 
@@ -251,9 +253,6 @@ class UserController extends Controller
      * Deteksi data pasien yang terhubung dengan user berdasarkan:
      * - user_id langsung
      * - NIK matching (balita: nik_ibu/nik_ayah, remaja/lansia: nik)
-     *
-     * PENTING: ini sama persis dengan logika di User\DashboardController
-     * supaya konsisten antara admin view dan user dashboard
      */
     private function detectLinkedPatients(User $user): array
     {
@@ -262,6 +261,7 @@ class UserController extends Controller
         try {
             if ($nik) {
                 $balita = Balita::where('user_id', $user->id)
+                    ->orWhere('nik', $nik)
                     ->orWhere('nik_ibu', $nik)
                     ->orWhere('nik_ayah', $nik)
                     ->get();
@@ -282,7 +282,13 @@ class UserController extends Controller
                 : Lansia::where('user_id', $user->id)->first();
         } catch (\Throwable $e) { $lansia = null; }
 
-        return compact('balita', 'remaja', 'lansia');
+        try {
+            $bumil = $nik
+                ? IbuHamil::where('user_id', $user->id)->orWhere('nik', $nik)->first()
+                : IbuHamil::where('user_id', $user->id)->first();
+        } catch (\Throwable $e) { $bumil = null; }
+
+        return compact('balita', 'remaja', 'lansia', 'bumil');
     }
 
     private function makePassword(): string
