@@ -6,7 +6,7 @@
 <style>
     /*
     |--------------------------------------------------------------------------
-    | POSYANDUCARE LOGIN - PRECISION FINAL
+    | POSYANDUCARE LOGIN - PRECISION FINAL FULL
     |--------------------------------------------------------------------------
     */
 
@@ -14,7 +14,7 @@
         position: relative;
         width: 100%;
         max-width: 1420px;
-        min-height: calc(100svh - 38px);
+        min-height: calc(100svh - 24px);
         margin: 0 auto;
         padding: 0 56px;
 
@@ -33,8 +33,8 @@
     .pc-login-brand {
         position: relative;
         width: 100%;
-        height: 650px;
-        min-height: 650px;
+        height: 620px;
+        min-height: 620px;
 
         display: flex;
         align-items: center;
@@ -86,18 +86,18 @@
         align-items: center;
         text-align: center;
 
-        transform: translate(-6px, -4px);
+        transform: translate(-6px, -18px);
     }
 
     .pc-brand-logo {
-        width: 430px;
+        width: 420px;
         max-width: 100%;
         height: auto;
 
         display: block;
         object-fit: contain;
 
-        margin-bottom: 66px;
+        margin-bottom: 48px;
 
         filter:
             drop-shadow(0 22px 34px rgba(5,150,105,.075))
@@ -157,7 +157,7 @@
 
     .pc-brand-description {
         max-width: 510px;
-        margin: 0 0 34px;
+        margin: 0 0 26px;
 
         color: #64748b;
 
@@ -173,15 +173,17 @@
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 18px;
+
+        transform: translateY(-8px);
     }
 
     .pc-feature-card {
-        height: 104px;
+        height: 96px;
 
-        border-radius: 24px;
+        border-radius: 23px;
 
         background:
-            linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.64));
+            linear-gradient(180deg, rgba(255,255,255,.90), rgba(255,255,255,.66));
 
         border: 1px solid rgba(255,255,255,.94);
 
@@ -215,8 +217,8 @@
     }
 
     .pc-feature-icon {
-        width: 44px;
-        height: 44px;
+        width: 43px;
+        height: 43px;
 
         border-radius: 16px;
 
@@ -247,8 +249,8 @@
     .pc-login-form-side {
         position: relative;
         width: 100%;
-        height: 650px;
-        min-height: 650px;
+        height: 620px;
+        min-height: 620px;
 
         display: flex;
         align-items: center;
@@ -260,10 +262,10 @@
     .pc-login-card {
         position: relative;
         width: 100%;
-        max-width: 545px;
-        min-height: 610px;
+        max-width: 535px;
+        min-height: 570px;
 
-        padding: 46px 54px 38px;
+        padding: 38px 52px 32px;
 
         overflow: hidden;
 
@@ -281,6 +283,8 @@
 
         backdrop-filter: blur(26px);
         -webkit-backdrop-filter: blur(26px);
+
+        transform: translateY(-8px);
     }
 
     .pc-login-card::before {
@@ -320,7 +324,7 @@
 
     .pc-login-header {
         text-align: center;
-        margin-bottom: 36px;
+        margin-bottom: 28px;
     }
 
     .pc-login-title {
@@ -348,7 +352,7 @@
     .pc-login-form {
         display: flex;
         flex-direction: column;
-        gap: 21px;
+        gap: 17px;
     }
 
     .pc-form-group {
@@ -374,7 +378,7 @@
 
     .pc-input {
         width: 100%;
-        height: 59px;
+        height: 56px;
 
         border: 1px solid #dbe5ee;
         border-radius: 18px;
@@ -487,12 +491,12 @@
     }
 
     .pc-submit-area {
-        padding-top: 16px;
+        padding-top: 12px;
     }
 
     .pc-submit-btn {
         width: 100%;
-        height: 62px;
+        height: 58px;
 
         border: 0;
         border-radius: 18px;
@@ -552,8 +556,8 @@
     */
 
     .pc-system-note {
-        margin-top: 32px;
-        padding: 17px;
+        margin-top: 24px;
+        padding: 16px;
 
         border-radius: 21px;
 
@@ -611,6 +615,27 @@
         font-size: 12.8px;
         line-height: 1.62;
         font-weight: 700;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | AUTH LAYOUT WAVE FIX
+    |--------------------------------------------------------------------------
+    | Ini yang bikin bawah tidak panjang sebelah.
+    |--------------------------------------------------------------------------
+    */
+
+    .auth-wave-bottom {
+        bottom: -42px !important;
+    }
+
+    .auth-wave-bottom svg {
+        height: 145px !important;
+    }
+
+    .auth-leaf-left {
+        bottom: -112px !important;
+        opacity: .07 !important;
     }
 
     /*
@@ -710,13 +735,17 @@
 
         .pc-login-brand,
         .pc-login-form-side {
-            height: 620px;
-            min-height: 620px;
+            height: 600px;
+            min-height: 600px;
+        }
+
+        .pc-brand-inner {
+            transform: translate(-6px, -14px);
         }
 
         .pc-brand-logo {
             width: 405px;
-            margin-bottom: 56px;
+            margin-bottom: 46px;
         }
 
         .pc-brand-title {
@@ -725,22 +754,24 @@
 
         .pc-brand-description {
             font-size: 15px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
         }
 
         .pc-feature-grid {
             max-width: 440px;
             gap: 14px;
+            transform: translateY(-6px);
         }
 
         .pc-feature-card {
-            height: 100px;
+            height: 94px;
         }
 
         .pc-login-card {
             max-width: 505px;
-            min-height: 580px;
-            padding: 40px 46px 34px;
+            min-height: 560px;
+            padding: 36px 46px 32px;
+            transform: translateY(-6px);
         }
 
         .pc-login-title {
@@ -748,15 +779,23 @@
         }
 
         .pc-login-header {
-            margin-bottom: 30px;
+            margin-bottom: 26px;
         }
 
         .pc-login-form {
-            gap: 18px;
+            gap: 16px;
         }
 
         .pc-system-note {
-            margin-top: 26px;
+            margin-top: 22px;
+        }
+
+        .auth-wave-bottom {
+            bottom: -50px !important;
+        }
+
+        .auth-wave-bottom svg {
+            height: 135px !important;
         }
     }
 
@@ -914,6 +953,14 @@
             left: 130px;
             bottom: 45px;
             transform: rotate(22deg);
+        }
+
+        .auth-wave-bottom {
+            bottom: -34px !important;
+        }
+
+        .auth-wave-bottom svg {
+            height: 130px !important;
         }
     }
 
