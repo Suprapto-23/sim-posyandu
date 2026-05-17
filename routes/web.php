@@ -48,6 +48,8 @@ use App\Http\Controllers\User\NotifikasiController  as UserNotifikasi;
 use App\Http\Controllers\User\RiwayatController;
 use App\Http\Controllers\User\KonselingController   as UserKonseling;
 
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 Route::get('/gas-seed', function () {
     try {
@@ -338,8 +340,7 @@ Route::prefix('user')->name('user.')->middleware(['auth','checkstatus','role:use
     
     // Fallback URL jika user me-refresh halaman ganti sandi
     Route::get('/profile/password', fn() => redirect()->route('user.profile.edit'));
-    use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
+    
 
 Route::get('/debug-auth', function (Request $request) {
     return response()->json([
