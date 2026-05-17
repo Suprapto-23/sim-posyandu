@@ -6,314 +6,391 @@
 <style>
     /*
     |--------------------------------------------------------------------------
-    | POSYANDUCARE LOGIN PAGE, REFINED FINAL
+    | POSYANDUCARE LOGIN PAGE - FINAL POLISHED
     |--------------------------------------------------------------------------
     */
 
-    .login-page-shell {
-        width: 100%;
-        max-width: 1360px;
-        min-height: min(720px, calc(100vh - 46px));
-        margin: 0 auto;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(470px, 0.92fr);
-        align-items: center;
-        gap: 70px;
+    .pc-login-shell {
         position: relative;
-        padding: 0 42px;
+        width: 100%;
+        max-width: 1440px;
+        min-height: calc(100vh - 28px);
+        margin: 0 auto;
+        padding: 0 54px;
+
+        display: grid;
+        grid-template-columns: minmax(560px, 1fr) minmax(500px, .92fr);
+        align-items: center;
+        gap: 78px;
     }
 
-    /* =========================
-       LEFT BRANDING
-    ========================== */
+    /*
+    |--------------------------------------------------------------------------
+    | LEFT SIDE
+    |--------------------------------------------------------------------------
+    */
 
-    .brand-side {
+    .pc-login-brand {
         position: relative;
         width: 100%;
-        min-height: 620px;
+        height: 690px;
+        min-height: 690px;
+
         display: flex;
         align-items: center;
         justify-content: center;
-        padding-top: 0;
     }
 
-    .brand-side::before {
+    .pc-login-brand::before {
         content: "";
         position: absolute;
-        width: 560px;
-        height: 560px;
-        border-radius: 999px;
-        left: 50%;
-        top: 48%;
+        width: 650px;
+        height: 650px;
+        left: 48%;
+        top: 45%;
         transform: translate(-50%, -50%);
+
+        border-radius: 999px;
+
         background:
-            radial-gradient(circle, rgba(255,255,255,.68), rgba(255,255,255,.24) 48%, transparent 72%);
+            radial-gradient(circle, rgba(255,255,255,.78), rgba(255,255,255,.34) 46%, transparent 73%);
+
         z-index: -1;
-        opacity: .86;
+        opacity: .96;
     }
 
-    .brand-side::after {
+    .pc-login-brand::after {
         content: "";
         position: absolute;
-        width: 420px;
-        height: 420px;
-        left: -90px;
-        bottom: -70px;
-        border-radius: 44% 56% 50% 50%;
+        width: 490px;
+        height: 490px;
+        left: -140px;
+        bottom: -120px;
+
+        border-radius: 46% 54% 50% 50%;
+
         background:
-            radial-gradient(circle at 32% 35%, rgba(16,185,129,.16), transparent 54%),
-            linear-gradient(135deg, rgba(16,185,129,.12), rgba(255,255,255,0));
+            radial-gradient(circle at 34% 32%, rgba(16,185,129,.18), transparent 54%),
+            linear-gradient(135deg, rgba(16,185,129,.13), rgba(255,255,255,0));
+
         z-index: -2;
-        opacity: .72;
+        opacity: .76;
     }
 
-    .brand-content {
+    .pc-brand-inner {
         width: 100%;
-        max-width: 570px;
+        max-width: 650px;
+
         display: flex;
         flex-direction: column;
         align-items: center;
         text-align: center;
-        transform: translateY(-4px);
+
+        transform: translate(-6px, -8px);
     }
 
-    .brand-logo-main {
-        width: 430px;
+    .pc-brand-logo {
+        width: 455px;
         max-width: 100%;
         height: auto;
+
         display: block;
         object-fit: contain;
-        margin-bottom: 18px;
+
+        margin-bottom: 112px;
+
         filter:
-            drop-shadow(0 18px 28px rgba(5,150,105,.08))
+            drop-shadow(0 22px 34px rgba(5,150,105,.08))
             drop-shadow(0 8px 12px rgba(15,23,42,.035));
+
         user-select: none;
         pointer-events: none;
     }
 
-    .brand-title-main {
-        max-width: 560px;
+    .pc-brand-title {
+        max-width: 650px;
         margin: 0;
+
         color: #0f172a;
-        font-size: 26px;
-        line-height: 1.28;
+
+        font-family: 'Poppins', sans-serif;
+        font-size: 28px;
+        line-height: 1.22;
         font-weight: 900;
-        letter-spacing: -0.055em;
+        letter-spacing: -0.065em;
     }
 
-    .brand-divider-main {
+    .pc-brand-divider {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 13px;
-        margin: 14px 0 18px;
+
+        margin: 18px 0 20px;
     }
 
-    .brand-divider-line {
-        width: 55px;
-        height: 1.6px;
+    .pc-brand-divider-line {
+        width: 58px;
+        height: 1.7px;
         border-radius: 999px;
     }
 
-    .brand-divider-line.left {
+    .pc-brand-divider-line.left {
         background: linear-gradient(to right, transparent, #f59e0b);
     }
 
-    .brand-divider-line.right {
+    .pc-brand-divider-line.right {
         background: linear-gradient(to left, transparent, #f59e0b);
     }
 
-    .brand-divider-dot {
+    .pc-brand-divider-dot {
         width: 8px;
         height: 8px;
+
         border-radius: 2px;
         background: #f59e0b;
+
         transform: rotate(45deg);
-        box-shadow: 0 4px 10px rgba(245,158,11,.26);
+
+        box-shadow: 0 5px 12px rgba(245,158,11,.28);
     }
 
-    .brand-description-main {
-        max-width: 445px;
-        margin: 0 0 26px;
+    .pc-brand-description {
+        max-width: 510px;
+        margin: 0 0 42px;
+
         color: #64748b;
-        font-size: 15.5px;
+
+        font-size: 16px;
         line-height: 1.72;
-        font-weight: 650;
+        font-weight: 750;
     }
 
-    .feature-list {
+    .pc-feature-grid {
         width: 100%;
-        max-width: 455px;
+        max-width: 520px;
+
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
+        gap: 18px;
     }
 
-    .feature-box {
-        aspect-ratio: 1 / 1;
-        border-radius: 24px;
+    .pc-feature-card {
+        height: 112px;
+
+        border-radius: 25px;
+
         background:
-            linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.58));
-        border: 1px solid rgba(255,255,255,.88);
+            linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.62));
+
+        border: 1px solid rgba(255,255,255,.92);
+
         box-shadow:
-            0 18px 35px rgba(15,23,42,.055),
-            inset 0 1px 0 rgba(255,255,255,.82);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
+            0 18px 36px rgba(15,23,42,.055),
+            inset 0 1px 0 rgba(255,255,255,.86);
+
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
-        gap: 10px;
+        gap: 11px;
+
         transition:
             transform .34s cubic-bezier(.16,1,.3,1),
             box-shadow .34s ease,
             background .34s ease;
     }
 
-    .feature-box:hover {
+    .pc-feature-card:hover {
         transform: translateY(-7px);
-        background: rgba(255,255,255,.92);
-        box-shadow: 0 24px 44px rgba(16,185,129,.16);
+
+        background: rgba(255,255,255,.95);
+
+        box-shadow:
+            0 26px 46px rgba(16,185,129,.16),
+            inset 0 1px 0 rgba(255,255,255,.92);
     }
 
-    .feature-icon {
-        width: 43px;
-        height: 43px;
+    .pc-feature-icon {
+        width: 46px;
+        height: 46px;
+
         border-radius: 16px;
+
         background: rgba(5,150,105,.10);
         color: #059669;
+
         display: flex;
         align-items: center;
         justify-content: center;
+
         font-size: 18px;
     }
 
-    .feature-text {
+    .pc-feature-text {
         color: #1e293b;
-        font-size: 12px;
+
+        font-size: 12.2px;
         line-height: 1;
         font-weight: 900;
     }
 
-    /* =========================
-       RIGHT LOGIN CARD
-    ========================== */
+    /*
+    |--------------------------------------------------------------------------
+    | RIGHT SIDE
+    |--------------------------------------------------------------------------
+    */
 
-    .form-side {
+    .pc-login-form-side {
+        position: relative;
         width: 100%;
+        height: 690px;
+        min-height: 690px;
+
         display: flex;
         align-items: center;
         justify-content: center;
+
+        transform: translateX(4px);
     }
 
-    .login-card {
+    .pc-login-card {
         position: relative;
         width: 100%;
-        max-width: 535px;
-        min-height: 600px;
-        border-radius: 38px;
-        padding: 48px 52px 42px;
+        max-width: 545px;
+        min-height: 640px;
+
+        padding: 52px 54px 44px;
+
         overflow: hidden;
+
+        border-radius: 42px;
+
         background:
-            linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.91));
+            linear-gradient(180deg, rgba(255,255,255,.965), rgba(255,255,255,.91));
+
         border: 1px solid rgba(226,232,240,.86);
+
         box-shadow:
-            0 34px 90px rgba(15,23,42,.09),
-            0 12px 32px rgba(15,23,42,.045),
-            inset 0 1px 0 rgba(255,255,255,.92);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
+            0 36px 94px rgba(15,23,42,.09),
+            0 14px 34px rgba(15,23,42,.045),
+            inset 0 1px 0 rgba(255,255,255,.94);
+
+        backdrop-filter: blur(26px);
+        -webkit-backdrop-filter: blur(26px);
+
+        transform: translateY(2px);
     }
 
-    .login-card::before {
+    .pc-login-card::before {
         content: "";
         position: absolute;
         inset: 0;
+
         background:
-            radial-gradient(circle at 15% 0%, rgba(16,185,129,.085), transparent 34%),
-            radial-gradient(circle at 94% 100%, rgba(245,158,11,.055), transparent 32%);
+            radial-gradient(circle at 14% 0%, rgba(16,185,129,.085), transparent 34%),
+            radial-gradient(circle at 96% 100%, rgba(245,158,11,.055), transparent 32%);
+
         pointer-events: none;
     }
 
-    .login-card::after {
+    .pc-login-card::after {
         content: "";
         position: absolute;
-        width: 260px;
-        height: 260px;
-        right: -110px;
-        top: -120px;
+        width: 285px;
+        height: 285px;
+        right: -118px;
+        top: -134px;
+
         border-radius: 999px;
-        background: rgba(16,185,129,.055);
+        background: rgba(16,185,129,.06);
+
         pointer-events: none;
     }
 
-    .login-card-inner {
+    .pc-login-card-inner {
         position: relative;
         z-index: 2;
     }
 
-    .mobile-brand {
+    .pc-mobile-logo {
         display: none;
     }
 
-    .login-header {
+    .pc-login-header {
         text-align: center;
-        margin-bottom: 36px;
+        margin-bottom: 42px;
     }
 
-    .login-title {
-        margin: 0 0 11px;
+    .pc-login-title {
+        margin: 0 0 12px;
+
         color: #064e3b;
-        font-size: 30px;
-        line-height: 1.14;
+
+        font-family: 'Poppins', sans-serif;
+        font-size: 32px;
+        line-height: 1.12;
         font-weight: 900;
-        letter-spacing: -0.055em;
+        letter-spacing: -0.065em;
     }
 
-    .login-subtitle {
+    .pc-login-subtitle {
         margin: 0;
+
         color: #64748b;
+
         font-size: 15px;
         line-height: 1.55;
-        font-weight: 650;
+        font-weight: 700;
     }
 
-    .login-form {
+    .pc-login-form {
         display: flex;
         flex-direction: column;
-        gap: 21px;
+        gap: 23px;
     }
 
-    .form-group-auth {
+    .pc-form-group {
         width: 100%;
     }
 
-    .auth-label {
+    .pc-label {
         display: block;
+
         margin: 0 0 10px 2px;
+
         color: #1e293b;
+
         font-size: 12.5px;
         font-weight: 900;
-        letter-spacing: .06em;
+        letter-spacing: .055em;
     }
 
-    .input-wrap-auth {
+    .pc-input-wrap {
         position: relative;
         width: 100%;
     }
 
-    .auth-input-control {
+    .pc-input {
         width: 100%;
-        height: 58px;
+        height: 61px;
+
         border: 1px solid #dbe5ee;
-        border-radius: 16px;
-        padding: 0 52px 0 52px;
+        border-radius: 18px;
+
+        padding: 0 54px 0 54px;
+
         color: #0f172a;
         background: rgba(255,255,255,.88);
+
         outline: none;
+
         font-size: 15px;
-        font-weight: 650;
+        font-weight: 700;
+
         transition:
             border-color .24s ease,
             box-shadow .24s ease,
@@ -321,306 +398,368 @@
             transform .24s ease;
     }
 
-    .auth-input-control::placeholder {
+    .pc-input::placeholder {
         color: #94a3b8;
-        font-weight: 600;
+        font-weight: 650;
     }
 
-    .auth-input-control:hover {
+    .pc-input:hover {
         background: #ffffff;
         border-color: #cbd5e1;
     }
 
-    .auth-input-control:focus {
+    .pc-input:focus {
         background: #ffffff;
         border-color: #059669;
+
         box-shadow:
             0 0 0 5px rgba(5,150,105,.10),
-            0 12px 24px rgba(5,150,105,.06);
+            0 14px 28px rgba(5,150,105,.065);
     }
 
-    .input-icon-left {
+    .pc-input-icon {
         position: absolute;
-        left: 18px;
+        left: 19px;
         top: 50%;
         transform: translateY(-50%);
+
         color: #0f766e;
+
         font-size: 18px;
+
         pointer-events: none;
+
         transition: color .24s ease;
     }
 
-    .auth-input-control:not(:focus) ~ .input-icon-left {
+    .pc-input:not(:focus) ~ .pc-input-icon {
         color: #94a3b8;
     }
 
-    .password-toggle {
+    .pc-password-toggle {
         position: absolute;
         right: 10px;
         top: 50%;
         transform: translateY(-50%);
-        width: 40px;
-        height: 40px;
+
+        width: 42px;
+        height: 42px;
+
         border: 0;
-        border-radius: 13px;
+        border-radius: 14px;
+
         background: transparent;
         color: #94a3b8;
+
         display: flex;
         align-items: center;
         justify-content: center;
+
         cursor: pointer;
+
         transition:
             color .24s ease,
             background .24s ease;
     }
 
-    .password-toggle:hover {
+    .pc-password-toggle:hover {
         color: #059669;
         background: #f8fafc;
     }
 
-    .forgot-row {
+    .pc-forgot-row {
         display: flex;
         justify-content: flex-end;
-        margin-top: -2px;
+
+        margin-top: -4px;
     }
 
-    .forgot-link {
+    .pc-forgot-link {
         color: #059669;
+
         font-size: 13.5px;
         font-weight: 900;
         text-decoration: none;
     }
 
-    .forgot-link:hover {
+    .pc-forgot-link:hover {
         color: #047857;
         text-decoration: underline;
         text-underline-offset: 4px;
     }
 
-    .submit-area {
-        padding-top: 16px;
+    .pc-submit-area {
+        padding-top: 18px;
     }
 
-    .submit-btn {
+    .pc-submit-btn {
         width: 100%;
-        height: 62px;
+        height: 64px;
+
         border: 0;
-        border-radius: 17px;
+        border-radius: 18px;
+
         color: white;
         cursor: pointer;
+
         background:
             linear-gradient(135deg, #047857 0%, #059669 48%, #10b981 100%);
+
         box-shadow:
-            0 18px 36px rgba(5,150,105,.30),
-            inset 0 1px 0 rgba(255,255,255,.22);
+            0 18px 38px rgba(5,150,105,.30),
+            inset 0 1px 0 rgba(255,255,255,.24);
+
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 12px;
+
         font-size: 16px;
         font-weight: 900;
+
         transition:
             transform .28s cubic-bezier(.16,1,.3,1),
             box-shadow .28s ease,
             filter .28s ease;
     }
 
-    .submit-btn:hover {
+    .pc-submit-btn:hover {
         transform: translateY(-2px);
-        filter: saturate(1.05);
+        filter: saturate(1.06);
+
         box-shadow:
-            0 24px 44px rgba(5,150,105,.36),
-            inset 0 1px 0 rgba(255,255,255,.26);
+            0 25px 46px rgba(5,150,105,.36),
+            inset 0 1px 0 rgba(255,255,255,.28);
     }
 
-    .submit-btn:disabled {
+    .pc-submit-btn:disabled {
         cursor: wait;
         opacity: .9;
         transform: none;
     }
 
-    .submit-btn i {
+    .pc-submit-btn i {
         font-size: 14px;
         transition: transform .24s ease;
     }
 
-    .submit-btn:hover i.fa-arrow-right {
+    .pc-submit-btn:hover i.fa-arrow-right {
         transform: translateX(5px);
     }
 
-    /* =========================
-       REPLACEMENT INFO SECTION
-    ========================== */
+    /*
+    |--------------------------------------------------------------------------
+    | NOTE BOX
+    |--------------------------------------------------------------------------
+    */
 
-    .system-note {
-        margin-top: 30px;
-        padding: 18px 18px;
-        border-radius: 20px;
+    .pc-system-note {
+        margin-top: 38px;
+        padding: 18px;
+
+        border-radius: 21px;
+
         background:
-            linear-gradient(135deg, rgba(236,253,245,.86), rgba(255,255,255,.72));
-        border: 1px solid rgba(16,185,129,.16);
+            linear-gradient(135deg, rgba(236,253,245,.88), rgba(255,255,255,.74));
+
+        border: 1px solid rgba(16,185,129,.17);
+
         box-shadow:
             0 14px 30px rgba(15,23,42,.045),
-            inset 0 1px 0 rgba(255,255,255,.80);
+            inset 0 1px 0 rgba(255,255,255,.84);
+
         display: flex;
         align-items: flex-start;
         gap: 13px;
     }
 
-    .system-note-icon {
+    .pc-note-icon {
         flex: 0 0 auto;
-        width: 38px;
-        height: 38px;
-        border-radius: 14px;
+
+        width: 39px;
+        height: 39px;
+
+        border-radius: 15px;
+
         background: rgba(5,150,105,.10);
         color: #059669;
+
         display: flex;
         align-items: center;
         justify-content: center;
+
         font-size: 16px;
     }
 
-    .system-note-content {
+    .pc-note-content {
         min-width: 0;
     }
 
-    .system-note-title {
+    .pc-note-title {
         margin: 0 0 4px;
+
         color: #064e3b;
+
         font-size: 13.8px;
         line-height: 1.35;
         font-weight: 900;
     }
 
-    .system-note-text {
+    .pc-note-text {
         margin: 0;
+
         color: #64748b;
+
         font-size: 12.8px;
         line-height: 1.62;
-        font-weight: 650;
+        font-weight: 700;
     }
 
-    /* =========================
-       MOBILE DECOR
-    ========================== */
+    /*
+    |--------------------------------------------------------------------------
+    | MOBILE DECOR
+    |--------------------------------------------------------------------------
+    */
 
-    .leaf-mobile-decor {
+    .pc-mobile-leaf {
         position: absolute;
         display: none;
         pointer-events: none;
         z-index: 1;
     }
 
-    .leaf-mobile-decor .leaf-small {
+    .pc-mobile-leaf span {
         position: absolute;
+
         border-radius: 100% 0 100% 0;
+
         background:
             linear-gradient(135deg, rgba(4,120,87,.36), rgba(16,185,129,.06));
+
         box-shadow: inset 8px 8px 14px rgba(255,255,255,.16);
     }
 
-    /* =========================
-       ENTRANCE ANIMATION
-    ========================== */
+    /*
+    |--------------------------------------------------------------------------
+    | ANIMATION
+    |--------------------------------------------------------------------------
+    */
 
-    .auth-fade-left {
+    .pc-enter-left {
         opacity: 0;
         transform: translateX(-34px);
-        animation: loginEnterLeft .82s cubic-bezier(.16,1,.3,1) forwards;
+        filter: blur(5px);
+        animation: pcEnterLeft .86s cubic-bezier(.16,1,.3,1) forwards;
     }
 
-    .auth-fade-right {
+    .pc-enter-right {
         opacity: 0;
         transform: translateX(34px);
-        animation: loginEnterRight .82s cubic-bezier(.16,1,.3,1) forwards;
+        filter: blur(5px);
+        animation: pcEnterRight .86s cubic-bezier(.16,1,.3,1) forwards;
     }
 
-    .auth-fade-up {
+    .pc-enter-up {
         opacity: 0;
         transform: translateY(24px);
-        animation: loginEnterUp .72s cubic-bezier(.16,1,.3,1) forwards;
+        filter: blur(4px);
+        animation: pcEnterUp .76s cubic-bezier(.16,1,.3,1) forwards;
     }
 
-    .delay-1 { animation-delay: .08s; }
-    .delay-2 { animation-delay: .15s; }
-    .delay-3 { animation-delay: .22s; }
-    .delay-4 { animation-delay: .29s; }
-    .delay-5 { animation-delay: .36s; }
+    .pc-delay-1 { animation-delay: .08s; }
+    .pc-delay-2 { animation-delay: .15s; }
+    .pc-delay-3 { animation-delay: .22s; }
+    .pc-delay-4 { animation-delay: .29s; }
+    .pc-delay-5 { animation-delay: .36s; }
 
-    @keyframes loginEnterLeft {
+    @keyframes pcEnterLeft {
         to {
             opacity: 1;
             transform: translateX(0);
+            filter: blur(0);
         }
     }
 
-    @keyframes loginEnterRight {
+    @keyframes pcEnterRight {
         to {
             opacity: 1;
             transform: translateX(0);
+            filter: blur(0);
         }
     }
 
-    @keyframes loginEnterUp {
+    @keyframes pcEnterUp {
         to {
             opacity: 1;
             transform: translateY(0);
+            filter: blur(0);
         }
     }
 
-    /* =========================
-       TABLET
-    ========================== */
+    /*
+    |--------------------------------------------------------------------------
+    | RESPONSIVE
+    |--------------------------------------------------------------------------
+    */
 
     @media (max-width: 1280px) {
-        .login-page-shell {
-            max-width: 1180px;
-            grid-template-columns: minmax(0, 1fr) minmax(440px, .92fr);
-            gap: 56px;
-            padding: 0 28px;
+        .pc-login-shell {
+            max-width: 1220px;
+            grid-template-columns: minmax(0, 1fr) minmax(450px, .92fr);
+            gap: 58px;
+            padding: 0 34px;
         }
 
-        .brand-side {
-            min-height: 590px;
+        .pc-login-brand,
+        .pc-login-form-side {
+            height: 640px;
+            min-height: 640px;
         }
 
-        .brand-logo-main {
-            width: 390px;
-            margin-bottom: 16px;
+        .pc-brand-logo {
+            width: 405px;
+            margin-bottom: 82px;
         }
 
-        .brand-title-main {
+        .pc-brand-title {
             font-size: 24px;
         }
 
-        .brand-description-main {
+        .pc-brand-description {
             font-size: 15px;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
         }
 
-        .feature-list {
-            max-width: 430px;
+        .pc-feature-grid {
+            max-width: 440px;
             gap: 14px;
         }
 
-        .login-card {
-            max-width: 500px;
-            min-height: 585px;
+        .pc-feature-card {
+            height: 104px;
+        }
+
+        .pc-login-card {
+            max-width: 505px;
+            min-height: 600px;
             padding: 44px 46px 38px;
         }
 
-        .login-title {
+        .pc-login-title {
             font-size: 28px;
+        }
+
+        .pc-login-header {
+            margin-bottom: 34px;
+        }
+
+        .pc-system-note {
+            margin-top: 30px;
         }
     }
 
-    /* =========================
-       MOBILE
-    ========================== */
-
     @media (max-width: 1024px) {
-        .login-page-shell {
+        .pc-login-shell {
             min-height: calc(100svh - 28px);
             display: flex;
             align-items: center;
@@ -628,16 +767,19 @@
             padding: 18px 0;
         }
 
-        .brand-side {
+        .pc-login-brand {
             display: none;
         }
 
-        .form-side {
+        .pc-login-form-side {
             width: 100%;
+            height: auto;
+            min-height: auto;
             position: relative;
+            transform: none;
         }
 
-        .form-side::before {
+        .pc-login-form-side::before {
             content: "";
             position: absolute;
             width: 330px;
@@ -645,91 +787,100 @@
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
+
             border-radius: 999px;
+
             background:
-                radial-gradient(circle, rgba(255,255,255,.70), rgba(255,255,255,.20) 54%, transparent 72%);
+                radial-gradient(circle, rgba(255,255,255,.72), rgba(255,255,255,.22) 54%, transparent 72%);
+
             z-index: 0;
         }
 
-        .login-card {
+        .pc-login-card {
             max-width: 460px;
             min-height: auto;
             padding: 28px 26px 26px;
+
             border-radius: 32px;
+
             z-index: 2;
+            transform: none;
         }
 
-        .mobile-brand {
+        .pc-mobile-logo {
             display: flex;
             justify-content: center;
             margin-bottom: 20px;
         }
 
-        .mobile-brand img {
+        .pc-mobile-logo img {
             width: 164px;
             height: auto;
+
             display: block;
             object-fit: contain;
+
             filter: drop-shadow(0 10px 18px rgba(5,150,105,.08));
         }
 
-        .login-header {
+        .pc-login-header {
             margin-bottom: 28px;
         }
 
-        .login-title {
+        .pc-login-title {
             font-size: 24px;
         }
 
-        .login-subtitle {
+        .pc-login-subtitle {
             font-size: 13.5px;
         }
 
-        .auth-label {
+        .pc-label {
             font-size: 11.2px;
             margin-bottom: 8px;
         }
 
-        .auth-input-control {
+        .pc-input {
             height: 52px;
             border-radius: 15px;
             font-size: 13.3px;
             padding-left: 46px;
+            padding-right: 48px;
         }
 
-        .input-icon-left {
+        .pc-input-icon {
             left: 17px;
             font-size: 15px;
         }
 
-        .submit-btn {
+        .pc-submit-btn {
             height: 54px;
             border-radius: 15px;
             font-size: 14.2px;
         }
 
-        .system-note {
+        .pc-system-note {
             margin-top: 24px;
-            padding: 15px 15px;
+            padding: 15px;
             border-radius: 18px;
         }
 
-        .system-note-icon {
+        .pc-note-icon {
             width: 35px;
             height: 35px;
             border-radius: 13px;
             font-size: 15px;
         }
 
-        .system-note-title {
+        .pc-note-title {
             font-size: 13px;
         }
 
-        .system-note-text {
+        .pc-note-text {
             font-size: 12.2px;
         }
 
-        .leaf-mobile-decor {
+        .pc-mobile-leaf {
             display: block;
             width: 250px;
             height: 250px;
@@ -739,7 +890,7 @@
             transform: rotate(-10deg);
         }
 
-        .leaf-mobile-decor .leaf-small.one {
+        .pc-mobile-leaf .one {
             width: 120px;
             height: 70px;
             left: 20px;
@@ -747,7 +898,7 @@
             transform: rotate(-24deg);
         }
 
-        .leaf-mobile-decor .leaf-small.two {
+        .pc-mobile-leaf .two {
             width: 135px;
             height: 76px;
             left: 78px;
@@ -755,7 +906,7 @@
             transform: rotate(-4deg);
         }
 
-        .leaf-mobile-decor .leaf-small.three {
+        .pc-mobile-leaf .three {
             width: 98px;
             height: 58px;
             left: 130px;
@@ -765,64 +916,64 @@
     }
 
     @media (max-width: 640px) {
-        .login-page-shell {
+        .pc-login-shell {
             min-height: calc(100svh - 20px);
             padding: 12px 0;
         }
 
-        .login-card {
+        .pc-login-card {
             max-width: 100%;
             width: min(100%, 390px);
             border-radius: 29px;
             padding: 25px 22px 23px;
         }
 
-        .mobile-brand img {
+        .pc-mobile-logo img {
             width: 150px;
         }
 
-        .login-title {
+        .pc-login-title {
             font-size: 22px;
         }
 
-        .login-subtitle {
+        .pc-login-subtitle {
             font-size: 12.6px;
         }
 
-        .login-form {
+        .pc-login-form {
             gap: 17px;
         }
 
-        .forgot-link {
+        .pc-forgot-link {
             font-size: 12.4px;
         }
 
-        .system-note {
+        .pc-system-note {
             gap: 11px;
         }
     }
 
     @media (max-width: 390px) {
-        .login-card {
+        .pc-login-card {
             width: 100%;
             border-radius: 25px;
             padding: 23px 18px 21px;
         }
 
-        .mobile-brand img {
+        .pc-mobile-logo img {
             width: 140px;
         }
 
-        .login-title {
+        .pc-login-title {
             font-size: 20px;
         }
 
-        .auth-input-control {
+        .pc-input {
             height: 50px;
             font-size: 12.8px;
         }
 
-        .system-note-text {
+        .pc-note-text {
             font-size: 11.8px;
         }
     }
@@ -830,40 +981,39 @@
 @endpush
 
 @section('content')
-<div class="login-page-shell">
+<div class="pc-login-shell">
 
-    {{-- DEKORASI DAUN MOBILE --}}
-    <div class="leaf-mobile-decor" aria-hidden="true">
-        <span class="leaf-small one"></span>
-        <span class="leaf-small two"></span>
-        <span class="leaf-small three"></span>
+    <div class="pc-mobile-leaf" aria-hidden="true">
+        <span class="one"></span>
+        <span class="two"></span>
+        <span class="three"></span>
     </div>
 
-    {{-- KIRI: BRANDING --}}
-    <section class="brand-side auth-fade-left">
-        <div class="brand-content">
+    {{-- LEFT BRANDING --}}
+    <section class="pc-login-brand pc-enter-left">
+        <div class="pc-brand-inner">
 
             <img
                 src="{{ asset('img/logo.png') }}"
                 alt="Logo PosyanduCare"
-                class="brand-logo-main"
+                class="pc-brand-logo"
             >
 
-            <h2 class="brand-title-main">
+            <h2 class="pc-brand-title">
                 Sehat Bersama, Tumbuh Setiap Generasi
             </h2>
 
-            <div class="brand-divider-main">
-                <span class="brand-divider-line left"></span>
-                <span class="brand-divider-dot"></span>
-                <span class="brand-divider-line right"></span>
+            <div class="pc-brand-divider">
+                <span class="pc-brand-divider-line left"></span>
+                <span class="pc-brand-divider-dot"></span>
+                <span class="pc-brand-divider-line right"></span>
             </div>
 
-            <p class="brand-description-main">
+            <p class="pc-brand-description">
                 Platform layanan kesehatan terpadu untuk masyarakat modern.
             </p>
 
-            <div class="feature-list">
+            <div class="pc-feature-grid">
                 @php
                     $features = [
                         ['icon' => 'fa-user-group', 'text' => 'Terintegrasi'],
@@ -874,12 +1024,12 @@
                 @endphp
 
                 @foreach($features as $index => $feature)
-                    <div class="feature-box auth-fade-up delay-{{ $index + 1 }}">
-                        <div class="feature-icon">
+                    <div class="pc-feature-card pc-enter-up pc-delay-{{ $index + 1 }}">
+                        <div class="pc-feature-icon">
                             <i class="fa-solid {{ $feature['icon'] }}"></i>
                         </div>
 
-                        <span class="feature-text">
+                        <span class="pc-feature-text">
                             {{ $feature['text'] }}
                         </span>
                     </div>
@@ -889,25 +1039,24 @@
         </div>
     </section>
 
-    {{-- KANAN: FORM --}}
-    <section class="form-side auth-fade-right delay-1">
-        <div class="login-card">
-            <div class="login-card-inner">
+    {{-- RIGHT FORM --}}
+    <section class="pc-login-form-side pc-enter-right pc-delay-1">
+        <div class="pc-login-card">
+            <div class="pc-login-card-inner">
 
-                {{-- LOGO KHUSUS MOBILE --}}
-                <div class="mobile-brand">
+                <div class="pc-mobile-logo">
                     <img
                         src="{{ asset('img/logo.png') }}"
                         alt="Logo PosyanduCare"
                     >
                 </div>
 
-                <div class="login-header">
-                    <h1 class="login-title">
+                <div class="pc-login-header">
+                    <h1 class="pc-login-title">
                         Selamat Datang Kembali!
                     </h1>
 
-                    <p class="login-subtitle">
+                    <p class="pc-login-subtitle">
                         Masuk untuk melanjutkan ke Portal PosyanduCare
                     </p>
                 </div>
@@ -916,54 +1065,54 @@
                     method="POST"
                     action="{{ route('login.post') }}"
                     id="loginFormEngine"
-                    class="login-form"
+                    class="pc-login-form"
                 >
                     @csrf
 
-                    <div class="form-group-auth">
-                        <label for="login" class="auth-label">
+                    <div class="pc-form-group">
+                        <label for="login" class="pc-label">
                             Email atau Username
                         </label>
 
-                        <div class="input-wrap-auth">
+                        <div class="pc-input-wrap">
                             <input
                                 type="text"
                                 id="login"
                                 name="login"
                                 value="{{ old('login') }}"
-                                class="auth-input-control"
+                                class="pc-input"
                                 placeholder="Masukkan email atau username"
                                 required
                                 autofocus
                                 autocomplete="off"
                             >
 
-                            <i class="fa-regular fa-user input-icon-left"></i>
+                            <i class="fa-regular fa-user pc-input-icon"></i>
                         </div>
                     </div>
 
-                    <div class="form-group-auth">
-                        <label for="password" class="auth-label">
+                    <div class="pc-form-group">
+                        <label for="password" class="pc-label">
                             Password
                         </label>
 
-                        <div class="input-wrap-auth">
+                        <div class="pc-input-wrap">
                             <input
                                 type="password"
                                 id="password"
                                 name="password"
-                                class="auth-input-control"
+                                class="pc-input"
                                 placeholder="Masukkan password"
                                 required
                                 autocomplete="current-password"
                             >
 
-                            <i class="fa-solid fa-lock input-icon-left"></i>
+                            <i class="fa-solid fa-lock pc-input-icon"></i>
 
                             <button
                                 type="button"
                                 onclick="toggleVision()"
-                                class="password-toggle"
+                                class="pc-password-toggle"
                                 aria-label="Tampilkan atau sembunyikan password"
                             >
                                 <i class="fa-regular fa-eye-slash" id="visionIcon"></i>
@@ -971,17 +1120,17 @@
                         </div>
                     </div>
 
-                    <div class="forgot-row">
-                        <a href="#" class="forgot-link">
+                    <div class="pc-forgot-row">
+                        <a href="#" class="pc-forgot-link">
                             Lupa password?
                         </a>
                     </div>
 
-                    <div class="submit-area">
+                    <div class="pc-submit-area">
                         <button
                             type="submit"
                             id="submitActionBtn"
-                            class="submit-btn"
+                            class="pc-submit-btn"
                         >
                             <span id="submitTxt">Masuk</span>
                             <i class="fa-solid fa-arrow-right" id="submitIcon"></i>
@@ -989,18 +1138,17 @@
                     </div>
                 </form>
 
-                {{-- PENGGANTI SOCIAL LOGIN --}}
-                <div class="system-note auth-fade-up delay-3">
-                    <div class="system-note-icon">
+                <div class="pc-system-note pc-enter-up pc-delay-3">
+                    <div class="pc-note-icon">
                         <i class="fa-solid fa-shield-heart"></i>
                     </div>
 
-                    <div class="system-note-content">
-                        <p class="system-note-title">
+                    <div class="pc-note-content">
+                        <p class="pc-note-title">
                             Akses khusus pengguna terdaftar
                         </p>
 
-                        <p class="system-note-text">
+                        <p class="pc-note-text">
                             Gunakan akun yang telah dibuat oleh petugas Posyandu untuk mengakses layanan kesehatan digital.
                         </p>
                     </div>
@@ -1044,25 +1192,29 @@
             return;
         }
 
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
+        form.dataset.transitionBound = 'true';
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
 
             btn.disabled = true;
             btn.style.pointerEvents = 'none';
-            txt.innerText = 'Memverifikasi akun...';
+            btn.classList.add('opacity-90', 'cursor-wait');
+
+            txt.innerText = 'Membuka portal...';
 
             ico.classList.remove('fa-arrow-right');
-            ico.classList.add('fa-spinner', 'fa-spin');
+            ico.classList.remove('fa-spinner');
+            ico.classList.add('fa-circle-notch', 'fa-spin');
 
             setTimeout(function () {
-                if (window.PosyanduAuthTransition) {
-                    window.PosyanduAuthTransition.play();
+                if (typeof window.runLoginTransition === 'function') {
+                    window.runLoginTransition(form);
+                    return;
                 }
 
-                setTimeout(function () {
-                    form.submit();
-                }, 980);
-            }, 160);
+                form.submit();
+            }, 180);
         });
     });
 </script>
