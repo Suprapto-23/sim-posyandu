@@ -2,6 +2,16 @@
 
 use Illuminate\Support\Str;
 
+/*
+|--------------------------------------------------------------------------
+| MySQL SSL Constants Compatibility
+|--------------------------------------------------------------------------
+|
+| PHP 8.5 mulai mengganti beberapa konstanta PDO MySQL lama.
+| Kode ini dibuat supaya tetap jalan di PHP lama dan PHP 8.5 Vercel.
+|
+*/
+
 $mysqlSslCa = class_exists(\Pdo\Mysql::class) && defined(\Pdo\Mysql::class . '::ATTR_SSL_CA')
     ? constant(\Pdo\Mysql::class . '::ATTR_SSL_CA')
     : constant('PDO::MYSQL_ATTR_SSL_CA');
@@ -10,10 +20,36 @@ $mysqlSslVerifyServerCert = class_exists(\Pdo\Mysql::class) && defined(\Pdo\Mysq
     ? constant(\Pdo\Mysql::class . '::ATTR_SSL_VERIFY_SERVER_CERT')
     : constant('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT');
 
+/*
+|--------------------------------------------------------------------------
+| MySQL SSL CA Path
+|--------------------------------------------------------------------------
+|
+| Untuk Aiven, simpan CA certificate di:
+| config/certs/aiven-ca.pem
+|
+| Lalu di Vercel Environment Variables isi:
+| MYSQL_ATTR_SSL_CA=config/certs/aiven-ca.pem
+|
+*/
+
+$defaultMysqlSslCaPath = base_path('config/certs/aiven-ca.pem');
+
+$mysqlSslCaPath = env('MYSQL_ATTR_SSL_CA')
+    ? base_path(env('MYSQL_ATTR_SSL_CA'))
+    : $defaultMysqlSslCaPath;
+
+$mysqlSslCaPath = file_exists($mysqlSslCaPath)
+    ? $mysqlSslCaPath
+    : null;
+
 $mysqlSslVerifyServerCertValue = filter_var(
     env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', false),
-    FILTER_VALIDATE_BOOLEAN
+    FILTER_VALIDATE_BOOLEAN,
+    FILTER_NULL_ON_FAILURE
 );
+
+$mysqlSslVerifyServerCertValue = $mysqlSslVerifyServerCertValue ?? false;
 
 return [
 
@@ -60,7 +96,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                $mysqlSslCa => env('MYSQL_ATTR_SSL_CA') ? base_path(env('MYSQL_ATTR_SSL_CA')) : null,
+                $mysqlSslCa => $mysqlSslCaPath,
                 $mysqlSslVerifyServerCert => $mysqlSslVerifyServerCertValue,
             ], fn ($value) => ! is_null($value)) : [],
         ],
@@ -81,7 +117,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                $mysqlSslCa => env('MYSQL_ATTR_SSL_CA') ? base_path(env('MYSQL_ATTR_SSL_CA')) : null,
+                $mysqlSslCa => $mysqlSslCaPath,
                 $mysqlSslVerifyServerCert => $mysqlSslVerifyServerCertValue,
             ], fn ($value) => ! is_null($value)) : [],
         ],
