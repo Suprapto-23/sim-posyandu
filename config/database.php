@@ -2,18 +2,25 @@
 
 use Illuminate\Support\Str;
 
+$mysqlSslCa = class_exists(\Pdo\Mysql::class) && defined(\Pdo\Mysql::class . '::ATTR_SSL_CA')
+    ? constant(\Pdo\Mysql::class . '::ATTR_SSL_CA')
+    : constant('PDO::MYSQL_ATTR_SSL_CA');
+
+$mysqlSslVerifyServerCert = class_exists(\Pdo\Mysql::class) && defined(\Pdo\Mysql::class . '::ATTR_SSL_VERIFY_SERVER_CERT')
+    ? constant(\Pdo\Mysql::class . '::ATTR_SSL_VERIFY_SERVER_CERT')
+    : constant('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT');
+
+$mysqlSslVerifyServerCertValue = filter_var(
+    env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', false),
+    FILTER_VALIDATE_BOOLEAN
+);
+
 return [
 
     /*
     |--------------------------------------------------------------------------
     | Default Database Connection Name
     |--------------------------------------------------------------------------
-    |
-    | Here you may specify which of the database connections below you wish
-    | to use as your default connection for database operations. This is
-    | the connection which will be utilized unless another connection
-    | is explicitly specified when you execute a query / statement.
-    |
     */
 
     'default' => env('DB_CONNECTION', 'sqlite'),
@@ -22,11 +29,6 @@ return [
     |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
-    |
-    | Below are all of the database connections defined for your application.
-    | An example configuration is provided for each database system which
-    | is supported by Laravel. You're free to add / remove connections.
-    |
     */
 
     'connections' => [
@@ -57,10 +59,12 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-          'options' => extension_loaded('pdo_mysql') ? array_filter([
-    PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA') ? base_path(env('MYSQL_ATTR_SSL_CA')) : null,
-]) : [],
-],
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                $mysqlSslCa => env('MYSQL_ATTR_SSL_CA') ? base_path(env('MYSQL_ATTR_SSL_CA')) : null,
+                $mysqlSslVerifyServerCert => $mysqlSslVerifyServerCertValue,
+            ], fn ($value) => ! is_null($value)) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
@@ -77,8 +81,9 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
-]) : [],
+                $mysqlSslCa => env('MYSQL_ATTR_SSL_CA') ? base_path(env('MYSQL_ATTR_SSL_CA')) : null,
+                $mysqlSslVerifyServerCert => $mysqlSslVerifyServerCertValue,
+            ], fn ($value) => ! is_null($value)) : [],
         ],
 
         'pgsql' => [
@@ -117,11 +122,6 @@ return [
     |--------------------------------------------------------------------------
     | Migration Repository Table
     |--------------------------------------------------------------------------
-    |
-    | This table keeps track of all the migrations that have already run for
-    | your application. Using this information, we can determine which of
-    | the migrations on disk haven't actually been run on the database.
-    |
     */
 
     'migrations' => [
@@ -133,11 +133,6 @@ return [
     |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
-    |
-    | Redis is an open source, fast, and advanced key-value store that also
-    | provides a richer body of commands than a typical key-value system
-    | such as Memcached. You may define your connection settings here.
-    |
     */
 
     'redis' => [
@@ -146,7 +141,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+            'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_') . '_database_'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
