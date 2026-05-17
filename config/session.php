@@ -9,8 +9,7 @@ return [
     | Default Session Driver
     |--------------------------------------------------------------------------
     |
-    | Untuk Vercel, jangan pakai file.
-    | Pakai database supaya session tetap kebaca antar request.
+    | Untuk Vercel, pakai database. Jangan file, jangan cookie dulu.
     |
     */
 
@@ -45,8 +44,7 @@ return [
     | Session File Location
     |--------------------------------------------------------------------------
     |
-    | Tetap diset ke /tmp untuk jaga-jaga kalau driver berubah.
-    | Vercel cuma aman nulis ke /tmp. Ya, serverless banyak gaya.
+    | Untuk cadangan saja. Vercel aman nulis ke /tmp.
     |
     */
 
@@ -88,9 +86,6 @@ return [
     |--------------------------------------------------------------------------
     | Session Cookie Name
     |--------------------------------------------------------------------------
-    |
-    | Dibuat eksplisit supaya cookie tidak gonta-ganti nama.
-    |
     */
 
     'cookie' => env(
@@ -111,8 +106,7 @@ return [
     | Session Cookie Domain
     |--------------------------------------------------------------------------
     |
-    | Penting: kalau env SESSION_DOMAIN kosong, harus null.
-    | Jangan isi domain manual dulu di Vercel.
+    | Kalau SESSION_DOMAIN kosong, jadikan null.
     |
     */
 
@@ -122,9 +116,6 @@ return [
     |--------------------------------------------------------------------------
     | HTTPS Only Cookies
     |--------------------------------------------------------------------------
-    |
-    | Karena Vercel pakai HTTPS, ini true.
-    |
     */
 
     'secure' => filter_var(
@@ -134,7 +125,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | HTTP Access Only
+    | HTTP Only Cookies
     |--------------------------------------------------------------------------
     */
 
