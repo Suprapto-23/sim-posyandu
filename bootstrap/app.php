@@ -4,10 +4,14 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+$appStoragePath = $_ENV['APP_STORAGE']
+    ?? $_SERVER['APP_STORAGE']
+    ?? dirname(__DIR__) . '/storage';
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
@@ -23,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->trustHosts(at: [
+            'sim-posyandu.vercel.app',
             'posyandu-magement-sistem.vercel.app',
             '.vercel.app',
             'localhost',
@@ -44,17 +49,23 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->redirectUsersTo(function () {
             $user = auth()->user();
-            if (!$user) return '/login';
-            return match(strtolower($user->role)) {
-                'admin'  => '/admin/dashboard',
-                'bidan'  => '/bidan/dashboard',
-                'kader'  => '/kader/dashboard',
-                'user'   => '/user/dashboard',
-                default  => '/home',
+
+            if (! $user) {
+                return '/login';
+            }
+
+            return match (strtolower($user->role)) {
+                'admin' => '/admin/dashboard',
+                'bidan' => '/bidan/dashboard',
+                'kader' => '/kader/dashboard',
+                'user'  => '/user/dashboard',
+                default => '/home',
             };
         });
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
-    })->create();
+    })
+    ->useStoragePath($appStoragePath)
+    ->create();
