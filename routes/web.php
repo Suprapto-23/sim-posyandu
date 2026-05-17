@@ -338,4 +338,23 @@ Route::prefix('user')->name('user.')->middleware(['auth','checkstatus','role:use
     
     // Fallback URL jika user me-refresh halaman ganti sandi
     Route::get('/profile/password', fn() => redirect()->route('user.profile.edit'));
+    use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+
+Route::get('/debug-auth', function (Request $request) {
+    return response()->json([
+        'auth_check' => Auth::check(),
+        'auth_id' => Auth::id(),
+        'session_id' => $request->session()->getId(),
+        'session_login_user_id' => $request->session()->get('login_user_id'),
+        'session_login_role' => $request->session()->get('login_role'),
+        'cookie_session_name' => config('session.cookie'),
+        'cookie_value_exists' => $request->cookies->has(config('session.cookie')),
+        'cookie_keys' => array_keys($request->cookies->all()),
+        'session_driver' => config('session.driver'),
+        'session_domain' => config('session.domain'),
+        'session_secure' => config('session.secure'),
+        'session_same_site' => config('session.same_site'),
+    ]);
+});
 });
