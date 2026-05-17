@@ -10,9 +10,34 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 use App\Models\Pemeriksaan;
+// INJEKSI OTAL MEDIS (SERVICES)
+use App\Services\AnalisisBalitaService;
+use App\Services\AnalisisRemajaService;
+use App\Services\AnalisisIbuHamilService;
+use App\Services\AnalisisLansiaService;
 
 class PemeriksaanController extends Controller
 {
+    protected $balitaService;
+    protected $remajaService;
+    protected $bumilService;
+    protected $lansiaService;
+
+    /**
+     * Constructor dengan Dependency Injection untuk seluruh layanan analisis
+     */
+    public function __construct(
+        AnalisisBalitaService $balitaService,
+        AnalisisRemajaService $remajaService,
+        AnalisisIbuHamilService $bumilService,
+        AnalisisLansiaService $lansiaService
+    ) {
+        $this->balitaService = $balitaService;
+        $this->remajaService = $remajaService;
+        $this->bumilService  = $bumilService;
+        $this->lansiaService = $lansiaService;
+    }
+
     /**
      * INDEX: Ruang Tunggu Validasi Bidan (Triase Meja 5)
      */
@@ -25,9 +50,9 @@ class PemeriksaanController extends Controller
             $query = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])->latest();
 
             if ($tab === 'verified') {
-                $query->verified();
+                $query->where('status_verifikasi', 'verified');
             } else {
-                $query->pending();
+                $query->where('status_verifikasi', 'pending');
                 $tab = 'pending';
             }
 
@@ -39,103 +64,143 @@ class PemeriksaanController extends Controller
             }
 
             $pemeriksaans = $query->paginate(15)->withQueryString();
-            $pendingCount = Pemeriksaan::pending()->count();
+            $pendingCount = Pemeriksaan::where('status_verifikasi', 'pending')->count();
 
             return view('bidan.pemeriksaan.index', compact('pemeriksaans', 'tab', 'pendingCount'));
 
         } catch (\Exception $e) {
             Log::error('BIDAN_INDEX_ERROR: ' . $e->getMessage());
-            abort(500, 'Sistem gagal memuat antrian pemeriksaan.');
+            return back()->with('error', 'Gagal memuat ruang tunggu pemeriksaan.');
         }
     }
 
     /**
-     * SHOW: Ruang Konsultasi (Menampilkan data untuk divalidasi)
+     * VALIDASI: Halaman Tinjauan Medis sebelum Disahkan oleh Bidan
+     * Di sinilah Otak AI Medis bekerja memberikan rekomendasi otomatis ke Bidan
      */
-    public function show($id)
+    public function validasi($id)
     {
-        $pemeriksaan = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])->findOrFail($id);
-        return view('bidan.pemeriksaan.show', compact('pemeriksaan'));
+        try {
+            // Tarik data pemeriksaan beserta data pasien polimorfik lewat kunjungan
+            $pemeriksaan = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])->findOrFail($id);
+            $pasien = $pemeriksaan->kunjungan->pasien ?? null;
+
+            if (!$pasien) {
+                return redirect()->route('bidan.pemeriksaan.index')->with('error', 'Biodata pasien tidak ditemukan.');
+            }
+
+            $analisis = null;
+            $kategori = strtolower($pemeriksaan->kategori_pasien);
+
+            // PROSES ANALISIS OTOMATIS BERDASARKAN KATEGORI DEMOGRAFI PASIEN
+            if ($kategori === 'balita') {
+                $usiaBulan = $pasien->usia_bulan ?? 0;
+                $jk = $pasien->jenis_kelamin ?? 'L';
+                $analisis = $this->balitaService->analisisKomprehensif(
+                    $usiaBulan, 
+                    $jk, 
+                    (float)$pemeriksaan->berat_badan, 
+                    (float)$pemeriksaan->tinggi_badan
+                );
+            } elseif ($kategori === 'remaja') {
+                $usiaTahun = $pasien->usia_tahun ?? 0;
+                $jk = $pasien->jenis_kelamin ?? 'L';
+                
+                // Mencegah error pembagian jika tinggi badan 0
+                $tb = (float)($pemeriksaan->tinggi_badan ?? 0);
+                $bb = (float)($pemeriksaan->berat_badan ?? 0);
+                $imtValue = (float)($pemeriksaan->imt ?? 0);
+                
+                if ($imtValue <= 0 && $tb > 0) {
+                    $imtValue = $bb / (($tb / 100) ** 2);
+                }
+                
+                $analisis = $this->remajaService->analisisIMT($usiaTahun, $jk, $imtValue);
+            } elseif (str_contains($kategori, 'hamil') || $kategori === 'ibu_hamil') {
+                $analisis = $this->bumilService->analisisKomprehensif($pemeriksaan);
+            } elseif ($kategori === 'lansia') {
+                $jk = $pasien->jenis_kelamin ?? 'L';
+                $analisis = $this->lansiaService->analisisKomprehensif($pemeriksaan, $jk);
+            }
+
+            return view('bidan.pemeriksaan.validasi', compact('pemeriksaan', 'pasien', 'analisis'));
+
+        } catch (\Exception $e) {
+            Log::error('BIDAN_SHOW_VALIDASI_ERROR: ' . $e->getMessage());
+            return redirect()->route('bidan.pemeriksaan.index')->with('error', 'Gagal memuat panel tinjauan medis.');
+        }
     }
 
     /**
-     * UPDATE: Finalisasi & Pengesahan Medis (DENGAN LOGIKA JEMBATAN IMUNISASI)
+     * SIMPAN VALIDASI: Menyimpan verifikasi resmi dari Bidan beserta diagnosa akhir
      */
-    public function update(Request $request, $id)
+    public function simpanValidasi(Request $request, $id)
     {
-        $validated = $request->validate([
-            'suhu_tubuh'     => 'nullable|numeric|between:30,45',
-            'tekanan_darah'  => 'nullable|string|max:20',
-            'status_gizi'    => 'nullable|string|max:50',
-            'diagnosa'       => 'required|string|min:5',
-            'tindakan'       => 'required|string|min:5',
+        $request->validate([
+            'status_gizi'   => 'nullable|string|max:100',
+            'diagnosa'      => 'required|string|max:255',
+            'tindakan'      => 'nullable|string|max:255',
+            'catatan_edukasi'=> 'nullable|string',
         ], [
-            'diagnosa.required' => 'Hasil diagnosa klinis wajib diisi sebelum pengesahan.',
-            'tindakan.required' => 'Saran tindakan atau resep wajib diberikan.',
+            'diagnosa.required' => 'Kolom Kesimpulan Diagnosa Medis wajib diisi oleh Bidan.'
         ]);
 
         DB::beginTransaction();
         try {
-            $pemeriksaan = Pemeriksaan::with('kunjungan')->findOrFail($id);
-            
-            $clinicalData = $request->only([
-                'suhu_tubuh', 
-                'tekanan_darah', 
-                'status_gizi', 
-                'diagnosa', 
-                'tindakan'
-            ]);
-            
-            // Stempel Otoritas Bidan mutlak
-            $clinicalData['status_verifikasi'] = 'verified'; 
-            $clinicalData['verified_by']       = Auth::id();
-            $clinicalData['verified_at']       = Carbon::now();
+            $pemeriksaan = Pemeriksaan::findOrFail($id);
 
-            $pemeriksaan->update($clinicalData);
+            // Hitung IMT otomatis untuk kategori remaja/lansia/bumil jika belum terisi
+            $imt = $pemeriksaan->imt;
+            if (empty($imt) && $pemeriksaan->berat_badan > 0 && $pemeriksaan->tinggi_badan > 0) {
+                $imt = round($pemeriksaan->berat_badan / (($pemeriksaan->tinggi_badan / 100) ** 2), 2);
+            }
+
+            // Update status rekam medis menjadi Terverifikasi (Verified)
+            $pemeriksaan->update([
+                'imt'               => $imt,
+                'status_gizi'       => $request->status_gizi ?? $pemeriksaan->status_gizi,
+                'diagnosa'          => $request->diagnosa,
+                'tindakan'          => $request->tindakan ?? '-',
+                'edukasi'           => $request->catatan_edukasi ?? '-',
+                'status_verifikasi' => 'verified',
+                'user_id_verifikator' => Auth::id(), // ID Bidan yang mengesahkan
+                'tanggal_periksa'   => now(),
+            ]);
 
             DB::commit();
-            
-            // ====================================================================
-            // LOGIKA JEMBATAN CERDAS (SMART BRIDGE)
-            // Jika request datang dari AJAX (fetch API di view show), balas dgn JSON
-            // ====================================================================
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status'  => 'success',
-                    'message' => 'Pemeriksaan telah disahkan secara permanen.',
-                    'data'    => [
-                        'pasien_id'   => $pemeriksaan->pasien_id,
-                        'pasien_type' => class_basename($pemeriksaan->kunjungan->pasien_type ?? ''),
-                        'kategori'    => $pemeriksaan->kategori_pasien,
-                        'nama'        => $pemeriksaan->nama_pasien
-                    ]
-                ]);
-            }
-            
-            // Fallback jika browser tidak mendukung JS (Standard form submit)
             return redirect()->route('bidan.pemeriksaan.index', ['tab' => 'verified'])
-                             ->with('success', 'Pemeriksaan telah disahkan secara permanen ke Rekam Medis (EMR).');
+                             ->with('success', 'Rekam medis berhasil disahkan dan diterbitkan ke Buku Kesehatan Digital warga.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('BIDAN_VALIDASI_ERROR: ' . $e->getMessage());
-            
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
-            }
-            return back()->with('error', 'Gagal memproses validasi: ' . $e->getMessage())->withInput();
+            Log::error('BIDAN_SIMPAN_VALIDASI_ERROR: ' . $e->getMessage());
+            return back()->with('error', 'Gagal mengesahkan data: ' . $e->getMessage())->withInput();
         }
     }
 
     /**
-     * DESTROY: Penghapusan Data (Emergency Only)
+     * SHOW: Melihat detail pemeriksaan yang sudah verified
+     */
+    public function show($id)
+    {
+        try {
+            $pemeriksaan = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa', 'verifikator'])->findOrFail($id);
+            $pasien = $pemeriksaan->kunjungan->pasien ?? null;
+            return view('bidan.pemeriksaan.show', compact('pemeriksaan', 'pasien'));
+        } catch (\Exception $e) {
+            return redirect()->route('bidan.pemeriksaan.index')->with('error', 'Data tidak ditemukan.');
+        }
+    }
+
+    /**
+     * DESTROY: Menghapus data antrean (Darurat/Salah Input)
      */
     public function destroy($id)
     {
         try {
             $pem = Pemeriksaan::findOrFail($id);
             $pem->delete();
-            return back()->with('success', 'Data antrian berhasil dihapus.');
+            return back()->with('success', 'Data antrean pemeriksaan berhasil dihapus dari sistem.');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal menghapus data.');
         }

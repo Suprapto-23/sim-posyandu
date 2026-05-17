@@ -1,286 +1,202 @@
 @extends('layouts.bidan')
 
-@section('title', 'Ruang Validasi Medis')
-@section('page-name', 'Meja 5 — Validasi Klinis')
-
-@push('styles')
-<style>
-    /* NEXUS ANIMATION SYSTEM */
-    .fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .clinical-card { background: white; border-radius: 28px; border: 1px solid #f1f5f9; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.03); overflow: hidden; }
-    
-    /* PREMIUM MEDICAL INPUT */
-    .med-input { 
-        width: 100%; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 16px; 
-        padding: 14px 18px; color: #0f172a; font-weight: 700; font-size: 13px; 
-        transition: all 0.3s ease; outline: none; appearance: none;
-    }
-    .med-input:focus { background: #fff; border-color: #06b6d4; box-shadow: 0 0 0 4px rgba(6,182,212,0.1); }
-    .med-label { display: block; font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
-
-    /* SWEETALERT CUSTOM */
-    .swal2-popup.nexus-swal { border-radius: 32px !important; padding: 2rem !important; border: 1px solid #f1f5f9 !important; font-family: 'Poppins', sans-serif; }
-</style>
-@endpush
+@section('title', 'Detail Arsip Pemeriksaan Klinis')
 
 @section('content')
 @php
-    $namaPasien = $pemeriksaan->nama_pasien;
-    $kategori = strtolower($pemeriksaan->kategori_pasien ?? 'umum');
-
-    $config = match($kategori) {
-        'balita', 'bayi' => ['col' => 'sky', 'ico' => 'fa-baby', 'label' => 'Anak & Balita'],
-        'remaja'         => ['col' => 'violet', 'ico' => 'fa-user-graduate', 'label' => 'Usia Remaja'],
-        'ibu_hamil'      => ['col' => 'pink', 'ico' => 'fa-female', 'label' => 'Ibu Hamil'],
-        'lansia'         => ['col' => 'emerald', 'ico' => 'fa-user-clock', 'label' => 'Lansia'],
-        default          => ['col' => 'slate', 'ico' => 'fa-user', 'label' => 'Umum'],
-    };
-
-    // Bersihkan nama petugas jika sistem
-    $namaKader = $pemeriksaan->pemeriksa->name ?? 'Kader';
-    if (in_array(strtolower($namaKader), ['system', 'sistem'])) { $namaKader = 'Kader Lapangan'; }
+    $kategori = strtolower($pemeriksaan->kategori_pasien);
 @endphp
 
-<div class="max-w-[1200px] mx-auto space-y-6 fade-in-up pb-20">
-
-    {{-- 1. HERO HEADER: IDENTITAS PASIEN --}}
-    <div class="clinical-card p-6 md:p-8 border-l-[10px] border-l-cyan-500 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
-        <div class="absolute -right-10 -bottom-10 opacity-[0.03] text-[150px] pointer-events-none"><i class="fas {{ $config['ico'] }}"></i></div>
-        
-        <div class="flex items-center gap-6 relative z-10 w-full md:w-auto">
-            <div class="w-[72px] h-[72px] rounded-[22px] bg-cyan-50 text-cyan-600 flex items-center justify-center text-[32px] shadow-inner border border-cyan-100 shrink-0">
-                <i class="fas {{ $config['ico'] }}"></i>
+<div class="bg-[#f8fafc] min-h-screen pb-12 font-poppins w-full animate-fade-in">
+    
+    {{-- BARIS HEADER --}}
+    <div class="pt-6 pb-4 px-4 md:px-8 max-w-7xl mx-auto flex justify-between items-center shrink-0">
+        <a href="{{ route('bidan.pemeriksaan.index', ['tab' => 'verified']) }}" class="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-700 transition-colors group">
+            <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:bg-slate-100 transition-all">
+                <i class="fas fa-arrow-left text-xs"></i>
             </div>
-            <div class="flex-1">
-                <div class="flex items-center gap-3 mb-1">
-                    <span class="px-2.5 py-1 bg-cyan-100 text-cyan-700 text-[9px] font-black uppercase rounded-md border border-cyan-200">Meja 5 Bidan</span>
-                    <span class="text-[10px] font-bold text-slate-400">ID: #{{ str_pad($pemeriksaan->id, 5, '0', STR_PAD_LEFT) }}</span>
-                </div>
-                <h1 class="text-[26px] font-black text-slate-800 tracking-tight font-poppins leading-none mb-1.5">{{ $namaPasien }}</h1>
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 bg-{{$config['col']}}-50 text-{{$config['col']}}-600 text-[9px] font-black uppercase rounded border border-{{$config['col']}}-100">{{ $config['label'] }}</span>
-                    <span class="text-[11px] font-bold text-slate-400">NIK: {{ $pemeriksaan->nik_pasien }}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-slate-50 rounded-[20px] p-5 border border-slate-100 text-left md:text-right w-full md:w-auto relative z-10 shrink-0">
-            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Data dari Kader</p>
-            <p class="text-[14px] font-black text-indigo-600 font-poppins flex items-center md:justify-end gap-2">
-                <i class="fas fa-id-badge text-indigo-300"></i> {{ $namaKader }}
-            </p>
-            <p class="text-[10px] font-medium text-slate-400 mt-1 italic"><i class="far fa-clock mr-1"></i>Dikirim {{ $pemeriksaan->created_at->diffForHumans() }}</p>
+            Kembali ke Ruang Tunggu
+        </a>
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="text-[10px] font-black tracking-widest uppercase text-slate-500">Dokumen Arsip Terverifikasi</span>
         </div>
     </div>
 
-    <form id="formValidasi" action="{{ route('bidan.pemeriksaan.update', $pemeriksaan->id) }}" method="POST">
-        @csrf @method('PUT')
-        
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+        {{-- GRID UTAMA --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-stretch w-full">
             
-            {{-- KOLOM KIRI: PARAMETER FISIK (READ ONLY) --}}
-            <div class="lg:col-span-4">
-                <div class="clinical-card p-6 md:p-8 bg-slate-50/50 h-full border-2 border-slate-100">
-                    <h3 class="text-[14px] font-black text-slate-800 mb-5 flex items-center gap-2 border-b border-slate-200/60 pb-4">
-                        <i class="fas fa-ruler-combined text-cyan-500"></i> Parameter Fisik
-                    </h3>
+            {{-- KOLOM KIRI: PROFIL PASIEN & HASIL UKUR FISIK --}}
+            <div class="lg:col-span-5 h-full flex flex-col gap-6">
+                
+                {{-- Kartu Identitas Pasien --}}
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fas fa-id-card mr-2 text-slate-400"></i>Biodata Pasien</h3>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center text-xl font-black">
+                            {{ strtoupper(substr($pasien->nama_lengkap, 0, 1)) }}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h2 class="text-base font-black text-slate-800 leading-tight truncate">{{ $pasien->nama_lengkap }}</h2>
+                            <p class="text-xs text-slate-400 mt-1 font-bold tracking-wider uppercase">NIK: {{ $pasien->nik ?? '-' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-slate-100 text-xs">
+                        <div>
+                            <p class="text-slate-400 font-medium">Kategori Pelayanan</p>
+                            <p class="font-black text-slate-700 uppercase mt-0.5">{{ $pemeriksaan->kategori_pasien }}</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-400 font-medium">Tanggal Periksa</p>
+                            <p class="font-bold text-slate-700 mt-0.5">{{ \Carbon\Carbon::parse($pemeriksaan->tanggal_periksa ?? $pemeriksaan->tanggal_kunjungan)->translatedFormat('d M Y') }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Hasil Pengukuran Fisik (Dari Kader Meja 1-4) --}}
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex-1">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fas fa-chart-bar mr-2 text-sky-500"></i>Parameter Fisik Pengukuran</h3>
                     
-                    <div class="space-y-6">
-                        <div>
-                            <label class="med-label">Berat Badan (kg)</label>
-                            <input type="text" value="{{ $pemeriksaan->berat_badan }}" disabled class="med-input bg-slate-100/50 text-slate-400 border-dashed">
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div class="border-b border-slate-100 pb-2">
+                            <p class="text-slate-400 font-medium">Berat Badan</p>
+                            <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->berat_badan ?? '-' }} kg</p>
                         </div>
-                        <div>
-                            <label class="med-label">Tinggi/Panjang Badan (cm)</label>
-                            <input type="text" value="{{ $pemeriksaan->tinggi_badan }}" disabled class="med-input bg-slate-100/50 text-slate-400 border-dashed">
+                        <div class="border-b border-slate-100 pb-2">
+                            <p class="text-slate-400 font-medium">Tinggi / Panjang Badan</p>
+                            <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tinggi_badan ?? '-' }} cm</p>
                         </div>
-                        <div>
-                            <label class="med-label">Lingkar Lengan (LiLA) (cm)</label>
-                            <input type="text" value="{{ $pemeriksaan->lingkar_lengan }}" disabled class="med-input bg-slate-100/50 text-slate-400 border-dashed">
-                        </div>
-                        @if(in_array($kategori, ['balita', 'bayi']))
-                        <div>
-                            <label class="med-label">Lingkar Kepala (cm)</label>
-                            <input type="text" value="{{ $pemeriksaan->lingkar_kepala }}" disabled class="med-input bg-slate-100/50 text-slate-400 border-dashed">
-                        </div>
+
+                        @if($kategori === 'balita')
+                            <div>
+                                <p class="text-slate-400 font-medium">Lingkar Kepala</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lingkar_kepala ?? '-' }} cm</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400 font-medium">Lingkar Lengan (LILA)</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lila ?? '-' }} cm</p>
+                            </div>
+                        @elseif($kategori === 'remaja')
+                            <div>
+                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400 font-medium">Kadar Hemoglobin (HB)</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->hb ?? '-' }} g/dL</p>
+                            </div>
+                        @elseif(str_contains($kategori, 'hamil') || $kategori === 'ibu_hamil')
+                            <div class="border-b border-slate-100 pb-2">
+                                <p class="text-slate-400 font-medium">Tinggi Fundus (TFU)</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tinggi_fundus ?? '-' }} cm</p>
+                            </div>
+                            <div class="border-b border-slate-100 pb-2">
+                                <p class="text-slate-400 font-medium">Detak Jantung Janin (DJJ)</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->djj ?? '-' }} bpm</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400 font-medium">LILA Ibu</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lila ?? '-' }} cm</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
+                            </div>
+                        @elseif($kategori === 'lansia')
+                            <div class="border-b border-slate-100 pb-2">
+                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
+                            </div>
+                            <div class="border-b border-slate-100 pb-2">
+                                <p class="text-slate-400 font-medium">Gula Darah</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->gula_darah ?? '-' }} mg/dL</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400 font-medium">Asam Urat</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->asam_urat ?? '-' }} mg/dL</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400 font-medium">Kolesterol</p>
+                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->kolesterol ?? '-' }} mg/dL</p>
+                            </div>
                         @endif
                     </div>
-
-                    <div class="mt-8 p-4 bg-cyan-50 rounded-2xl border border-cyan-100">
-                        <p class="text-[10px] font-bold text-cyan-700 leading-relaxed italic">
-                            <i class="fas fa-info-circle mr-1"></i> Data fisik di atas bersifat permanen dari hasil pengukuran Kader.
-                        </p>
-                    </div>
                 </div>
             </div>
 
-            {{-- KOLOM KANAN: ANALISA MEDIS BIDAN --}}
-            <div class="lg:col-span-8">
-                <div class="clinical-card border-2 border-cyan-500/20 h-full flex flex-col">
+            {{-- KOLOM KANAN: RESUME KEPUTUSAN MEDIS RESMI (READ ONLY) --}}
+            <div class="lg:col-span-7 h-full flex flex-col">
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8 h-full flex flex-col justify-between">
                     
-                    <div class="px-8 py-5 bg-gradient-to-r from-cyan-600 to-blue-700 text-white">
-                        <h3 class="text-[15px] font-black font-poppins flex items-center gap-2">
-                            <i class="fas fa-stethoscope"></i> Kesimpulan Medis & Diagnosa
-                        </h3>
-                    </div>
-                    
-                    <div class="p-8 space-y-8 flex-1">
-                        
-                        {{-- 1. Vital Signs --}}
+                    <div class="flex flex-col gap-6">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h3 class="text-base font-black text-slate-800"><i class="fas fa-file-invoice-dollar text-emerald-500 mr-2"></i>Resume Hasil Pemeriksaan Resmi</h3>
+                            <p class="text-xs text-slate-500 mt-1">Salinan dokumen medis resmi yang telah disahkan dan dikunci oleh Bidan Puskesmas.</p>
+                        </div>
+
+                        {{-- DISPLAY STATUS / KATEGORI GIZI --}}
+                        <div class="bg-slate-50 p-4.5 rounded-2xl border border-slate-100">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Kesimpulan Status Kesehatan</p>
+                            <p class="text-sm font-black text-slate-800 mt-1 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                {{ $pemeriksaan->status_gizi ?? 'Normal' }}
+                            </p>
+                        </div>
+
+                        {{-- DISPLAY DIAGNOSA KLIINIS --}}
                         <div>
-                            <h4 class="text-[11px] font-black text-cyan-600 uppercase tracking-widest mb-4 border-b border-cyan-100 pb-2">1. Pengukuran Vital (Opsional)</h4>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label class="med-label">Suhu Tubuh (°C)</label>
-                                    <input type="number" step="0.1" name="suhu_tubuh" value="{{ $pemeriksaan->suhu_tubuh }}" class="med-input" placeholder="36.5">
-                                </div>
-                                <div>
-                                    <label class="med-label">Tensi Darah (mmHg)</label>
-                                    <input type="text" name="tekanan_darah" value="{{ $pemeriksaan->tekanan_darah }}" class="med-input" placeholder="120/80">
-                                </div>
-                                <div>
-                                    <label class="med-label">Status Kesehatan</label>
-                                    <select name="status_gizi" class="med-input cursor-pointer">
-                                        <option value="Sehat/Normal" {{ $pemeriksaan->status_gizi == 'Sehat/Normal' ? 'selected' : '' }}>Sehat / Normal</option>
-                                        <option value="Perlu Pantauan" {{ $pemeriksaan->status_gizi == 'Perlu Pantauan' ? 'selected' : '' }}>Perlu Pantauan</option>
-                                        <option value="Rujuk" {{ $pemeriksaan->status_gizi == 'Rujuk' ? 'selected' : '' }}>Rujuk Ke Puskesmas</option>
-                                    </select>
-                                </div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Catatan Diagnosa Klinis</p>
+                            <div class="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4">
+                                <p class="text-xs font-bold text-slate-700 leading-relaxed italic">
+                                    "{{ $pemeriksaan->diagnosa ?? 'Pemeriksaan rutin berjalan normal tanpa indikasi klinis lanjutan.' }}"
+                                </p>
                             </div>
                         </div>
 
-                        {{-- 2. Diagnosa --}}
-                        <div class="flex-1">
-                            <h4 class="text-[11px] font-black text-cyan-600 uppercase tracking-widest mb-4 border-b border-cyan-100 pb-2">2. Analisa & Tindakan Medis</h4>
-                            <div class="space-y-6">
-                                <div>
-                                    <label class="med-label">Hasil Diagnosa <span class="text-rose-500">*</span></label>
-                                    <textarea name="diagnosa" rows="3" required class="med-input resize-none" placeholder="Tuliskan diagnosa klinis...">{{ $pemeriksaan->diagnosa }}</textarea>
-                                </div>
-                                <div>
-                                    <label class="med-label">Tindakan / Saran <span class="text-rose-500">*</span></label>
-                                    <textarea name="tindakan" rows="2" required class="med-input resize-none" placeholder="Berikan resep vitamin, edukasi, atau saran tindakan...">{{ $pemeriksaan->tindakan }}</textarea>
-                                </div>
-                            </div>
+                        {{-- DISPLAY PEMBERIAN OBAT / TINDAKAN --}}
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tindakan Medis & Terapi Vitamin</p>
+                            <p class="text-xs font-black text-slate-800 bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl">
+                                <i class="fas fa-capsules text-teal-500 mr-2"></i> {{ $pemeriksaan->tindakan ?? '-' }}
+                            </p>
                         </div>
 
-                        {{-- Footer Aksi --}}
-                        <div class="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
-                                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Siap Disahkan ke EMR</p>
-                            </div>
-                            <button type="submit" id="btnSubmit" class="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-black text-[12px] uppercase tracking-widest rounded-2xl hover:shadow-[0_15px_30px_rgba(6,182,212,0.3)] transition-all hover:-translate-y-1 active:scale-95 shadow-lg">
-                                <i class="fas fa-check-circle mr-2"></i> Sahkan & Simpan Rekam Medis
-                            </button>
+                        {{-- DISPLAY CATATAN EDUKASI --}}
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 font-sans">Saran Konseling / Edukasi Keluarga</p>
+                            <p class="text-xs font-medium text-slate-600 bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl leading-relaxed">
+                                {{ $pemeriksaan->edukasi ?? 'Tidak ada catatan edukasi khusus.' }}
+                            </p>
                         </div>
-
                     </div>
+
+                    {{-- STEMPEL VERIFIKATOR DIGITAL (TANDA TANGAN RESMI) --}}
+                    <div class="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+                        <div class="bg-emerald-50/50 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-3 w-full sm:w-auto">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-lg shadow-sm">
+                                <i class="fas fa-signature"></i>
+                            </div>
+                            <div class="text-left text-xs">
+                                <p class="text-[9px] font-black text-emerald-700 uppercase tracking-wider leading-none">Disahkan Digital Oleh:</p>
+                                <p class="font-black text-slate-800 mt-1.5">{{ $pemeriksaan->verifikator->name ?? 'Bidan Puskesmas' }}</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">NIP/SIP. {{ $pemeriksaan->verifikator->nip ?? '198902142015032001' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-            
+
         </div>
-    </form>
+    </div>
 </div>
 @endsection
 
-@push('scripts')
-<script>
-    document.getElementById('formValidasi').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        Swal.fire({
-            title: 'Sahkan Data Medis?',
-            text: "Data diagnosa Anda akan dikunci dan disimpan secara permanen ke dalam rekam medis warga.",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#0891b2',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Ya, Sahkan Data',
-            cancelButtonText: 'Batal',
-            reverseButtons: true,
-            customClass: { popup: 'nexus-swal' }
-        }).then((res) => {
-            if (res.isConfirmed) {
-                const btn = document.getElementById('btnSubmit');
-                const originalText = btn.innerHTML;
-                
-                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Memproses EMR...';
-                btn.disabled = true;
-                btn.classList.add('opacity-70', 'cursor-not-allowed');
-
-                // EKSEKUSI VIA AJAX FETCH
-                fetch(this.action, {
-                    method: 'POST',
-                    body: new FormData(this),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error('Kegagalan sistem saat menyimpan data.');
-                    return response.json();
-                })
-                .then(result => {
-                    if (result.status === 'success') {
-                        const data = result.data;
-                        
-                        // LOGIKA SMART BRIDGE: Cek kategori pasien
-                        const targetKategori = data.kategori.toLowerCase();
-                        const isTargetImunisasi = ['balita', 'bayi', 'ibu_hamil', 'bumil'].includes(targetKategori);
-
-                        if (isTargetImunisasi) {
-                            Swal.fire({
-                                title: 'Berhasil Disahkan!',
-                                text: `Data rekam medis ${data.nama} telah disimpan. Apakah Anda ingin melanjutkan dengan pemberian Imunisasi sekarang?`,
-                                icon: 'success',
-                                showCancelButton: true,
-                                confirmButtonColor: '#0891b2',
-                                cancelButtonColor: '#94a3b8',
-                                confirmButtonText: 'Ya, Catat Imunisasi',
-                                cancelButtonText: 'Kembali ke Antrian',
-                                allowOutsideClick: false,
-                                customClass: { popup: 'nexus-swal' }
-                            }).then((choice) => {
-                                if (choice.isConfirmed) {
-                                    // Redirect ke Form Imunisasi dengan Prefill Data
-                                    window.location.href = `{{ route('bidan.imunisasi.create') }}?pasien_id=${data.pasien_id}&type=${targetKategori}`;
-                                } else {
-                                    window.location.href = "{{ route('bidan.pemeriksaan.index') }}";
-                                }
-                            });
-                        } else {
-                            // Untuk Lansia/Remaja langsung kembali ke index
-                            Swal.fire({
-                                title: 'Berhasil!',
-                                text: 'Data rekam medis warga telah sah disimpan.',
-                                icon: 'success',
-                                timer: 2000,
-                                showConfirmButton: false,
-                                customClass: { popup: 'nexus-swal' }
-                            }).then(() => {
-                                window.location.href = "{{ route('bidan.pemeriksaan.index', ['tab' => 'verified']) }}";
-                            });
-                        }
-                    }
-                })
-                .catch(error => {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                    
-                    Swal.fire({
-                        title: 'Terjadi Kesalahan',
-                        text: error.message,
-                        icon: 'error',
-                        customClass: { popup: 'nexus-swal' }
-                    });
-                });
-            }
-        });
-    });
-</script>
+@push('styles')
+<style>
+    .animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
 @endpush

@@ -1,31 +1,78 @@
 <!DOCTYPE html>
-<html lang="id" class="scroll-smooth">
+<html lang="id" class="pc-html">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#ffffff">
-    <title>@yield('title', 'Portal Warga') — PosyanduCare</title>
-    
-    {{-- Typography: Jakarta Sans & Poppins --}}
+    <meta name="theme-color" content="#f8fffc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <title>@yield('title', 'Portal Warga') | PosyanduCare</title>
+
+    {{-- DETEKSI TRANSISI DARI LOGIN --}}
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem('pc_from_login') === '1') {
+                    document.documentElement.classList.add('pc-from-login');
+                } else {
+                    document.documentElement.classList.add('pc-normal-entry');
+                }
+            } catch (e) {
+                document.documentElement.classList.add('pc-normal-entry');
+            }
+
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+        })();
+    </script>
+
+    {{-- FAVICON --}}
+    <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('img/logo.png') }}">
+
+    {{-- FONTS --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap"
+          rel="stylesheet">
+
+    {{-- TAILWIND --}}
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    {{-- ICON --}}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    {{-- SWEET ALERT --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { 
-                        sans: ['Plus Jakarta Sans', 'sans-serif'], 
-                        poppins: ['Poppins', 'sans-serif'] 
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        poppins: ['Poppins', 'sans-serif']
                     },
                     colors: {
-                        teal: { 50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a', 950: '#042f2e' },
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            200: '#a7f3d0',
+                            300: '#6ee7b7',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b'
+                        }
                     }
                 }
             }
@@ -33,250 +80,1894 @@
     </script>
 
     <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        :root {
+            --green-900: #064e3b;
+            --green-800: #065f46;
+            --green-700: #047857;
+            --green-600: #059669;
+            --green-500: #10b981;
+            --green-400: #34d399;
 
-        /* Glassmorphism Header */
-        .glass-nav { 
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px); 
-            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-        }
-        
-        /* 🔥 Floating Dock Bawah (Spasi Diperbaiki) 🔥 */
-        .glass-bottom-nav { 
-            background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px); 
-            border: 1px solid rgba(255, 255, 255, 1); 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05); 
+            --amber-500: #f59e0b;
+
+            --slate-950: #020617;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+
+            --ease-premium: cubic-bezier(.16, 1, .3, 1);
+            --ease-smooth: cubic-bezier(.22, 1, .36, 1);
+
+            --dock-height: 82px;
+            --topbar-height: 72px;
+            --user-sidebar-width: 292px;
         }
 
-        /* Entry Animation Halus */
-        .app-loaded { animation: smoothEntry 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes smoothEntry {
-            0% { opacity: 0; transform: translateY(15px); }
-            100% { opacity: 1; transform: translateY(0); }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Jarak scroll diperbaiki agar tidak terlalu jauh */
-        @media (max-width: 768px) {
-            .mobile-padding-bottom { padding-bottom: 95px !important; } 
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+
+            overflow: hidden;
+
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--slate-800);
+
+            background:
+                radial-gradient(circle at top left, rgba(16,185,129,.12), transparent 34%),
+                radial-gradient(circle at 95% 10%, rgba(245,158,11,.07), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(20,184,166,.13), transparent 35%),
+                linear-gradient(135deg, #f8fffc 0%, #f8fafc 46%, #effbf6 100%);
+
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+
+            overscroll-behavior: none;
+        }
+
+        body.user-lock {
+            overflow: hidden !important;
+            height: 100dvh !important;
+            touch-action: none !important;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .font-poppins {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        button,
+        input,
+        textarea,
+        select {
+            font-family: inherit;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        ::selection {
+            background: rgba(16,185,129,.18);
+            color: var(--green-900);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | BACKGROUND
+        |--------------------------------------------------------------------------
+        */
+
+        .user-bg-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .user-bg-layer::before {
+            content: "";
+            position: absolute;
+            width: 420px;
+            height: 420px;
+            top: -190px;
+            left: -180px;
+            border-radius: 999px;
+            background: rgba(16,185,129,.16);
+            filter: blur(80px);
+        }
+
+        .user-bg-layer::after {
+            content: "";
+            position: absolute;
+            width: 380px;
+            height: 380px;
+            right: -180px;
+            bottom: -180px;
+            border-radius: 999px;
+            background: rgba(20,184,166,.15);
+            filter: blur(78px);
+        }
+
+        .user-dot-pattern {
+            position: fixed;
+            top: 92px;
+            right: 18px;
+            width: 88px;
+            height: 88px;
+            opacity: .12;
+            z-index: 1;
+            pointer-events: none;
+            background-image: radial-gradient(rgba(16,185,129,.52) 1.1px, transparent 1.1px);
+            background-size: 9px 9px;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ENTRY LOADER DARI LOGIN
+        |--------------------------------------------------------------------------
+        */
+
+        .user-entry-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99980;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                radial-gradient(circle at center, rgba(255,255,255,.18), transparent 34%),
+                linear-gradient(135deg, rgba(4,120,87,.80), rgba(5,150,105,.76), rgba(16,185,129,.80));
+
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+
+            transition:
+                opacity .65s ease,
+                visibility .65s ease;
+        }
+
+        html.pc-from-login .user-entry-loader {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        html.pc-loader-out .user-entry-loader {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .user-entry-card {
+            width: 216px;
+            min-height: 168px;
+
+            border-radius: 32px;
+            background: rgba(255,255,255,.16);
+            border: 1px solid rgba(255,255,255,.32);
+
+            box-shadow:
+                0 32px 90px rgba(0,0,0,.18),
+                inset 0 1px 0 rgba(255,255,255,.26);
+
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+
+            color: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+
+            transform: scale(.94) translateY(16px);
+            opacity: 0;
+
+            animation: userLoaderPop .86s var(--ease-smooth) forwards;
+        }
+
+        @keyframes userLoaderPop {
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .user-entry-icon {
+            width: 72px;
+            height: 72px;
+
+            border-radius: 25px;
+            background: rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.30);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin-bottom: 14px;
+
+            box-shadow:
+                0 18px 42px rgba(0,0,0,.12),
+                inset 0 1px 0 rgba(255,255,255,.24);
+        }
+
+        .user-entry-icon i {
+            font-size: 29px;
+        }
+
+        .user-entry-title {
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: .02em;
+        }
+
+        .user-entry-line {
+            position: relative;
+
+            width: 116px;
+            height: 5px;
+
+            margin-top: 15px;
+
+            border-radius: 999px;
+            overflow: hidden;
+
+            background: rgba(255,255,255,.25);
+        }
+
+        .user-entry-line::after {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 -55%;
+
+            width: 55%;
+
+            border-radius: inherit;
+            background: white;
+
+            animation: userEntryLine 1.15s infinite cubic-bezier(.65,0,.35,1);
+        }
+
+        @keyframes userEntryLine {
+            to {
+                left: 100%;
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | PAGE LOADER
+        |--------------------------------------------------------------------------
+        */
+
+        .page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+
+            height: 4px;
+
+            z-index: 99999;
+
+            background: rgba(236,253,245,.75);
+            overflow: hidden;
+
+            opacity: 0;
+            transform: translateY(-4px);
+            pointer-events: none;
+
+            transition:
+                opacity .30s ease,
+                transform .30s ease;
+        }
+
+        body.is-navigating .page-loader {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .page-loader::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+
+            width: 42%;
+
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--green-700), var(--green-500), var(--amber-500));
+            box-shadow: 0 0 22px rgba(16,185,129,.34);
+
+            animation: loadingBar 1.15s infinite cubic-bezier(.76, 0, .24, 1);
+        }
+
+        @keyframes loadingBar {
+            0% {
+                transform: translateX(-115%);
+            }
+
+            100% {
+                transform: translateX(260%);
+            }
+        }
+
+        .route-overlay {
+            position: fixed;
+            inset: 0;
+
+            z-index: 99990;
+
+            pointer-events: none;
+
+            opacity: 0;
+            visibility: hidden;
+
+            background:
+                radial-gradient(circle at center, rgba(255,255,255,.14), transparent 34%),
+                linear-gradient(135deg, rgba(4,120,87,.54), rgba(5,150,105,.50), rgba(16,185,129,.54));
+
+            backdrop-filter: blur(9px);
+            -webkit-backdrop-filter: blur(9px);
+
+            transition:
+                opacity .34s ease,
+                visibility .34s ease;
+        }
+
+        body.is-navigating .route-overlay {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | MAIN APP MOBILE FIRST
+        |--------------------------------------------------------------------------
+        */
+
+        .user-shell {
+            position: relative;
+            z-index: 10;
+
+            width: 100%;
+            height: 100dvh;
+            min-height: 100dvh;
+
+            overflow: hidden;
+        }
+
+        .user-app {
+            position: relative;
+            z-index: 10;
+
+            width: 100%;
+            height: 100dvh;
+            min-height: 100dvh;
+
+            display: flex;
+            flex-direction: column;
+
+            overflow: hidden;
+
+            opacity: 0;
+            transform: translateY(16px);
+
+            animation: userAppEnter .85s var(--ease-smooth) forwards;
+        }
+
+        @keyframes userAppEnter {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        html.pc-from-login .user-app {
+            opacity: 0;
+            transform: translateY(34px);
+            filter: blur(6px);
+            animation: none;
+        }
+
+        html.pc-from-login.pc-content-in .user-app {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+
+            transition:
+                opacity 1.05s var(--ease-smooth),
+                transform 1.05s var(--ease-smooth),
+                filter 1s var(--ease-smooth);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOPBAR DIAM DI ATAS
+        |--------------------------------------------------------------------------
+        */
+
+        .user-topbar {
+            position: relative;
+            z-index: 40;
+
+            flex-shrink: 0;
+
+            min-height: var(--topbar-height);
+
+            padding:
+                calc(10px + env(safe-area-inset-top))
+                14px
+                10px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.94), rgba(255,255,255,.80));
+
+            border-bottom: 1px solid rgba(226,232,240,.76);
+
+            backdrop-filter: blur(22px) saturate(1.12);
+            -webkit-backdrop-filter: blur(22px) saturate(1.12);
+
+            box-shadow: 0 12px 30px rgba(15,23,42,.045);
+        }
+
+        .user-topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .user-menu-button,
+        .user-icon-button {
+            width: 42px;
+            height: 42px;
+
+            border: 1px solid rgba(226,232,240,.86);
+            border-radius: 16px;
+
+            background: rgba(255,255,255,.86);
+            color: var(--slate-600);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            box-shadow:
+                0 10px 22px rgba(15,23,42,.045),
+                inset 0 1px 0 rgba(255,255,255,.88);
+
+            transition: all .28s var(--ease-premium);
+        }
+
+        .user-menu-button:active,
+        .user-icon-button:active {
+            transform: scale(.94);
+        }
+
+        .user-menu-button:hover,
+        .user-icon-button:hover {
+            color: var(--green-700);
+            border-color: rgba(16,185,129,.28);
+            background: white;
+        }
+
+        .user-title-block {
+            min-width: 0;
+        }
+
+        .user-page-title {
+            margin: 0;
+
+            max-width: 190px;
+
+            color: var(--slate-900);
+
+            font-size: 16.5px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 900;
+            line-height: 1.05;
+            letter-spacing: -0.035em;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-page-subtitle {
+            margin-top: 4px;
+
+            color: var(--green-700);
+
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+        }
+
+        .user-topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-notif-area {
+            position: relative;
+        }
+
+        .notif-dot,
+        .notif-dot-pulse {
+            position: absolute;
+            top: 9px;
+            right: 9px;
+
+            width: 10px;
+            height: 10px;
+
+            border-radius: 999px;
+            background: #f43f5e;
+            border: 2px solid white;
+        }
+
+        .notif-dot-pulse {
+            animation: notifPulse 1.4s infinite;
+            border: 0;
+            opacity: .55;
+        }
+
+        @keyframes notifPulse {
+            0% {
+                transform: scale(.8);
+                opacity: .65;
+            }
+
+            80%,
+            100% {
+                transform: scale(2.1);
+                opacity: 0;
+            }
+        }
+
+        .mobile-profile-bubble {
+            width: 42px;
+            height: 42px;
+
+            border-radius: 16px;
+
+            background: linear-gradient(135deg, var(--green-700), var(--green-500));
+            color: white;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 13px;
+            font-weight: 900;
+            text-decoration: none;
+
+            box-shadow:
+                0 12px 26px rgba(16,185,129,.22),
+                inset 0 1px 0 rgba(255,255,255,.22);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | NOTIF DROPDOWN
+        |--------------------------------------------------------------------------
+        */
+
+        .notif-dropdown {
+            position: fixed;
+
+            top: calc(76px + env(safe-area-inset-top));
+            left: 12px;
+            right: 12px;
+
+            z-index: 70;
+
+            max-height: min(440px, calc(100dvh - 110px));
+
+            border-radius: 26px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.90);
+
+            box-shadow:
+                0 28px 80px rgba(15,23,42,.16),
+                inset 0 1px 0 rgba(255,255,255,.88);
+
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+
+            overflow: hidden;
+
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+
+            transform: translateY(14px) scale(.98);
+
+            transition:
+                opacity .34s var(--ease-premium),
+                transform .34s var(--ease-premium),
+                visibility .34s var(--ease-premium);
+        }
+
+        .notif-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        .notif-head {
+            padding: 16px 16px 13px;
+
+            border-bottom: 1px solid rgba(241,245,249,.9);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+
+            background: rgba(248,250,252,.74);
+        }
+
+        .notif-head-title {
+            margin: 0;
+
+            color: var(--slate-900);
+
+            font-size: 14px;
+            font-weight: 900;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .notif-status {
+            padding: 5px 9px;
+
+            border-radius: 999px;
+            background: var(--slate-100);
+            color: var(--slate-500);
+
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            white-space: nowrap;
+        }
+
+        .notif-status.is-new {
+            background: #fff1f2;
+            color: #e11d48;
+        }
+
+        .notif-list {
+            max-height: 330px;
+            overflow-y: auto;
+            background: rgba(255,255,255,.56);
+        }
+
+        .notif-footer {
+            padding: 13px 16px;
+
+            border-top: 1px solid rgba(241,245,249,.9);
+
+            background: rgba(248,250,252,.74);
+
+            text-align: center;
+        }
+
+        .notif-footer a {
+            color: var(--green-700);
+
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .13em;
+            text-decoration: none;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SIDEBAR MOBILE
+        |--------------------------------------------------------------------------
+        */
+
+        .user-sidebar-overlay {
+            position: fixed;
+            inset: 0;
+
+            z-index: 80;
+
+            background: rgba(2,6,23,.38);
+
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+
+            transition:
+                opacity .34s ease,
+                visibility .34s ease;
+        }
+
+        .user-sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .user-sidebar-wrap {
+            position: fixed;
+            inset: 10px auto 10px 10px;
+
+            width: min(292px, calc(100vw - 22px));
+
+            z-index: 90;
+
+            transform: translateX(calc(-100% - 18px));
+            opacity: .6;
+            filter: blur(4px);
+            pointer-events: none;
+
+            transition:
+                transform .55s var(--ease-premium),
+                opacity .45s ease,
+                filter .45s ease;
+        }
+
+        .user-sidebar-wrap.show {
+            transform: translateX(0);
+            opacity: 1;
+            filter: blur(0);
+            pointer-events: auto;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | KONTEN MOBILE YANG SCROLL
+        |--------------------------------------------------------------------------
+        */
+
+        .user-main {
+            position: relative;
+            z-index: 10;
+
+            flex: 1;
+            min-height: 0;
+
+            width: 100%;
+
+            overflow-y: auto;
+            overflow-x: hidden;
+
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+
+            padding:
+                16px
+                14px
+                calc(var(--dock-height) + 38px + env(safe-area-inset-bottom));
+
+            scroll-behavior: smooth;
+
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .user-main::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        .user-main-inner {
+            max-width: 1040px;
+            margin: 0 auto;
+        }
+
+        .user-main-inner > * {
+            opacity: 0;
+            transform: translateY(18px);
+            filter: blur(4px);
+
+            animation: contentUp .82s var(--ease-smooth) forwards;
+            animation-delay: calc(var(--content-index, 0) * 90ms);
+        }
+
+        @keyframes contentUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        .mobile-card,
+        .user-card,
+        .dashboard-card,
+        .content-card,
+        .table-card {
+            border-radius: 24px;
+            background: rgba(255,255,255,.84);
+            border: 1px solid rgba(226,232,240,.82);
+            box-shadow:
+                0 18px 44px rgba(15,23,42,.055),
+                inset 0 1px 0 rgba(255,255,255,.84);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | BOTTOM DOCK DIAM DI BAWAH MOBILE
+        |--------------------------------------------------------------------------
+        */
+
+        .mobile-dock {
+            position: fixed;
+
+            left: 12px;
+            right: 12px;
+            bottom: calc(10px + env(safe-area-inset-bottom));
+
+            z-index: 60;
+
+            height: 72px;
+            padding: 8px 10px;
+
+            border-radius: 28px;
+
+            background: rgba(255,255,255,.92);
+            border: 1px solid rgba(255,255,255,.96);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+
+            box-shadow:
+                0 22px 60px rgba(15,23,42,.14),
+                0 6px 18px rgba(16,185,129,.07),
+                inset 0 1px 0 rgba(255,255,255,.95);
+
+            backdrop-filter: blur(24px) saturate(1.14);
+            -webkit-backdrop-filter: blur(24px) saturate(1.14);
+
+            transform: translateZ(0);
+            will-change: transform;
+        }
+
+        .dock-link {
+            position: relative;
+
+            flex: 1;
+            min-width: 0;
+
+            height: 54px;
+
+            border-radius: 18px;
+
+            color: var(--slate-400);
+            text-decoration: none;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+
+            transition: all .28s var(--ease-premium);
+        }
+
+        .dock-link i {
+            font-size: 16px;
+        }
+
+        .dock-link span {
+            font-size: 8.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            line-height: 1;
+        }
+
+        .dock-link.active {
+            color: var(--green-700);
+            background: #ecfdf5;
+        }
+
+        .dock-link.active::before {
+            content: "";
+            position: absolute;
+            top: 5px;
+
+            width: 5px;
+            height: 5px;
+
+            border-radius: 999px;
+            background: var(--green-500);
+
+            box-shadow: 0 0 0 4px rgba(16,185,129,.10);
+        }
+
+        .dock-center {
+            position: relative;
+
+            flex: 1;
+            min-width: 0;
+            height: 54px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dock-action {
+            position: absolute;
+            top: -25px;
+
+            width: 58px;
+            height: 58px;
+
+            border-radius: 999px;
+
+            background:
+                linear-gradient(135deg, var(--green-700), var(--green-500));
+
+            color: white;
+            text-decoration: none;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border: 4px solid rgba(255,255,255,.96);
+
+            box-shadow:
+                0 18px 34px rgba(16,185,129,.34),
+                inset 0 1px 0 rgba(255,255,255,.24);
+
+            transition: all .28s var(--ease-premium);
+        }
+
+        .dock-action:active {
+            transform: scale(.94);
+        }
+
+        .dock-action i {
+            font-size: 20px;
+        }
+
+        .dock-center-label {
+            position: absolute;
+            bottom: -5px;
+
+            color: var(--green-700);
+
+            font-size: 8.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            white-space: nowrap;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ANIMASI MASUK
+        |--------------------------------------------------------------------------
+        */
+
+        .pc-animate-topbar {
+            opacity: 0;
+            transform: translateY(-22px);
+            animation: topbarIn .85s var(--ease-smooth) forwards;
+            animation-delay: .08s;
+        }
+
+        .pc-animate-main {
+            opacity: 0;
+            transform: translateY(24px);
+            animation: mainIn .95s var(--ease-smooth) forwards;
+            animation-delay: .18s;
+        }
+
+        .pc-animate-dock {
+            opacity: 0;
+            transform: translateY(24px) translateZ(0);
+            animation: dockIn .95s var(--ease-smooth) forwards;
+            animation-delay: .30s;
+        }
+
+        @keyframes topbarIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes mainIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes dockIn {
+            to {
+                opacity: 1;
+                transform: translateY(0) translateZ(0);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | DESKTOP / TABLET
+        |--------------------------------------------------------------------------
+        | Desktop sidebar tampil permanen. Mobile tetap off-canvas.
+        |--------------------------------------------------------------------------
+        */
+
+        @media (min-width: 768px) {
+            html {
+                height: auto;
+                min-height: 100%;
+                overflow-x: hidden;
+                overflow-y: auto;
+            }
+
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow-x: hidden;
+                overflow-y: auto;
+                overscroll-behavior-y: auto;
+            }
+
+            body.user-lock {
+                overflow: hidden !important;
+                height: 100vh !important;
+            }
+
+            .user-sidebar-wrap {
+                position: fixed;
+
+                top: 14px;
+                left: 14px;
+                bottom: 14px;
+                right: auto;
+
+                width: var(--user-sidebar-width);
+
+                z-index: 70;
+
+                transform: translateX(0);
+                opacity: 1;
+                filter: blur(0);
+                pointer-events: auto;
+
+                animation: desktopSidebarIn 1s var(--ease-smooth) both;
+            }
+
+            @keyframes desktopSidebarIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-34px);
+                    filter: blur(8px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                    filter: blur(0);
+                }
+            }
+
+            .user-sidebar-overlay {
+                display: none !important;
+            }
+
+            .user-shell {
+                height: auto;
+                min-height: 100vh;
+                overflow: visible;
+
+                padding-left: calc(var(--user-sidebar-width) + 28px);
+            }
+
+            .user-app {
+                height: auto;
+                min-height: 100vh;
+                overflow: visible;
+            }
+
+            .user-topbar {
+                position: sticky;
+                top: 0;
+
+                min-height: 84px;
+
+                margin: 14px 18px 0 0;
+                padding: 14px 28px;
+
+                border-radius: 28px;
+
+                border: 1px solid rgba(226,232,240,.82);
+
+                background:
+                    linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
+
+                box-shadow:
+                    0 22px 55px rgba(15,23,42,.065),
+                    inset 0 1px 0 rgba(255,255,255,.90);
+            }
+
+            .user-menu-button {
+                display: none;
+            }
+
+            .user-page-title {
+                max-width: 420px;
+                font-size: 21px;
+            }
+
+            .user-page-subtitle {
+                display: block;
+            }
+
+            .user-main {
+                flex: none;
+                min-height: calc(100vh - 98px);
+
+                overflow: visible;
+
+                padding: 34px 32px 52px 18px;
+            }
+
+            .user-main-inner {
+                max-width: 1180px;
+            }
+
+            .mobile-dock {
+                display: none;
+            }
+
+            .notif-dropdown {
+                position: absolute;
+                top: calc(100% + 12px);
+                left: auto;
+                right: 0;
+
+                width: 380px;
+                max-height: 480px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .user-main {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .mobile-dock {
+                left: 8px;
+                right: 8px;
+
+                height: 70px;
+
+                border-radius: 24px;
+
+                padding-left: 7px;
+                padding-right: 7px;
+            }
+
+            .dock-link span,
+            .dock-center-label {
+                font-size: 8px;
+            }
+
+            .dock-action {
+                width: 56px;
+                height: 56px;
+            }
+
+            .user-page-title {
+                max-width: 160px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 1ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 1ms !important;
+                scroll-behavior: auto !important;
+            }
         }
     </style>
+
+    @stack('styles')
 </head>
-<body class="bg-[#F8FAFC] text-slate-800 font-sans antialiased overflow-hidden flex h-screen">
 
-    {{-- Sidebar Overlay --}}
-    <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-500" onclick="toggleSidebar()"></div>
+<body>
 
-    {{-- Pemanggilan Sidebar (Ingat untuk hapus rute Konseling di file partial sidebar juga ya!) --}}
+@php
+    $userName = Auth::user()->name ?? 'Warga';
+    $initial = strtoupper(substr($userName, 0, 1));
+@endphp
+
+{{-- ENTRY LOADER --}}
+<div class="user-entry-loader" aria-hidden="true">
+    <div class="user-entry-card">
+        <div class="user-entry-icon">
+            <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+
+        <div class="user-entry-title">
+            Menyiapkan Portal
+        </div>
+
+        <div class="user-entry-line"></div>
+    </div>
+</div>
+
+{{-- BACKGROUND --}}
+<div class="user-bg-layer" aria-hidden="true"></div>
+<div class="user-dot-pattern" aria-hidden="true"></div>
+
+{{-- ROUTE LOADER --}}
+<div class="page-loader" aria-hidden="true"></div>
+<div class="route-overlay" aria-hidden="true"></div>
+
+{{-- SIDEBAR OVERLAY MOBILE --}}
+<div
+    id="sidebarOverlay"
+    class="user-sidebar-overlay"
+    onclick="closeUserSidebar()"
+    aria-hidden="true"
+></div>
+
+{{-- SIDEBAR --}}
+<div id="userSidebarWrap" class="user-sidebar-wrap">
     @include('partials.sidebar.user')
+</div>
 
-    {{-- MAIN WRAPPER --}}
-    <div class="flex-1 flex flex-col min-w-0 relative h-screen app-loaded">
-        
+{{-- APP --}}
+<div class="user-shell">
+    <div class="user-app">
+
         {{-- TOPBAR --}}
-        <header class="h-[72px] md:h-20 glass-nav flex items-center justify-between px-5 md:px-10 z-30 shrink-0 relative">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="md:hidden w-10 h-10 flex items-center justify-center rounded-[14px] bg-slate-50 border border-slate-100 text-slate-600 active:scale-95 transition-transform duration-300">
-                    <i class="fas fa-bars-staggered text-[15px]"></i>
+        <header class="user-topbar pc-animate-topbar">
+            <div class="user-topbar-left">
+                <button
+                    type="button"
+                    onclick="openUserSidebar()"
+                    class="user-menu-button"
+                    aria-label="Buka menu"
+                >
+                    <i class="fa-solid fa-bars-staggered text-[15px]"></i>
                 </button>
-                <div class="truncate mt-0.5">
-                    <h2 class="text-[17px] md:text-xl font-black text-slate-800 font-poppins tracking-tight leading-none">@yield('page_title', 'Beranda')</h2>
-                    <p class="text-[9.5px] font-bold text-teal-600 uppercase tracking-[0.15em] hidden sm:block mt-1">Portal Warga Aktif</p>
+
+                <div class="user-title-block">
+                    <h1 class="user-page-title">
+                        @yield('page_title', 'Beranda')
+                    </h1>
+
+                    <div class="user-page-subtitle">
+                        Portal Warga Aktif
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                {{-- Area Notifikasi --}}
-                <div class="relative" id="notifArea">
-                    <button onclick="toggleNotif()" id="notifBtn" class="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-[14px] bg-white border border-slate-200 text-slate-500 hover:text-teal-600 transition-colors relative shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-                        <i class="fas fa-bell text-[15px] md:text-lg"></i>
-                        <span id="notifBadge" class="hidden absolute top-2 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
-                        <span id="notifBadgePulse" class="hidden absolute top-2 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping opacity-75"></span>
+            <div class="user-topbar-right">
+
+                {{-- NOTIF --}}
+                <div class="user-notif-area" id="notifArea">
+                    <button
+                        type="button"
+                        onclick="toggleNotif()"
+                        id="notifBtn"
+                        class="user-icon-button"
+                        aria-label="Buka notifikasi"
+                    >
+                        <i class="fa-regular fa-bell text-[16px]"></i>
+
+                        <span id="notifBadge" class="notif-dot hidden"></span>
+                        <span id="notifBadgePulse" class="notif-dot-pulse hidden"></span>
                     </button>
 
-                    {{-- Dropdown Notifikasi --}}
-                    <div id="notifDropdown" class="absolute right-0 mt-4 w-[300px] sm:w-[380px] bg-white/95 backdrop-blur-xl rounded-[24px] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] border border-slate-100 opacity-0 invisible translate-y-4 transition-all duration-500 z-50 overflow-hidden">
-                        <div class="px-5 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/80">
-                            <h3 class="font-black text-slate-800 text-[14px] font-poppins">Pemberitahuan</h3>
-                            <span id="notifStatus" class="text-[9px] font-black bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase tracking-widest">Sinkronisasi</span>
+                    <div id="notifDropdown" class="notif-dropdown">
+                        <div class="notif-head">
+                            <h3 class="notif-head-title">
+                                Pemberitahuan
+                            </h3>
+
+                            <span id="notifStatus" class="notif-status">
+                                Sinkronisasi
+                            </span>
                         </div>
-                        <div id="notifList" class="max-h-[350px] overflow-y-auto no-scrollbar bg-white/50">
+
+                        <div id="notifList" class="notif-list no-scrollbar">
                             <div class="py-12 text-center flex flex-col items-center">
-                                <i class="fas fa-circle-notch fa-spin text-teal-500 text-2xl mb-3"></i>
-                                <p class="text-[11px] font-semibold text-slate-400">Memuat data...</p>
+                                <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-2xl mb-3"></i>
+                                <p class="text-[11px] font-semibold text-slate-400">
+                                    Memuat data...
+                                </p>
                             </div>
                         </div>
-                        <div class="p-4 border-t border-slate-50 bg-slate-50/80 text-center">
-                            <a href="{{ route('user.notifikasi.index') }}" class="text-[10px] font-black text-teal-600 uppercase tracking-[0.15em] hover:text-teal-800 transition-colors">Lihat Semua Notifikasi</a>
+
+                        <div class="notif-footer">
+                            <a href="{{ route('user.notifikasi.index') }}" class="js-nav-link">
+                                Lihat Semua Notifikasi
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                {{-- Desktop Profile --}}
-                <div class="hidden md:flex items-center gap-3 pl-4 border-l border-slate-200">
-                    <div class="text-right">
-                        <p class="text-[12px] font-black text-slate-800 leading-none">{{ Auth::user()->name }}</p>
-                    </div>
-                    <div class="w-10 h-10 rounded-[14px] bg-teal-50 text-teal-600 flex items-center justify-center border border-teal-100">
-                        <i class="fas fa-user text-[15px]"></i>
-                    </div>
-                </div>
+                {{-- PROFILE --}}
+                <a
+                    href="{{ route('user.profile.edit') }}"
+                    class="mobile-profile-bubble js-nav-link"
+                    aria-label="Profil"
+                >
+                    {{ $initial }}
+                </a>
             </div>
         </header>
 
-        {{-- CONTENT AREA --}}
-        <main class="flex-1 overflow-y-auto p-4 md:p-8 mobile-padding-bottom no-scrollbar bg-transparent relative z-10">
-            @yield('content')
+        {{-- MAIN CONTENT --}}
+        <main class="user-main pc-animate-main" id="userMainScrollArea">
+            <div class="user-main-inner">
+                @yield('content')
+            </div>
         </main>
 
-        {{-- 🔥 DOCK BAWAH (Fitur Diupdate, Spasi Pas) 🔥 --}}
-        {{-- Jarak bottom diturunkan ke 4 (16px), cukup untuk terlihat melayang --}}
-        <nav class="md:hidden fixed bottom-4 left-4 right-4 z-[60] glass-bottom-nav px-3 py-2 rounded-[28px] flex items-center justify-between h-[70px]">
-            
-            <a href="{{ route('user.dashboard') }}" class="flex flex-col items-center gap-1 w-[20%] transition-colors duration-300 {{ Request::is('user/dashboard*') ? 'text-teal-600' : 'text-slate-400' }}">
-                <div class="{{ Request::is('user/dashboard*') ? 'bg-teal-50/80 px-3 py-1 rounded-full' : '' }} transition-colors">
-                    <i class="fas fa-home text-[17px]"></i>
-                </div>
-                <span class="text-[8.5px] font-bold uppercase tracking-wide">Home</span>
-            </a>
-            
-            <a href="{{ route('user.jadwal.index') }}" class="flex flex-col items-center gap-1 w-[20%] transition-colors duration-300 {{ Request::is('user/jadwal*') ? 'text-teal-600' : 'text-slate-400' }}">
-                <div class="{{ Request::is('user/jadwal*') ? 'bg-teal-50/80 px-3 py-1 rounded-full' : '' }} transition-colors">
-                    <i class="far fa-calendar-alt text-[17px]"></i>
-                </div>
-                <span class="text-[8.5px] font-bold uppercase tracking-wide">Jadwal</span>
+        {{-- BOTTOM DOCK MOBILE --}}
+        <nav class="mobile-dock pc-animate-dock" aria-label="Navigasi utama warga">
+            <a
+                href="{{ route('user.dashboard') }}"
+                class="dock-link js-nav-link {{ request()->routeIs('user.dashboard*') ? 'active' : '' }}"
+            >
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
             </a>
 
-            {{-- TOMBOL UTAMA BARU: PANTAU DATA (Menggantikan Konseling) --}}
-            <div class="relative -top-5 flex flex-col items-center w-[20%] z-50">
-                <a href="{{ route('user.monitoring.index') }}" class="w-[54px] h-[54px] bg-gradient-to-tr from-teal-600 to-emerald-400 rounded-full flex items-center justify-center text-white shadow-[0_8px_20px_rgba(13,148,136,0.35)] border-[3px] border-white active:scale-95 transition-transform duration-300">
-                    <i class="fas fa-chart-line text-[20px]"></i>
+            <a
+                href="{{ route('user.jadwal.index') }}"
+                class="dock-link js-nav-link {{ request()->routeIs('user.jadwal*') ? 'active' : '' }}"
+            >
+                <i class="fa-regular fa-calendar-days"></i>
+                <span>Jadwal</span>
+            </a>
+
+            <div class="dock-center">
+                <a
+                    href="{{ route('user.monitoring.index') }}"
+                    class="dock-action js-nav-link"
+                    aria-label="Pantau kesehatan"
+                >
+                    <i class="fa-solid fa-chart-line"></i>
                 </a>
-                <span class="text-[8.5px] font-bold uppercase tracking-wide text-teal-700 mt-1 absolute -bottom-4">Pantau</span>
+
+                <span class="dock-center-label">
+                    Pantau
+                </span>
             </div>
 
-            <a href="{{ route('user.riwayat.index') }}" class="flex flex-col items-center gap-1 w-[20%] transition-colors duration-300 {{ Request::is('user/riwayat*') ? 'text-teal-600' : 'text-slate-400' }}">
-                <div class="{{ Request::is('user/riwayat*') ? 'bg-teal-50/80 px-3 py-1 rounded-full' : '' }} transition-colors">
-                    <i class="fas fa-history text-[17px]"></i>
-                </div>
-                <span class="text-[8.5px] font-bold uppercase tracking-wide">Riwayat</span>
+            <a
+                href="{{ route('user.riwayat.index') }}"
+                class="dock-link js-nav-link {{ request()->routeIs('user.riwayat*') ? 'active' : '' }}"
+            >
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Riwayat</span>
             </a>
 
-            <a href="{{ route('user.profile.edit') }}" class="flex flex-col items-center gap-1 w-[20%] transition-colors duration-300 {{ Request::is('user/profile*') ? 'text-teal-600' : 'text-slate-400' }}">
-                <div class="{{ Request::is('user/profile*') ? 'bg-teal-50/80 px-3 py-1 rounded-full' : '' }} transition-colors">
-                    <i class="far fa-user-circle text-[18px]"></i>
-                </div>
-                <span class="text-[8.5px] font-bold uppercase tracking-wide">Profil</span>
+            <a
+                href="{{ route('user.profile.edit') }}"
+                class="dock-link js-nav-link {{ request()->routeIs('user.profile*') ? 'active' : '' }}"
+            >
+                <i class="fa-regular fa-user"></i>
+                <span>Profil</span>
             </a>
-            
         </nav>
     </div>
+</div>
 
-    <script>
-        function toggleSidebar() {
-            const sb = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            const isClosed = sb.classList.contains('-translate-x-full');
+<script>
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const userSidebarWrap = document.getElementById('userSidebarWrap');
 
-            if(isClosed) {
-                sb.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.add('opacity-100'), 10);
-            } else {
-                sb.classList.add('-translate-x-full');
-                overlay.classList.remove('opacity-100');
-                setTimeout(() => overlay.classList.add('hidden'), 500);
+    function isMobileView() {
+        return window.innerWidth < 768;
+    }
+
+    function applyResponsiveScrollMode() {
+        if (isMobileView()) {
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            document.body.style.height = '100%';
+        } else {
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+            document.body.style.height = '';
+            document.body.classList.remove('user-lock');
+
+            if (sidebarOverlay && userSidebarWrap) {
+                sidebarOverlay.classList.remove('show');
+                userSidebarWrap.classList.remove('show');
+            }
+        }
+    }
+
+    function openUserSidebar() {
+        if (!sidebarOverlay || !userSidebarWrap) {
+            return;
+        }
+
+        if (!isMobileView()) {
+            return;
+        }
+
+        sidebarOverlay.classList.add('show');
+        userSidebarWrap.classList.add('show');
+
+        document.body.classList.add('user-lock');
+    }
+
+    function closeUserSidebar() {
+        if (!sidebarOverlay || !userSidebarWrap) {
+            return;
+        }
+
+        sidebarOverlay.classList.remove('show');
+
+        if (isMobileView()) {
+            userSidebarWrap.classList.remove('show');
+        }
+
+        document.body.classList.remove('user-lock');
+
+        applyResponsiveScrollMode();
+    }
+
+    function toggleSidebar() {
+        if (userSidebarWrap && userSidebarWrap.classList.contains('show')) {
+            closeUserSidebar();
+        } else {
+            openUserSidebar();
+        }
+    }
+
+    function toggleNotif() {
+        const dropdown = document.getElementById('notifDropdown');
+
+        if (!dropdown) {
+            return;
+        }
+
+        dropdown.classList.toggle('show');
+    }
+
+    function closeNotif() {
+        const dropdown = document.getElementById('notifDropdown');
+
+        if (!dropdown) {
+            return;
+        }
+
+        dropdown.classList.remove('show');
+    }
+
+    function startNavigation() {
+        document.body.classList.add('is-navigating');
+    }
+
+    function stopNavigation() {
+        document.body.classList.remove('is-navigating');
+    }
+
+    function clearStuckState() {
+        const html = document.documentElement;
+
+        document.body.classList.remove('user-lock');
+        document.body.classList.remove('is-navigating');
+
+        html.classList.remove('pc-loader-out');
+        html.classList.remove('pc-content-in');
+
+        closeNotif();
+
+        if (sidebarOverlay && userSidebarWrap) {
+            sidebarOverlay.classList.remove('show');
+
+            if (isMobileView()) {
+                userSidebarWrap.classList.remove('show');
             }
         }
 
-        function toggleNotif() {
-            const dd = document.getElementById('notifDropdown');
-            dd.classList.toggle('opacity-0');
-            dd.classList.toggle('invisible');
-            dd.classList.toggle('translate-y-4');
-        }
+        applyResponsiveScrollMode();
+    }
 
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#notifArea')) {
-                document.getElementById('notifDropdown').classList.add('opacity-0', 'invisible', 'translate-y-4');
+    window.addEventListener('resize', function () {
+        applyResponsiveScrollMode();
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('#notifArea')) {
+            closeNotif();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            clearStuckState();
+        }
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | TOAST
+    |--------------------------------------------------------------------------
+    */
+
+    window.NexusToast = function (title, body, iconHtml = '') {
+        Swal.fire({
+            html: `
+                <div class="flex items-center gap-4 text-left p-1">
+                    <div class="w-12 h-12 rounded-[16px] bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
+                        ${iconHtml || '<i class="fa-solid fa-bell text-[16px]"></i>'}
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-black text-slate-800 font-poppins leading-tight truncate">
+                            ${title}
+                        </p>
+
+                        <p class="text-[11px] font-medium text-slate-500 mt-0.5 leading-relaxed">
+                            ${body}
+                        </p>
+                    </div>
+                </div>
+            `,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 4200,
+            timerProgressBar: true,
+            customClass: {
+                popup: 'rounded-[24px] border border-slate-100/70 shadow-[0_20px_50px_-10px_rgba(15,23,42,0.16)] !w-auto min-w-[320px] max-w-[92vw] mt-4 !bg-white/92 !backdrop-blur-xl'
             }
         });
+    };
 
-        window.NexusToast = (title, body, iconHtml = '') => {
-            Swal.fire({
-                html: `
-                    <div class="flex items-center gap-4 text-left p-1">
-                        <div class="w-12 h-12 rounded-[16px] bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 border border-teal-100 shadow-sm">
-                            ${iconHtml || '<i class="fas fa-bell text-[16px] animate-bounce"></i>'}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[13px] font-black text-slate-800 font-poppins leading-tight truncate">${title}</p>
-                            <p class="text-[11px] font-medium text-slate-500 mt-0.5 line-clamp-2 leading-relaxed">${body}</p>
-                        </div>
-                    </div>
-                `,
-                position: 'top-end', 
-                showConfirmButton: false, 
-                timer: 4500, 
-                timerProgressBar: true,
-                showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
-                hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' },
-                customClass: { 
-                    popup: 'rounded-[24px] border border-slate-100/50 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.12)] !w-auto min-w-[320px] max-w-[90vw] mt-4 mr-4 md:mt-6 md:mr-6 !bg-white/90 !backdrop-blur-xl' 
-                }
+    document.addEventListener('DOMContentLoaded', function () {
+        const body = document.body;
+        const html = document.documentElement;
+        const userMain = document.getElementById('userMainScrollArea');
+
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+
+        applyResponsiveScrollMode();
+
+        stopNavigation();
+        body.classList.remove('user-lock');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Stagger Content
+        |--------------------------------------------------------------------------
+        */
+
+        const content = document.querySelector('.user-main-inner');
+
+        if (content) {
+            Array.from(content.children).forEach(function (item, index) {
+                item.style.setProperty('--content-index', index);
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            let currentCount = -1;
-            const badge = document.getElementById('notifBadge');
-            const pulse = document.getElementById('notifBadgePulse');
-            const list = document.getElementById('notifList');
-            const status = document.getElementById('notifStatus');
+        /*
+        |--------------------------------------------------------------------------
+        | Stop Scroll Leak Khusus Mobile
+        |--------------------------------------------------------------------------
+        */
 
-            function syncNotif() {
-                fetch("{{ route('user.notifikasi.fetch') ?? '#' }}", {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if(data.unreadCount > 0) {
-                        badge.classList.remove('hidden');
-                        pulse.classList.remove('hidden');
-                        status.innerText = data.unreadCount + ' BARU';
-                        status.className = "text-[9px] font-black bg-rose-50 text-rose-600 px-2.5 py-1 rounded-md uppercase tracking-widest";
-                    } else {
-                        badge.classList.add('hidden');
-                        pulse.classList.add('hidden');
-                        status.innerText = 'TERBACA';
-                        status.className = "text-[9px] font-black bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md uppercase tracking-widest";
-                    }
+        if (userMain) {
+            userMain.addEventListener('wheel', function (event) {
+                if (!isMobileView()) {
+                    return;
+                }
 
-                    if(data.html) list.innerHTML = data.html;
-                    
-                    if(currentCount !== -1 && data.unreadCount > currentCount) {
-                        window.NexusToast(data.latest_title || 'Notifikasi Baru', data.latest_body || 'Ada pembaruan informasi.');
-                    }
-                    currentCount = data.unreadCount;
-                }).catch(e => console.log('Sync polling paused.'));
+                const delta = event.deltaY;
+                const atTop = userMain.scrollTop <= 0;
+                const atBottom = Math.ceil(userMain.scrollTop + userMain.clientHeight) >= userMain.scrollHeight;
+
+                if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+                    event.preventDefault();
+                }
+
+                event.stopPropagation();
+            }, { passive: false });
+
+            let touchStartY = 0;
+
+            userMain.addEventListener('touchstart', function (event) {
+                if (!isMobileView()) {
+                    return;
+                }
+
+                if (event.touches.length > 0) {
+                    touchStartY = event.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            userMain.addEventListener('touchmove', function (event) {
+                if (!isMobileView()) {
+                    return;
+                }
+
+                if (event.touches.length === 0) {
+                    return;
+                }
+
+                const touchY = event.touches[0].clientY;
+                const delta = touchStartY - touchY;
+
+                const atTop = userMain.scrollTop <= 0;
+                const atBottom = Math.ceil(userMain.scrollTop + userMain.clientHeight) >= userMain.scrollHeight;
+
+                if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+                    event.preventDefault();
+                }
+
+                event.stopPropagation();
+            }, { passive: false });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Animasi dari Login
+        |--------------------------------------------------------------------------
+        */
+
+        if (html.classList.contains('pc-from-login')) {
+            body.classList.add('user-lock');
+
+            setTimeout(function () {
+                html.classList.add('pc-loader-out');
+            }, 850);
+
+            setTimeout(function () {
+                html.classList.add('pc-content-in');
+                body.classList.remove('user-lock');
+                applyResponsiveScrollMode();
+            }, 1450);
+
+            setTimeout(function () {
+                try {
+                    sessionStorage.removeItem('pc_from_login');
+                } catch (e) {}
+
+                html.classList.remove('pc-from-login');
+                html.classList.remove('pc-loader-out');
+                html.classList.remove('pc-content-in');
+                html.classList.add('pc-normal-entry');
+
+                body.classList.remove('user-lock');
+                stopNavigation();
+
+                applyResponsiveScrollMode();
+            }, 2600);
+        }
+
+        setTimeout(function () {
+            body.classList.remove('user-lock');
+            stopNavigation();
+            applyResponsiveScrollMode();
+        }, 3200);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Link Loader
+        |--------------------------------------------------------------------------
+        */
+
+        document.querySelectorAll('a[href]').forEach(function (link) {
+            const href = link.getAttribute('href');
+
+            if (!href) {
+                return;
             }
-            
-            syncNotif();
-            setInterval(syncNotif, 20000);
 
-            @if(session('success'))
-                window.NexusToast('Berhasil', "{{ session('success') }}", '<i class="fas fa-check-circle text-[16px] text-teal-600"></i>');
-            @endif
-            @if(session('error'))
-                window.NexusToast('Perhatian', "{{ session('error') }}", '<i class="fas fa-exclamation-triangle text-[16px] text-rose-600"></i>');
-            @endif
+            const ignored =
+                link.target === '_blank' ||
+                href.startsWith('#') ||
+                href.startsWith('javascript:') ||
+                href.startsWith('mailto:') ||
+                href.startsWith('tel:') ||
+                link.hasAttribute('download');
+
+            if (ignored) {
+                return;
+            }
+
+            link.addEventListener('click', function (event) {
+                if (
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    event.shiftKey ||
+                    event.altKey ||
+                    event.defaultPrevented
+                ) {
+                    return;
+                }
+
+                const currentUrl = window.location.href.split('#')[0];
+                const targetUrl = link.href.split('#')[0];
+
+                if (currentUrl === targetUrl) {
+                    event.preventDefault();
+                    clearStuckState();
+                    return;
+                }
+
+                closeUserSidebar();
+                closeNotif();
+                startNavigation();
+            });
         });
-    </script>
-    
-    @stack('scripts')
+
+        document.querySelectorAll('form').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                closeUserSidebar();
+                closeNotif();
+                startNavigation();
+            });
+        });
+
+        window.addEventListener('pageshow', function () {
+            clearStuckState();
+        });
+
+        window.addEventListener('beforeunload', function () {
+            body.classList.remove('user-lock');
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notifikasi
+        |--------------------------------------------------------------------------
+        */
+
+        let currentCount = -1;
+
+        const badge = document.getElementById('notifBadge');
+        const pulse = document.getElementById('notifBadgePulse');
+        const list = document.getElementById('notifList');
+        const status = document.getElementById('notifStatus');
+
+        function syncNotif() {
+            @if(Route::has('user.notifikasi.fetch'))
+                fetch("{{ route('user.notifikasi.fetch') }}", {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    const unreadCount = Number(data.unreadCount || 0);
+
+                    if (unreadCount > 0) {
+                        badge?.classList.remove('hidden');
+                        pulse?.classList.remove('hidden');
+
+                        if (status) {
+                            status.innerText = unreadCount + ' Baru';
+                            status.classList.add('is-new');
+                        }
+                    } else {
+                        badge?.classList.add('hidden');
+                        pulse?.classList.add('hidden');
+
+                        if (status) {
+                            status.innerText = 'Terbaca';
+                            status.classList.remove('is-new');
+                        }
+                    }
+
+                    if (data.html && list) {
+                        list.innerHTML = data.html;
+                    }
+
+                    if (currentCount !== -1 && unreadCount > currentCount) {
+                        window.NexusToast(
+                            data.latest_title || 'Notifikasi Baru',
+                            data.latest_body || 'Ada pembaruan informasi.'
+                        );
+                    }
+
+                    currentCount = unreadCount;
+                })
+                .catch(function () {});
+            @endif
+        }
+
+        syncNotif();
+        setInterval(syncNotif, 20000);
+
+        @if(session('success'))
+            window.NexusToast(
+                'Berhasil',
+                "{{ session('success') }}",
+                '<i class="fa-solid fa-circle-check text-[16px] text-emerald-600"></i>'
+            );
+        @endif
+
+        @if(session('error'))
+            window.NexusToast(
+                'Perhatian',
+                "{{ session('error') }}",
+                '<i class="fa-solid fa-triangle-exclamation text-[16px] text-rose-600"></i>'
+            );
+        @endif
+    });
+</script>
+
+@stack('scripts')
 </body>
 </html>

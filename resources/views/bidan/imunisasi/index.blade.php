@@ -1,7 +1,7 @@
 @extends('layouts.bidan')
 
 @section('title', 'Register Imunisasi Terpadu')
-@section('page-name', 'Log Vaksinasi')
+@section('page-name', 'Buku Imunisasi')
 
 @push('styles')
 <style>
@@ -17,7 +17,7 @@
         border-radius: 28px; transition: all 0.4s ease;
     }
 
-    /* TABLE MICRO-INTERACTION & LIVE SEARCH */
+    /* TABLE MICRO-INTERACTION */
     .tr-nexus { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-bottom: 1px solid #f1f5f9; }
     .tr-nexus:hover { background-color: #f0fdfa; transform: scale(1.002); z-index: 10; position: relative; border-color: transparent; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(6,182,212,0.1); }
     
@@ -45,55 +45,55 @@
             <div class="flex-1">
                 <div class="flex items-center gap-3 mb-1.5">
                     <span class="flex h-2.5 w-2.5 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span></span>
-                    <h1 class="text-3xl font-black tracking-tight font-poppins">Buku Register Vaksinasi</h1>
+                    <h1 class="text-3xl font-black tracking-tight font-poppins">Buku Register Imunisasi</h1>
                 </div>
                 <p class="text-[14px] font-medium text-cyan-100 max-w-xl leading-relaxed">
-                    Pusat pencatatan riwayat injeksi vaksin imunisasi dasar Balita dan Ibu Hamil (TT). Seluruh data terintegrasi secara otomatis ke EMR KIA.
+                    Pusat pencatatan riwayat pemberian imunisasi dasar Balita dan Tetanus Toxoid (TT) Ibu Hamil. Seluruh data terintegrasi secara otomatis ke EMR KIA.
                 </p>
             </div>
         </div>
 
         <a href="{{ route('bidan.imunisasi.create') }}" class="relative z-10 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-cyan-700 text-[13px] font-black uppercase tracking-widest rounded-2xl hover:bg-cyan-50 transition-all shadow-xl hover:-translate-y-1 group w-full md:w-auto shrink-0 whitespace-nowrap">
-            <i class="fas fa-plus-circle text-lg text-amber-500 group-hover:rotate-90 transition-transform duration-500"></i> Tambah Injeksi
+            <i class="fas fa-plus-circle text-lg text-amber-500 group-hover:rotate-90 transition-transform duration-500"></i> Catat Imunisasi
         </a>
     </div>
 
     {{-- =================================================================
-         2. WORKSPACE AREA (ALPINE.JS LIVE SEARCH ENGINE)
+         2. WORKSPACE AREA (SERVER-SIDE SEARCH ENGINE)
          ================================================================= --}}
-    <div class="nexus-glass overflow-hidden flex flex-col" x-data="{ searchQuery: '{{ request('search') }}' }">
+    <div class="nexus-glass overflow-hidden flex flex-col">
         
         <div class="px-6 md:px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <h3 class="text-[16px] font-black text-slate-800 font-poppins flex items-center gap-2">
-                <i class="fas fa-clipboard-list text-cyan-500"></i> Riwayat Injeksi Medis
+                <i class="fas fa-clipboard-list text-cyan-500"></i> Riwayat Imunisasi Warga
             </h3>
             
-            {{-- Form Live Search Alpine.js --}}
-            <form id="searchForm" method="GET" action="{{ route('bidan.imunisasi.index') }}" class="relative w-full sm:w-[400px]">
+            {{-- Form Search --}}
+            <form id="searchForm" method="GET" action="{{ route('bidan.imunisasi.index') }}" class="relative w-full sm:w-[400px]" x-data="{ searchQuery: '{{ request('search') }}' }">
                 <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                     <i class="fas fa-search text-cyan-500" :class="searchQuery.length > 0 ? 'animate-bounce' : ''"></i>
                 </div>
                 
                 <input type="text" name="search" x-model="searchQuery" 
-                       placeholder="Cari nama warga, vaksin, NIK..." 
+                       placeholder="Cari nama warga, vaksin, NIK... (Tekan Enter)" 
                        class="w-full bg-white border border-slate-200 rounded-[16px] pl-12 pr-12 py-3.5 text-[12px] font-bold text-slate-700 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-50 outline-none transition-all shadow-sm">
                 
-                <button type="button" x-show="searchQuery.length > 0" @click="searchQuery = ''; document.getElementById('searchForm').submit();" x-cloak
-                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-rose-400 hover:text-rose-600 transition-colors">
+                <a href="{{ route('bidan.imunisasi.index') }}" x-show="searchQuery.length > 0" x-cloak
+                   class="absolute inset-y-0 right-0 pr-5 flex items-center text-rose-400 hover:text-rose-600 transition-colors" title="Bersihkan Pencarian">
                     <i class="fas fa-times-circle text-lg"></i>
-                </button>
+                </a>
             </form>
         </div>
 
         {{-- =================================================================
-             3. TABEL DATA IMUNISASI (FILTER REAL-TIME)
+             3. TABEL DATA IMUNISASI
              ================================================================= --}}
         <div class="overflow-x-auto custom-scrollbar p-2 md:p-4">
             <table class="w-full text-left border-collapse min-w-[1000px]">
                 <thead>
                     <tr>
                         <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Identitas Warga</th>
-                        <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Detail Vaksin / Injeksi</th>
+                        <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Detail Vaksin & Dosis</th>
                         <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Waktu & Petugas Medis</th>
                         <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 text-right">Manajemen Arsip</th>
                     </tr>
@@ -106,7 +106,7 @@
                         $nama = $pasien->nama_lengkap ?? 'Warga Tidak Diketahui';
                         $kategoriRaw = strtolower(class_basename($imu->kunjungan->pasien_type ?? ''));
                         
-                        // Mapping Visual (Anti PurgeCSS Bug dengan String Utuh)
+                        // Mapping Visual Demografi
                         $config = match($kategoriRaw) {
                             'balita', 'bayi' => ['theme' => 'bg-sky-50 text-sky-600 border-sky-100', 'badge' => 'text-sky-600 border-sky-200', 'ico' => 'fa-baby', 'label' => 'Balita'],
                             'ibuhamil', 'ibu_hamil', 'bumil' => ['theme' => 'bg-pink-50 text-pink-600 border-pink-100', 'badge' => 'text-pink-600 border-pink-200', 'ico' => 'fa-female', 'label' => 'Ibu Hamil'],
@@ -114,11 +114,7 @@
                         };
                     @endphp
 
-                    {{-- ALPINE LIVE SEARCH FILTER --}}
-                    <tr class="tr-nexus group" 
-                        x-show="searchQuery === '' || $el.textContent.toLowerCase().includes(searchQuery.toLowerCase())" 
-                        x-transition.opacity.duration.300ms>
-                        
+                    <tr class="tr-nexus group">
                         {{-- Kolom 1: Identitas --}}
                         <td class="py-5 px-6">
                             <div class="flex items-center gap-4">
@@ -171,7 +167,7 @@
                                 <a href="{{ route('bidan.imunisasi.show', $imu->id) }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-widest rounded-xl hover:bg-cyan-50 hover:text-cyan-600 hover:border-cyan-200 transition-colors shadow-sm" title="Lihat Sertifikat">
                                     <i class="fas fa-certificate text-[14px]"></i> EMR
                                 </a>
-                                <form action="{{ route('bidan.imunisasi.destroy', $imu->id) }}" method="POST" onsubmit="return confirm('Hapus catatan vaksin ini secara permanen?')">
+                                <form action="{{ route('bidan.imunisasi.destroy', $imu->id) }}" method="POST" onsubmit="return confirm('Hapus catatan imunisasi ini secara permanen?')">
                                     @csrf @method('DELETE')
                                     <button class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition-all shadow-sm" title="Hapus Data">
                                         <i class="fas fa-trash-alt text-[14px]"></i>
@@ -184,36 +180,34 @@
                     @empty
                     <tr>
                         <td colspan="4" class="py-24 text-center">
-                            <div class="inline-flex items-center justify-center w-28 h-28 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 text-slate-300 mb-6 relative shadow-inner">
-                                <i class="fas fa-syringe text-5xl relative z-10 opacity-50"></i>
-                            </div>
-                            <h3 class="text-[18px] font-black text-slate-800 font-poppins tracking-wide mb-2">Buku Register Kosong</h3>
-                            <p class="text-[13px] font-medium text-slate-500 max-w-sm mx-auto leading-relaxed">
-                                Klik tombol <b class="text-cyan-600">Tambah Injeksi</b> di sudut kanan atas untuk mencatat riwayat imunisasi warga.
-                            </p>
+                            @if(request('search'))
+                                <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-300 flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fas fa-search-minus"></i></div>
+                                <h4 class="text-[15px] font-black text-slate-700 font-poppins">Pencarian Tidak Ditemukan</h4>
+                                <p class="text-[12px] text-slate-500 mt-1">Tidak ada data rekam medis yang cocok dengan kata kunci "<b class="text-slate-700">{{ request('search') }}</b>".</p>
+                                <a href="{{ route('bidan.imunisasi.index') }}" class="mt-5 inline-block px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-colors">Tampilkan Semua Data</a>
+                            @else
+                                <div class="inline-flex items-center justify-center w-28 h-28 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 text-slate-300 mb-6 relative shadow-inner">
+                                    <i class="fas fa-syringe text-5xl relative z-10 opacity-50"></i>
+                                </div>
+                                <h3 class="text-[18px] font-black text-slate-800 font-poppins tracking-wide mb-2">Buku Register Kosong</h3>
+                                <p class="text-[13px] font-medium text-slate-500 max-w-sm mx-auto leading-relaxed">
+                                    Klik tombol <b class="text-cyan-600">Catat Imunisasi</b> di sudut kanan atas untuk menyimpan riwayat vaksinasi warga.
+                                </p>
+                            @endif
                         </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
-            
-            {{-- Pesan Data Tidak Ditemukan oleh Alpine --}}
-            <div x-show="searchQuery.length > 0 && Array.from($el.previousElementSibling.querySelectorAll('tbody tr')).every(row => row.style.display === 'none')" 
-                 x-cloak class="py-16 text-center">
-                 <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-300 flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fas fa-search-minus"></i></div>
-                 <h4 class="text-[14px] font-black text-slate-700">Pencarian Tidak Ditemukan</h4>
-                 <p class="text-[11px] text-slate-500 mt-1">Pastikan ejaan nama atau jenis vaksin sudah benar.</p>
-            </div>
         </div>
         
-        {{-- Area Pagination --}}
         @if(isset($imunisasis) && $imunisasis->hasPages())
         <div class="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
-                Menampilkan <span class="text-slate-800">{{ $imunisasis->firstItem() }}</span> - <span class="text-slate-800">{{ $imunisasis->lastItem() }}</span> dari <span class="text-slate-800">{{ $imunisasis->total() }}</span> Vaksinasi
+                Menampilkan <span class="text-slate-800">{{ $imunisasis->firstItem() }}</span> - <span class="text-slate-800">{{ $imunisasis->lastItem() }}</span> dari <span class="text-slate-800">{{ $imunisasis->total() }}</span> Data
             </p>
-            <div class="nexus-pagination">
-                {{ $imunisasis->withQueryString()->links() }}
+            <div class="nexus-pagination text-xs">
+                {{ $imunisasis->links() }}
             </div>
         </div>
         @endif

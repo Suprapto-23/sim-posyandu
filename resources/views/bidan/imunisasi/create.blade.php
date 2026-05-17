@@ -85,15 +85,9 @@
 @endpush
 
 @section('content')
-@php
-    // Memuat Data Warga KIA
-    $dbPasien = [
-        'balita'    => $balitas->map(fn($p) => ['id' => $p->id, 'nama' => $p->nama_lengkap, 'nik' => $p->nik, 'type' => 'App\\Models\\Balita'])->toArray(),
-        'ibu_hamil' => $ibuHamils->map(fn($p) => ['id' => $p->id, 'nama' => $p->nama_lengkap, 'nik' => $p->nik, 'type' => 'App\\Models\\IbuHamil'])->toArray(),
-    ];
-@endphp
 
-<div x-data="imunisasiWizard(@js($dbPasien))" class="max-w-[1050px] mx-auto fade-in-up pb-24 relative">
+{{-- Inisialisasi Alpine dengan $masterData dari Controller --}}
+<div x-data="imunisasiWizard(@js($masterData))" class="max-w-[1050px] mx-auto fade-in-up pb-24 relative">
 
     {{-- NAVIGASI ATAS --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 px-2">
@@ -114,8 +108,10 @@
     {{-- KONTANER UTAMA --}}
     <form id="formImunisasi" action="{{ route('bidan.imunisasi.store') }}" method="POST" class="bg-white rounded-[36px] border border-slate-100 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col relative z-10">
         @csrf
+        
+        {{-- Input Tersembunyi --}}
         <input type="hidden" name="pasien_id" x-model="pasienId">
-        <input type="hidden" name="pasien_type" x-model="pasienType">
+        {{-- Note: Kategori pasien (balita/ibu_hamil) sudah dihandle langsung oleh input radio di Langkah 1 --}}
 
         {{-- HEADER FORM --}}
         <div class="px-8 md:px-12 py-8 border-b border-slate-100 bg-slate-50/50">
@@ -167,7 +163,7 @@
             </div>
         </div>
 
-        {{-- 2. PENCARIAN (Bebas Tumpang Tindih) --}}
+        {{-- 2. PENCARIAN OFFLINE SUPER CEPAT --}}
         <div class="p-8 md:p-12 border-b border-slate-100 bg-slate-50/50">
             <div class="flex flex-col md:flex-row md:items-start gap-8 lg:gap-12">
                 
@@ -183,12 +179,10 @@
                 
                 <div class="w-full relative pl-0 md:pl-2" @click.away="dropOpen = false">
                     <div class="relative w-full flex items-center">
-                        {{-- Ikon mutlak presisi (Left: 20px) --}}
                         <div class="absolute left-5 flex items-center pointer-events-none z-10">
                             <i class="fas fa-search text-[16px] transition-all duration-300" :class="query.length > 0 ? 'text-cyan-500 scale-110' : 'text-slate-400'"></i>
                         </div>
                         
-                        {{-- Input dengan class khusus .search-input-kia (Padding Left: 56px TERKUNCI) --}}
                         <input type="text" x-model="query" @focus="dropOpen = true" @input="dropOpen = true"
                                class="med-input search-input-kia w-full bg-white" 
                                :placeholder="kategori ? 'Ketik pencarian ' + kategori.replace('_', ' ') + '...' : 'Pilih sasaran (Langkah 1) dahulu...'">
@@ -237,7 +231,7 @@
 
         {{-- 3. RINCIAN INJEKSI MEDIS --}}
         <div class="p-8 md:p-12 transition-all duration-500 bg-white relative" :class="pasienId ? 'unlocked-section' : 'locked-section'">
-            {{-- Overlay Pengunci Mewah (Glassmorphism) --}}
+            {{-- Overlay Pengunci --}}
             <div x-show="!pasienId" class="absolute inset-0 z-20 bg-white/40 backdrop-blur-[3px] flex flex-col items-center justify-center" x-transition.opacity>
                 <div class="px-8 py-5 bg-white rounded-[24px] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center gap-5">
                     <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-xl"><i class="fas fa-lock"></i></div>
@@ -254,26 +248,30 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pl-0 md:pl-[50px] relative z-10">
-                <div>
+                
+                <div class="md:col-span-2 lg:col-span-1">
                     <label class="med-label">Program Vaksinasi <span class="text-rose-500">*</span></label>
                     <div class="relative">
                         <select name="jenis_imunisasi" class="med-input cursor-pointer pr-10" required>
                             <option value="">-- Tentukan Program --</option>
                             <option value="Dasar Lengkap (0-11 Bulan)" x-show="kategori === 'balita'">Dasar Lengkap (0-11 Bulan)</option>
                             <option value="Lanjutan Baduta (18-24 Bulan)" x-show="kategori === 'balita'">Lanjutan Baduta (18-24 Bulan)</option>
+                            <option value="Imunisasi Anak Sekolah (BIAS)" x-show="kategori === 'balita'">Imunisasi Anak Sekolah (BIAS)</option>
                             <option value="Imunisasi TT" x-show="kategori === 'ibu_hamil'">Imunisasi TT (Ibu Hamil)</option>
                         </select>
                         <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[12px]"></i>
                     </div>
                 </div>
-                <div>
+
+                <div class="md:col-span-2 lg:col-span-1">
                     <label class="med-label">Tanggal Pelaksanaan <span class="text-rose-500">*</span></label>
                     <input type="date" name="tanggal_imunisasi" value="{{ date('Y-m-d') }}" class="med-input cursor-pointer text-slate-700" required>
                 </div>
                 
-                <div class="md:col-span-2">
+                {{-- Penambahan Field Dosis dan Vaksin Bersebelahan --}}
+                <div class="md:col-span-1">
                     <label class="med-label">Jenis / Nama Vaksin <span class="text-rose-500">*</span></label>
-                    <input list="vaksin-kia-list" name="vaksin" required placeholder="Pilih dari daftar atau ketik manual nama vaksin..." class="med-input">
+                    <input list="vaksin-kia-list" name="vaksin" required placeholder="Contoh: BCG / DPT / TT" class="med-input">
                     <datalist id="vaksin-kia-list">
                         <option value="Hepatitis B (HB-0)">
                         <option value="BCG">
@@ -285,9 +283,14 @@
                     </datalist>
                 </div>
 
+                <div class="md:col-span-1">
+                    <label class="med-label">Dosis Vaksinasi <span class="text-rose-500">*</span></label>
+                    <input type="text" name="dosis" required placeholder="Contoh: 0.5 ml / 2 Tetes" class="med-input">
+                </div>
+
                 <div class="md:col-span-2">
                     <label class="med-label">Observasi Klinis (KIPI)</label>
-                    <textarea name="keterangan" rows="3" class="med-input resize-none bg-slate-50/50" placeholder="Catat keluhan pasca penyuntikan di sini. Kosongkan form ini jika tidak ada reaksi abnormal pada pasien..."></textarea>
+                    <textarea name="keterangan" rows="3" class="med-input resize-none bg-slate-50/50" placeholder="Catat keluhan pasca penyuntikan di sini. Kosongkan form ini jika tidak ada reaksi abnormal (demam/bengkak) pada pasien..."></textarea>
                 </div>
             </div>
         </div>
@@ -317,9 +320,24 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('imunisasiWizard', (masterData) => ({
-            master: masterData, kategori: '', query: '', pasienId: '', pasienType: '', dropOpen: false,
-            resetPencarian() { this.pasienId = ''; this.query = ''; this.dropOpen = false; this.pasienType = ''; },
-            pilihPasien(p) { this.pasienId = p.id; this.pasienType = p.type; this.query = p.nama; this.dropOpen = false; },
+            master: masterData, 
+            kategori: '', 
+            query: '', 
+            pasienId: '', 
+            dropOpen: false,
+            
+            resetPencarian() { 
+                this.pasienId = ''; 
+                this.query = ''; 
+                this.dropOpen = false; 
+            },
+            
+            pilihPasien(p) { 
+                this.pasienId = p.id; 
+                this.query = p.nama; 
+                this.dropOpen = false; 
+            },
+            
             results() {
                 if(!this.kategori || !this.master[this.kategori]) return [];
                 const q = this.query.toLowerCase();
@@ -343,6 +361,8 @@
             });
             return;
         }
+        
+        // Animasi Loading Submit
         const btn = document.getElementById('btnSubmit');
         btn.innerHTML = '<i class="fas fa-circle-notch fa-spin text-[16px]"></i> MENYIMPAN...';
         btn.classList.add('opacity-70', 'cursor-wait', 'scale-95');

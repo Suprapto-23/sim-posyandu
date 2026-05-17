@@ -123,9 +123,9 @@
             </div>
         </div>
 
-        {{-- Card 3: Alert Risiko (Stunting/Hipertensi) --}}
+        {{-- Card 3: Alert Risiko (Waspada Medis Terintegrasi) --}}
         @php
-            $totalRisiko = ($alertRisiko['balita_stunting'] ?? 0) + ($alertRisiko['lansia_hipertensi'] ?? 0);
+            $totalRisiko = ($alertRisiko['balita_waspada'] ?? 0) + ($alertRisiko['lansia_metabolik'] ?? 0) + ($alertRisiko['bumil_resti'] ?? 0);
             $risikoColor = $totalRisiko > 0 ? 'amber' : 'slate';
         @endphp
         <div class="nexus-glass-card p-5 md:p-6 flex flex-col justify-between group overflow-hidden relative min-h-[140px]">
@@ -177,12 +177,14 @@
                     <div class="space-y-3">
                         @foreach($antrianLive as $antrian)
                             @php 
-                                // AMAN 100%: Menggunakan Accessor dari Model Pemeriksaan.php
-                                $namaPasien = $antrian->nama_pasien; 
+                                // Memanggil relasi yang benar dari model Pemeriksaan -> Kunjungan -> Pasien
+                                $pasienData = $antrian->kunjungan->pasien ?? null;
+                                $namaPasien = $pasienData ? $pasienData->nama_lengkap : 'Anonim';
                                 $kategori = strtoupper($antrian->kategori_pasien ?? 'UMUM');
+                                
                                 $warnaKat = match(strtolower($kategori)) {
                                     'balita' => 'text-rose-600 bg-rose-50 border-rose-100',
-                                    'ibu_hamil' => 'text-pink-600 bg-pink-50 border-pink-100',
+                                    'ibu hamil', 'ibu_hamil' => 'text-pink-600 bg-pink-50 border-pink-100',
                                     'remaja' => 'text-sky-600 bg-sky-50 border-sky-100',
                                     'lansia' => 'text-emerald-600 bg-emerald-50 border-emerald-100',
                                     default => 'text-slate-600 bg-slate-50 border-slate-100'
@@ -286,7 +288,7 @@
         grad.addColorStop(0, 'rgba(6, 182, 212, 0.3)'); // Cyan Glow
         grad.addColorStop(1, 'rgba(6, 182, 212, 0)');
 
-        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.font.family = "'Poppins', sans-serif";
         
         window._trendChart = new Chart(ctx, {
             type: 'line',

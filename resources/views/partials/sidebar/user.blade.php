@@ -1,156 +1,900 @@
 @php
-    $route = request()->route()->getName();
-    
-    // =================================================================================
-    // SMART ROUTE HIGHLIGHTING
-    // =================================================================================
+    use Illuminate\Support\Str;
+
+    $route = request()->route()?->getName() ?? '';
+
+    $userName = Auth::user()->name ?? 'Warga Posyandu';
+    $initial = strtoupper(substr($userName, 0, 1));
+
     $isDashboard  = $route === 'user.dashboard';
     $isJadwal     = Str::startsWith($route, 'user.jadwal');
-    
-    // [PERBAIKAN KUNCI] Tambahkan deteksi untuk remaja, lansia, dan ibu_hamil
-    $isMonitoring = Str::startsWith($route, 'user.monitoring') || 
+
+    $isMonitoring = Str::startsWith($route, 'user.monitoring') ||
                     Str::startsWith($route, 'user.balita') ||
                     Str::startsWith($route, 'user.remaja') ||
                     Str::startsWith($route, 'user.lansia') ||
-                    Str::startsWith($route, 'user.ibu_hamil');
-                    
-    $isRiwayat    = Str::startsWith($route, 'user.riwayat');
-    $isNotifikasi = Str::startsWith($route, 'notifikasi') || Str::startsWith($route, 'user.notifikasi');
+                    Str::startsWith($route, 'user.ibu_hamil') ||
+                    Str::startsWith($route, 'user.ibu-hamil');
 
-    // =================================================================================
-    // NEXUS PREMIUM COLOR THEME (LIGHT GLASSMORPHISM)
-    // =================================================================================
-    $navActive   = 'bg-white text-teal-600 shadow-[0_8px_20px_rgba(20,184,166,0.08)] border border-white translate-x-1';
-    $navPassive  = 'text-slate-500 hover:text-teal-600 hover:bg-white/60 border border-transparent hover:translate-x-1';
-    
-    $iconActive  = 'text-teal-500 drop-shadow-[0_4px_8px_rgba(20,184,166,0.3)] scale-110';
-    $iconPassive = 'text-slate-400 group-hover:text-teal-500 group-hover:scale-110 transition-all duration-300';
+    $isRiwayat    = Str::startsWith($route, 'user.riwayat');
+    $isNotifikasi = Str::startsWith($route, 'user.notifikasi') || Str::startsWith($route, 'notifikasi');
+    $isProfile    = Str::startsWith($route, 'user.profile');
+
+    $mainMenus = [
+        [
+            'label' => 'Beranda',
+            'icon' => 'fa-house',
+            'route' => route('user.dashboard'),
+            'active' => $isDashboard,
+        ],
+        [
+            'label' => 'Agenda Posyandu',
+            'icon' => 'fa-calendar-days',
+            'route' => route('user.jadwal.index'),
+            'active' => $isJadwal,
+        ],
+    ];
+
+    $healthMenus = [
+        [
+            'label' => 'Pantau Kesehatan',
+            'icon' => 'fa-heart-pulse',
+            'route' => route('user.monitoring.index'),
+            'active' => $isMonitoring,
+        ],
+        [
+            'label' => 'Riwayat Terpadu',
+            'icon' => 'fa-notes-medical',
+            'route' => route('user.riwayat.index'),
+            'active' => $isRiwayat,
+        ],
+    ];
+
+    $infoMenus = [
+        [
+            'label' => 'Pesan Bidan',
+            'icon' => 'fa-bell',
+            'route' => route('user.notifikasi.index'),
+            'active' => $isNotifikasi,
+        ],
+    ];
 @endphp
 
-<aside id="sidebar" class="fixed md:relative z-50 w-[290px] h-full flex flex-col transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] -translate-x-full md:translate-x-0 overflow-hidden bg-slate-50/80 backdrop-blur-2xl border-r border-white/60 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-    
-    {{-- Efek Cahaya / Bias Kaca (Ambient Glow) --}}
-    <div class="absolute top-0 left-0 w-64 h-64 bg-teal-300/10 blur-[80px] rounded-full -ml-20 -mt-20 pointer-events-none"></div>
-    <div class="absolute bottom-0 right-0 w-64 h-64 bg-sky-300/10 blur-[80px] rounded-full -mr-20 -mb-20 pointer-events-none"></div>
+<style>
+    /*
+    |--------------------------------------------------------------------------
+    | USER SIDEBAR CLEAN MOBILE
+    |--------------------------------------------------------------------------
+    | Catatan:
+    | - Tidak pakai fixed aside lagi.
+    | - Tidak pakai id="sidebar" lagi.
+    | - Wrapper fixed sudah ditangani layout user melalui #userSidebarWrap.
+    */
 
-    {{-- LOGO BRANDING NEXUS --}}
-    <div class="h-24 flex items-center gap-4 px-8 shrink-0 relative z-10 border-b border-slate-200/50">
-        <a href="{{ route('user.dashboard') }}" class="flex items-center gap-4 w-full group outline-none">
-            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-400 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-teal-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border-2 border-white relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <i class="fas fa-heart-pulse text-[20px] relative z-10"></i>
-            </div>
-            <div class="flex flex-col">
-                <h1 class="text-[21px] font-black text-slate-800 tracking-tight font-poppins leading-none">Portal<span class="text-teal-500">Warga</span></h1>
-                <p class="text-[8px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-1.5">Layanan Mandiri</p>
-            </div>
-        </a>
-    </div>
+    .pc-user-sidebar {
+        position: relative;
 
-    {{-- MENU NAVIGASI --}}
-    <nav class="flex-1 overflow-y-auto no-scrollbar px-5 py-8 space-y-8 relative z-10">
-        
-        {{-- SECTION 1: EKSPLORASI --}}
-        <div>
-            <p class="px-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Eksplorasi</p>
-            <div class="space-y-2">
-                
-                {{-- 1. HOME --}}
-                <a href="{{ route('user.dashboard') }}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative {{ $isDashboard ? $navActive : $navPassive }}">
-                    @if($isDashboard)
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-teal-500 rounded-r-full shadow-[2px_0_8px_rgba(20,184,166,0.6)]"></div>
-                    @endif
-                    <i class="fas fa-home text-[18px] w-6 text-center {{ $isDashboard ? $iconActive : $iconPassive }}"></i>
-                    <span>Beranda Saya</span>
-                </a>
+        width: 100%;
+        height: calc(100dvh - 20px);
+        min-height: calc(100dvh - 20px);
 
-                {{-- 2. JADWAL --}}
-                <a href="{{ route('user.jadwal.index') }}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative {{ $isJadwal ? $navActive : $navPassive }}">
-                    @if($isJadwal)
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-teal-500 rounded-r-full shadow-[2px_0_8px_rgba(20,184,166,0.6)]"></div>
-                    @endif
-                    <i class="far fa-calendar-alt text-[18px] w-6 text-center {{ $isJadwal ? $iconActive : $iconPassive }}"></i>
-                    <span>Agenda Posyandu</span>
-                </a>
+        display: flex;
+        flex-direction: column;
 
-            </div>
-        </div>
+        overflow: hidden;
 
-        {{-- SECTION 2: MEDIS --}}
-        <div>
-            <p class="px-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Rekam Medis</p>
-            <div class="space-y-2">
-                
-                {{-- 3. PANTAU --}}
-                <a href="{{ route('user.monitoring.index') }}" class="flex items-center justify-between px-4 py-3.5 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative {{ $isMonitoring ? $navActive : $navPassive }}">
-                    @if($isMonitoring)
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-teal-500 rounded-r-full shadow-[2px_0_8px_rgba(20,184,166,0.6)]"></div>
-                    @endif
-                    <div class="flex items-center gap-4">
-                        <i class="fas fa-heartbeat text-[18px] w-6 text-center {{ $isMonitoring ? $iconActive : $iconPassive }}"></i>
-                        <span>Pantau Kesehatan</span>
-                    </div>
-                </a>
+        border-radius: 28px;
+        border: 1px solid rgba(226, 232, 240, .82);
 
-                {{-- 4. RIWAYAT --}}
-                <a href="{{ route('user.riwayat.index') }}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative {{ $isRiwayat ? $navActive : $navPassive }}">
-                    @if($isRiwayat)
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-teal-500 rounded-r-full shadow-[2px_0_8px_rgba(20,184,166,0.6)]"></div>
-                    @endif
-                    <i class="fas fa-notes-medical text-[18px] w-6 text-center {{ $isRiwayat ? $iconActive : $iconPassive }}"></i>
-                    <span>Riwayat Terpadu</span>
-                </a>
+        background:
+            radial-gradient(circle at 50% 0%, rgba(236,253,245,.92), transparent 34%),
+            radial-gradient(circle at 100% 100%, rgba(20,184,166,.10), transparent 32%),
+            linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,255,252,.95));
 
-            </div>
-        </div>
+        box-shadow:
+            0 24px 70px rgba(15,23,42,.12),
+            inset 0 1px 0 rgba(255,255,255,.96);
 
-        {{-- SECTION 3: EKSTRA --}}
-        <div>
-            <p class="px-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Informasi</p>
-            <div class="space-y-2">
-                <a href="{{ route('user.notifikasi.index') }}" class="flex items-center justify-between px-4 py-3.5 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative {{ $isNotifikasi ? $navActive : $navPassive }}">
-                    @if($isNotifikasi)
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-teal-500 rounded-r-full shadow-[2px_0_8px_rgba(20,184,166,0.6)]"></div>
-                    @endif
-                    <div class="flex items-center gap-4">
-                        <i class="far fa-bell text-[18px] w-6 text-center {{ $isNotifikasi ? $iconActive : $iconPassive }}"></i>
-                        <span>Pesan Bidan</span>
-                        
-                        {{-- Fitur Cerdas: Badge Notifikasi Real-time (Opsional jika Anda sudah punya logic badge-nya di backend) --}}
-                        {{-- <span class="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm">2</span> --}}
-                    </div>
-                </a>
-            </div>
-        </div>
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
 
-    </nav>
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+    }
 
-    {{-- BOTTOM PROFILE & LOGOUT CARD --}}
-    <div class="p-6 mt-auto relative z-10 shrink-0">
-        <div class="p-4 rounded-[24px] bg-white/70 border border-white shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-4 backdrop-blur-xl hover:shadow-[0_15px_40px_rgba(20,184,166,0.1)] transition-all duration-300 group/bottom">
-            
-            {{-- User Mini Profile --}}
-            <a href="{{ route('user.profile.edit') }}" class="flex items-center gap-3 px-1 group cursor-pointer outline-none">
-                <div class="w-10 h-10 rounded-[14px] bg-teal-50 border border-teal-100/50 flex items-center justify-center text-teal-600 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300 shadow-sm">
-                    <i class="fas fa-user-shield"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-[12.5px] font-black text-slate-800 truncate group-hover:text-teal-600 transition-colors">{{ ucwords(Auth::user()->name) }}</p>
-                    <p class="text-[8px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5 group-hover:text-teal-500/70 transition-colors">Pengaturan Akun</p>
-                </div>
-                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-teal-50 transition-colors border border-slate-100">
-                    <i class="fas fa-chevron-right text-[9px] text-slate-400 group-hover:text-teal-600"></i>
-                </div>
+    .pc-user-sidebar::before {
+        content: "";
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        top: -120px;
+        left: -110px;
+
+        border-radius: 999px;
+        background: rgba(16,185,129,.12);
+        filter: blur(70px);
+
+        pointer-events: none;
+    }
+
+    .pc-user-sidebar::after {
+        content: "";
+        position: absolute;
+        width: 250px;
+        height: 250px;
+        right: -120px;
+        bottom: -110px;
+
+        border-radius: 999px;
+        background: rgba(20,184,166,.12);
+        filter: blur(70px);
+
+        pointer-events: none;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | TOP
+    |--------------------------------------------------------------------------
+    */
+
+    .pc-user-top {
+        position: relative;
+        z-index: 4;
+
+        flex-shrink: 0;
+
+        padding: 24px 18px 0;
+    }
+
+    .pc-user-logo-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        margin-bottom: 20px;
+    }
+
+    .pc-user-logo-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        text-decoration: none;
+    }
+
+    .pc-user-logo {
+        width: 148px;
+        height: auto;
+
+        object-fit: contain;
+        display: block;
+
+        filter:
+            drop-shadow(0 12px 22px rgba(15,23,42,.08))
+            drop-shadow(0 2px 4px rgba(16,185,129,.08));
+    }
+
+    .pc-user-card {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+
+        padding: 14px;
+        margin-bottom: 16px;
+
+        border-radius: 22px;
+
+        background:
+            linear-gradient(135deg, rgba(255,255,255,.90), rgba(248,255,252,.78));
+
+        border: 1px solid rgba(209,250,229,.95);
+
+        box-shadow:
+            0 16px 34px rgba(15,23,42,.06),
+            inset 0 1px 0 rgba(255,255,255,.95);
+    }
+
+    .pc-user-avatar {
+        width: 52px;
+        height: 52px;
+
+        flex-shrink: 0;
+
+        border-radius: 999px;
+
+        background:
+            linear-gradient(135deg, #10b981 0%, #34d399 46%, #f59e0b 100%);
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        color: white;
+        font-weight: 900;
+        font-size: 18px;
+
+        box-shadow:
+            0 12px 24px rgba(16,185,129,.18),
+            inset 0 1px 0 rgba(255,255,255,.25);
+    }
+
+    .pc-user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pc-user-info h4 {
+        margin: 0;
+
+        color: #064e3b;
+
+        font-size: 13.5px;
+        font-weight: 900;
+        line-height: 1.2;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pc-user-info p {
+        margin: 3px 0 6px;
+
+        color: #64748b;
+
+        font-size: 11px;
+        font-weight: 750;
+    }
+
+    .pc-user-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+
+        padding: 3px 8px;
+
+        border-radius: 999px;
+
+        background: #ecfdf5;
+        color: #059669;
+
+        font-size: 10px;
+        font-weight: 850;
+    }
+
+    .pc-user-status span {
+        width: 6px;
+        height: 6px;
+
+        border-radius: 999px;
+        background: #10b981;
+
+        box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SCROLL AREA
+    |--------------------------------------------------------------------------
+    */
+
+    .pc-user-scroll {
+        position: relative;
+        z-index: 3;
+
+        flex: 1;
+        min-height: 0;
+
+        overflow-y: auto;
+        overflow-x: hidden;
+
+        padding: 0 18px 0;
+
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        overscroll-behavior: contain;
+        overscroll-behavior-y: contain;
+
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .pc-user-scroll::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MENU
+    |--------------------------------------------------------------------------
+    */
+
+    .pc-user-menu-group {
+        margin-bottom: 20px;
+    }
+
+    .pc-user-menu-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .pc-user-menu-title {
+        margin: 0 0 10px;
+        padding-left: 4px;
+
+        color: #64748b;
+
+        font-size: 10.5px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+    }
+
+    .pc-user-menu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .pc-user-menu-item {
+        position: relative;
+
+        width: 100%;
+        min-height: 42px;
+
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        padding: 10px 13px;
+
+        border: 0;
+        border-radius: 15px;
+
+        background: transparent;
+
+        color: #334155;
+        text-decoration: none;
+
+        font-size: 13px;
+        font-weight: 800;
+
+        cursor: pointer;
+
+        transition:
+            background .28s cubic-bezier(.16, 1, .3, 1),
+            color .28s cubic-bezier(.16, 1, .3, 1),
+            transform .28s cubic-bezier(.16, 1, .3, 1),
+            box-shadow .28s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    .pc-user-menu-item:hover {
+        background: rgba(236,253,245,.92);
+        color: #047857;
+        transform: translateX(3px);
+    }
+
+    .pc-user-menu-item.active {
+        background:
+            linear-gradient(90deg, rgba(236,253,245,.98), rgba(255,255,255,.84));
+
+        color: #047857;
+        font-weight: 900;
+
+        box-shadow:
+            0 10px 24px rgba(16,185,129,.08),
+            inset 0 1px 0 rgba(255,255,255,.92);
+    }
+
+    .pc-user-menu-item.active::before {
+        content: "";
+
+        position: absolute;
+        left: 0;
+        top: 9px;
+        bottom: 9px;
+
+        width: 4px;
+
+        border-radius: 999px;
+        background: linear-gradient(180deg, #10b981, #059669);
+    }
+
+    .pc-user-menu-icon {
+        width: 22px;
+        flex-shrink: 0;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        color: #64748b;
+        font-size: 13px;
+
+        transition:
+            color .28s ease,
+            transform .28s ease;
+    }
+
+    .pc-user-menu-item:hover .pc-user-menu-icon,
+    .pc-user-menu-item.active .pc-user-menu-icon {
+        color: #059669;
+        transform: scale(1.08);
+    }
+
+    .pc-user-menu-text {
+        flex: 1;
+        min-width: 0;
+
+        text-align: left;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pc-user-menu-badge {
+        min-width: 22px;
+        height: 22px;
+
+        padding: 0 7px;
+
+        border-radius: 999px;
+
+        background: #ecfdf5;
+        color: #059669;
+
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 10px;
+        font-weight: 900;
+
+        box-shadow:
+            0 8px 18px rgba(16,185,129,.10),
+            inset 0 1px 0 rgba(255,255,255,.85);
+    }
+
+    .pc-user-profile-link {
+        color: #334155;
+    }
+
+    .pc-user-profile-link.active {
+        color: #047857;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOGOUT
+    |--------------------------------------------------------------------------
+    */
+
+    .pc-user-logout-form {
+        margin: 0;
+        padding: 0;
+    }
+
+    .pc-user-logout {
+        color: #ef4444;
+    }
+
+    .pc-user-logout .pc-user-menu-icon {
+        color: #ef4444;
+    }
+
+    .pc-user-logout:hover {
+        background: #fff1f2;
+        color: #dc2626;
+    }
+
+    .pc-user-logout:hover .pc-user-menu-icon {
+        color: #dc2626;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | BOTTOM DECOR IKUT SCROLL, SETELAH LOGOUT
+    |--------------------------------------------------------------------------
+    */
+
+    .pc-user-bottom-decor {
+        position: relative;
+        z-index: 1;
+
+        height: 96px;
+        min-height: 96px;
+
+        margin: 8px -18px 0;
+
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    .pc-user-wave {
+        position: absolute;
+        left: -20%;
+
+        width: 140%;
+
+        border-radius: 50% 50% 0 0;
+    }
+
+    .pc-user-wave-1 {
+        bottom: -54px;
+        height: 96px;
+
+        background: rgba(16,185,129,.14);
+    }
+
+    .pc-user-wave-2 {
+        bottom: -67px;
+        height: 106px;
+
+        background: rgba(5,150,105,.13);
+    }
+
+    .pc-user-wave-3 {
+        bottom: -78px;
+        height: 116px;
+
+        background: rgba(20,184,166,.10);
+    }
+
+    .pc-user-plant {
+        position: absolute;
+        right: 22px;
+        bottom: 11px;
+
+        width: 64px;
+        height: 64px;
+    }
+
+    .pc-user-stem {
+        position: absolute;
+        left: 31px;
+        bottom: 0;
+
+        width: 3px;
+        height: 46px;
+
+        border-radius: 999px;
+        background: rgba(4,120,87,.35);
+
+        transform: rotate(18deg);
+        transform-origin: bottom;
+    }
+
+    .pc-user-leaf {
+        position: absolute;
+
+        width: 31px;
+        height: 16px;
+
+        border-radius: 100% 0 100% 0;
+
+        background:
+            linear-gradient(135deg, rgba(4,120,87,.66), rgba(16,185,129,.24));
+
+        transform-origin: bottom left;
+    }
+
+    .pc-user-leaf-1 {
+        right: 19px;
+        bottom: 23px;
+        transform: rotate(-34deg);
+    }
+
+    .pc-user-leaf-2 {
+        right: 32px;
+        bottom: 35px;
+        transform: rotate(-8deg) scale(.9);
+    }
+
+    .pc-user-leaf-3 {
+        right: 7px;
+        bottom: 36px;
+        transform: rotate(28deg) scale(.86);
+    }
+
+    .pc-user-leaf-4 {
+        right: 25px;
+        bottom: 11px;
+        transform: rotate(46deg) scale(.72);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ANIMATION
+    |--------------------------------------------------------------------------
+    */
+
+    .pc-user-top,
+    .pc-user-menu-group,
+    .pc-user-bottom-decor {
+        opacity: 0;
+        transform: translateY(16px);
+
+        animation: pcUserSidebarIn .85s cubic-bezier(.22, 1, .36, 1) forwards;
+    }
+
+    .pc-user-top {
+        animation-delay: .06s;
+    }
+
+    .pc-user-menu-group:nth-child(1) {
+        animation-delay: .14s;
+    }
+
+    .pc-user-menu-group:nth-child(2) {
+        animation-delay: .22s;
+    }
+
+    .pc-user-menu-group:nth-child(3) {
+        animation-delay: .30s;
+    }
+
+    .pc-user-menu-group:nth-child(4) {
+        animation-delay: .38s;
+    }
+
+    .pc-user-bottom-decor {
+        animation-delay: .46s;
+    }
+
+    @keyframes pcUserSidebarIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 420px) {
+        .pc-user-sidebar {
+            border-radius: 24px;
+        }
+
+        .pc-user-top {
+            padding: 22px 16px 0;
+        }
+
+        .pc-user-scroll {
+            padding: 0 16px 0;
+        }
+
+        .pc-user-logo {
+            width: 138px;
+        }
+
+        .pc-user-bottom-decor {
+            margin-left: -16px;
+            margin-right: -16px;
+        }
+    }
+</style>
+
+<div class="pc-user-sidebar">
+
+    {{-- TOP --}}
+    <div class="pc-user-top">
+
+        {{-- LOGO --}}
+        <div class="pc-user-logo-wrap">
+            <a href="{{ route('user.dashboard') }}" class="js-nav-link pc-user-logo-link">
+                <img
+                    src="{{ asset('img/logo.png') }}"
+                    alt="Logo PosyanduCare"
+                    class="pc-user-logo"
+                >
             </a>
+        </div>
 
-            {{-- Logout Button --}}
-            <form action="{{ route('logout') }}" method="POST" class="m-0">
-                @csrf
-                <button type="submit" class="w-full py-3.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white rounded-[16px] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 border border-rose-100 hover:border-rose-500 hover:shadow-[0_8px_20px_rgba(244,63,94,0.25)] flex items-center justify-center gap-2 group/logout">
-                    <i class="fas fa-power-off text-[13px] group-hover/logout:scale-110 transition-transform"></i>
-                    Keluar Sistem
-                </button>
-            </form>
+        {{-- USER CARD --}}
+        <div class="pc-user-card">
+            <div class="pc-user-avatar">
+                {{ $initial }}
+            </div>
+
+            <div class="pc-user-info">
+                <h4>{{ ucwords($userName) }}</h4>
+                <p>Akun Warga</p>
+
+                <div class="pc-user-status">
+                    <span></span>
+                    Portal Aktif
+                </div>
+            </div>
         </div>
     </div>
-</aside>
+
+    {{-- SCROLL MENU --}}
+    <div class="pc-user-scroll" id="userSidebarScrollArea">
+
+        {{-- MENU UTAMA --}}
+        <div class="pc-user-menu-group">
+            <p class="pc-user-menu-title">
+                Menu Utama
+            </p>
+
+            <div class="pc-user-menu-list">
+                @foreach($mainMenus as $menu)
+                    <a
+                        href="{{ $menu['route'] }}"
+                        class="js-nav-link pc-user-menu-item {{ $menu['active'] ? 'active' : '' }}"
+                    >
+                        <span class="pc-user-menu-icon">
+                            <i class="fa-solid {{ $menu['icon'] }}"></i>
+                        </span>
+
+                        <span class="pc-user-menu-text">
+                            {{ $menu['label'] }}
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- KESEHATAN --}}
+        <div class="pc-user-menu-group">
+            <p class="pc-user-menu-title">
+                Kesehatan
+            </p>
+
+            <div class="pc-user-menu-list">
+                @foreach($healthMenus as $menu)
+                    <a
+                        href="{{ $menu['route'] }}"
+                        class="js-nav-link pc-user-menu-item {{ $menu['active'] ? 'active' : '' }}"
+                    >
+                        <span class="pc-user-menu-icon">
+                            <i class="fa-solid {{ $menu['icon'] }}"></i>
+                        </span>
+
+                        <span class="pc-user-menu-text">
+                            {{ $menu['label'] }}
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- INFORMASI --}}
+        <div class="pc-user-menu-group">
+            <p class="pc-user-menu-title">
+                Informasi
+            </p>
+
+            <div class="pc-user-menu-list">
+                @foreach($infoMenus as $menu)
+                    <a
+                        href="{{ $menu['route'] }}"
+                        class="js-nav-link pc-user-menu-item {{ $menu['active'] ? 'active' : '' }}"
+                    >
+                        <span class="pc-user-menu-icon">
+                            <i class="fa-regular {{ $menu['icon'] }}"></i>
+                        </span>
+
+                        <span class="pc-user-menu-text">
+                            {{ $menu['label'] }}
+                        </span>
+
+                        {{-- Opsional badge kalau nanti ada count notifikasi --}}
+                        {{-- <span class="pc-user-menu-badge">3</span> --}}
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- AKUN --}}
+        <div class="pc-user-menu-group">
+            <p class="pc-user-menu-title">
+                Sesi Akun
+            </p>
+
+            <div class="pc-user-menu-list">
+                <a
+                    href="{{ route('user.profile.edit') }}"
+                    class="js-nav-link pc-user-menu-item pc-user-profile-link {{ $isProfile ? 'active' : '' }}"
+                >
+                    <span class="pc-user-menu-icon">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </span>
+
+                    <span class="pc-user-menu-text">
+                        Pengaturan Akun
+                    </span>
+                </a>
+
+                <form method="POST" action="{{ route('logout') }}" class="pc-user-logout-form">
+                    @csrf
+
+                    <button type="submit" class="pc-user-menu-item pc-user-logout">
+                        <span class="pc-user-menu-icon">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </span>
+
+                        <span class="pc-user-menu-text">
+                            Keluar Sistem
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {{-- DEKORASI BAWAH IKUT SCROLL --}}
+        <div class="pc-user-bottom-decor" aria-hidden="true">
+            <div class="pc-user-wave pc-user-wave-1"></div>
+            <div class="pc-user-wave pc-user-wave-2"></div>
+            <div class="pc-user-wave pc-user-wave-3"></div>
+
+            <div class="pc-user-plant">
+                <span class="pc-user-leaf pc-user-leaf-1"></span>
+                <span class="pc-user-leaf pc-user-leaf-2"></span>
+                <span class="pc-user-leaf pc-user-leaf-3"></span>
+                <span class="pc-user-leaf pc-user-leaf-4"></span>
+                <span class="pc-user-stem"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@once
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const scrollArea = document.getElementById('userSidebarScrollArea');
+
+            if (!scrollArea) {
+                return;
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Stop scroll leak
+            |--------------------------------------------------------------------------
+            | Scroll sidebar tidak boleh nyeret area dashboard.
+            | Browser kadang sok kreatif, jadi perlu ditampar pakai JS.
+            */
+
+            scrollArea.addEventListener('wheel', function (event) {
+                const delta = event.deltaY;
+                const atTop = scrollArea.scrollTop <= 0;
+                const atBottom = Math.ceil(scrollArea.scrollTop + scrollArea.clientHeight) >= scrollArea.scrollHeight;
+
+                if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+                    event.preventDefault();
+                }
+
+                event.stopPropagation();
+            }, { passive: false });
+
+            let touchStartY = 0;
+
+            scrollArea.addEventListener('touchstart', function (event) {
+                if (event.touches.length > 0) {
+                    touchStartY = event.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            scrollArea.addEventListener('touchmove', function (event) {
+                if (event.touches.length === 0) {
+                    return;
+                }
+
+                const touchY = event.touches[0].clientY;
+                const delta = touchStartY - touchY;
+
+                const atTop = scrollArea.scrollTop <= 0;
+                const atBottom = Math.ceil(scrollArea.scrollTop + scrollArea.clientHeight) >= scrollArea.scrollHeight;
+
+                if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+                    event.preventDefault();
+                }
+
+                event.stopPropagation();
+            }, { passive: false });
+        });
+    </script>
+@endonce

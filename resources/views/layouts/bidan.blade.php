@@ -1,267 +1,2494 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#ffffff">
-    <title>@yield('title', 'Bidan Workspace') — PosyanduCare</title>
-    
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2306b6d4'/%3E%3Cstop offset='100%25' stop-color='%230284c7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' fill='url(%23grad)'/%3E%3Cpath d='M12 7v6M9 10h6' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-    
+
+    <title>@yield('title', 'Bidan Workspace') | PosyanduCare</title>
+
+    {{-- DETEKSI TRANSISI DARI LOGIN --}}
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem('pc_from_login') === '1') {
+                    document.documentElement.classList.add('pc-from-login');
+                } else {
+                    document.documentElement.classList.add('pc-normal-entry');
+                }
+            } catch (e) {
+                document.documentElement.classList.add('pc-normal-entry');
+            }
+
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+        })();
+    </script>
+
+    {{-- META --}}
+    <meta name="theme-color" content="#f8fffc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    {{-- FAVICON --}}
+    <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('img/logo.png') }}">
+
+    {{-- FONTS --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap"
+          rel="stylesheet">
+
+    {{-- ICONS --}}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    {{-- ENGINE --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <style type="text/tailwindcss">
-        @theme { 
-            --font-sans: 'Inter', sans-serif; 
-            --font-poppins: 'Poppins', sans-serif; 
+        @theme {
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-poppins: 'Poppins', sans-serif;
         }
-        body { 
-            font-family: var(--font-sans); 
-            background-color: #f0fdfa; 
-            background-image: radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.05) 0px, transparent 50%),
-                              radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 50%);
-            background-attachment: fixed;
-            -webkit-font-smoothing: antialiased;
-            color: #0f172a;
-        }
-        h1, h2, h3, h4, h5, h6 { font-family: var(--font-poppins); }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-        .menu-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        [x-cloak] { display: none !important; }
     </style>
+
+    <style>
+        :root {
+            --green-950: #052e24;
+            --green-900: #064e3b;
+            --green-800: #065f46;
+            --green-700: #047857;
+            --green-600: #059669;
+            --green-500: #10b981;
+            --green-400: #34d399;
+
+            --cyan-700: #0e7490;
+            --cyan-600: #0891b2;
+            --cyan-500: #06b6d4;
+            --cyan-400: #22d3ee;
+
+            --amber-500: #f59e0b;
+            --amber-400: #fbbf24;
+
+            --rose-600: #e11d48;
+            --rose-500: #f43f5e;
+
+            --slate-950: #020617;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+
+            --sidebar-width: 292px;
+
+            --ease-premium: cubic-bezier(.16, 1, .3, 1);
+            --ease-smooth: cubic-bezier(.22, 1, .36, 1);
+            --ease-gate: cubic-bezier(.76, 0, .24, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            scroll-behavior: auto !important;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--slate-700);
+            overscroll-behavior-y: auto;
+            background:
+                radial-gradient(circle at 7% 0%, rgba(16,185,129,.10), transparent 28%),
+                radial-gradient(circle at 95% 7%, rgba(245,158,11,.075), transparent 28%),
+                radial-gradient(circle at 85% 92%, rgba(20,184,166,.10), transparent 30%),
+                linear-gradient(135deg, #f8fffc 0%, #f8fafc 46%, #effbf6 100%);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body.pc-scroll-lock {
+            overflow: hidden !important;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        .font-poppins {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        ::selection {
+            background: rgba(16,185,129,.18);
+            color: var(--green-900);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148,163,184,.50);
+            border-radius: 999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100,116,139,.70);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(148,163,184,.42);
+            border-radius: 999px;
+        }
+
+        /* =========================================================
+           BACKGROUND
+        ========================================================= */
+
+        .bidan-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bidan-bg::before {
+            content: "";
+            position: absolute;
+            width: 580px;
+            height: 580px;
+            left: -250px;
+            top: -240px;
+            border-radius: 999px;
+            background: rgba(16,185,129,.14);
+            filter: blur(90px);
+        }
+
+        .bidan-bg::after {
+            content: "";
+            position: absolute;
+            width: 540px;
+            height: 540px;
+            right: -240px;
+            bottom: -230px;
+            border-radius: 999px;
+            background: rgba(20,184,166,.12);
+            filter: blur(92px);
+        }
+
+        .bidan-grid-soft {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            opacity: .12;
+            background-image:
+                linear-gradient(rgba(15,23,42,.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15,23,42,.035) 1px, transparent 1px);
+            background-size: 72px 72px;
+            mask-image: radial-gradient(circle at center, black, transparent 72%);
+        }
+
+        .bidan-dot-pattern {
+            position: fixed;
+            right: 42px;
+            top: 118px;
+            width: 98px;
+            height: 98px;
+            z-index: 2;
+            pointer-events: none;
+            opacity: .14;
+            background-image: radial-gradient(rgba(16,185,129,.50) 1.2px, transparent 1.2px);
+            background-size: 10px 10px;
+        }
+
+        .bidan-leaf-decor {
+            position: fixed;
+            left: -92px;
+            bottom: -100px;
+            width: 360px;
+            height: 360px;
+            z-index: 1;
+            opacity: .055;
+            transform: rotate(-12deg);
+            pointer-events: none;
+        }
+
+        .bidan-leaf-decor span {
+            position: absolute;
+            border-radius: 100% 0 100% 0;
+            background: linear-gradient(135deg, rgba(4,120,87,.85), rgba(16,185,129,.05));
+        }
+
+        .bidan-leaf-decor .leaf-1 {
+            width: 140px;
+            height: 82px;
+            left: 48px;
+            bottom: 82px;
+            transform: rotate(-24deg);
+        }
+
+        .bidan-leaf-decor .leaf-2 {
+            width: 160px;
+            height: 92px;
+            left: 112px;
+            bottom: 142px;
+            transform: rotate(-5deg);
+        }
+
+        .bidan-leaf-decor .leaf-3 {
+            width: 126px;
+            height: 72px;
+            left: 184px;
+            bottom: 62px;
+            transform: rotate(28deg);
+        }
+
+        /* =========================================================
+           ENTRY LOADER SETELAH LOGIN
+        ========================================================= */
+
+        .dashboard-entry-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99980;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(circle at center, rgba(255,255,255,.19), transparent 34%),
+                linear-gradient(135deg, rgba(4,120,87,.80), rgba(5,150,105,.76), rgba(16,185,129,.80));
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .75s ease, visibility .75s ease;
+        }
+
+        html.pc-from-login .dashboard-entry-loader {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        html.pc-loader-out .dashboard-entry-loader {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .dashboard-entry-card {
+            width: 238px;
+            min-height: 182px;
+            border-radius: 34px;
+            background: rgba(255,255,255,.16);
+            border: 1px solid rgba(255,255,255,.32);
+            box-shadow:
+                0 32px 90px rgba(0,0,0,.18),
+                inset 0 1px 0 rgba(255,255,255,.26);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transform: scale(.94) translateY(16px);
+            opacity: 0;
+            animation: dashboardLoaderPop .86s var(--ease-smooth) forwards;
+        }
+
+        @keyframes dashboardLoaderPop {
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .dashboard-entry-icon {
+            width: 76px;
+            height: 76px;
+            border-radius: 26px;
+            background: rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.30);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow:
+                0 18px 42px rgba(0,0,0,.12),
+                inset 0 1px 0 rgba(255,255,255,.24);
+            margin-bottom: 15px;
+        }
+
+        .dashboard-entry-icon i {
+            font-size: 31px;
+        }
+
+        .dashboard-entry-title {
+            font-size: 13.5px;
+            font-weight: 900;
+            letter-spacing: .02em;
+        }
+
+        .dashboard-entry-line {
+            position: relative;
+            width: 124px;
+            height: 5px;
+            margin-top: 16px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255,255,255,.25);
+        }
+
+        .dashboard-entry-line::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -55%;
+            width: 55%;
+            height: 100%;
+            border-radius: inherit;
+            background: white;
+            animation: dashboardEntryLine 1.15s infinite cubic-bezier(.65,0,.35,1);
+        }
+
+        @keyframes dashboardEntryLine {
+            to {
+                left: 100%;
+            }
+        }
+
+        /* =========================================================
+           ROUTE LOADER
+        ========================================================= */
+
+        .page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            z-index: 99999;
+            background: rgba(236,253,245,.75);
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: opacity .30s ease, transform .30s ease;
+        }
+
+        body.is-navigating .page-loader {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .page-loader::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 42%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--green-700), var(--green-500), var(--amber-400));
+            box-shadow: 0 0 22px rgba(16,185,129,.34);
+            animation: loadingBar 1.25s infinite var(--ease-gate);
+        }
+
+        @keyframes loadingBar {
+            0% {
+                transform: translateX(-115%);
+            }
+
+            100% {
+                transform: translateX(260%);
+            }
+        }
+
+        .route-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99990;
+            pointer-events: none;
+            opacity: 0;
+            background:
+                radial-gradient(circle at center, rgba(255,255,255,.16), transparent 34%),
+                linear-gradient(135deg, rgba(4,120,87,.72), rgba(5,150,105,.68), rgba(16,185,129,.72));
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: opacity .42s ease;
+        }
+
+        body.is-navigating .route-overlay {
+            opacity: 1;
+        }
+
+        .route-loader-card {
+            position: fixed;
+            inset: 0;
+            z-index: 99991;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(.96);
+            transition: opacity .42s ease, transform .50s var(--ease-premium);
+        }
+
+        body.is-navigating .route-loader-card {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .loader-glass-card {
+            width: 220px;
+            min-height: 168px;
+            border-radius: 32px;
+            background: rgba(255,255,255,.16);
+            border: 1px solid rgba(255,255,255,.32);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow:
+                0 30px 80px rgba(0,0,0,.16),
+                inset 0 1px 0 rgba(255,255,255,.26);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        .loader-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 25px;
+            background: rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.30);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            box-shadow:
+                0 18px 42px rgba(0,0,0,.12),
+                inset 0 1px 0 rgba(255,255,255,.24);
+        }
+
+        .loader-icon i {
+            font-size: 30px;
+        }
+
+        .loader-title {
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: .02em;
+        }
+
+        .loader-line {
+            position: relative;
+            width: 116px;
+            height: 5px;
+            margin-top: 15px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.24);
+            overflow: hidden;
+        }
+
+        .loader-line::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -55%;
+            width: 55%;
+            height: 100%;
+            border-radius: inherit;
+            background: white;
+            animation: miniLoader 1.05s infinite cubic-bezier(.65,0,.35,1);
+        }
+
+        @keyframes miniLoader {
+            to {
+                left: 100%;
+            }
+        }
+
+        /* =========================================================
+           LAYOUT
+        ========================================================= */
+
+        .bidan-shell {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+        }
+
+        .bidan-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 70;
+            width: var(--sidebar-width);
+            height: 100dvh;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            background: transparent;
+            transform: translateX(-108%);
+            transition:
+                transform .48s var(--ease-premium),
+                opacity .36s ease,
+                filter .36s ease;
+        }
+
+        .bidan-sidebar.is-open {
+            transform: translateX(0);
+        }
+
+        @media (min-width: 1024px) {
+            .bidan-sidebar {
+                transform: translateX(0);
+            }
+        }
+
+        .sidebar-nav {
+            position: relative;
+            z-index: 2;
+            padding: 0;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .bidan-content {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition:
+                margin-left .44s var(--ease-premium),
+                opacity .34s ease,
+                filter .34s ease;
+        }
+
+        @media (min-width: 1024px) {
+            .bidan-content {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        body.is-navigating .bidan-content {
+            opacity: .46;
+            filter: blur(2px);
+            pointer-events: none;
+        }
+
+        .mobile-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            background: rgba(2,6,23,.36);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .sidebar-close-floating {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            z-index: 8;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 14px;
+            background: rgba(236,253,245,.94);
+            color: var(--green-700);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow:
+                0 10px 24px rgba(15,23,42,.08),
+                inset 0 1px 0 rgba(255,255,255,.85);
+            transition:
+                transform .26s var(--ease-premium),
+                background .26s var(--ease-premium),
+                color .26s var(--ease-premium);
+        }
+
+        .sidebar-close-floating:hover {
+            transform: translateY(-1px);
+            background: white;
+            color: #dc2626;
+        }
+
+        /* =========================================================
+           SIDEBAR COMPATIBILITY
+        ========================================================= */
+
+        .pc-light-sidebar {
+            position: relative;
+            width: 100%;
+            height: calc(100dvh - 28px);
+            min-height: calc(100dvh - 28px);
+
+            display: flex;
+            flex-direction: column;
+
+            padding: 24px 18px 18px;
+            border-radius: 28px;
+
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+
+            background:
+                radial-gradient(circle at 50% 0%, rgba(236,253,245,.80), transparent 34%),
+                linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,255,252,.94));
+
+            border: 1px solid rgba(226,232,240,.78);
+
+            box-shadow:
+                0 24px 70px rgba(15,23,42,.09),
+                inset 0 1px 0 rgba(255,255,255,.95);
+
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        .pc-light-sidebar::-webkit-scrollbar {
+            width: 0;
+            display: none;
+        }
+
+        .pc-sidebar-logo-area {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 22px;
+        }
+
+        .pc-logo-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .pc-sidebar-logo {
+            width: 154px;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            filter:
+                drop-shadow(0 12px 22px rgba(15,23,42,.08))
+                drop-shadow(0 2px 4px rgba(16,185,129,.08));
+        }
+
+        .pc-user-card {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 14px;
+            margin-bottom: 24px;
+            border-radius: 22px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.88), rgba(248,255,252,.78));
+            border: 1px solid rgba(209,250,229,.95);
+            box-shadow:
+                0 16px 34px rgba(15,23,42,.06),
+                inset 0 1px 0 rgba(255,255,255,.95);
+        }
+
+        .pc-user-avatar {
+            width: 52px;
+            height: 52px;
+            flex-shrink: 0;
+            border-radius: 999px;
+            background:
+                linear-gradient(135deg, #10b981 0%, #34d399 45%, #f59e0b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            font-size: 18px;
+            box-shadow:
+                0 12px 24px rgba(16,185,129,.18),
+                inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+        .pc-user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pc-user-info h4 {
+            margin: 0;
+            color: #064e3b;
+            font-size: 13.5px;
+            font-weight: 900;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pc-user-info p {
+            margin: 3px 0 6px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 750;
+        }
+
+        .pc-online {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #ecfdf5;
+            color: #059669;
+            font-size: 10px;
+            font-weight: 850;
+        }
+
+        .pc-online span {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+        }
+
+        .pc-menu-group {
+            position: relative;
+            z-index: 3;
+            margin-bottom: 22px;
+        }
+
+        .pc-menu-title {
+            margin: 0 0 10px;
+            padding-left: 4px;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .pc-menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .pc-menu-item {
+            position: relative;
+            width: 100%;
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 13px;
+            border: 0;
+            border-radius: 13px;
+            background: transparent;
+            color: #334155;
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 780;
+            cursor: pointer;
+            transition:
+                background .28s var(--ease-premium),
+                color .28s var(--ease-premium),
+                transform .28s var(--ease-premium),
+                box-shadow .28s var(--ease-premium);
+        }
+
+        .pc-menu-item:hover {
+            background: rgba(236,253,245,.92);
+            color: #047857;
+            transform: translateX(3px);
+        }
+
+        .pc-menu-item.active {
+            background:
+                linear-gradient(90deg, rgba(236,253,245,.98), rgba(255,255,255,.82));
+            color: #047857;
+            font-weight: 900;
+            box-shadow:
+                0 10px 24px rgba(16,185,129,.08),
+                inset 0 1px 0 rgba(255,255,255,.92);
+        }
+
+        .pc-menu-item.active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 9px;
+            bottom: 9px;
+            width: 4px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #10b981, #059669);
+        }
+
+        .pc-menu-icon {
+            width: 22px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 13px;
+            transition: color .28s ease;
+        }
+
+        .pc-menu-item:hover .pc-menu-icon,
+        .pc-menu-item.active .pc-menu-icon {
+            color: #059669;
+        }
+
+        .pc-menu-text {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pc-menu-badge {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 7px;
+            border-radius: 999px;
+            background: #d1fae5;
+            color: #059669;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .pc-logout-form {
+            margin: 0;
+            padding: 0;
+        }
+
+        .pc-logout {
+            color: #ef4444;
+        }
+
+        .pc-logout .pc-menu-icon {
+            color: #ef4444;
+        }
+
+        .pc-logout:hover {
+            background: #fff1f2;
+            color: #dc2626;
+        }
+
+        .pc-sidebar-decoration {
+            position: relative;
+            min-height: 96px;
+            height: 96px;
+            margin: 8px -18px -18px;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .pc-wave {
+            position: absolute;
+            left: -20%;
+            width: 140%;
+            border-radius: 50% 50% 0 0;
+        }
+
+        .pc-wave-1 {
+            bottom: -54px;
+            height: 96px;
+            background: rgba(16,185,129,.14);
+        }
+
+        .pc-wave-2 {
+            bottom: -67px;
+            height: 106px;
+            background: rgba(5,150,105,.13);
+        }
+
+        .pc-wave-3 {
+            bottom: -78px;
+            height: 116px;
+            background: rgba(20,184,166,.10);
+        }
+
+        .pc-plant {
+            position: absolute;
+            right: 22px;
+            bottom: 11px;
+            width: 64px;
+            height: 64px;
+        }
+
+        .pc-stem {
+            position: absolute;
+            left: 31px;
+            bottom: 0;
+            width: 3px;
+            height: 46px;
+            border-radius: 999px;
+            background: rgba(4,120,87,.35);
+            transform: rotate(18deg);
+            transform-origin: bottom;
+        }
+
+        .pc-leaf {
+            position: absolute;
+            width: 31px;
+            height: 16px;
+            border-radius: 100% 0 100% 0;
+            background:
+                linear-gradient(135deg, rgba(4,120,87,.66), rgba(16,185,129,.24));
+            transform-origin: bottom left;
+        }
+
+        .pc-leaf-1 {
+            right: 19px;
+            bottom: 23px;
+            transform: rotate(-34deg);
+        }
+
+        .pc-leaf-2 {
+            right: 32px;
+            bottom: 35px;
+            transform: rotate(-8deg) scale(.9);
+        }
+
+        .pc-leaf-3 {
+            right: 7px;
+            bottom: 36px;
+            transform: rotate(28deg) scale(.86);
+        }
+
+        .pc-leaf-4 {
+            right: 25px;
+            bottom: 11px;
+            transform: rotate(46deg) scale(.72);
+        }
+
+        /* =========================================================
+           TOPBAR
+        ========================================================= */
+
+        .bidan-topbar {
+            position: relative;
+            z-index: 35;
+            min-height: 78px;
+            margin: 24px 28px 0;
+            padding: 14px 18px 14px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            border-radius: 28px;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.90), rgba(255,255,255,.72));
+            border: 1px solid rgba(226,232,240,.82);
+            backdrop-filter: blur(26px) saturate(1.12);
+            -webkit-backdrop-filter: blur(26px) saturate(1.12);
+            box-shadow:
+                0 22px 55px rgba(15,23,42,.065),
+                inset 0 1px 0 rgba(255,255,255,.90);
+        }
+
+        .bidan-topbar::before {
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: 27px;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 4% 0%, rgba(16,185,129,.10), transparent 34%),
+                radial-gradient(circle at 96% 0%, rgba(245,158,11,.08), transparent 34%);
+        }
+
+        .topbar-left,
+        .topbar-right {
+            position: relative;
+            z-index: 2;
+        }
+
+        .topbar-left {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .topbar-title-block {
+            min-width: 0;
+        }
+
+        .mobile-menu-btn {
+            width: 44px;
+            height: 44px;
+            border: 0;
+            border-radius: 16px;
+            background: rgba(255,255,255,.86);
+            border: 1px solid rgba(226,232,240,.86);
+            color: var(--slate-600);
+            box-shadow:
+                0 12px 26px rgba(15,23,42,.06),
+                inset 0 1px 0 rgba(255,255,255,.80);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .32s var(--ease-premium);
+        }
+
+        .mobile-menu-btn:hover {
+            color: var(--green-700);
+            border-color: rgba(16,185,129,.30);
+            transform: translateY(-1px);
+            box-shadow: 0 16px 32px rgba(16,185,129,.12);
+        }
+
+        .breadcrumb-mini {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--slate-400);
+            font-size: 10.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .13em;
+        }
+
+        .breadcrumb-mini a {
+            color: var(--green-700);
+            text-decoration: none;
+        }
+
+        .breadcrumb-mini i {
+            font-size: 9px;
+            opacity: .62;
+        }
+
+        .page-title-inline {
+            margin: 6px 0 0;
+            color: var(--slate-900);
+            font-size: 20px;
+            line-height: 1.05;
+            font-weight: 900;
+            letter-spacing: -0.045em;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .workspace-chip {
+            height: 46px;
+            padding: 0 18px;
+            border-radius: 18px;
+            background:
+                linear-gradient(135deg, rgba(236,253,245,.84), rgba(255,255,255,.62));
+            border: 1px solid rgba(16,185,129,.18);
+            color: var(--green-800);
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 12px;
+            font-weight: 900;
+            white-space: nowrap;
+            box-shadow:
+                0 14px 30px rgba(16,185,129,.045),
+                inset 0 1px 0 rgba(255,255,255,.82);
+        }
+
+        .workspace-chip i {
+            color: var(--green-600);
+        }
+
+        .notif-button,
+        .profile-button {
+            height: 50px;
+            border: 1px solid rgba(226,232,240,.82);
+            border-radius: 999px;
+            background: rgba(255,255,255,.78);
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all .32s var(--ease-premium);
+            box-shadow:
+                0 14px 30px rgba(15,23,42,.045),
+                inset 0 1px 0 rgba(255,255,255,.82);
+        }
+
+        .notif-button {
+            width: 50px;
+            justify-content: center;
+            color: var(--slate-500);
+            position: relative;
+        }
+
+        .notif-button:hover,
+        .profile-button:hover {
+            background: white;
+            border-color: rgba(16,185,129,.24);
+            transform: translateY(-1px);
+            box-shadow: 0 18px 34px rgba(15,23,42,.075);
+        }
+
+        .notif-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 11px;
+            height: 11px;
+            border-radius: 999px;
+            background: #f43f5e;
+            border: 2px solid white;
+            box-shadow: 0 0 0 3px rgba(244,63,94,.10);
+        }
+
+        .profile-button {
+            padding: 5px 14px 5px 5px;
+            gap: 10px;
+        }
+
+        .profile-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 999px;
+            color: white;
+            background: linear-gradient(135deg, var(--green-700), var(--green-500));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+            box-shadow:
+                0 12px 24px rgba(16,185,129,.20),
+                inset 0 1px 0 rgba(255,255,255,.22);
+            overflow: hidden;
+        }
+
+        .profile-name {
+            color: var(--slate-700);
+            font-size: 13px;
+            font-weight: 900;
+            max-width: 132px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .profile-role {
+            margin-top: 2px;
+            color: var(--slate-400);
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .10em;
+        }
+
+        .floating-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 12px);
+            width: 280px;
+            border-radius: 24px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(226,232,240,.9);
+            box-shadow:
+                0 28px 80px rgba(15,23,42,.14),
+                inset 0 1px 0 rgba(255,255,255,.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 10px;
+            overflow: hidden;
+            z-index: 80;
+        }
+
+        .notif-menu {
+            width: 360px;
+            max-width: calc(100vw - 32px);
+        }
+
+        .floating-menu-head {
+            padding: 12px 12px 10px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            border-bottom: 1px solid var(--slate-100);
+            margin-bottom: 8px;
+        }
+
+        .floating-menu-title {
+            margin: 0;
+            color: var(--slate-900);
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .floating-menu-subtitle {
+            margin: 3px 0 0;
+            color: var(--slate-400);
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .10em;
+        }
+
+        .floating-link,
+        .logout-btn {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: var(--slate-600);
+            border-radius: 16px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            font-size: 13px;
+            font-weight: 900;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .30s ease;
+        }
+
+        .floating-link:hover {
+            background: #ecfdf5;
+            color: var(--green-700);
+        }
+
+        .logout-btn {
+            color: #e11d48;
+        }
+
+        .logout-btn:hover {
+            background: #fff1f2;
+            color: #be123c;
+        }
+
+        .notif-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 18px;
+            color: var(--slate-700);
+            text-decoration: none;
+            transition: all .28s var(--ease-premium);
+        }
+
+        .notif-item:hover {
+            background: #ecfdf5;
+            transform: translateX(2px);
+        }
+
+        .notif-icon {
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            border-radius: 15px;
+            background: #ecfdf5;
+            color: var(--green-700);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notif-title {
+            margin: 0;
+            color: var(--slate-800);
+            font-size: 12.5px;
+            font-weight: 900;
+            line-height: 1.3;
+        }
+
+        .notif-meta {
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--slate-400);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        /* =========================================================
+           MAIN CONTENT
+        ========================================================= */
+
+        .bidan-main {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            width: 100%;
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 28px 28px 104px;
+        }
+
+        .bidan-main-inner {
+            position: relative;
+        }
+
+        .admin-card,
+        .stat-card,
+        .dashboard-card,
+        .content-card,
+        .table-card,
+        .bidan-card {
+            border-radius: 24px;
+            background: rgba(255,255,255,.82);
+            border: 1px solid rgba(226,232,240,.82);
+            box-shadow:
+                0 20px 50px rgba(15,23,42,.052),
+                inset 0 1px 0 rgba(255,255,255,.82);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        /* =========================================================
+           MOBILE BOTTOM NAV
+        ========================================================= */
+
+        .bottom-nav {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: 10px;
+            z-index: 55;
+
+            min-height: 68px;
+            padding: 8px 10px;
+
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+
+            border-radius: 26px;
+            background: rgba(255,255,255,.88);
+            border: 1px solid rgba(226,232,240,.86);
+
+            backdrop-filter: blur(24px) saturate(1.12);
+            -webkit-backdrop-filter: blur(24px) saturate(1.12);
+
+            box-shadow:
+                0 22px 60px rgba(15,23,42,.14),
+                inset 0 1px 0 rgba(255,255,255,.92);
+        }
+
+        .bottom-nav-link {
+            flex: 1;
+            min-width: 0;
+            height: 52px;
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: var(--slate-400);
+            text-decoration: none;
+            font-size: 9.5px;
+            font-weight: 900;
+            transition: all .28s var(--ease-premium);
+        }
+
+        .bottom-nav-link i {
+            font-size: 16px;
+        }
+
+        .bottom-nav-link:hover,
+        .bottom-nav-link.active {
+            color: var(--green-700);
+            background: #ecfdf5;
+        }
+
+        .bottom-nav-center {
+            position: relative;
+            flex: 1;
+            height: 52px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .bottom-nav-action {
+            position: absolute;
+            top: -22px;
+            width: 58px;
+            height: 58px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--green-700), var(--green-500));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow:
+                0 16px 34px rgba(16,185,129,.32),
+                inset 0 1px 0 rgba(255,255,255,.22);
+            border: 4px solid rgba(255,255,255,.94);
+            transition: all .28s var(--ease-premium);
+        }
+
+        .bottom-nav-action:hover {
+            transform: translateY(-2px);
+        }
+
+        .bottom-nav-action i {
+            font-size: 20px;
+        }
+
+        .bottom-nav-alert {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 13px;
+            height: 13px;
+            border-radius: 999px;
+            background: var(--rose-500);
+            border: 2px solid white;
+        }
+
+        /* =========================================================
+           REVEAL CONTENT
+        ========================================================= */
+
+        .pc-reveal-item {
+            opacity: 0;
+            transform: translateY(42px) scale(.982);
+            filter: blur(5px);
+            will-change: opacity, transform, filter;
+        }
+
+        html.pc-normal-entry .pc-reveal-ready .pc-reveal-item {
+            animation: dashboardRevealSlow 1.15s var(--ease-smooth) forwards;
+            animation-delay: calc(var(--reveal-index, 0) * 180ms);
+        }
+
+        html.pc-from-login.pc-content-in .pc-reveal-ready .pc-reveal-item {
+            animation: dashboardRevealSlow 1.22s var(--ease-smooth) forwards;
+            animation-delay: calc(var(--reveal-index, 0) * 220ms);
+        }
+
+        @keyframes dashboardRevealSlow {
+            0% {
+                opacity: 0;
+                transform: translateY(42px) scale(.982);
+                filter: blur(5px);
+            }
+
+            70% {
+                opacity: 1;
+                filter: blur(0);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        /* =========================================================
+           ENTRY ANIMATION
+        ========================================================= */
+
+        .sidebar-enter {
+            opacity: 0;
+            animation: sidebarEnter 1.15s var(--ease-smooth) forwards;
+        }
+
+        .topbar-enter {
+            opacity: 0;
+            transform: translateY(-28px) scale(.985);
+            animation: topbarEnter 1.12s var(--ease-smooth) .22s forwards;
+        }
+
+        .main-enter {
+            opacity: 0;
+            transform: translateY(36px) scale(.988);
+            animation: mainEnter 1.2s var(--ease-smooth) .42s forwards;
+        }
+
+        @keyframes sidebarEnter {
+            from {
+                opacity: 0;
+                transform: translateX(-40px);
+                filter: blur(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+                filter: blur(0);
+            }
+        }
+
+        @keyframes topbarEnter {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes mainEnter {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        html.pc-from-login:not(.pc-sidebar-in) .bidan-sidebar {
+            opacity: 0;
+            transform: translateX(-115%);
+            filter: blur(8px);
+        }
+
+        html.pc-from-login.pc-sidebar-in .bidan-sidebar {
+            opacity: 1;
+            transform: translateX(0);
+            filter: blur(0);
+            transition:
+                opacity 1.45s var(--ease-smooth),
+                transform 1.45s var(--ease-smooth),
+                filter 1.25s var(--ease-smooth);
+        }
+
+        html.pc-from-login:not(.pc-topbar-in) .bidan-topbar {
+            opacity: 0;
+            transform: translateY(-42px) scale(.985);
+            filter: blur(8px);
+        }
+
+        html.pc-from-login.pc-topbar-in .bidan-topbar {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+            transition:
+                opacity 1.25s var(--ease-smooth),
+                transform 1.25s var(--ease-smooth),
+                filter 1.15s var(--ease-smooth);
+        }
+
+        html.pc-from-login:not(.pc-content-in) .bidan-main {
+            opacity: 0;
+            transform: translateY(58px) scale(.988);
+            filter: blur(8px);
+        }
+
+        html.pc-from-login.pc-content-in .bidan-main {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+            transition:
+                opacity 1.35s var(--ease-smooth),
+                transform 1.35s var(--ease-smooth),
+                filter 1.2s var(--ease-smooth);
+        }
+
+        html.pc-from-login .sidebar-enter,
+        html.pc-from-login .topbar-enter,
+        html.pc-from-login .main-enter {
+            animation: none !important;
+        }
+
+        html.pc-from-login:not(.pc-content-in) .bidan-main-inner > * {
+            opacity: 0 !important;
+            transform: translateY(42px) scale(.982) !important;
+            animation: none !important;
+        }
+
+        /* =========================================================
+           SWEETALERT
+        ========================================================= */
+
+        .swal2-popup.nexus-swal {
+            border-radius: 32px !important;
+            padding: 2.5rem 2rem !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            border: 1px solid rgba(226, 232, 240, 0.8) !important;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15) !important;
+            background: rgba(255, 255, 255, 0.98) !important;
+            backdrop-filter: blur(20px) !important;
+        }
+
+        .swal2-title {
+            font-family: 'Poppins', sans-serif !important;
+            font-weight: 900 !important;
+            color: #1e293b !important;
+            font-size: 1.35rem !important;
+        }
+
+        .swal2-html-container {
+            color: #64748b !important;
+            font-weight: 600 !important;
+            font-size: .95rem !important;
+            line-height: 1.6 !important;
+        }
+
+        .btn-nexus-confirm {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            color: white !important;
+            border-radius: 16px !important;
+            font-weight: 900 !important;
+            text-transform: uppercase !important;
+            letter-spacing: .05em !important;
+            padding: 14px 32px !important;
+            box-shadow: 0 10px 20px -5px rgba(16,185,129,.40) !important;
+            border: none !important;
+        }
+
+        .btn-nexus-cancel {
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+            border-radius: 16px !important;
+            font-weight: 900 !important;
+            text-transform: uppercase !important;
+            letter-spacing: .05em !important;
+            padding: 14px 32px !important;
+            border: none !important;
+        }
+
+        /* =========================================================
+           RESPONSIVE
+        ========================================================= */
+
+        @media (max-width: 1023px) {
+            :root {
+                --sidebar-width: 286px;
+            }
+
+            .bidan-sidebar {
+                width: min(286px, calc(100vw - 24px));
+                padding: 10px;
+                transform: translateX(-110%);
+            }
+
+            .bidan-sidebar.is-open {
+                transform: translateX(0);
+            }
+
+            .sidebar-close-floating {
+                display: flex;
+            }
+
+            .pc-light-sidebar {
+                height: calc(100dvh - 20px);
+                min-height: calc(100dvh - 20px);
+                border-radius: 24px;
+                padding: 22px 16px 18px;
+            }
+
+            .pc-sidebar-logo {
+                width: 142px;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .bidan-content {
+                margin-left: 0 !important;
+                min-height: 100vh;
+            }
+
+            .bidan-topbar {
+                min-height: 72px;
+                margin: 14px 14px 0;
+                padding: 12px 14px;
+                border-radius: 24px;
+            }
+
+            .breadcrumb-mini {
+                display: none;
+            }
+
+            .page-title-inline {
+                margin: 0;
+                font-size: 16px;
+            }
+
+            .workspace-chip {
+                display: none;
+            }
+
+            .profile-name,
+            .profile-role {
+                display: none;
+            }
+
+            .profile-button {
+                padding-right: 5px;
+            }
+
+            .bidan-main {
+                padding: 24px 16px 104px;
+            }
+
+            .bottom-nav {
+                display: flex;
+            }
+
+            html.pc-from-login:not(.pc-sidebar-in) .bidan-sidebar,
+            html.pc-from-login.pc-sidebar-in .bidan-sidebar {
+                opacity: 0;
+                transform: translateX(-110%);
+            }
+
+            html.pc-from-login.pc-topbar-in .bidan-topbar,
+            html.pc-from-login.pc-content-in .bidan-main {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .bidan-topbar {
+                min-height: 68px;
+                margin: 10px 10px 0;
+                border-radius: 22px;
+            }
+
+            .page-title-inline {
+                max-width: 170px;
+                font-size: 15px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .bidan-main {
+                padding: 22px 14px 104px;
+            }
+
+            .floating-menu {
+                width: 230px;
+            }
+
+            .notif-menu {
+                width: calc(100vw - 24px);
+                right: -74px;
+            }
+
+            .loader-glass-card,
+            .dashboard-entry-card {
+                width: 190px;
+                min-height: 154px;
+                border-radius: 30px;
+            }
+
+            .loader-icon,
+            .dashboard-entry-icon {
+                width: 64px;
+                height: 64px;
+                border-radius: 23px;
+            }
+
+            .loader-icon i,
+            .dashboard-entry-icon i {
+                font-size: 26px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .pc-sidebar-logo {
+                width: 132px;
+            }
+
+            .pc-user-card {
+                padding: 12px;
+            }
+
+            .pc-user-avatar {
+                width: 48px;
+                height: 48px;
+            }
+
+            .bottom-nav {
+                left: 8px;
+                right: 8px;
+                bottom: 8px;
+                border-radius: 22px;
+            }
+
+            .bottom-nav-link {
+                font-size: 8.5px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 1ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 1ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+
     @stack('styles')
 </head>
 
-<body x-data="{ sidebarOpen: window.innerWidth >= 1280 }" @resize.window="sidebarOpen = window.innerWidth >= 1280" class="flex h-screen overflow-hidden selection:bg-cyan-100 selection:text-cyan-900">
+<body
+    x-data="{ sidebarOpen: false, notifOpen: false, profileOpen: false }"
+    x-init="
+        $watch('sidebarOpen', value => {
+            if (window.innerWidth < 1024) {
+                document.body.classList.toggle('pc-scroll-lock', value);
+            }
+        });
 
-    {{-- GLOBAL PAGE LOADER --}}
-    <div id="globalLoader" class="fixed inset-0 z-[9998] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
-        <div class="relative w-20 h-20 flex items-center justify-center mb-5">
-            <div class="absolute inset-0 border-4 border-cyan-100 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-cyan-500 rounded-full border-t-transparent animate-spin"></div>
-            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_15px_rgba(6,182,212,0.3)]">
-                <i class="fas fa-stethoscope text-cyan-600 animate-pulse text-xl"></i>
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                sidebarOpen = false;
+                document.body.classList.remove('pc-scroll-lock');
+            }
+        });
+
+        window.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                sidebarOpen = false;
+                document.body.classList.remove('pc-scroll-lock');
+            }
+        });
+    "
+    class="selection:bg-emerald-100 selection:text-emerald-900"
+>
+
+    @php
+        use Illuminate\Support\Str;
+
+        $route = request()->route()?->getName() ?? '';
+
+        $notifCount = 0;
+        $pendingNotifs = collect();
+
+        if (class_exists('\App\Models\Pemeriksaan')) {
+            $notifCount = \App\Models\Pemeriksaan::where('status_verifikasi', 'pending')->count() ?? 0;
+
+            $pendingNotifs = \App\Models\Pemeriksaan::with(['kunjungan.pasien'])
+                ->where('status_verifikasi', 'pending')
+                ->latest()
+                ->take(5)
+                ->get();
+        }
+    @endphp
+
+    {{-- ENTRY LOADER --}}
+    <div class="dashboard-entry-loader" aria-hidden="true">
+        <div class="dashboard-entry-card">
+            <div class="dashboard-entry-icon">
+                <i class="fa-solid fa-stethoscope"></i>
             </div>
+
+            <div class="dashboard-entry-title">
+                Menyiapkan Workspace
+            </div>
+
+            <div class="dashboard-entry-line"></div>
         </div>
-        <p class="text-[10px] font-black text-cyan-700 uppercase tracking-[0.25em]" id="loaderText">MEMUAT SISTEM...</p>
+    </div>
+
+    {{-- BACKGROUND --}}
+    <div class="bidan-bg" aria-hidden="true"></div>
+    <div class="bidan-grid-soft" aria-hidden="true"></div>
+    <div class="bidan-dot-pattern" aria-hidden="true"></div>
+
+    <div class="bidan-leaf-decor" aria-hidden="true">
+        <span class="leaf-1"></span>
+        <span class="leaf-2"></span>
+        <span class="leaf-3"></span>
+    </div>
+
+    {{-- ROUTE LOADER --}}
+    <div class="page-loader" aria-hidden="true"></div>
+
+    <div class="route-overlay" aria-hidden="true"></div>
+
+    <div class="route-loader-card" aria-hidden="true">
+        <div class="loader-glass-card">
+            <div class="loader-icon">
+                <i class="fa-solid fa-stethoscope"></i>
+            </div>
+
+            <div class="loader-title">
+                Memuat halaman
+            </div>
+
+            <div class="loader-line"></div>
+        </div>
     </div>
 
     {{-- MOBILE OVERLAY --}}
-    <div x-show="sidebarOpen && window.innerWidth < 1280" x-transition.opacity 
-         @click="sidebarOpen = false" 
-         class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 xl:hidden">
-    </div>
+    <div
+        x-show="sidebarOpen"
+        x-transition.opacity.duration.260ms
+        @click="sidebarOpen = false; document.body.classList.remove('pc-scroll-lock')"
+        class="mobile-overlay lg:hidden"
+        style="display: none;"
+        aria-hidden="true"
+    ></div>
 
-    {{-- PEMANGGILAN FILE SIDEBAR --}}
-    @include('partials.sidebar.bidan')
+    <div class="bidan-shell">
 
-    {{-- MAIN WRAPPER --}}
-    <div class="flex-1 flex flex-col min-w-0 h-screen relative transition-all duration-300 ease-in-out"
-         :class="sidebarOpen ? 'xl:ml-[280px]' : 'ml-0'">
-        
-        {{-- TOP NAVBAR --}}
-        <header class="h-[80px] glass-panel sticky top-0 z-40 flex items-center justify-between px-4 lg:px-8 border-b border-slate-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
-            <div class="flex items-center gap-3 lg:gap-5">
-                <button @click="sidebarOpen = !sidebarOpen" class="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 rounded-[12px] transition-colors bg-white border border-slate-200 shadow-sm focus:outline-none">
-                    <i class="fas fa-bars-staggered"></i>
-                </button>
-                
-                <div class="hidden md:flex flex-col">
-                    <h2 class="text-[18px] font-black text-slate-800 tracking-tight font-poppins leading-none">@yield('page-name', 'Beranda Medis')</h2>
-                    <div class="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-slate-400 tracking-wide">
-                        <span>Workspace Bidan</span> <i class="fas fa-chevron-right text-[8px] opacity-50"></i> <span class="text-cyan-500 font-bold">Sistem Aktif</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-3 sm:gap-5">
-                
-                {{-- WIDGET NOTIFIKASI ANTRIAN (Alpine.js Dropdown) --}}
-                {{-- PERBAIKAN MUTLAK RELASI DATABASE DI DALAM BLADE --}}
-                @php 
-                    $pendingNotifs = \App\Models\Pemeriksaan::with(['kunjungan.pasien'])->where('status_verifikasi', 'pending')->latest()->take(5)->get();
-                    $notifCount = \App\Models\Pemeriksaan::where('status_verifikasi', 'pending')->count() ?? 0; 
-                @endphp
-                
-                <div x-data="{ openNotif: false }" class="relative">
-                    <button @click="openNotif = !openNotif" @click.away="openNotif = false" class="relative w-11 h-11 flex items-center justify-center bg-white text-slate-500 hover:text-cyan-600 hover:bg-cyan-50 rounded-[14px] transition-all border border-slate-200 shadow-sm group focus:outline-none">
-                        <i class="fas fa-bell text-[18px]"></i>
-                        @if($notifCount > 0)
-                            <span class="absolute -top-1.5 -right-1.5 flex h-4 w-4">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-4 w-4 bg-rose-500 border-2 border-white text-[8px] font-black text-white items-center justify-center"></span>
+        {{-- SIDEBAR --}}
+        <aside
+            :class="sidebarOpen ? 'is-open' : ''"
+            class="bidan-sidebar sidebar-enter"
+        >
+            <button
+                type="button"
+                class="sidebar-close-floating lg:hidden"
+                @click="sidebarOpen = false; document.body.classList.remove('pc-scroll-lock')"
+                aria-label="Tutup sidebar"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <nav class="sidebar-nav">
+                @include('partials.sidebar.bidan')
+            </nav>
+        </aside>
+
+        {{-- CONTENT --}}
+        <div class="bidan-content">
+
+            {{-- TOPBAR --}}
+            <header class="bidan-topbar topbar-enter">
+                <div class="topbar-left">
+
+                    <button
+                        type="button"
+                        @click="sidebarOpen = true"
+                        class="mobile-menu-btn"
+                        aria-label="Buka sidebar"
+                    >
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+
+                    <div class="topbar-title-block">
+                        <div class="breadcrumb-mini">
+                            <a href="{{ route('bidan.dashboard') }}" class="js-nav-link spa-route smooth-route">
+                                <i class="fa-solid fa-house"></i>
+                            </a>
+
+                            <i class="fa-solid fa-chevron-right"></i>
+
+                            <span>
+                                @yield('page-name', 'Workspace')
                             </span>
-                        @endif
-                    </button>
+                        </div>
+                    </div>
+                </div>
 
-                    <div x-show="openNotif" x-cloak
-                         x-transition:enter="transition ease-out duration-200"
-                         x-transition:enter-start="opacity-0 translate-y-2 scale-95"
-                         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                         x-transition:leave="transition ease-in duration-150"
-                         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                         x-transition:leave-end="opacity-0 translate-y-2 scale-95"
-                         class="absolute right-0 mt-3 w-[320px] sm:w-[360px] bg-white rounded-3xl shadow-xl border border-slate-100 z-50 overflow-hidden origin-top-right">
-                        
-                        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                            <h3 class="text-[14px] font-black text-slate-800 font-poppins flex items-center gap-2"><i class="fas fa-procedures text-cyan-500"></i> Antrian Medis</h3>
+                <div class="topbar-right">
+
+                    <div class="workspace-chip">
+                        <i class="fa-solid fa-user-doctor"></i>
+                        Bidan Workspace
+                    </div>
+
+                    {{-- NOTIFIKASI --}}
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="notifOpen = !notifOpen; profileOpen = false"
+                            class="notif-button"
+                            aria-label="Buka notifikasi"
+                        >
+                            <i class="fa-regular fa-bell text-[18px]"></i>
+
                             @if($notifCount > 0)
-                                <span class="bg-rose-100 text-rose-600 text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-widest">{{ $notifCount }} Menunggu</span>
+                                <span class="notif-dot"></span>
                             @endif
-                        </div>
+                        </button>
 
-                        <div class="max-h-[320px] overflow-y-auto custom-scrollbar bg-white">
-                            @forelse($pendingNotifs as $notif)
-                                @php
-                                    // PERBAIKAN: Memanfaatkan Accessor getNamaPasienAttribute dari Model
-                                    $namaPasien = $notif->nama_pasien ?? 'Pasien Anonim';
-                                    $kat = strtolower($notif->kategori_pasien ?? 'pasien');
-                                @endphp
-                                <a href="{{ route('bidan.pemeriksaan.show', $notif->id) }}" class="flex items-start gap-4 p-4 border-b border-slate-50 hover:bg-cyan-50 transition-colors group">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-bold text-slate-800 truncate group-hover:text-cyan-600">{{ $namaPasien }}</p>
-                                        <div class="flex items-center gap-2 mt-0.5">
-                                            <span class="text-[9px] font-black text-cyan-500 uppercase">{{ $kat }}</span>
-                                            <span class="text-[10px] text-slate-400">{{ $notif->created_at->diffForHumans() }}</span>
+                        <div
+                            x-show="notifOpen"
+                            @click.outside="notifOpen = false"
+                            x-transition.opacity.scale.95.duration.240ms
+                            class="floating-menu notif-menu"
+                            style="display: none;"
+                        >
+                            <div class="floating-menu-head">
+                                <div class="profile-avatar">
+                                    <i class="fa-solid fa-notes-medical"></i>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p class="floating-menu-title">
+                                        Antrian Medis
+                                    </p>
+
+                                    <p class="floating-menu-subtitle">
+                                        {{ $notifCount }} Pemeriksaan Menunggu
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="max-h-[330px] overflow-y-auto custom-scrollbar px-1 pb-1">
+                                @forelse($pendingNotifs as $notif)
+                                    @php
+                                        $namaPasien = $notif->nama_pasien ?? 'Pasien Anonim';
+                                        $kategoriPasien = strtolower($notif->kategori_pasien ?? 'pasien');
+                                        $targetUrl = Route::has('bidan.pemeriksaan.show')
+                                            ? route('bidan.pemeriksaan.show', $notif->id)
+                                            : '#';
+                                    @endphp
+
+                                    <a href="{{ $targetUrl }}" class="notif-item js-nav-link spa-route smooth-route">
+                                        <div class="notif-icon">
+                                            <i class="fa-solid fa-stethoscope"></i>
                                         </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <p class="notif-title truncate">
+                                                {{ $namaPasien }}
+                                            </p>
+
+                                            <div class="notif-meta">
+                                                <span class="uppercase text-emerald-600">
+                                                    {{ $kategoriPasien }}
+                                                </span>
+
+                                                <span>•</span>
+
+                                                <span>
+                                                    {{ optional($notif->created_at)->diffForHumans() }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 mt-3"></i>
+                                    </a>
+                                @empty
+                                    <div class="py-9 text-center">
+                                        <div class="mx-auto mb-3 w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                            <i class="fa-regular fa-circle-check text-xl"></i>
+                                        </div>
+
+                                        <p class="text-[12px] font-bold text-slate-400">
+                                            Belum ada antrian pemeriksaan.
+                                        </p>
                                     </div>
-                                    <i class="fas fa-chevron-right text-[10px] text-slate-300 mt-2"></i>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- PROFILE --}}
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="profileOpen = !profileOpen; notifOpen = false"
+                            @click.away="profileOpen = false"
+                            class="profile-button"
+                        >
+                            <div class="profile-avatar">
+                                {{ strtoupper(substr(Auth::user()->name ?? 'B', 0, 1)) }}
+                            </div>
+
+                            <div class="hidden sm:block text-left min-w-0">
+                                <p class="profile-name">
+                                    {{ Auth::user()->name ?? 'Bidan' }}
+                                </p>
+
+                                <p class="profile-role">
+                                    Tenaga Bidan
+                                </p>
+                            </div>
+
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-300 hidden sm:block"
+                               :class="profileOpen ? 'rotate-180' : ''"></i>
+                        </button>
+
+                        <div
+                            x-show="profileOpen"
+                            x-transition.opacity.scale.95.duration.240ms
+                            class="floating-menu"
+                            style="display: none;"
+                        >
+                            <div class="floating-menu-head">
+                                <div class="profile-avatar">
+                                    {{ strtoupper(substr(Auth::user()->name ?? 'B', 0, 1)) }}
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p class="floating-menu-title truncate">
+                                        {{ Auth::user()->name ?? 'Bidan' }}
+                                    </p>
+
+                                    <p class="floating-menu-subtitle">
+                                        Tenaga Bidan
+                                    </p>
+                                </div>
+                            </div>
+
+                            @if(Route::has('bidan.profile.index'))
+                                <a href="{{ route('bidan.profile.index') }}" class="floating-link js-nav-link spa-route smooth-route">
+                                    <i class="fa-regular fa-user"></i>
+                                    Profil Akun
                                 </a>
-                            @empty
-                                <div class="p-8 text-center text-slate-500 text-[12px]">Belum ada antrian.</div>
-                            @endforelse
+                            @endif
+
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+
+                                <button type="submit" class="logout-btn">
+                                    <i class="fa-solid fa-right-from-bracket"></i>
+                                    Keluar Aplikasi
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </header>
 
-                <div class="w-px h-8 bg-slate-200 hidden sm:block"></div>
-
-                {{-- Dropdown Profil --}}
-                <div x-data="{ openProfile: false }" class="relative">
-                    <button @click="openProfile = !openProfile" @click.away="openProfile = false" class="flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors focus:outline-none">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-inner">
-                            {{ strtoupper(substr(Auth::user()->name ?? 'B', 0, 1)) }}
-                        </div>
-                        <span class="hidden md:block text-[13px] font-bold text-slate-700 truncate max-w-[120px]">{{ Str::words(Auth::user()->name, 2, '') }}</span>
-                        <i class="fas fa-chevron-down text-[10px] text-slate-400" :class="{'rotate-180': openProfile}"></i>
-                    </button>
-                    
-                    <div x-show="openProfile" x-cloak
-                         x-transition:enter="transition ease-out duration-200"
-                         x-transition:enter-start="opacity-0 translate-y-2"
-                         x-transition:enter-end="opacity-100 translate-y-0"
-                         x-transition:leave="transition ease-in duration-150"
-                         x-transition:leave-start="opacity-100 translate-y-0"
-                         x-transition:leave-end="opacity-0 translate-y-2"
-                         class="absolute right-0 mt-2 w-48 bg-white border border-slate-200 shadow-xl rounded-2xl p-2 z-50 origin-top-right">
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" onclick="showGlobalLoader('SEDANG KELUAR...')" class="w-full flex items-center gap-3 px-4 py-3 text-[12px] font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                                <i class="fas fa-sign-out-alt text-sm"></i> Akhiri Sesi
-                            </button>
-                        </form>
-                    </div>
+            {{-- MAIN --}}
+            <main class="bidan-main main-enter">
+                <div class="bidan-main-inner">
+                    @yield('content')
                 </div>
+            </main>
 
-            </div>
-        </header>
-
-        {{-- INJEKSI KONTEN UTAMA --}}
-        <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 relative z-0 custom-scrollbar pb-24 lg:pb-8">
-            <div class="max-w-7xl mx-auto w-full">
-                @yield('content')
-            </div>
-        </main>
-
-        {{-- MOBILE BOTTOM NAV --}}
-        <nav class="xl:hidden fixed bottom-0 left-0 right-0 h-[68px] glass-panel border-t border-slate-200 z-50 flex items-center justify-around px-2 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-            @php $route = request()->route()->getName() ?? ''; @endphp
-            
-            <a href="{{ route('bidan.dashboard') }}" class="flex flex-col items-center justify-center w-full h-full text-[10px] font-bold transition-colors {{ $route == 'bidan.dashboard' ? 'text-cyan-600' : 'text-slate-400 hover:text-slate-600' }}">
-                <i class="fas fa-chart-pie text-[18px] mb-1"></i> Beranda
-            </a>
-            
-            <a href="{{ route('bidan.rekam-medis.index') }}" class="flex flex-col items-center justify-center w-full h-full text-[10px] font-bold transition-colors {{ Str::startsWith($route,'bidan.rekam-medis') ? 'text-cyan-600' : 'text-slate-400 hover:text-slate-600' }}">
-                <i class="fas fa-folder-open text-[18px] mb-1"></i> EMR
-            </a>
-            
-            <div class="relative w-full h-full flex justify-center">
-                <a href="{{ route('bidan.pemeriksaan.index') }}" class="absolute -top-5 flex flex-col items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-[0_8px_20px_rgba(6,182,212,0.4)] border-4 border-white transition-transform active:scale-95 hover:-translate-y-1">
-                    <i class="fas fa-stethoscope text-[20px]"></i>
-                    @if($notifCount > 0)
-                        <span class="absolute top-0 right-0 w-3.5 h-3.5 bg-rose-500 border-2 border-white rounded-full"></span>
-                    @endif
-                </a>
-            </div>
-
-            <a href="{{ route('bidan.imunisasi.index') }}" class="flex flex-col items-center justify-center w-full h-full text-[10px] font-bold transition-colors {{ Str::startsWith($route,'bidan.imunisasi') ? 'text-cyan-600' : 'text-slate-400 hover:text-slate-600' }}">
-                <i class="fas fa-syringe text-[18px] mb-1"></i> Vaksin
-            </a>
-            
-            <a href="{{ route('bidan.jadwal.index') }}" class="flex flex-col items-center justify-center w-full h-full text-[10px] font-bold transition-colors {{ Str::startsWith($route,'bidan.jadwal') ? 'text-cyan-600' : 'text-slate-400 hover:text-slate-600' }}">
-                <i class="fas fa-calendar-alt text-[18px] mb-1"></i> Jadwal
-            </a>
-        </nav>
+        </div>
     </div>
 
-    {{-- SYSTEM SCRIPTS --}}
+    {{-- MOBILE BOTTOM NAV --}}
+    <nav class="bottom-nav lg:hidden">
+        <a
+            href="{{ route('bidan.dashboard') }}"
+            class="bottom-nav-link js-nav-link spa-route smooth-route {{ $route === 'bidan.dashboard' ? 'active' : '' }}"
+        >
+            <i class="fa-solid fa-chart-pie"></i>
+            Beranda
+        </a>
+
+        <a
+            href="{{ route('bidan.rekam-medis.index') }}"
+            class="bottom-nav-link js-nav-link spa-route smooth-route {{ Str::startsWith($route, 'bidan.rekam-medis') ? 'active' : '' }}"
+        >
+            <i class="fa-solid fa-folder-open"></i>
+            EMR
+        </a>
+
+        <div class="bottom-nav-center">
+            <a
+                href="{{ route('bidan.pemeriksaan.index') }}"
+                class="bottom-nav-action js-nav-link spa-route smooth-route"
+                aria-label="Pemeriksaan"
+            >
+                <i class="fa-solid fa-stethoscope"></i>
+
+                @if($notifCount > 0)
+                    <span class="bottom-nav-alert"></span>
+                @endif
+            </a>
+        </div>
+
+        <a
+            href="{{ route('bidan.imunisasi.index') }}"
+            class="bottom-nav-link js-nav-link spa-route smooth-route {{ Str::startsWith($route, 'bidan.imunisasi') ? 'active' : '' }}"
+        >
+            <i class="fa-solid fa-syringe"></i>
+            Vaksin
+        </a>
+
+        <a
+            href="{{ route('bidan.jadwal.index') }}"
+            class="bottom-nav-link js-nav-link spa-route smooth-route {{ Str::startsWith($route, 'bidan.jadwal') ? 'active' : '' }}"
+        >
+            <i class="fa-solid fa-calendar-days"></i>
+            Jadwal
+        </a>
+    </nav>
+
+    {{-- SCRIPT --}}
     <script>
-        const showGlobalLoader = (text = 'MEMUAT SISTEM...') => {
-            const loader = document.getElementById('globalLoader');
-            if(loader) {
-                document.getElementById('loaderText').innerText = text;
-                loader.classList.remove('opacity-0', 'pointer-events-none');
-                loader.classList.add('opacity-100');
+        document.addEventListener('DOMContentLoaded', function () {
+            const body = document.body;
+            const html = document.documentElement;
+
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
             }
-        };
 
-        const hideGlobalLoader = () => { 
-            const l = document.getElementById('globalLoader'); 
-            if(l) { l.classList.remove('opacity-100'); l.classList.add('opacity-0', 'pointer-events-none'); } 
-        };
+            window.scrollTo(0, 0);
 
-        window.addEventListener('pageshow', hideGlobalLoader);
+            if (!html.classList.contains('pc-from-login')) {
+                body.classList.remove('pc-scroll-lock');
+                body.style.overflow = '';
+            }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            hideGlobalLoader();
-            document.querySelectorAll('.smooth-route').forEach(el => el.addEventListener('click', e => { 
-                if(!el.classList.contains('target-blank') && el.target !== '_blank' && !e.ctrlKey) { showGlobalLoader(); }
-            }));
-        });
+            function startNavigation() {
+                body.classList.add('is-navigating');
+            }
 
-        // SWEETALERT2 GLOBAL NOTIFICATION
-        const showToast = (icon, title, text) => {
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: icon,
-                title: title,
-                text: text,
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                customClass: {
-                    popup: 'rounded-2xl shadow-xl border border-slate-100',
-                    title: 'text-[14px] font-bold font-poppins',
+            function stopNavigation() {
+                body.classList.remove('is-navigating');
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Auto reveal content
+            |--------------------------------------------------------------------------
+            */
+            const content = document.querySelector('.bidan-main-inner');
+
+            if (content) {
+                const revealSelectors = [
+                    '.dashboard-hero',
+                    '.dashboard-section',
+                    '.section-title',
+                    '.stat-card',
+                    '.dashboard-card',
+                    '.admin-card',
+                    '.bidan-card',
+                    '.content-card',
+                    '.table-card',
+                    '.chart-card',
+                    '.grid > *',
+                    'section',
+                    'article'
+                ];
+
+                let revealItems = [];
+
+                revealSelectors.forEach(function (selector) {
+                    content.querySelectorAll(selector).forEach(function (item) {
+                        if (!revealItems.includes(item)) {
+                            revealItems.push(item);
+                        }
+                    });
+                });
+
+                if (revealItems.length === 0) {
+                    revealItems = Array.from(content.children);
                 }
-            });
-        };
 
-        @if(session('success')) showToast('success', 'Berhasil!', "{{ session('success') }}"); @endif
-        @if(session('error')) showToast('error', 'Peringatan!', "{{ session('error') }}"); @endif
+                revealItems.forEach(function (item, index) {
+                    item.classList.add('pc-reveal-item');
+                    item.style.setProperty('--reveal-index', index);
+                });
+
+                requestAnimationFrame(function () {
+                    content.classList.add('pc-reveal-ready');
+                });
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Animasi dari login
+            |--------------------------------------------------------------------------
+            */
+            const fromLogin = html.classList.contains('pc-from-login');
+
+            if (fromLogin) {
+                stopNavigation();
+                body.classList.add('pc-scroll-lock');
+                window.scrollTo(0, 0);
+
+                setTimeout(function () {
+                    html.classList.add('pc-loader-out');
+                }, 1000);
+
+                setTimeout(function () {
+                    html.classList.add('pc-sidebar-in');
+                }, 1450);
+
+                setTimeout(function () {
+                    html.classList.add('pc-topbar-in');
+                }, 2250);
+
+                setTimeout(function () {
+                    html.classList.add('pc-content-in');
+                }, 3050);
+
+                setTimeout(function () {
+                    try {
+                        sessionStorage.removeItem('pc_from_login');
+                    } catch (e) {}
+
+                    html.classList.remove('pc-from-login');
+                    html.classList.remove('pc-loader-out');
+                    html.classList.remove('pc-sidebar-in');
+                    html.classList.remove('pc-topbar-in');
+                    html.classList.remove('pc-content-in');
+                    html.classList.add('pc-normal-entry');
+
+                    body.classList.remove('pc-scroll-lock');
+                    body.style.overflow = '';
+                    window.scrollTo(0, 0);
+                }, 7200);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Loader route
+            |--------------------------------------------------------------------------
+            */
+            document.querySelectorAll('a[href]').forEach(function (link) {
+                const href = link.getAttribute('href');
+
+                if (!href) {
+                    return;
+                }
+
+                const ignored =
+                    link.target === '_blank' ||
+                    href.startsWith('#') ||
+                    href.startsWith('javascript:') ||
+                    href.startsWith('mailto:') ||
+                    href.startsWith('tel:') ||
+                    link.hasAttribute('download');
+
+                if (ignored) {
+                    return;
+                }
+
+                link.addEventListener('click', function (event) {
+                    if (
+                        event.ctrlKey ||
+                        event.metaKey ||
+                        event.shiftKey ||
+                        event.altKey ||
+                        event.defaultPrevented
+                    ) {
+                        return;
+                    }
+
+                    body.classList.remove('pc-scroll-lock');
+                    startNavigation();
+                });
+            });
+
+            document.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', function () {
+                    body.classList.remove('pc-scroll-lock');
+                    startNavigation();
+                });
+            });
+
+            window.addEventListener('pageshow', function () {
+                stopNavigation();
+                body.classList.remove('pc-scroll-lock');
+                body.style.overflow = '';
+                window.scrollTo(0, 0);
+            });
+
+            /*
+            |--------------------------------------------------------------------------
+            | SweetAlert flash
+            |--------------------------------------------------------------------------
+            */
+            window.nexusAlert = function (title, text, type, confirmText) {
+                Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: type || 'success',
+                    confirmButtonText: confirmText || 'MENGERTI',
+                    customClass: {
+                        popup: 'nexus-swal',
+                        confirmButton: 'btn-nexus-confirm',
+                        cancelButton: 'btn-nexus-cancel'
+                    },
+                    buttonsStyling: false
+                });
+            };
+
+            @if(session('success'))
+                setTimeout(function () {
+                    window.nexusAlert(
+                        'Berhasil!',
+                        "{{ session('success') }}",
+                        'success',
+                        'LANJUTKAN'
+                    );
+                }, 400);
+            @endif
+
+            @if(session('error'))
+                setTimeout(function () {
+                    window.nexusAlert(
+                        'Perhatian!',
+                        "{{ session('error') }}",
+                        'error',
+                        'TUTUP'
+                    );
+                }, 400);
+            @endif
+        });
     </script>
+
     @stack('scripts')
 </body>
 </html>

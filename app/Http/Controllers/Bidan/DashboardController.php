@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
+// Pemanggilan Seluruh Model Terkait
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
@@ -16,65 +17,81 @@ use App\Models\JadwalPosyandu;
 class DashboardController extends Controller
 {
     /**
-     * Menampilkan Halaman Command Center Klinis Bidan
+     * Menampilkan Halaman Command Center Utama Bidan
      */
     public function index()
     {
-        // 1. STATISTIK UTAMA (TRIASE & BEBAN KERJA HARI INI)
+        // 1. STATISTIK UTAMA (Beban Kerja Hari Ini & Total Cakupan)
         $stats = [
-            // Total Data Warga di Database
             'total_pasien' => Balita::count() + Remaja::count() + Lansia::count() + IbuHamil::count(),
-            
-            // Antrian Meja 5 (Menunggu Bidan memvalidasi dan memberi resep/diagnosa)
             'menunggu_validasi' => Pemeriksaan::where('status_verifikasi', 'pending')->count(),
-            
-            // Kinerja Bidan hari ini
             'selesai_divalidasi' => Pemeriksaan::where('status_verifikasi', 'verified')
-                                        ->whereDate('updated_at', Carbon::today())
+                                        ->whereDate('tanggal_periksa', Carbon::today())
                                         ->count(),
-            
-            // Jadwal pelayanan aktif hari ini
             'jadwal_hari_ini' => JadwalPosyandu::whereDate('tanggal', Carbon::today())
                                         ->where('status', 'aktif')
                                         ->count(),
         ];
 
-        // 2. ALERT RISIKO TINGGI KESEHATAN WARTA
+        // 2. ALERT RISIKO KRITIS (Deteksi Dini Pasien Berisiko Tinggi Hari Ini)
+        // GANTI MENJADI INI:
+$pemeriksaanHariIni = Pemeriksaan::whereDate('created_at', Carbon::today())->get();
+
         $alertRisiko = [
-            'balita_stunting' => Pemeriksaan::where('kategori_pasien', 'balita')
-                                    ->whereIn('status_gizi', ['Stunting', 'Buruk', 'Kurang'])
-                                    ->count(),
-            'lansia_hipertensi' => Pemeriksaan::where('kategori_pasien', 'lansia')
-                                    ->where(function($q) {
-                                        // Deteksi dari teks diagnosa kader atau tensi > 140
-                                        $q->where('diagnosa', 'like', '%hipertensi%')
-                                          ->orWhereRaw("CAST(SUBSTRING_INDEX(tekanan_darah, '/', 1) AS UNSIGNED) >= 140");
-                                    })->count(),
+            // Ibu Hamil dengan Tensi Tinggi (Risiko Preeklampsia)
+            'bumil_resti' => $pemeriksaanHariIni->filter(function($p) {
+                if (strtolower($p->kategori_pasien) !== 'ibu hamil' && strtolower($p->kategori_pasien) !== 'ibu_hamil') return false;
+                $sistolik = (int) explode('/', $p->tekanan_darah ?? '0/0')[0];
+                return $sistolik >= 140;
+            })->count(),
+
+            // Lansia dengan Gula Darah >= 200 (Indikasi Diabetes)
+            'lansia_metabolik' => $pemeriksaanHariIni->filter(function($p) {
+                if (strtolower($p->kategori_pasien) !== 'lansia') return false;
+                return (int)($p->gula_darah ?? 0) >= 200;
+            })->count(),
+
+            // Balita dengan Gizi Kurang/Buruk (Berdasarkan IMT sementara)
+            'balita_waspada' => $pemeriksaanHariIni->filter(function($p) {
+                if (strtolower($p->kategori_pasien) !== 'balita') return false;
+                $imt = (float) $p->imt;
+                return $imt > 0 && $imt < 13.5;
+            })->count(),
         ];
 
-        // 3. DATA ANTRIAN LIVE (5 Pasien Terakhir yang dikirim Kader ke Meja 5)
-        $antrianLive = Pemeriksaan::with(['balita', 'remaja', 'lansia', 'pemeriksa'])
+        // 3. ANTREAN LIVE MEJA 5 (5 Pasien Terakhir)
+        // Memakai kunjungan.pasien agar model polimorfik terpanggil dengan benar
+        $antrianLive = Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])
                             ->where('status_verifikasi', 'pending')
                             ->latest('created_at')
                             ->take(5)
                             ->get();
 
-        // 4. DATA GRAFIK (Tren Pemeriksaan 7 Hari Terakhir)
+        // 4. DATA GRAFIK KINERJA (Tren Penyelesaian 7 Hari Terakhir)
         $trend = $this->getTrend7Hari();
         $chartLabels = $trend['labels'];
         $chartData = $trend['data'];
+
+        // 5. DATA GRAFIK DEMOGRAFI (Donut Chart)
+        $demografi = [
+            'balita'    => Balita::count(),
+            'ibu_hamil' => IbuHamil::count(),
+            'remaja'    => Remaja::count(),
+            'lansia'    => Lansia::count(),
+        ];
 
         return view('bidan.dashboard', compact(
             'stats', 
             'alertRisiko', 
             'antrianLive', 
             'chartLabels', 
-            'chartData'
+            'chartData',
+            'demografi'
         ));
     }
 
     /**
-     * FUNGSI BANTUAN: Generate Array 7 Hari untuk Chart.js
+     * FUNGSI BANTUAN: Menghitung Jumlah Pasien Selesai Periksa per Hari (7 Hari Terakhir)
      */
     private function getTrend7Hari()
     {
@@ -85,13 +102,15 @@ class DashboardController extends Controller
             $date = Carbon::today()->subDays($i);
             $labels[] = $date->translatedFormat('d M'); 
             
-            // Hitung pemeriksaan medis (verified) di hari tersebut
             $count = Pemeriksaan::where('status_verifikasi', 'verified')
-                                ->whereDate('updated_at', $date->format('Y-m-d'))
+                                ->whereDate('tanggal_periksa', $date->format('Y-m-d'))
                                 ->count();
             $data[] = $count;
         }
 
-        return ['labels' => $labels, 'data' => $data];
+        return [
+            'labels' => $labels,
+            'data'   => $data
+        ];
     }
 }

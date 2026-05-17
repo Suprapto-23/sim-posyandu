@@ -1,243 +1,198 @@
 @extends('layouts.bidan')
 
-@section('title', 'Antrian Pemeriksaan Klinis')
-@section('page-name', 'Manajemen Antrian')
+@section('title', 'Ruang Tunggu Meja 5 - Pemeriksaan Medis')
+
+@section('content')
+<div class="bg-[#f8fafc] min-h-screen pb-12 font-poppins w-full animate-fade-in">
+    
+    {{-- BARIS JUDUL UTAMA & STATISTIK RINGKAS --}}
+    <div class="pt-6 pb-6 px-4 md:px-8 max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-xl md:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                <i class="fas fa-notes-medical text-teal-500"></i> Ruang Pemeriksaan Meja 5
+            </h1>
+            <p class="text-xs md:text-sm font-medium text-slate-500 mt-1">Kelola validasi antrian klinis dan keputusan medis hasil input dari Meja 1-4.</p>
+        </div>
+        
+        {{-- Badge Total Antrian Aktif --}}
+        <div class="bg-teal-50 border border-teal-100 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-sm shrink-0">
+            <div class="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse"></div>
+            <p class="text-xs font-bold text-teal-800">
+                Antrian Belum Diperiksa: <span class="text-sm font-black">{{ $pendingCount }} Pasien</span>
+            </p>
+        </div>
+    </div>
+
+    {{-- AREA KONTEN UTAMA --}}
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.02)] overflow-hidden p-6">
+            
+            {{-- BARIS NAVIGASI TAB & FILTER PENCARIAN --}}
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
+                
+                {{-- Navigasi Tab (Pending vs Verified) --}}
+                <div class="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto self-start">
+                    <a href="{{ route('bidan.pemeriksaan.index', ['tab' => 'pending', 'search' => request('search')]) }}" 
+                       class="flex-1 md:flex-none text-center px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all {{ $tab === 'pending' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
+                        <i class="fas fa-clock mr-1.5"></i> Belum Diperiksa
+                    </a>
+                    <a href="{{ route('bidan.pemeriksaan.index', ['tab' => 'verified', 'search' => request('search')]) }}" 
+                       class="flex-1 md:flex-none text-center px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all {{ $tab === 'verified' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
+                        <i class="fas fa-check-circle mr-1.5"></i> Selesai Diperiksa
+                    </a>
+                </div>
+
+                {{-- Form Filter Pencarian Warga --}}
+                <form action="{{ route('bidan.pemeriksaan.index') }}" method="GET" class="w-full md:w-80 flex gap-2">
+                    <input type="hidden" name="tab" value="{{ $tab }}">
+                    <div class="relative w-full">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                            <i class="fas fa-search text-xs"></i>
+                        </span>
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               class="w-full bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl pl-9 pr-4 py-3 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white transition-all" 
+                               placeholder="Cari Nama Pasien atau NIK...">
+                    </div>
+                    @if(request('search'))
+                        <a href="{{ route('bidan.pemeriksaan.index', ['tab' => $tab]) }}" class="px-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-500 rounded-xl flex items-center justify-center text-xs transition-colors" title="Bersihkan Pencarian">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    @endif
+                </form>
+            </div>
+
+            {{-- TABEL DATA ANTRIAN PEMERIKSAAN --}}
+            <div class="overflow-x-auto w-full">
+                <table class="w-full text-left border-collapse whitespace-nowrap min-w-[800px]">
+                    <thead>
+                        <tr class="bg-slate-50/50 border-b border-slate-100 text-[10px] uppercase tracking-widest text-slate-400 font-black">
+                            <th class="p-4 w-12 text-center">No</th>
+                            <th class="p-4">Tanggal Kunjungan</th>
+                            <th class="p-4">Nama Pasien</th>
+                            <th class="p-4">Kategori Demografi</th>
+                            <th class="p-4 text-center">Status Validasi</th>
+                            <th class="p-4 text-center">Tindakan Medis</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 text-xs">
+                        @forelse($pemeriksaans as $index => $item)
+                            <tr class="hover:bg-slate-50/50 transition-colors group">
+                                {{-- Nomor Urut Urutan Halaman --}}
+                                <td class="p-4 text-center font-bold text-slate-400">
+                                    {{ $pemeriksaans->firstItem() + $index }}
+                                </td>
+                                
+                                {{-- Tanggal Input Data --}}
+                                <td class="p-4">
+                                    <span class="font-black text-slate-700">
+                                        {{ \Carbon\Carbon::parse($item->tanggal_kunjungan)->translatedFormat('d F Y') }}
+                                    </span>
+                                </td>
+                                
+                                {{-- Detail Nama Pasien --}}
+                                <td class="p-4">
+                                    <div class="flex flex-col">
+                                        <span class="font-black text-slate-800 text-sm">{{ $item->kunjungan->pasien->nama_lengkap ?? 'Nama Tidak Terdata' }}</span>
+                                        <span class="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider">NIK: {{ $item->kunjungan->pasien->nik ?? '-' }}</span>
+                                    </div>
+                                </td>
+                                
+                                {{-- Badge Warna Tiap Kategori Warga --}}
+                                <td class="p-4">
+                                    @php
+                                        $kat = strtolower($item->kategori_pasien);
+                                        $badgeStyle = match($kat) {
+                                            'balita' => 'bg-teal-50 text-teal-700 border-teal-100',
+                                            'remaja' => 'bg-indigo-50 text-indigo-700 border-indigo-100',
+                                            'ibu hamil', 'ibu_hamil' => 'bg-rose-50 text-rose-700 border-rose-100',
+                                            'lansia' => 'bg-amber-50 text-amber-700 border-amber-100',
+                                            default => 'bg-slate-100 text-slate-600 border-slate-200'
+                                        };
+                                    @endphp
+                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border {{ $badgeStyle }}">
+                                        {{ $item->kategori_pasien }}
+                                    </span>
+                                </td>
+                                
+                                {{-- Status Verifikasi Alur Data --}}
+                                <td class="p-4 text-center">
+                                    @if($item->status_verifikasi === 'verified')
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 font-bold border border-emerald-100">
+                                            <i class="fas fa-check-circle text-[10px]"></i> Selesai Periksa
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-600 font-bold border border-amber-100 animate-pulse">
+                                            <i class="fas fa-clock text-[10px]"></i> Menunggu Validasi
+                                        </span>
+                                    @endif
+                                </td>
+                                
+                                {{-- TOMBOL AKSI HORIZONTAL RAPIH --}}
+                                <td class="p-4">
+                                    <div class="flex items-center justify-center gap-2">
+                                        @if($item->status_verifikasi !== 'verified')
+                                            {{-- Jika Pending: Tombol Periksa Validasi --}}
+                                            <a href="{{ route('bidan.pemeriksaan.validasi', $item->id) }}" 
+                                               class="h-8 px-3 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-500 hover:text-white flex items-center justify-center gap-1.5 font-black uppercase tracking-widest text-[10px] border border-teal-200 hover:border-teal-500 hover:shadow-md transition-all" 
+                                               title="Periksa Medis Pasien">
+                                                <i class="fas fa-file-medical-chart text-xs"></i> Periksa Pasien
+                                            </a>
+                                            
+                                            {{-- Tombol Hapus Antrian Darurat --}}
+                                            <form action="{{ route('bidan.pemeriksaan.destroy', $item->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Yakin ingin menghapus antrian pemeriksaan warga ini?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-100 hover:border-rose-500 flex items-center justify-center transition-all" title="Batalkan Antrian">
+                                                    <i class="fas fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            {{-- Jika Verified: Tombol Lihat Detail Rekam Medis Saja (Read Only) --}}
+                                            <a href="{{ route('bidan.pemeriksaan.show', $item->id) }}" 
+                                               class="h-8 px-3 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-800 hover:text-white flex items-center justify-center gap-1.5 font-black uppercase tracking-widest text-[10px] border border-slate-200 hover:border-slate-800 hover:shadow-md transition-all" 
+                                               title="Lihat Detail Pemeriksaan">
+                                                <i class="fas fa-eye text-xs"></i> Lihat Hasil Arsip
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            {{-- State Jika Ruang Tunggu Kosong --}}
+                            <tr>
+                                <td colspan="6" class="p-16 text-center">
+                                    <div class="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4">
+                                        <i class="fas fa-hospital-user"></i>
+                                    </div>
+                                    <h3 class="text-sm font-black text-slate-700">Ruang Tunggu Kosong</h3>
+                                    <p class="text-xs text-slate-400 mt-1">Tidak ada data antrian pasien yang cocok atau menunggu diperiksa saat ini.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- FOOTER PAGINATION YANG RAPIH --}}
+            @if($pemeriksaans->hasPages())
+                <div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        Menampilkan <span class="text-slate-700">{{ $pemeriksaans->firstItem() }}</span> - <span class="text-slate-700">{{ $pemeriksaans->lastItem() }}</span> dari <span class="text-slate-700">{{ $pemeriksaans->total() }}</span> Antrian
+                    </p>
+                    <div class="pagination-custom text-xs">
+                        {{ $pemeriksaans->links() }}
+                    </div>
+                </div>
+            @endif
+
+        </div>
+    </div>
+</div>
+@endsection
 
 @push('styles')
 <style>
-    /* NEXUS CLINICAL ANIMATION SYSTEM */
-    .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* GLASS PANEL UI */
-    .nexus-glass { 
-        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); 
-        border: 1px solid rgba(226, 232, 240, 0.8); 
-        box-shadow: 0 10px 40px -10px rgba(6, 182, 212, 0.05); 
-        border-radius: 28px; transition: all 0.4s ease;
-    }
-
-    /* TAB SYSTEM PREMIUM */
-    .tab-nexus { position: relative; transition: all 0.3s ease; }
-    .tab-nexus.active { background: #ffffff; color: #0891b2; box-shadow: 0 4px 15px rgba(8, 145, 178, 0.1); border-color: #cffafe; }
-    .tab-nexus.inactive { color: #64748b; border-color: transparent; }
-    .tab-nexus.inactive:hover { background: rgba(255,255,255,0.5); color: #0e7490; }
-
-    /* TABLE MICRO-INTERACTION & LIVE SEARCH */
-    .tr-nexus { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-bottom: 1px solid #f1f5f9; }
-    .tr-nexus:hover { background-color: #f0fdfa; transform: scale(1.002); z-index: 10; position: relative; border-color: transparent; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(6,182,212,0.1); }
-    
-    /* Menyembunyikan elemen Alpine sebelum dimuat */
-    [x-cloak] { display: none !important; }
+    .animate-fade-in { animation: fadeIn 0.5s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 @endpush
-
-@section('content')
-<div class="max-w-[1400px] mx-auto relative pb-16 fade-in-up">
-
-    {{-- =================================================================
-         1. HERO HEADER (CLINICAL STYLE)
-         ================================================================= --}}
-    <div class="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-[32px] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_15px_40px_-10px_rgba(8,145,178,0.4)] border border-cyan-400/50 flex flex-col md:flex-row items-center justify-between gap-8">
-        <div class="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PHBhdGggZD0iTTAgMGgyMHYyMEgwem0xMCAxMGgxMHYxMEgxMHoiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMSIvPjwvc3ZnPg==')]"></div>
-        <div class="absolute -right-10 -top-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-        
-        <div class="flex items-center gap-6 relative z-10 text-white w-full">
-            <div class="w-20 h-20 rounded-[22px] bg-white/20 backdrop-blur-md flex items-center justify-center text-4xl shrink-0 shadow-inner border border-white/30 transform -rotate-3">
-                <i class="fas fa-microscope text-white"></i>
-            </div>
-            <div class="flex-1">
-                <div class="flex items-center gap-3 mb-1.5">
-                    <h1 class="text-3xl font-black tracking-tight font-poppins">Antrian Meja 5</h1>
-                    <span class="px-3 py-1 bg-cyan-900/40 border border-cyan-400/30 rounded-lg text-[10px] font-black uppercase tracking-widest backdrop-blur-sm shadow-sm">Otoritas Bidan</span>
-                </div>
-                <p class="text-[14px] font-medium text-cyan-100 max-w-2xl leading-relaxed">
-                    Pusat Validasi Medis. Verifikasi data pengukuran fisik yang dikirim oleh Kader lapangan dan berikan diagnosa klinis yang presisi.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    {{-- =================================================================
-         2. WORKSPACE AREA (ALPINE.JS LIVE SEARCH ENGINE TERPASANG)
-         ================================================================= --}}
-    <div class="nexus-glass overflow-hidden flex flex-col" x-data="{ searchQuery: '{{ request('search') }}' }">
-        
-        <div class="px-6 md:px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            
-            {{-- Tab Switcher --}}
-            <div class="flex items-center p-1.5 bg-slate-200/60 rounded-[18px] w-full lg:w-auto">
-                <a href="{{ route('bidan.pemeriksaan.index', ['tab' => 'pending']) }}" class="tab-nexus flex-1 lg:flex-none flex items-center justify-center gap-2.5 px-6 py-3 rounded-[14px] text-[11px] font-black uppercase tracking-widest border-2 {{ $tab == 'pending' ? 'active' : 'inactive' }}">
-                    <i class="fas fa-clock text-sm"></i> Antrian Aktif
-                    @if($pendingCount > 0)
-                        <span class="px-2 py-0.5 rounded-md bg-rose-500 text-white text-[9px] shadow-sm animate-pulse ml-1">{{ $pendingCount }}</span>
-                    @endif
-                </a>
-                <a href="{{ route('bidan.pemeriksaan.index', ['tab' => 'verified']) }}" class="tab-nexus flex-1 lg:flex-none flex items-center justify-center gap-2.5 px-6 py-3 rounded-[14px] text-[11px] font-black uppercase tracking-widest border-2 {{ $tab == 'verified' ? 'active' : 'inactive' }}">
-                    <i class="fas fa-check-double text-sm"></i> Arsip Terverifikasi
-                </a>
-            </div>
-            
-            {{-- Form Live Search Alpine.js --}}
-            <form id="searchForm" method="GET" action="{{ route('bidan.pemeriksaan.index') }}" class="relative w-full lg:w-[380px]">
-                <input type="hidden" name="tab" value="{{ $tab }}">
-                <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-cyan-500" :class="searchQuery.length > 0 ? 'animate-bounce' : ''"></i>
-                </div>
-                
-                {{-- x-model mengikat input ke variabel searchQuery secara real-time --}}
-                <input type="text" name="search" x-model="searchQuery" 
-                       placeholder="Ketik nama, NIK, atau nama kader..." 
-                       class="w-full bg-white border border-slate-200 rounded-[16px] pl-12 pr-12 py-3.5 text-[12px] font-bold text-slate-700 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-50 outline-none transition-all shadow-sm">
-                
-                {{-- Tombol Hapus Pencarian muncul jika ada teks --}}
-                <button type="button" x-show="searchQuery.length > 0" @click="searchQuery = ''; document.getElementById('searchForm').submit();" x-cloak
-                        class="absolute inset-y-0 right-0 pr-5 flex items-center text-rose-400 hover:text-rose-600 transition-colors">
-                    <i class="fas fa-times-circle text-lg"></i>
-                </button>
-            </form>
-        </div>
-
-        {{-- =================================================================
-             3. TABEL DATA MEDIS (DENGAN FILTER REAL-TIME)
-             ================================================================= --}}
-        <div class="overflow-x-auto custom-scrollbar p-2">
-            <table class="w-full text-left border-collapse min-w-[1000px]">
-                <thead>
-                    <tr>
-                        <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Identitas Warga</th>
-                        <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Parameter Fisik (Kader)</th>
-                        <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">Waktu & Petugas</th>
-                        <th class="py-4 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 text-right">Aksi Klinis</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($pemeriksaans as $pem)
-                    @php
-                        // Memanfaatkan Accessor Model untuk data aman
-                        $namaPasien = $pem->nama_pasien;
-                        $kategori = strtolower($pem->kategori_pasien ?? 'umum');
-                        
-                        // Mapping Visual
-                        $config = match($kategori) {
-                            'balita', 'bayi' => ['col' => 'sky', 'ico' => 'fa-baby'],
-                            'remaja'         => ['col' => 'violet', 'ico' => 'fa-user-graduate'],
-                            'ibu_hamil'      => ['col' => 'pink', 'ico' => 'fa-female'],
-                            'lansia'         => ['col' => 'emerald', 'ico' => 'fa-user-clock'],
-                            default          => ['col' => 'slate', 'ico' => 'fa-user'],
-                        };
-                    @endphp
-                    
-                    {{-- 🔥 INTI LIVE SEARCH: Menyembunyikan baris jika teks tidak cocok dengan inputan 🔥 --}}
-                    <tr class="tr-nexus group" 
-                        x-show="searchQuery === '' || $el.textContent.toLowerCase().includes(searchQuery.toLowerCase())" 
-                        x-transition.opacity.duration.300ms>
-                        
-                        {{-- Kolom 1: Identitas --}}
-                        <td class="py-5 px-6">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-[14px] flex items-center justify-center shrink-0 border shadow-sm group-hover:scale-110 transition-transform bg-{{$config['col']}}-50 text-{{$config['col']}}-500 border-{{$config['col']}}-100">
-                                    <i class="fas {{$config['ico']}} text-lg"></i>
-                                </div>
-                                <div>
-                                    <p class="font-black text-slate-800 text-[14px] mb-1 group-hover:text-cyan-600 transition-colors font-poppins">{{ $namaPasien }}</p>
-                                    <div class="flex items-center gap-2">
-                                        <span class="px-2 py-0.5 bg-{{$config['col']}}-100 text-{{$config['col']}}-700 text-[9px] font-black uppercase tracking-wider rounded border border-{{$config['col']}}-200 shadow-sm">
-                                            {{ ucfirst($kategori) }}
-                                        </span>
-                                        <span class="text-[10px] font-bold text-slate-400">NIK: {{ $pem->nik_pasien }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-
-                        {{-- Kolom 2: Parameter Fisik (Kader) --}}
-                        <td class="py-5 px-6">
-                            <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                                <div class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg flex items-center gap-1.5 shadow-sm">
-                                    <i class="fas fa-weight-hanging text-slate-400 text-[10px]"></i>
-                                    <span class="text-[11px] font-black text-slate-700">{{ $pem->berat_badan ?? '0' }} <small class="text-[9px] text-slate-400">kg</small></span>
-                                </div>
-                                <div class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg flex items-center gap-1.5 shadow-sm">
-                                    <i class="fas fa-ruler-vertical text-slate-400 text-[10px]"></i>
-                                    <span class="text-[11px] font-black text-slate-700">{{ $pem->tinggi_badan ?? '0' }} <small class="text-[9px] text-slate-400">cm</small></span>
-                                </div>
-                            </div>
-                            @if($pem->tekanan_darah)
-                                <p class="text-[10px] font-bold text-rose-500 flex items-center gap-1.5 ml-1">
-                                    <i class="fas fa-heartbeat animate-pulse"></i> Tensi: {{ $pem->tekanan_darah }} mmHg
-                                </p>
-                            @elseif($pem->lingkar_kepala)
-                                <p class="text-[10px] font-bold text-sky-500 flex items-center gap-1.5 ml-1">
-                                    <i class="fas fa-brain"></i> L. Kepala: {{ $pem->lingkar_kepala }} cm
-                                </p>
-                            @endif
-                        </td>
-
-                        {{-- Kolom 3: Waktu & Petugas --}}
-                        <td class="py-5 px-6">
-                            <p class="font-bold text-slate-700 text-[11px] flex items-center gap-2">
-                                <i class="far fa-calendar-check text-cyan-500"></i> {{ \Carbon\Carbon::parse($pem->tanggal_periksa)->translatedFormat('d M Y') }}
-                            </p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <p class="text-[10px] font-medium text-slate-500 ml-4 border-r border-slate-200 pr-2">{{ $pem->created_at->format('H:i') }} WIB</p>
-                                <div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-black text-indigo-700 uppercase tracking-widest">
-                                    <i class="fas fa-id-badge text-indigo-400"></i> {{ Str::words($pem->pemeriksa->name ?? 'System', 1, '') }}
-                                </div>
-                            </div>
-                        </td>
-
-                        {{-- Kolom 4: Aksi --}}
-                        <td class="py-5 px-6 text-right">
-                            @if($tab == 'pending')
-                                <a href="{{ route('bidan.pemeriksaan.show', $pem->id) }}" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:shadow-[0_8px_15px_rgba(244,63,94,0.3)] hover:-translate-y-0.5 transition-all active:scale-95 shadow-md">
-                                    <i class="fas fa-stethoscope text-sm"></i> Validasi Medis
-                                </a>
-                            @else
-                                <a href="{{ route('bidan.pemeriksaan.show', $pem->id) }}" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-emerald-600 border-2 border-emerald-100 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-emerald-50 transition-all shadow-sm">
-                                    <i class="fas fa-file-invoice text-sm"></i> Lihat EMR
-                                </a>
-                            @endif
-                        </td>
-
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="4" class="py-24 text-center">
-                            <div class="w-28 h-28 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center mx-auto mb-5 text-slate-300 shadow-inner">
-                                <i class="fas fa-{{ $tab == 'pending' ? 'mug-hot' : 'archive' }} text-4xl opacity-40"></i>
-                            </div>
-                            <h3 class="text-[16px] font-black text-slate-800 font-poppins mb-1.5">{{ $tab == 'pending' ? 'Meja 5 Kosong' : 'Arsip Masih Kosong' }}</h3>
-                            <p class="text-[12px] font-medium text-slate-500 max-w-sm mx-auto leading-relaxed">
-                                {{ $tab == 'pending' ? 'Belum ada data pemeriksaan warga dari Kader yang perlu divalidasi saat ini. Silakan bersantai sejenak!' : 'Anda belum menyelesaikan validasi pemeriksaan untuk periode ini.' }}
-                            </p>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            
-            {{-- Pesan Data Tidak Ditemukan oleh Alpine (Muncul saat Live Search gagal menemukan data) --}}
-            <div x-show="searchQuery.length > 0 && Array.from($el.previousElementSibling.querySelectorAll('tbody tr')).every(row => row.style.display === 'none')" 
-                 x-cloak class="py-16 text-center">
-                 <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-300 flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fas fa-search-minus"></i></div>
-                 <h4 class="text-[14px] font-black text-slate-700">Pencarian Tidak Ditemukan</h4>
-                 <p class="text-[11px] text-slate-500 mt-1">Tekan Enter untuk mencari data di halaman lain, atau periksa ejaan Anda.</p>
-            </div>
-        </div>
-        
-        {{-- Area Pagination --}}
-        @if($pemeriksaans->hasPages())
-        <div class="px-8 py-5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:block">
-                Menampilkan <span class="text-slate-800">{{ $pemeriksaans->firstItem() }}</span> - <span class="text-slate-800">{{ $pemeriksaans->lastItem() }}</span> dari <span class="text-slate-800">{{ $pemeriksaans->total() }}</span> Antrian
-            </p>
-            <div class="nexus-pagination">
-                {{ $pemeriksaans->withQueryString()->links() }}
-            </div>
-        </div>
-        @endif
-    </div>
-
-</div>
-@endsection

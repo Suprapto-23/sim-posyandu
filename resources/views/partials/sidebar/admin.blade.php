@@ -1,60 +1,113 @@
 @php
-    // Palet Warna Medical SaaS Premium (Sky Blue & Teal Gradient)
-    $activeClass = 'bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-lg shadow-sky-500/25 font-bold scale-[1.02] rounded-[14px]';
-    $inactiveClass = 'text-slate-400 hover:bg-slate-800/60 hover:text-sky-300 font-medium rounded-[14px] transition-all duration-300';
-    
-    $activeIconClass = 'text-white drop-shadow-sm';
-    $inactiveIconClass = 'text-slate-500 group-hover:text-sky-400 transition-colors duration-300';
+    /*
+    |--------------------------------------------------------------------------
+    | Sidebar Admin PosyanduCare - Clean Minimal Menu
+    |--------------------------------------------------------------------------
+    | Menu aktif:
+    | 1. Dashboard
+    | 2. Kelola User
+    | 3. Kelola Bidan
+    | 4. Kelola Kader
+    */
+
+    $adminName = Auth::user()->name ?? 'Admin Posyandu';
+    $initial = strtoupper(substr($adminName, 0, 1));
+
+    $menus = [
+        [
+            'label' => 'Dashboard',
+            'icon' => 'fa-house',
+            'route' => route('admin.dashboard'),
+            'active' => request()->routeIs('admin.dashboard*'),
+        ],
+        [
+            'label' => 'Kelola User',
+            'icon' => 'fa-users',
+            'route' => route('admin.users.index'),
+            'active' => request()->routeIs('admin.users.*'),
+        ],
+        [
+            'label' => 'Kelola Bidan',
+            'icon' => 'fa-user-doctor',
+            'route' => route('admin.bidans.index'),
+            'active' => request()->routeIs('admin.bidans.*'),
+        ],
+        [
+            'label' => 'Kelola Kader',
+            'icon' => 'fa-user-nurse',
+            'route' => route('admin.kaders.index'),
+            'active' => request()->routeIs('admin.kaders.*'),
+        ],
+    ];
 @endphp
 
-<div class="space-y-6 font-poppins">
-    
-    {{-- BLOK 1: CORE SYSTEM --}}
-    <div>
-        <p class="px-5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3">Core System</p>
-        <div class="space-y-1.5 px-3">
-            <a href="{{ route('admin.dashboard') }}" class="smooth-route group flex items-center gap-3.5 px-4 py-3 {{ request()->routeIs('admin.dashboard*') ? $activeClass : $inactiveClass }}">
-                <div class="w-5 flex justify-center">
-                    <i class="fas fa-tachometer-alt text-[16px] {{ request()->routeIs('admin.dashboard*') ? $activeIconClass : $inactiveIconClass }}"></i>
-                </div>
-                <span class="text-[13.5px] tracking-wide">Overview Sistem</span>
-            </a>
+<div class="pc-light-sidebar">
+
+    {{-- LOGO --}}
+    <div class="pc-sidebar-logo-area">
+        <a href="{{ route('admin.dashboard') }}" class="js-nav-link pc-logo-link">
+            <img
+                src="{{ asset('img/logo.png') }}"
+                alt="Logo PosyanduCare"
+                class="pc-sidebar-logo"
+            >
+        </a>
+    </div>
+
+    {{-- USER CARD --}}
+    <div class="pc-user-card">
+        <div class="pc-user-avatar">
+            {{ $initial }}
+        </div>
+
+        <div class="pc-user-info">
+            <h4>{{ $adminName }}</h4>
+            <p>Administrator</p>
+
+            <div class="pc-online">
+                <span></span>
+                Online
+            </div>
         </div>
     </div>
 
-    {{-- BLOK 2: DATA MASTER --}}
-    <div>
-        <p class="px-5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3">Data Master</p>
-        <div class="space-y-1.5 px-3">
-            
-            <a href="{{ route('admin.users.index') }}" class="smooth-route group flex items-center justify-between px-4 py-3 {{ request()->routeIs('admin.users.*') ? $activeClass : $inactiveClass }}">
-                <div class="flex items-center gap-3.5">
-                    <div class="w-5 flex justify-center">
-                        <i class="fas fa-users text-[16px] {{ request()->routeIs('admin.users.*') ? $activeIconClass : $inactiveIconClass }}"></i>
-                    </div>
-                    <span class="text-[13.5px] tracking-wide">User Warga</span>
-                </div>
-                
-                {{-- Lencana (Badge) NIK hanya muncul jika tidak sedang aktif --}}
-                @if(!request()->routeIs('admin.users.*'))
-                    <span class="bg-slate-800/80 text-slate-400 text-[9px] font-black px-2 py-0.5 rounded shadow-inner border border-slate-700/50">NIK</span>
-                @endif
-            </a>
+    {{-- MENU --}}
+    <div class="pc-menu-group">
+        <p class="pc-menu-title">
+            Menu Admin
+        </p>
 
-            <a href="{{ route('admin.kaders.index') }}" class="smooth-route group flex items-center gap-3.5 px-4 py-3 {{ request()->routeIs('admin.kaders.*') ? $activeClass : $inactiveClass }}">
-                <div class="w-5 flex justify-center">
-                    <i class="fas fa-user-nurse text-[16px] {{ request()->routeIs('admin.kaders.*') ? $activeIconClass : $inactiveIconClass }}"></i>
-                </div>
-                <span class="text-[13.5px] tracking-wide">Akun Kader</span>
-            </a>
+        <div class="pc-menu-list">
+            @foreach($menus as $menu)
+                <a
+                    href="{{ $menu['route'] }}"
+                    class="js-nav-link pc-menu-item {{ $menu['active'] ? 'active' : '' }}"
+                >
+                    <span class="pc-menu-icon">
+                        <i class="fa-solid {{ $menu['icon'] }}"></i>
+                    </span>
 
-            <a href="{{ route('admin.bidans.index') }}" class="smooth-route group flex items-center gap-3.5 px-4 py-3 {{ request()->routeIs('admin.bidans.*') ? $activeClass : $inactiveClass }}">
-                <div class="w-5 flex justify-center">
-                    <i class="fas fa-user-md text-[16px] {{ request()->routeIs('admin.bidans.*') ? $activeIconClass : $inactiveIconClass }}"></i>
-                </div>
-                <span class="text-[13.5px] tracking-wide">Akun Bidan</span>
-            </a>
-            
+                    <span class="pc-menu-text">
+                        {{ $menu['label'] }}
+                    </span>
+                </a>
+            @endforeach
         </div>
     </div>
+
+    {{-- DEKORASI BAWAH --}}
+    <div class="pc-sidebar-decoration" aria-hidden="true">
+        <div class="pc-wave pc-wave-1"></div>
+        <div class="pc-wave pc-wave-2"></div>
+        <div class="pc-wave pc-wave-3"></div>
+
+        <div class="pc-plant">
+            <span class="pc-leaf pc-leaf-1"></span>
+            <span class="pc-leaf pc-leaf-2"></span>
+            <span class="pc-leaf pc-leaf-3"></span>
+            <span class="pc-leaf pc-leaf-4"></span>
+            <span class="pc-stem"></span>
+        </div>
+    </div>
+
 </div>
