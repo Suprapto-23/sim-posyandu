@@ -48,6 +48,17 @@ use App\Http\Controllers\User\NotifikasiController  as UserNotifikasi;
 use App\Http\Controllers\User\RiwayatController;
 use App\Http\Controllers\User\KonselingController   as UserKonseling;
 
+use Illuminate\Support\Facades\Artisan;
+Route::get('/gas-seed', function () {
+    try {
+        // Menjalankan seeder untuk membuat akun admin
+        Artisan::call('db:seed', ['--force' => true]);
+        return "<h1>Seeding Berhasil!</h1><pre>" . Artisan::output() . "</pre>";
+    } catch (\Exception $e) {
+        return "<h1>Gagal Seeding:</h1> " . $e->getMessage();
+    }
+});
+
 // ==================== ROOT ====================
 Route::get('/', function () {
     return auth()->check() ? redirect()->route('home') : redirect()->route('login');
