@@ -6,35 +6,35 @@
 <style>
     /*
     |--------------------------------------------------------------------------
-    | POSYANDUCARE LOGIN PAGE - FINAL POLISHED
+    | POSYANDUCARE LOGIN - PRECISION FINAL
     |--------------------------------------------------------------------------
     */
 
     .pc-login-shell {
         position: relative;
         width: 100%;
-        max-width: 1440px;
-        min-height: calc(100vh - 28px);
+        max-width: 1420px;
+        min-height: calc(100svh - 38px);
         margin: 0 auto;
-        padding: 0 54px;
+        padding: 0 56px;
 
         display: grid;
-        grid-template-columns: minmax(560px, 1fr) minmax(500px, .92fr);
+        grid-template-columns: minmax(560px, 1fr) minmax(500px, .9fr);
         align-items: center;
-        gap: 78px;
+        gap: 76px;
     }
 
     /*
     |--------------------------------------------------------------------------
-    | LEFT SIDE
+    | LEFT BRAND AREA
     |--------------------------------------------------------------------------
     */
 
     .pc-login-brand {
         position: relative;
         width: 100%;
-        height: 690px;
-        min-height: 690px;
+        height: 650px;
+        min-height: 650px;
 
         display: flex;
         align-items: center;
@@ -44,37 +44,37 @@
     .pc-login-brand::before {
         content: "";
         position: absolute;
-        width: 650px;
-        height: 650px;
+        width: 620px;
+        height: 620px;
         left: 48%;
-        top: 45%;
+        top: 47%;
         transform: translate(-50%, -50%);
 
         border-radius: 999px;
 
         background:
-            radial-gradient(circle, rgba(255,255,255,.78), rgba(255,255,255,.34) 46%, transparent 73%);
+            radial-gradient(circle, rgba(255,255,255,.76), rgba(255,255,255,.35) 47%, transparent 72%);
 
         z-index: -1;
-        opacity: .96;
+        opacity: .95;
     }
 
     .pc-login-brand::after {
         content: "";
         position: absolute;
-        width: 490px;
-        height: 490px;
-        left: -140px;
-        bottom: -120px;
+        width: 440px;
+        height: 440px;
+        left: -120px;
+        bottom: -96px;
 
         border-radius: 46% 54% 50% 50%;
 
         background:
-            radial-gradient(circle at 34% 32%, rgba(16,185,129,.18), transparent 54%),
-            linear-gradient(135deg, rgba(16,185,129,.13), rgba(255,255,255,0));
+            radial-gradient(circle at 34% 32%, rgba(16,185,129,.16), transparent 54%),
+            linear-gradient(135deg, rgba(16,185,129,.12), rgba(255,255,255,0));
 
         z-index: -2;
-        opacity: .76;
+        opacity: .7;
     }
 
     .pc-brand-inner {
@@ -86,21 +86,21 @@
         align-items: center;
         text-align: center;
 
-        transform: translate(-6px, -8px);
+        transform: translate(-6px, -4px);
     }
 
     .pc-brand-logo {
-        width: 455px;
+        width: 430px;
         max-width: 100%;
         height: auto;
 
         display: block;
         object-fit: contain;
 
-        margin-bottom: 112px;
+        margin-bottom: 66px;
 
         filter:
-            drop-shadow(0 22px 34px rgba(5,150,105,.08))
+            drop-shadow(0 22px 34px rgba(5,150,105,.075))
             drop-shadow(0 8px 12px rgba(15,23,42,.035));
 
         user-select: none;
@@ -108,16 +108,16 @@
     }
 
     .pc-brand-title {
-        max-width: 650px;
+        max-width: 640px;
         margin: 0;
 
         color: #0f172a;
 
         font-family: 'Poppins', sans-serif;
         font-size: 28px;
-        line-height: 1.22;
+        line-height: 1.18;
         font-weight: 900;
-        letter-spacing: -0.065em;
+        letter-spacing: -0.07em;
     }
 
     .pc-brand-divider {
@@ -126,7 +126,7 @@
         justify-content: center;
         gap: 13px;
 
-        margin: 18px 0 20px;
+        margin: 16px 0 18px;
     }
 
     .pc-brand-divider-line {
@@ -157,18 +157,18 @@
 
     .pc-brand-description {
         max-width: 510px;
-        margin: 0 0 42px;
+        margin: 0 0 34px;
 
         color: #64748b;
 
-        font-size: 16px;
-        line-height: 1.72;
+        font-size: 15.4px;
+        line-height: 1.65;
         font-weight: 750;
     }
 
     .pc-feature-grid {
         width: 100%;
-        max-width: 520px;
+        max-width: 500px;
 
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -176,18 +176,18 @@
     }
 
     .pc-feature-card {
-        height: 112px;
+        height: 104px;
 
-        border-radius: 25px;
+        border-radius: 24px;
 
         background:
-            linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.62));
+            linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.64));
 
-        border: 1px solid rgba(255,255,255,.92);
+        border: 1px solid rgba(255,255,255,.94);
 
         box-shadow:
-            0 18px 36px rgba(15,23,42,.055),
-            inset 0 1px 0 rgba(255,255,255,.86);
+            0 16px 32px rgba(15,23,42,.052),
+            inset 0 1px 0 rgba(255,255,255,.88);
 
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
@@ -196,7 +196,7 @@
         align-items: center;
         justify-content: center;
         flex-direction: column;
-        gap: 11px;
+        gap: 10px;
 
         transition:
             transform .34s cubic-bezier(.16,1,.3,1),
@@ -205,18 +205,18 @@
     }
 
     .pc-feature-card:hover {
-        transform: translateY(-7px);
+        transform: translateY(-6px);
 
         background: rgba(255,255,255,.95);
 
         box-shadow:
-            0 26px 46px rgba(16,185,129,.16),
+            0 24px 44px rgba(16,185,129,.15),
             inset 0 1px 0 rgba(255,255,255,.92);
     }
 
     .pc-feature-icon {
-        width: 46px;
-        height: 46px;
+        width: 44px;
+        height: 44px;
 
         border-radius: 16px;
 
@@ -227,28 +227,28 @@
         align-items: center;
         justify-content: center;
 
-        font-size: 18px;
+        font-size: 17px;
     }
 
     .pc-feature-text {
         color: #1e293b;
 
-        font-size: 12.2px;
+        font-size: 12px;
         line-height: 1;
         font-weight: 900;
     }
 
     /*
     |--------------------------------------------------------------------------
-    | RIGHT SIDE
+    | RIGHT FORM AREA
     |--------------------------------------------------------------------------
     */
 
     .pc-login-form-side {
         position: relative;
         width: 100%;
-        height: 690px;
-        min-height: 690px;
+        height: 650px;
+        min-height: 650px;
 
         display: flex;
         align-items: center;
@@ -261,9 +261,9 @@
         position: relative;
         width: 100%;
         max-width: 545px;
-        min-height: 640px;
+        min-height: 610px;
 
-        padding: 52px 54px 44px;
+        padding: 46px 54px 38px;
 
         overflow: hidden;
 
@@ -275,14 +275,12 @@
         border: 1px solid rgba(226,232,240,.86);
 
         box-shadow:
-            0 36px 94px rgba(15,23,42,.09),
-            0 14px 34px rgba(15,23,42,.045),
+            0 34px 90px rgba(15,23,42,.086),
+            0 14px 34px rgba(15,23,42,.042),
             inset 0 1px 0 rgba(255,255,255,.94);
 
         backdrop-filter: blur(26px);
         -webkit-backdrop-filter: blur(26px);
-
-        transform: translateY(2px);
     }
 
     .pc-login-card::before {
@@ -291,8 +289,8 @@
         inset: 0;
 
         background:
-            radial-gradient(circle at 14% 0%, rgba(16,185,129,.085), transparent 34%),
-            radial-gradient(circle at 96% 100%, rgba(245,158,11,.055), transparent 32%);
+            radial-gradient(circle at 14% 0%, rgba(16,185,129,.082), transparent 34%),
+            radial-gradient(circle at 96% 100%, rgba(245,158,11,.052), transparent 32%);
 
         pointer-events: none;
     }
@@ -322,7 +320,7 @@
 
     .pc-login-header {
         text-align: center;
-        margin-bottom: 42px;
+        margin-bottom: 36px;
     }
 
     .pc-login-title {
@@ -331,7 +329,7 @@
         color: #064e3b;
 
         font-family: 'Poppins', sans-serif;
-        font-size: 32px;
+        font-size: 31px;
         line-height: 1.12;
         font-weight: 900;
         letter-spacing: -0.065em;
@@ -342,7 +340,7 @@
 
         color: #64748b;
 
-        font-size: 15px;
+        font-size: 14.8px;
         line-height: 1.55;
         font-weight: 700;
     }
@@ -350,7 +348,7 @@
     .pc-login-form {
         display: flex;
         flex-direction: column;
-        gap: 23px;
+        gap: 21px;
     }
 
     .pc-form-group {
@@ -360,11 +358,11 @@
     .pc-label {
         display: block;
 
-        margin: 0 0 10px 2px;
+        margin: 0 0 9px 2px;
 
         color: #1e293b;
 
-        font-size: 12.5px;
+        font-size: 12.2px;
         font-weight: 900;
         letter-spacing: .055em;
     }
@@ -376,7 +374,7 @@
 
     .pc-input {
         width: 100%;
-        height: 61px;
+        height: 59px;
 
         border: 1px solid #dbe5ee;
         border-radius: 18px;
@@ -388,7 +386,7 @@
 
         outline: none;
 
-        font-size: 15px;
+        font-size: 14.8px;
         font-weight: 700;
 
         transition:
@@ -425,7 +423,7 @@
 
         color: #0f766e;
 
-        font-size: 18px;
+        font-size: 17px;
 
         pointer-events: none;
 
@@ -471,13 +469,13 @@
         display: flex;
         justify-content: flex-end;
 
-        margin-top: -4px;
+        margin-top: -5px;
     }
 
     .pc-forgot-link {
         color: #059669;
 
-        font-size: 13.5px;
+        font-size: 13.2px;
         font-weight: 900;
         text-decoration: none;
     }
@@ -489,12 +487,12 @@
     }
 
     .pc-submit-area {
-        padding-top: 18px;
+        padding-top: 16px;
     }
 
     .pc-submit-btn {
         width: 100%;
-        height: 64px;
+        height: 62px;
 
         border: 0;
         border-radius: 18px;
@@ -554,8 +552,8 @@
     */
 
     .pc-system-note {
-        margin-top: 38px;
-        padding: 18px;
+        margin-top: 32px;
+        padding: 17px;
 
         border-radius: 21px;
 
@@ -647,21 +645,21 @@
 
     .pc-enter-left {
         opacity: 0;
-        transform: translateX(-34px);
+        transform: translateX(-30px);
         filter: blur(5px);
         animation: pcEnterLeft .86s cubic-bezier(.16,1,.3,1) forwards;
     }
 
     .pc-enter-right {
         opacity: 0;
-        transform: translateX(34px);
+        transform: translateX(30px);
         filter: blur(5px);
         animation: pcEnterRight .86s cubic-bezier(.16,1,.3,1) forwards;
     }
 
     .pc-enter-up {
         opacity: 0;
-        transform: translateY(24px);
+        transform: translateY(20px);
         filter: blur(4px);
         animation: pcEnterUp .76s cubic-bezier(.16,1,.3,1) forwards;
     }
@@ -712,13 +710,13 @@
 
         .pc-login-brand,
         .pc-login-form-side {
-            height: 640px;
-            min-height: 640px;
+            height: 620px;
+            min-height: 620px;
         }
 
         .pc-brand-logo {
             width: 405px;
-            margin-bottom: 82px;
+            margin-bottom: 56px;
         }
 
         .pc-brand-title {
@@ -727,7 +725,7 @@
 
         .pc-brand-description {
             font-size: 15px;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         .pc-feature-grid {
@@ -736,13 +734,13 @@
         }
 
         .pc-feature-card {
-            height: 104px;
+            height: 100px;
         }
 
         .pc-login-card {
             max-width: 505px;
-            min-height: 600px;
-            padding: 44px 46px 38px;
+            min-height: 580px;
+            padding: 40px 46px 34px;
         }
 
         .pc-login-title {
@@ -750,11 +748,15 @@
         }
 
         .pc-login-header {
-            margin-bottom: 34px;
+            margin-bottom: 30px;
+        }
+
+        .pc-login-form {
+            gap: 18px;
         }
 
         .pc-system-note {
-            margin-top: 30px;
+            margin-top: 26px;
         }
     }
 
