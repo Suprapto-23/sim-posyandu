@@ -8,7 +8,7 @@ $appStoragePath = $_ENV['APP_STORAGE']
     ?? $_SERVER['APP_STORAGE']
     ?? dirname(__DIR__) . '/storage';
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
         commands: __DIR__ . '/../routes/console.php',
@@ -67,5 +67,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })
-    ->useStoragePath($appStoragePath)
     ->create();
+
+$app->useStoragePath($appStoragePath);
+
+return $app;
