@@ -69,6 +69,24 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })
     ->create();
 
+/*
+|--------------------------------------------------------------------------
+| Vercel Runtime Fix
+|--------------------------------------------------------------------------
+|
+| Di Vercel, beberapa binding Laravel kadang tidak kebaca normal.
+| Kita paksa register filesystem dan view supaya view('...') tidak error.
+|
+*/
+
 $app->useStoragePath($appStoragePath);
+
+if (! $app->bound('files')) {
+    $app->register(\Illuminate\Filesystem\FilesystemServiceProvider::class);
+}
+
+if (! $app->bound('view')) {
+    $app->register(\Illuminate\View\ViewServiceProvider::class);
+}
 
 return $app;
