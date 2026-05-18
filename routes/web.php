@@ -47,19 +47,10 @@ use App\Http\Controllers\User\ProfileController     as UserProfile;
 use App\Http\Controllers\User\NotifikasiController  as UserNotifikasi;
 use App\Http\Controllers\User\RiwayatController;
 use App\Http\Controllers\User\KonselingController   as UserKonseling;
-
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
-Route::get('/gas-seed', function () {
-    try {
-        // Menjalankan seeder untuk membuat akun admin
-        Artisan::call('db:seed', ['--force' => true]);
-        return "<h1>Seeding Berhasil!</h1><pre>" . Artisan::output() . "</pre>";
-    } catch (\Exception $e) {
-        return "<h1>Gagal Seeding:</h1> " . $e->getMessage();
-    }
-});
+use Illuminate\Support\Facades\DB;
+
 
 // ==================== ROOT ====================
 Route::get('/', function () {
@@ -340,22 +331,45 @@ Route::prefix('user')->name('user.')->middleware(['auth','checkstatus','role:use
     
     // Fallback URL jika user me-refresh halaman ganti sandi
     Route::get('/profile/password', fn() => redirect()->route('user.profile.edit'));
-    
-
-Route::get('/debug-auth', function (Request $request) {
+    Route::get('/debug-vercel', function (Request $request) {
     return response()->json([
-        'auth_check' => Auth::check(),
-        'auth_id' => Auth::id(),
-        'session_id' => $request->session()->getId(),
-        'session_login_user_id' => $request->session()->get('login_user_id'),
-        'session_login_role' => $request->session()->get('login_role'),
-        'cookie_session_name' => config('session.cookie'),
-        'cookie_value_exists' => $request->cookies->has(config('session.cookie')),
-        'cookie_keys' => array_keys($request->cookies->all()),
+        'app_env' => app()->environment(),
+        'app_debug' => config('app.debug'),
+        'app_url' => config('app.url'),
+
         'session_driver' => config('session.driver'),
+        'session_cookie' => config('session.cookie'),
         'session_domain' => config('session.domain'),
         'session_secure' => config('session.secure'),
         'session_same_site' => config('session.same_site'),
+
+        'cookie_exists' => $request->cookies->has(config('session.cookie')),
+        'cookie_keys' => array_keys($request->cookies->all()),
+
+        'auth_check' => Auth::check(),
+        'auth_id' => Auth::id(),
+
+        'db_connection' => config('database.default'),
+        'db_host' => config('database.connections.mysql.host'),
+        'db_port' => config('database.connections.mysql.port'),
+        'ssl_ca_exists' => file_exists(base_path('config/certs/aiven-ca.pem')),
     ]);
+});
+
+Route::get('/debug-db', function () {
+    try {
+        DB::connection()->getPdo();
+
+        return response()->json([
+            'database' => 'connected',
+            'users_count' => DB::table('users')->count(),
+            'sessions_count' => DB::table('sessions')->count(),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'database' => 'error',
+            'message' => $e->getMessage(),
+        ], 500);
+    }
 });
 });
