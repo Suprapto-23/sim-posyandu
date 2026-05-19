@@ -4,6 +4,7 @@
 @section('page-name', 'Detail Arsip #' . $absensi->nomor_pertemuan)
 
 @push('styles')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
     /* ====================================================================
@@ -11,12 +12,13 @@
        ==================================================================== */
     html { scroll-behavior: smooth; }
     body { 
-        background-color: #f0fdf4; 
+        background-color: #f0fdf6; 
         background-image: 
-            radial-gradient(at 0% 0%, hsla(148, 100%, 97%, 1) 0, transparent 50%), 
-            radial-gradient(at 100% 0%, hsla(45, 100%, 96%, 1) 0, transparent 50%);
+            radial-gradient(at 0% 0%, hsla(152, 100%, 96%, 1) 0, transparent 50%), 
+            radial-gradient(at 100% 0%, hsla(43, 100%, 96%, 1) 0, transparent 50%);
         background-attachment: fixed;
         -webkit-font-smoothing: antialiased; 
+        text-rendering: optimizeLegibility;
     }
     .gpu-layer { transform: translateZ(0); will-change: transform, opacity; }
 
@@ -55,24 +57,20 @@
 
     .nexus-table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
     .nexus-table th { 
-        background: rgba(240, 253, 244, 0.8); color: #064e3b; font-size: 0.65rem; font-weight: 900; 
+        background: rgba(240, 253, 244, 0.95); color: #064e3b; font-size: 0.65rem; font-weight: 900; 
         text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 1.5rem; 
-        border-bottom: 1px solid rgba(16, 185, 129, 0.15); white-space: nowrap; position: sticky; top: 0; z-index: 10; 
-        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(16, 185, 129, 0.2); white-space: nowrap; position: sticky; top: 0; z-index: 10; 
     }
     .nexus-table td { padding: 1rem 1.5rem; vertical-align: middle; border-bottom: 1px dashed rgba(203, 213, 225, 0.5); transition: background-color 0.2s; }
     .nexus-table tr:hover td { background-color: rgba(255, 255, 255, 0.9); }
     .nexus-table tr:last-child td { border-bottom: none; }
 
-    /* Custom Scrollbar for Inner Containers */
-    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    /* Custom Scrollbar */
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
-    .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.4); }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.25); border-radius: 10px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.5); }
 
-    /* ====================================================================
-       4. ANIMATIONS STAGGER
-       ==================================================================== */
     @keyframes snappyFadeUp {
         0% { opacity: 0; transform: translateY(12px); }
         100% { opacity: 1; transform: translateY(0); }
@@ -84,7 +82,7 @@
 @endpush
 
 @section('content')
-<div class="max-w-[1300px] mx-auto pb-16 mt-2 relative z-10 gpu-layer stagger-grid">
+<div class="max-w-[1350px] mx-auto pb-16 mt-2 relative z-10 gpu-layer stagger-grid">
 
     {{-- 1. PREMIUM HEADER ACTION BAR --}}
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 mb-6 glass-panel p-6 rounded-[24px] relative overflow-hidden">
@@ -103,96 +101,103 @@
             </div>
         </div>
         
-        {{-- Tombol Koreksi Data --}}
-        <a href="{{ route('kader.absensi.index', ['kategori' => $absensi->kategori]) }}" class="w-full md:w-auto px-6 py-3 bg-white border border-amber-200 text-amber-600 font-black text-[10.5px] uppercase tracking-widest rounded-[14px] hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 group">
-            <i class="ph-bold ph-pencil-simple text-[15px] group-hover:animate-bounce"></i> Koreksi Manifes
-        </a>
+        {{-- LOGIKA TOMBOL KOREKSI SMART UPDATE --}}
+        @if(\Carbon\Carbon::parse($absensi->tanggal_posyandu)->isToday())
+            <a href="{{ route('kader.absensi.index', ['kategori' => $absensi->kategori]) }}" onclick="window.showLoader()" class="w-full md:w-auto px-6 py-3 bg-amber-50 border border-amber-200 text-amber-600 font-black text-[11px] uppercase tracking-widest rounded-[14px] hover:bg-amber-500 hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 group">
+                <i class="ph-bold ph-pencil-simple text-[14px] group-hover:animate-bounce"></i> Koreksi Sesi Ini
+            </a>
+        @else
+            <div class="w-full md:w-auto px-6 py-3 bg-slate-50 border border-slate-200 text-slate-400 font-black text-[11px] uppercase tracking-widest rounded-[14px] flex items-center justify-center gap-2 cursor-not-allowed shadow-sm" title="Data masa lalu sudah dikunci oleh sistem">
+                <i class="ph-bold ph-lock-key text-[15px]"></i> Arsip Terkunci
+            </div>
+        @endif
     </div>
 
-    {{-- 2. GRID KONTEN UTAMA --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start relative">
-        
-        {{-- KOLOM KIRI: ANALITIK (STICKY) --}}
-        <aside class="lg:col-span-4 flex flex-col gap-4 sticky top-6 z-20">
+    {{-- 2. GRID KONTEN UTAMA (STRUKTUR TERKUNCI UNTUK PRESISI SEMPURNA) --}}
+    <div class="relative w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            {{-- Kartu Persentase Kehadiran (Hero Metric) --}}
-            @php $persentase = $totalPasien > 0 ? round(($totalHadir / $totalPasien) * 100) : 0; @endphp
-            <div class="bg-gradient-to-br from-emerald-800 to-emerald-950 rounded-[24px] p-6 text-white shadow-[0_15px_30px_-10px_rgba(6,78,59,0.3)] relative overflow-hidden shrink-0 border border-emerald-700">
-                <div class="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
-                <h4 class="font-bold text-[10px] text-emerald-300 uppercase tracking-widest mb-1 relative z-10 flex items-center gap-1.5"><i class="ph-fill ph-chart-donut"></i> Tingkat Partisipasi</h4>
+            {{-- KOLOM KIRI: ANALITIK (BOS TINGGI LAYOUT) --}}
+            <aside class="col-span-1 lg:col-span-4 flex flex-col gap-4 relative z-10 w-full">
                 
-                <div class="flex items-baseline gap-1.5 mb-4 relative z-10">
-                    <span class="text-[46px] font-black text-white font-poppins leading-none">{{ $persentase }}</span>
-                    <span class="text-xl font-bold text-emerald-400">%</span>
-                </div>
-                
-                <div class="w-full h-2 bg-emerald-950/60 rounded-full overflow-hidden relative z-10 shadow-inner">
-                    <div class="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-1000" style="width: {{ $persentase }}%"></div>
-                </div>
-            </div>
-
-            {{-- Stat Cards (Mini Metrics) --}}
-            <div class="grid grid-cols-1 gap-3">
-                {{-- Total Sasaran --}}
-                <div class="glass-card rounded-[18px] p-4 flex items-center justify-between">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-[12px] bg-white border border-emerald-100 flex items-center justify-center text-emerald-600 text-[20px] shadow-sm"><i class="ph-fill ph-users-three"></i></div>
-                        <div>
-                            <p class="text-[9px] font-black text-emerald-700/60 uppercase tracking-widest">Total Terdaftar</p>
-                            <h3 class="text-[22px] font-black text-emerald-950 font-poppins leading-none mt-0.5">{{ $totalPasien }}</h3>
-                        </div>
+                {{-- Kartu Persentase Kehadiran --}}
+                @php $persentase = $totalPasien > 0 ? round(($totalHadir / $totalPasien) * 100) : 0; @endphp
+                <div class="bg-gradient-to-br from-emerald-800 to-emerald-950 rounded-[24px] p-6 text-white shadow-[0_15px_30px_-10px_rgba(6,78,59,0.3)] relative overflow-hidden shrink-0 border border-emerald-700">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
+                    <h4 class="font-bold text-[10px] text-emerald-300 uppercase tracking-widest mb-1 relative z-10 flex items-center gap-1.5"><i class="ph-fill ph-chart-donut"></i> Tingkat Partisipasi</h4>
+                    
+                    <div class="flex items-baseline gap-1.5 mb-4 relative z-10">
+                        <span class="text-[46px] font-black text-white font-poppins leading-none">{{ $persentase }}</span>
+                        <span class="text-xl font-bold text-emerald-400">%</span>
                     </div>
-                </div>
-                
-                {{-- Hadir --}}
-                <div class="glass-card rounded-[18px] p-4 flex items-center justify-between border-l-[5px] border-l-emerald-500">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-[12px] bg-emerald-50 text-emerald-600 flex items-center justify-center text-[20px]"><i class="ph-fill ph-check-circle"></i></div>
-                        <div>
-                            <p class="text-[9px] font-black text-emerald-700/60 uppercase tracking-widest">Warga Hadir</p>
-                            <h3 class="text-[22px] font-black text-emerald-600 font-poppins leading-none mt-0.5">{{ $totalHadir }}</h3>
-                        </div>
+                    
+                    <div class="w-full h-2 bg-emerald-950/60 rounded-full overflow-hidden relative z-10 shadow-inner">
+                        <div class="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full transition-all duration-1000" style="width: {{ $persentase }}%"></div>
                     </div>
                 </div>
 
-                {{-- Absen --}}
-                <div class="glass-card rounded-[18px] p-4 flex items-center justify-between border-l-[5px] border-l-rose-500">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-[12px] bg-rose-50 text-rose-500 flex items-center justify-center text-[20px]"><i class="ph-fill ph-x-circle"></i></div>
-                        <div>
-                            <p class="text-[9px] font-black text-rose-700/60 uppercase tracking-widest">Warga Absen</p>
-                            <h3 class="text-[22px] font-black text-rose-600 font-poppins leading-none mt-0.5">{{ $totalAbsen }}</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Navigasi Cepat: Riwayat Sesi Lainnya --}}
-            <div class="glass-panel rounded-[20px] p-5 flex flex-col max-h-[300px]">
-                <h3 class="font-black text-emerald-900 text-[10.5px] uppercase tracking-widest mb-3 flex items-center gap-2 pb-3 border-b border-emerald-100 shrink-0">
-                    <i class="ph-bold ph-clock-counter-clockwise text-amber-500 text-[15px]"></i> Akses Sesi Sebelumnya
-                </h3>
-                <div class="space-y-1.5 overflow-y-auto pr-1 custom-scroll">
-                    @forelse($semuaSesi as $sesi)
-                        <a href="{{ route('kader.absensi.show', $sesi->id) }}" class="flex items-center gap-3 p-2.5 rounded-[12px] transition-colors border {{ $sesi->id == $absensi->id ? 'bg-emerald-50 border-emerald-200' : 'border-transparent hover:bg-white hover:border-emerald-100' }}">
-                            <div class="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 {{ $sesi->id == $absensi->id ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-100/50 text-emerald-700' }}">
-                                <span class="text-[11.5px] font-black">#{{ $sesi->nomor_pertemuan }}</span>
+                {{-- Stat Cards --}}
+                <div class="grid grid-cols-1 gap-3 shrink-0">
+                    <div class="glass-card rounded-[18px] p-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-[12px] bg-white border border-emerald-100 flex items-center justify-center text-emerald-600 text-[20px] shadow-sm"><i class="ph-fill ph-users-three"></i></div>
+                            <div>
+                                <p class="text-[9px] font-black text-emerald-700/60 uppercase tracking-widest">Total Terdaftar</p>
+                                <h3 class="text-[22px] font-black text-emerald-950 font-poppins leading-none mt-0.5">{{ $totalPasien }}</h3>
                             </div>
-                            <div class="min-w-0">
-                                <p class="text-[11px] font-black text-emerald-950 truncate">{{ \Carbon\Carbon::parse($sesi->tanggal_posyandu)->locale('id')->translatedFormat('d M Y') }}</p>
-                                @if($sesi->id == $absensi->id) <span class="text-[8.5px] text-emerald-600 font-bold tracking-widest uppercase">Sedang Dibuka</span> @endif
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card rounded-[18px] p-4 flex items-center justify-between border-l-[5px] border-l-emerald-500">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-[12px] bg-emerald-50 text-emerald-600 flex items-center justify-center text-[20px]"><i class="ph-fill ph-check-circle"></i></div>
+                            <div>
+                                <p class="text-[9px] font-black text-emerald-700/60 uppercase tracking-widest">Warga Hadir</p>
+                                <h3 class="text-[22px] font-black text-emerald-600 font-poppins leading-none mt-0.5">{{ $totalHadir }}</h3>
                             </div>
-                        </a>
-                    @empty
-                        <p class="text-center text-[10px] text-emerald-600/70 font-bold py-4">Belum ada sesi historis lain.</p>
-                    @endforelse
-                </div>
-            </div>
-        </aside>
+                        </div>
+                    </div>
 
-        {{-- KOLOM KANAN: TABEL MANIFES PESERTA --}}
-        <main class="lg:col-span-8 flex flex-col h-full">
-            <div class="glass-panel rounded-[24px] flex flex-col overflow-hidden shadow-sm h-full max-h-[750px]">
+                    <div class="glass-card rounded-[18px] p-4 flex items-center justify-between border-l-[5px] border-l-rose-500">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-[12px] bg-rose-50 text-rose-500 flex items-center justify-center text-[20px]"><i class="ph-fill ph-x-circle"></i></div>
+                            <div>
+                                <p class="text-[9px] font-black text-rose-700/60 uppercase tracking-widest">Warga Absen</p>
+                                <h3 class="text-[22px] font-black text-rose-600 font-poppins leading-none mt-0.5">{{ $totalAbsen }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Sesi Sebelumnya --}}
+                <div class="glass-panel rounded-[20px] p-5 flex flex-col flex-1 min-h-[250px] shrink-0">
+                    <h3 class="font-black text-emerald-900 text-[10.5px] uppercase tracking-widest mb-3 flex items-center gap-2 pb-3 border-b border-emerald-100 shrink-0">
+                        <i class="ph-bold ph-clock-counter-clockwise text-amber-500 text-[15px]"></i> Sesi Sebelumnya
+                    </h3>
+                    <div class="space-y-1.5 overflow-y-auto pr-1 custom-scroll flex-1 h-0">
+                        @forelse($semuaSesi as $sesi)
+                            <a href="{{ route('kader.absensi.show', $sesi->id) }}" class="flex items-center gap-3 p-2.5 rounded-[12px] transition-colors border {{ $sesi->id == $absensi->id ? 'bg-emerald-50 border-emerald-200' : 'border-transparent hover:bg-white hover:border-emerald-100' }}">
+                                <div class="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0 {{ $sesi->id == $absensi->id ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-100/50 text-emerald-700' }}">
+                                    <span class="text-[11.5px] font-black">#{{ $sesi->nomor_pertemuan }}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-black text-emerald-950 truncate">{{ \Carbon\Carbon::parse($sesi->tanggal_posyandu)->locale('id')->translatedFormat('d M Y') }}</p>
+                                    @if($sesi->id == $absensi->id) <span class="text-[8.5px] text-emerald-600 font-bold tracking-widest uppercase">Sedang Dibuka</span> @endif
+                                </div>
+                            </a>
+                        @empty
+                            <p class="text-center text-[10px] text-emerald-600/70 font-bold py-4">Belum ada sesi historis lain.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </aside>
+
+            <div class="hidden lg:block lg:col-span-8"></div>
+        </div>
+
+        {{-- KOLOM KANAN: TABEL MANIFES (MUTLAK TERKUNCI MENGIKUTI KIRI) --}}
+        <main class="w-full lg:w-[calc(66.666667%-8px)] lg:absolute lg:top-0 lg:bottom-0 lg:right-0 mt-6 lg:mt-0 flex flex-col z-20">
+            <div class="glass-panel rounded-[24px] flex flex-col overflow-hidden shadow-sm h-full w-full">
                 
                 {{-- Header Tabel & Search --}}
                 <div class="px-6 py-5 bg-white/60 border-b border-emerald-100 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-20">
@@ -206,9 +211,9 @@
                     </div>
                 </div>
 
-                {{-- Area Body Tabel (Scrollable) --}}
-                <div class="overflow-y-auto custom-scroll w-full flex-1">
-                    <table class="nexus-table min-w-full">
+                {{-- Area Body Tabel --}}
+                <div class="overflow-y-auto custom-scroll w-full flex-1 h-0">
+                    <table class="nexus-table min-w-full relative z-10">
                         <thead>
                             <tr>
                                 <th class="w-16 pl-6 text-center">No</th>
@@ -255,7 +260,7 @@
                 </div>
 
                 {{-- Footer Info Box --}}
-                <div class="px-6 py-4 bg-emerald-50/50 border-t border-emerald-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                <div class="px-6 py-4 bg-emerald-50/50 border-t border-emerald-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 z-20 relative">
                     <p class="text-[9px] font-black text-emerald-700/60 uppercase tracking-widest flex items-center gap-1.5">
                         <i class="ph-fill ph-user-circle text-emerald-400 text-[14px]"></i> Pencatat: <span class="text-emerald-900">{{ $absensi->pencatat->name ?? 'Sistem Auth' }}</span>
                     </p>
@@ -271,14 +276,12 @@
 
 @push('scripts')
 <script>
-    // Live Search Manifes
     const searchInput = document.getElementById('manifestSearch');
     if(searchInput) {
         searchInput.addEventListener('keyup', function() {
             const filter = this.value.toLowerCase();
             const rows = document.querySelectorAll('#manifestTableBody tr');
             rows.forEach(row => {
-                // Mencari berdasarkan kolom nama saja agar lebih presisi
                 const namaKolom = row.querySelector('.manifest-nama');
                 if(namaKolom) {
                     const textData = namaKolom.textContent.toLowerCase();

@@ -1,396 +1,401 @@
 @extends('layouts.kader')
-
-@section('title', 'Log Pemeriksaan Klinis')
-@section('page-name', 'Rekam Medis (EMR)')
+@section('title', 'Log Rekam Medis - Nexus EMR')
+@section('page-name', 'Manajemen Antropometri')
 
 @push('styles')
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    /* ====================================================================
-       1. GLOBAL OPTIMIZATION & ANTI-LAG ENGINE (Dari Referensi Absensi)
-       ==================================================================== */
-    html { scroll-behavior: smooth; }
-    body { 
-        background-color: #f4f7fe; 
-        -webkit-font-smoothing: antialiased; 
-        text-rendering: optimizeLegibility;
-    }
-    .gpu-accel { transform: translateZ(0); will-change: transform, opacity; }
-
-    /* ====================================================================
-       2. SNAPPY ENTRANCE ANIMATIONS (120 FPS FEEL)
-       ==================================================================== */
-    @keyframes snappyFadeUp {
-        0% { opacity: 0; transform: translateY(15px); }
-        100% { opacity: 1; transform: translateY(0); }
-    }
-    
-    .stagger-fast > * {
-        opacity: 0;
-        animation: snappyFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    
-    .stagger-fast > *:nth-child(1) { animation-delay: 40ms; }
-    .stagger-fast > *:nth-child(2) { animation-delay: 80ms; }
-    .stagger-fast > *:nth-child(3) { animation-delay: 120ms; }
-    .stagger-fast > *:nth-child(4) { animation-delay: 160ms; }
-
-    /* ====================================================================
-       3. PIXEL PERFECT UI (Menyamakan dengan Desain Absensi)
-       ==================================================================== */
-    .crm-search {
-        width: 100%; background-color: #ffffff; border: 1px solid #e2e8f0; color: #1e293b;
-        font-size: 0.85rem; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif;
-        border-radius: 9999px; padding: 0.6rem 1.2rem 0.6rem 2.5rem;
-        outline: none; transition: all 0.2s ease;
-    }
-    .crm-search:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-
-    .crm-select {
-        background-color: #ffffff; border: 1px solid #e2e8f0; color: #1e293b;
-        font-size: 0.85rem; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif;
-        border-radius: 9999px; padding: 0.6rem 2.5rem 0.6rem 1.2rem;
-        outline: none; transition: all 0.2s ease; appearance: none; cursor: pointer;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-        background-position: right 1rem center; background-repeat: no-repeat; background-size: 1.2em;
-    }
-    .crm-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-
-    .nexus-card { 
-        background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px;
-        box-shadow: 0 4px 15px -5px rgba(15, 23, 42, 0.02);
-        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    :root {
+        --nexus-emerald: #059669;
+        --nexus-emerald-light: #ecfdf5;
+        --nexus-slate: #64748b;
+        --nexus-dark: #0f172a;
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.5);
     }
 
-    /* iOS Segmented Control dari Absensi */
-    .ios-segment { display: flex; background: #f1f5f9; padding: 4px; border-radius: 9999px; overflow-x: auto; }
-    .ios-segment::-webkit-scrollbar { display: none; }
-    .ios-btn { flex: 1; text-align: center; padding: 8px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 9999px; color: #64748b; transition: all 0.2s ease; white-space: nowrap; }
-    .ios-btn.active { background: #ffffff; color: #4f46e5; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-    .ios-btn:hover:not(.active) { color: #334155; }
-
-    /* Table Styles */
-    .tr-nexus { transition: all 0.2s ease; border-bottom: 1px solid #f1f5f9; }
-    .tr-nexus:hover { background-color: #f8fafc; transform: translateY(-1px); }
-    
-    .med-badge {
-        display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; border-radius: 6px; 
-        font-size: 11px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; 
+    body {
         font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f8fafc;
     }
 
-    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .animate-up { opacity: 0; animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ==========================================================
-       4. SWEETALERT 2 - CLEAN UI (Dari Referensi Absensi)
-       ========================================================== */
-    div:where(.swal2-container).swal2-backdrop-show { background: rgba(15, 23, 42, 0.5) !important; backdrop-filter: blur(4px) !important; z-index: 99999 !important; }
-    .swal2-popup:not(.swal2-toast) { border-radius: 24px !important; padding: 2.5rem 2rem 2rem !important; background: #ffffff !important; width: 24em !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15) !important; border: none !important; }
-    .swal2-title { font-family: 'Poppins', sans-serif !important; font-weight: 900 !important; font-size: 1.3rem !important; color: #1e293b !important; padding-top: 0 !important; }
-    .swal2-html-container { font-family: 'Plus Jakarta Sans', sans-serif !important; color: #64748b !important; font-size: 0.85rem !important; line-height: 1.6 !important; margin: 1em 0 0.5em !important; }
-    .swal2-actions { gap: 10px !important; margin-top: 1.5rem !important; width: 100% !important; justify-content: center !important; }
+    /* Decorative Medical Aura */
+    .nexus-blur-aura {
+        position: fixed; width: 500px; height: 500px; border-radius: 50%;
+        filter: blur(100px); z-index: -1; opacity: 0.12; pointer-events: none;
+    }
+    .aura-emerald { top: -50px; right: -50px; background: var(--nexus-emerald); }
+    .aura-teal { bottom: -50px; left: -50px; background: #14b8a6; }
+
+    /* Glassmorphism Container */
+    .nexus-glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid var(--glass-border);
+        border-radius: 28px;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.05);
+        overflow: hidden;
+    }
+
+    /* Filter & Search Bar */
+    .nexus-search-bar {
+        background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0;
+        display: flex; align-items: center; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    .nexus-search-input {
+        flex: 1; border: none; padding: 10px 15px; outline: none; background: transparent;
+        font-weight: 500; font-size: 13px; color: var(--nexus-dark);
+    }
+    .nexus-search-btn {
+        background: var(--nexus-emerald); color: white; padding: 10px 20px;
+        border-radius: 12px; font-weight: 700; font-size: 12px; border: none;
+        cursor: pointer; transition: all 0.2s;
+    }
+    .nexus-search-btn:hover { background: #047857; }
+
+    .nexus-select {
+        background: #ffffff; border: 1px solid #e2e8f0; padding: 12px 16px;
+        border-radius: 16px; font-weight: 600; font-size: 13px; color: var(--nexus-dark);
+        outline: none; cursor: pointer; appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+        padding-right: 40px;
+    }
+
+    /* Modern Table Design */
+    .nexus-table-wrapper { overflow-x: auto; width: 100%; }
+    .nexus-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .nexus-table th {
+        background: rgba(248, 250, 252, 0.6); padding: 16px 24px;
+        text-align: left; font-size: 11px; font-weight: 800; color: var(--nexus-slate);
+        text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .nexus-table td {
+        padding: 18px 24px; border-bottom: 1px solid #f1f5f9;
+        font-size: 14px; font-weight: 600; color: var(--nexus-dark);
+        vertical-align: middle; transition: background 0.2s;
+    }
+    .nexus-table tr:last-child td { border-bottom: none; }
+    .nexus-table tbody tr:hover td { background: rgba(236, 253, 245, 0.4); }
+
+    /* Identity Cell */
+    .cell-identity { display: flex; flex-direction: column; gap: 4px; }
+    .cell-name { font-weight: 800; color: var(--nexus-dark); font-size: 14px; }
+    .cell-nik { font-family: monospace; font-size: 11px; color: #94a3b8; font-weight: 500; }
+
+    /* Category Pill */
+    .cat-pill {
+        display: inline-flex; items-center; gap: 6px; padding: 6px 12px;
+        border-radius: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .cat-balita { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+    .cat-remaja { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .cat-lansia { background: #fce7f3; color: #be185d; border: 1px solid #fbcfe8; }
+
+    /* Status Badges */
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+        border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .status-pending { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; } /* Gold */
+    .status-verified { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; } /* Emerald */
+    .status-rejected { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; } /* Rose */
+
+    /* Action Buttons */
+    .action-group { display: flex; gap: 8px; }
+    .btn-action {
+        width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s; border: 1px solid transparent; cursor: pointer; text-decoration: none;
+    }
+    .btn-show { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .btn-show:hover { background: #e2e8f0; color: #0f172a; }
+    .btn-edit { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+    .btn-edit:hover { background: #fef3c7; transform: translateY(-2px); }
+    .btn-del { background: #fff1f2; color: #e11d48; border-color: #fecdd3; }
+    .btn-del:hover { background: #ffe4e6; transform: translateY(-2px); }
     
-    .swal-btn-danger { background: #f43f5e !important; color: #ffffff !important; border-radius: 9999px !important; padding: 12px 28px !important; font-size: 11px !important; font-weight: 900 !important; text-transform: uppercase !important; box-shadow: 0 4px 15px -3px rgba(244,63,94,0.3) !important; border: none !important; transition: all 0.2s ease !important; }
-    .swal-btn-cancel { background: #f1f5f9 !important; color: #475569 !important; border-radius: 9999px !important; padding: 12px 28px !important; font-size: 11px !important; font-weight: 900 !important; text-transform: uppercase !important; border: none !important; transition: all 0.2s ease !important; }
+    /* Tombol Tambah Utama */
+    .btn-nexus-primary {
+        background: var(--nexus-emerald); color: white; padding: 14px 24px;
+        border-radius: 16px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.5px; font-size: 12px; display: inline-flex; align-items: center; gap: 8px;
+        box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25); transition: all 0.3s ease; text-decoration: none;
+    }
+    .btn-nexus-primary:hover { background: #047857; transform: translateY(-2px); box-shadow: 0 12px 24px rgba(5, 150, 105, 0.35); color: white; }
+
+    /* SweetAlert Custom Nexus Style */
+    .swal2-backdrop-show { background: rgba(15, 23, 42, 0.5) !important; backdrop-filter: blur(8px) !important; }
+    .nexus-swal-popup { border-radius: 28px !important; padding: 2.5rem 2rem !important; background: rgba(255, 255, 255, 0.95) !important; backdrop-filter: blur(20px) !important; border: 1px solid rgba(255, 255, 255, 0.8) !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important; width: 26em !important; }
+    .nexus-swal-title { font-family: 'Plus Jakarta Sans', sans-serif !important; font-size: 1.35rem !important; font-weight: 800 !important; color: #0f172a !important; margin-bottom: 0.5rem !important; }
+    .nexus-swal-text { font-family: 'Plus Jakarta Sans', sans-serif !important; color: #64748b !important; font-size: 0.9rem !important; line-height: 1.6 !important; font-weight: 500 !important; }
+    .nexus-swal-actions { gap: 12px !important; margin-top: 2rem !important; width: 100% !important; }
+    .swal-btn-danger { flex: 1; background-color: #e11d48 !important; color: white !important; border-radius: 14px !important; padding: 14px 24px !important; font-weight: 800 !important; font-size: 0.75rem !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; box-shadow: 0 4px 14px 0 rgba(225, 29, 72, 0.3) !important; border: 1px solid transparent !important; transition: all 0.2s ease !important; }
+    .swal-btn-danger:hover { background-color: #be123c !important; transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4) !important; }
+    .swal-btn-cancel { flex: 1; background-color: #ffffff !important; color: #64748b !important; border: 1px solid #cbd5e1 !important; border-radius: 14px !important; padding: 14px 24px !important; font-weight: 800 !important; font-size: 0.75rem !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; transition: all 0.2s ease !important; }
+    .swal-btn-cancel:hover { background-color: #f8fafc !important; color: #0f172a !important; border-color: #94a3b8 !important; }
 </style>
 @endpush
 
 @section('content')
-{{-- PRELOADER SISTEM (Sama persis dengan Absensi) --}}
-<div id="smoothLoader" class="fixed inset-0 bg-slate-50/90 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center transition-all duration-200 opacity-100 pointer-events-auto">
-    <div class="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
-    <p class="text-indigo-900 font-black tracking-widest text-[9px] uppercase font-poppins">MEMUAT...</p>
-</div>
+<div class="max-w-[1200px] mx-auto animate-up pb-20 relative px-4 mt-6">
+    <div class="nexus-blur-aura aura-emerald"></div>
+    <div class="nexus-blur-aura aura-teal"></div>
 
-<div class="max-w-[1450px] mx-auto relative z-10 pb-16 mt-2 gpu-accel stagger-fast">
-
-    {{-- TEKS HEADER UTAMA --}}
-    <div class="mb-6 px-1 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    {{-- HEADER CONTROLS --}}
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
-            <h1 class="text-[22px] md:text-[24px] font-black text-slate-800 tracking-tight font-poppins leading-none mb-1.5">Log Pemeriksaan Fisik</h1>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Database Rekam Medis &bull; Meja 2-4</p>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Log <span class="text-emerald-600">Rekam Medis</span></h1>
+            <p class="text-slate-500 font-medium text-sm mt-1">Kelola data antropometri fisik dan pantau status validasi Bidan.</p>
         </div>
-        <a href="{{ route('kader.pemeriksaan.create') }}" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-[11px] font-black uppercase tracking-widest shadow-[0_4px_15px_rgba(79,70,229,0.3)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
-            <i class="ph-bold ph-plus text-[16px]"></i> Input Pemeriksaan Baru
-        </a>
-    </div>
-
-    {{-- 1. BANNER UTAMA (Menggunakan style banner dari Absensi) --}}
-    <div class="bg-white rounded-[24px] border border-slate-100 shadow-sm p-6 md:p-8 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        
-        <div class="flex items-center gap-5 w-full md:w-auto">
-            <div class="w-16 h-16 rounded-[20px] bg-sky-600 text-white flex items-center justify-center text-[32px] shadow-lg shadow-sky-200 shrink-0">
-                <i class="ph-fill ph-stethoscope"></i>
-            </div>
-            <div>
-                <div class="flex items-center gap-2 mb-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sistem EMR Berjalan</span>
-                </div>
-                <h2 class="text-xl md:text-[26px] font-black text-slate-800 tracking-tight font-poppins leading-none mb-2">Rekapitulasi Medis</h2>
-                <p class="text-slate-500 font-medium text-[12px]">Pusat pencatatan fisik yang telah dan sedang diproses.</p>
-            </div>
-        </div>
-
-        <div class="shrink-0 bg-slate-50 p-4 rounded-[20px] border border-slate-100 flex items-center gap-5 w-full md:w-auto justify-between md:justify-center">
-            <div class="text-left md:text-right">
-                <p class="text-[9px] font-black text-sky-400 uppercase tracking-widest mb-1">Total Pemeriksaan</p>
-                <p class="text-3xl font-black text-sky-600 font-poppins leading-none">{{ count($pemeriksaans ?? []) }}</p>
-            </div>
-            <div class="w-12 h-12 rounded-[14px] bg-white text-sky-400 flex items-center justify-center text-[24px] shadow-sm"><i class="ph-bold ph-files"></i></div>
+        <div>
+            <a href="{{ route('kader.pemeriksaan.create') }}" class="btn-nexus-primary">
+                <i class="fas fa-plus-circle text-lg"></i> Input Pengukuran Fisik
+            </a>
         </div>
     </div>
 
-    {{-- 2. SMART FILTER BAR --}}
-    @php
-        $reqKategori = request('kategori', '');
-        $reqStatus   = request('status', '');
-    @endphp
-    
-    <div class="nexus-card p-4 mb-6">
-        <form action="{{ route('kader.pemeriksaan.index') }}" method="GET" class="flex flex-col lg:flex-row gap-4 items-stretch">
+    {{-- FILTER ENGINE --}}
+    <div class="nexus-glass-card mb-8 p-4">
+        <form action="{{ route('kader.pemeriksaan.index') }}" method="GET" class="flex flex-col md:flex-row gap-4">
             
-            {{-- Kategori (iOS Segmented Control) --}}
-            <div class="ios-segment flex-1 lg:max-w-[550px]">
-                @foreach([
-                    ''          => 'Semua',
-                    'balita'    => 'Balita',
-                    'ibu_hamil' => 'Ibu Hamil',
-                    'remaja'    => 'Remaja',
-                    'lansia'    => 'Lansia'
-                ] as $val => $label)
-                    <button type="submit" name="kategori" value="{{ $val }}" class="ios-btn {{ $reqKategori === $val ? 'active' : '' }}">
-                        {{ $label }}
-                    </button>
-                @endforeach
-                <input type="hidden" name="status" value="{{ $reqStatus }}">
+            <div class="nexus-search-bar flex-1">
+                <i class="fas fa-search text-slate-400 ml-3"></i>
+                <input type="text" name="search" value="{{ request('search') }}" class="nexus-search-input" placeholder="Cari nama warga atau NIK...">
+                <button type="submit" class="nexus-search-btn">CARI</button>
             </div>
 
-            {{-- Filter Status --}}
-            <div class="w-full lg:w-[220px] shrink-0">
-                <select name="status" onchange="this.form.submit()" class="crm-select w-full">
-                    <option value="">Semua Validasi</option>
-                    <option value="pending" {{ $reqStatus == 'pending' ? 'selected' : '' }}>Menunggu Bidan</option>
-                    <option value="verified" {{ $reqStatus == 'verified' ? 'selected' : '' }}>Sah (Verified)</option>
-                    <option value="ditolak" {{ $reqStatus == 'ditolak' ? 'selected' : '' }}>Ditolak / Revisi</option>
-                </select>
-            </div>
+            <select name="kategori" class="nexus-select w-full md:w-48" onchange="this.form.submit()">
+                <option value="">Semua Kategori</option>
+                <option value="balita" {{ request('kategori') == 'balita' ? 'selected' : '' }}>Balita (12-59 Bln)</option>
+                <option value="remaja" {{ request('kategori') == 'remaja' ? 'selected' : '' }}>Remaja</option>
+                <option value="lansia" {{ request('kategori') == 'lansia' ? 'selected' : '' }}>Lansia</option>
+            </select>
 
-            {{-- Live Search --}}
-            <div class="flex-1 relative flex items-center min-w-[260px]">
-                <i class="ph-bold ph-magnifying-glass absolute left-4 text-slate-400 text-[16px]"></i>
-                <input type="text" id="liveSearchInput" name="search" value="{{ request('search') }}" placeholder="Cari Nama Warga atau NIK..." class="crm-search">
-            </div>
-
+            <select name="status" class="nexus-select w-full md:w-48" onchange="this.form.submit()">
+                <option value="">Semua Status</option>
+                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>⏳ Menunggu Validasi</option>
+                <option value="verified" {{ request('status') == 'verified' ? 'selected' : '' }}>✅ Tervalidasi</option>
+                <option value="direvisi" {{ request('status') == 'direvisi' ? 'selected' : '' }}>❌ Revisi/Ditolak</option>
+            </select>
+            
+            @if(request('search') || request('kategori') || request('status'))
+                <a href="{{ route('kader.pemeriksaan.index') }}" class="flex items-center justify-center px-4 py-3 rounded-2xl bg-rose-50 text-rose-600 font-bold text-xs hover:bg-rose-100 transition-colors border border-rose-100">
+                    <i class="fas fa-times mr-2"></i> Reset
+                </a>
+            @endif
         </form>
     </div>
 
-    {{-- 3. THE MASTERPIECE TABLE --}}
-    <div class="nexus-card overflow-hidden flex flex-col p-1">
-        <div class="overflow-x-auto custom-scrollbar bg-white rounded-[18px] min-h-[400px]">
-            <table class="w-full text-left border-collapse min-w-[1000px]">
+    {{-- DATA TABLE --}}
+    <div class="nexus-glass-card">
+        <div class="nexus-table-wrapper">
+            <table class="nexus-table">
                 <thead>
-                    <tr class="bg-slate-50/50">
-                        <th class="py-4 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest w-[15%] text-center border-b border-slate-100">Tanggal Input</th>
-                        <th class="py-4 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest w-[25%] border-b border-slate-100">Identitas Pasien</th>
-                        <th class="py-4 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest w-[35%] border-b border-slate-100">Klinis & Pengukuran</th>
-                        <th class="py-4 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest w-[13%] text-center border-b border-slate-100">Validasi</th>
-                        <th class="py-4 px-6 text-[11px] font-black text-slate-400 uppercase tracking-widest w-[12%] text-right border-b border-slate-100">Aksi</th>
+                    <tr>
+                        <th>Identitas Warga</th>
+                        <th>Kategori</th>
+                        <th>Tanggal Periksa</th>
+                        <th>Pengukuran Utama</th>
+                        <th>Status Medis</th>
+                        <th class="text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody id="medisTableBody">
-                    
-                    @forelse($pemeriksaans ?? [] as $item)
-                    @php
-                        $kategori   = ucwords(str_replace('_', ' ', $item->kategori_pasien ?? 'Umum'));
-                        $namaPasien = $item->nama_pasien ?? 'Anonim';
-                        $nikPasien  = $item->nik_pasien ?? '-';
-                        
-                        $statusRaw  = $item->status_verifikasi ?? 'pending';
-                        $badgeColor = $statusRaw == 'verified' ? 'emerald' : ($statusRaw == 'ditolak' ? 'rose' : 'amber');
-                        $statusText = $statusRaw == 'verified' ? 'Verified' : ($statusRaw == 'ditolak' ? 'Ditolak' : 'Pending');
-                        $iconStatus = $badgeColor == 'emerald' ? 'ph-fill ph-seal-check' : ($badgeColor == 'rose' ? 'ph-fill ph-x-circle' : 'ph-fill ph-hourglass-high');
-                    @endphp
-                    
-                    <tr class="tr-nexus med-row group/row" data-search="{{ strtolower($namaPasien . ' ' . $nikPasien) }}">
-                        
-                        {{-- 1. WAKTU --}}
-                        <td class="py-4 px-6 text-center align-middle">
-                            <div class="flex flex-col items-center justify-center">
-                                <span class="text-[13.5px] font-bold text-slate-700">{{ \Carbon\Carbon::parse($item->tanggal_periksa ?? $item->created_at)->format('d M Y') }}</span>
-                                <span class="text-[11px] font-medium text-slate-400 mt-0.5">{{ \Carbon\Carbon::parse($item->tanggal_periksa ?? $item->created_at)->format('H:i') }} WIB</span>
+                <tbody>
+                    @forelse($pemeriksaans as $pem)
+                    <tr>
+                        <td>
+                            <div class="cell-identity">
+                                <span class="cell-name">{{ $pem->kunjungan->pasien->nama_lengkap ?? 'Data Terhapus' }}</span>
+                                <span class="cell-nik"><i class="fas fa-id-card mr-1"></i> {{ $pem->kunjungan->pasien->nik ?? '-' }}</span>
                             </div>
                         </td>
-
-                        {{-- 2. IDENTITAS & KATEGORI --}}
-                        <td class="py-4 px-6 align-middle">
-                            <div class="flex items-center gap-3.5">
-                                <div class="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 text-slate-500 flex items-center justify-center font-bold text-[16px] shrink-0 font-poppins group-hover/row:bg-indigo-50 group-hover/row:text-indigo-600 transition-colors">
-                                    {{ strtoupper(substr($namaPasien, 0, 1)) }}
+                        <td>
+                            @if($pem->kategori_pasien === 'balita')
+                                <span class="cat-pill cat-balita"><i class="fas fa-child"></i> Balita</span>
+                            @elseif($pem->kategori_pasien === 'remaja')
+                                <span class="cat-pill cat-remaja"><i class="fas fa-user-graduate"></i> Remaja</span>
+                            @elseif($pem->kategori_pasien === 'lansia')
+                                <span class="cat-pill cat-lansia"><i class="fas fa-wheelchair"></i> Lansia</span>
+                            @else
+                                <span class="cat-pill" style="background:#f1f5f9; color:#64748b;">Lainnya</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="font-bold text-slate-800">{{ \Carbon\Carbon::parse($pem->tanggal_periksa)->translatedFormat('d M Y') }}</div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">{{ $pem->created_at->diffForHumans() }}</div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div class="text-center px-3 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div class="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Berat</div>
+                                    <div class="text-sm font-bold text-slate-800">{{ $pem->berat_badan ?? '-' }}<span class="text-[10px] text-emerald-500 ml-0.5">kg</span></div>
                                 </div>
-                                <div class="min-w-0 flex flex-col items-start">
-                                    <h4 class="text-[14px] font-bold text-slate-800 truncate group-hover/row:text-indigo-600 transition-colors mb-0.5" title="{{ $namaPasien }}">{{ $namaPasien }}</h4>
-                                    <div class="flex items-center gap-1.5 text-[11px]">
-                                        <span class="text-slate-500 font-medium">{{ $kategori }}</span>
-                                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                                        <span class="text-slate-400 font-mono">{{ $nikPasien }}</span>
-                                    </div>
+                                <div class="text-center px-3 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div class="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">Tinggi</div>
+                                    <div class="text-sm font-bold text-slate-800">{{ $pem->tinggi_badan ?? '-' }}<span class="text-[10px] text-emerald-500 ml-0.5">cm</span></div>
                                 </div>
                             </div>
                         </td>
+                        <td>
+                            @php
+                                $status = strtolower($pem->status_verifikasi);
+                                $badgeClass = 'status-pending';
+                                $icon = 'fa-clock';
+                                $text = 'Menunggu';
 
-                        {{-- 3. HASIL FISIK (Tipografi seimbang) --}}
-                        <td class="py-4 px-6 whitespace-normal align-middle">
-                            <div class="flex flex-wrap gap-1.5 items-center max-w-[340px]">
-                                @if($item->berat_badan) <span class="med-badge bg-sky-50 text-sky-700 border-sky-100"><span class="font-medium opacity-70 mr-1">BB:</span><span class="font-bold">{{ $item->berat_badan }} kg</span></span> @endif
-                                @if($item->tinggi_badan) <span class="med-badge bg-emerald-50 text-emerald-700 border-emerald-100"><span class="font-medium opacity-70 mr-1">TB:</span><span class="font-bold">{{ $item->tinggi_badan }} cm</span></span> @endif
-                                @if($item->lingkar_kepala) <span class="med-badge bg-amber-50 text-amber-700 border-amber-100"><span class="font-medium opacity-70 mr-1">LK:</span><span class="font-bold">{{ $item->lingkar_kepala }} cm</span></span> @endif
-                                @if($item->lingkar_lengan) <span class="med-badge bg-amber-50 text-amber-700 border-amber-100"><span class="font-medium opacity-70 mr-1">LILA:</span><span class="font-bold">{{ $item->lingkar_lengan }} cm</span></span> @endif
-                                @if($item->lingkar_perut) <span class="med-badge bg-amber-50 text-amber-700 border-amber-100"><span class="font-medium opacity-70 mr-1">LP:</span><span class="font-bold">{{ $item->lingkar_perut }} cm</span></span> @endif
-                                
-                                @if($item->tekanan_darah) <span class="med-badge bg-rose-50 text-rose-700 border-rose-100"><span class="font-medium opacity-70 mr-1">Tensi:</span><span class="font-bold">{{ $item->tekanan_darah }}</span></span> @endif
-                                @if($item->hemoglobin) <span class="med-badge bg-rose-50 text-rose-700 border-rose-100"><span class="font-medium opacity-70 mr-1">Hb:</span><span class="font-bold">{{ $item->hemoglobin }} g/dL</span></span> @endif
-                                
-                                @if($item->gula_darah) <span class="med-badge bg-purple-50 text-purple-700 border-purple-100"><span class="font-medium opacity-70 mr-1">Gula:</span><span class="font-bold">{{ $item->gula_darah }}</span></span> @endif
-                                @if($item->kolesterol) <span class="med-badge bg-purple-50 text-purple-700 border-purple-100"><span class="font-medium opacity-70 mr-1">Koles:</span><span class="font-bold">{{ $item->kolesterol }}</span></span> @endif
-                                @if($item->asam_urat) <span class="med-badge bg-purple-50 text-purple-700 border-purple-100"><span class="font-medium opacity-70 mr-1">AU:</span><span class="font-bold">{{ $item->asam_urat }}</span></span> @endif
-
-                                @if(empty($item->berat_badan) && empty($item->tinggi_badan) && empty($item->tekanan_darah))
-                                    <span class="text-[11px] font-medium text-slate-400 italic">Belum ada data klinis</span>
-                                @endif
-                            </div>
+                                if (in_array($status, ['verified', 'tervalidasi', 'approved'])) {
+                                    $badgeClass = 'status-verified';
+                                    $icon = 'fa-check-circle';
+                                    $text = 'Tervalidasi';
+                                } elseif (in_array($status, ['ditolak', 'rejected', 'direvisi'])) {
+                                    $badgeClass = 'status-rejected';
+                                    $icon = 'fa-exclamation-circle';
+                                    $text = 'Revisi';
+                                }
+                            @endphp
+                            <span class="status-badge {{ $badgeClass }}">
+                                <i class="fas {{ $icon }}"></i> {{ $text }}
+                            </span>
                         </td>
-
-                        {{-- 4. STATUS VALIDASI --}}
-                        <td class="py-4 px-6 text-center align-middle">
-                            <div class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-{{ $badgeColor }}-50 border border-{{ $badgeColor }}-100 w-full max-w-[90px] mx-auto">
-                                <i class="{{ $iconStatus }} text-{{ $badgeColor }}-500 text-[12px] {{ $statusRaw == 'pending' ? 'animate-pulse' : '' }}"></i>
-                                <span class="text-[10px] font-bold text-{{ $badgeColor }}-600">{{ $statusText }}</span>
-                            </div>
-                        </td>
-
-                        {{-- 5. AKSI CRUD --}}
-                        <td class="py-4 px-6 text-right align-middle">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('kader.pemeriksaan.show', $item->id) }}" class="w-8 h-8 rounded-[8px] bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 flex items-center justify-center transition-colors shadow-sm" title="Lihat Detail">
-                                    <i class="ph-bold ph-eye text-[15px]"></i>
+                        <td>
+                            <div class="action-group justify-end">
+                                <a href="{{ route('kader.pemeriksaan.show', $pem->id) }}" class="btn-action btn-show" title="Lihat Detail">
+                                    <i class="fas fa-file-medical"></i>
                                 </a>
                                 
-                                @if($statusRaw !== 'verified')
-                                    <a href="{{ route('kader.pemeriksaan.edit', $item->id) }}" class="w-8 h-8 rounded-[8px] bg-white border border-slate-200 text-slate-400 hover:text-amber-500 hover:bg-amber-50 hover:border-amber-200 flex items-center justify-center transition-colors shadow-sm" title="Edit Data">
-                                        <i class="ph-bold ph-pencil-simple text-[15px]"></i>
+                                {{-- Kunci Tombol Edit jika sudah di-ACC Bidan --}}
+                                @if(!in_array($status, ['verified', 'tervalidasi', 'approved']))
+                                    <a href="{{ route('kader.pemeriksaan.edit', $pem->id) }}" class="btn-action btn-edit" title="Koreksi Data">
+                                        <i class="fas fa-pen"></i>
                                     </a>
                                     
-                                    <form action="{{ route('kader.pemeriksaan.destroy', $item->id) }}" method="POST" class="delete-form m-0 p-0">
-                                        @csrf @method('DELETE')
-                                        <button type="button" class="btn-delete w-8 h-8 rounded-[8px] bg-white border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 flex items-center justify-center transition-colors shadow-sm" title="Hapus Data">
-                                            <i class="ph-bold ph-trash text-[15px]"></i>
+                                    <form action="{{ route('kader.pemeriksaan.destroy', $pem->id) }}" method="POST" class="delete-form inline-block">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="button" class="btn-action btn-del btn-delete" title="Hapus Data">
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </form>
                                 @else
-                                    <div class="w-8 h-8 rounded-[8px] bg-slate-50 border border-slate-100 text-slate-300 flex items-center justify-center cursor-not-allowed" title="Data Terkunci">
-                                        <i class="ph-bold ph-lock-key text-[15px]"></i>
+                                    <div class="btn-action" style="background:#f1f5f9; color:#cbd5e1; cursor:not-allowed;" title="Terkunci (Sudah ACC)">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                    <div class="btn-action" style="background:#f1f5f9; color:#cbd5e1; cursor:not-allowed;" title="Terkunci (Sudah ACC)">
+                                        <i class="fas fa-ban"></i>
                                     </div>
                                 @endif
                             </div>
                         </td>
                     </tr>
                     @empty
-                    @endforelse
-
-                    {{-- EMPTY STATE --}}
-                    <tr id="emptyStateRow" style="{{ (isset($pemeriksaans) && count($pemeriksaans) > 0) ? 'display:none;' : '' }}">
-                        <td colspan="5" class="py-24 text-center bg-transparent">
-                            <div class="flex flex-col items-center justify-center max-w-sm mx-auto">
-                                <div class="w-20 h-20 bg-white rounded-full border border-slate-100 flex items-center justify-center text-slate-300 text-[40px] mb-4 shadow-sm">
-                                    <i class="ph-fill ph-folder-dashed"></i>
+                    <tr>
+                        <td colspan="6" class="text-center py-16">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                    <i class="fas fa-folder-open text-4xl text-slate-300"></i>
                                 </div>
-                                <h4 class="text-[16px] font-bold text-slate-700 font-poppins mb-1">Data Tidak Ditemukan</h4>
-                                <p class="text-[13px] text-slate-500 mb-6 font-medium">Sistem tidak menemukan log pemeriksaan yang cocok. Coba ubah kata kunci atau filter.</p>
+                                <h3 class="text-lg font-bold text-slate-700 mb-1">Rekam Medis Kosong</h3>
+                                <p class="text-sm font-medium text-slate-500">Belum ada data pemeriksaan yang sesuai dengan filter Anda.</p>
                             </div>
                         </td>
                     </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
+        
+        {{-- Custom Pagination --}}
+        @if($pemeriksaans->hasPages())
+        <div class="p-6 border-t border-slate-100 bg-white/50">
+            {{ $pemeriksaans->links() }}
+        </div>
+        @endif
     </div>
-
-    {{-- 4. PAGINATION --}}
-    @if(isset($pemeriksaans) && count($pemeriksaans) > 0 && method_exists($pemeriksaans, 'links'))
-    <div class="mt-6 flex justify-end">
-        {{ $pemeriksaans->withQueryString()->links() }}
-    </div>
-    @endif
-
 </div>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // System Loader Logic
-    window.hideLoader = () => { const l = document.getElementById('smoothLoader'); if(l) { l.classList.remove('opacity-100','pointer-events-auto'); l.classList.add('opacity-0','pointer-events-none'); setTimeout(()=> l.style.display = 'none', 200); } };
-    window.showLoader = () => { const l = document.getElementById('smoothLoader'); if(l) { l.style.display = 'flex'; l.classList.remove('opacity-0','pointer-events-none'); l.classList.add('opacity-100','pointer-events-auto'); } };
-
-    window.onload = hideLoader;
-    document.addEventListener('DOMContentLoaded', hideLoader);
-    window.addEventListener('pageshow', hideLoader);
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // LIVE SEARCH INSTAN
-        const searchInput = document.getElementById('liveSearchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                const keyword = e.target.value.toLowerCase();
-                const rows = document.querySelectorAll('.med-row');
-                const emptyState = document.getElementById('emptyStateRow');
-                let adaDataYangCocok = false;
-
-                rows.forEach(row => {
-                    const dataSearch = row.getAttribute('data-search');
-                    if(dataSearch.includes(keyword)) {
-                        row.style.display = ''; 
-                        adaDataYangCocok = true;
-                    } else {
-                        row.style.display = 'none'; 
-                    }
-                });
-
-                if (emptyState) {
-                    emptyState.style.display = adaDataYangCocok ? 'none' : '';
-                }
-            });
-        }
-
-        // DELETE CONFIRMATION (Gaya Alert Absensi)
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        // SWEETALERT2 NEXUS THEME UNTUK DELETE CONFIRMATION
         document.querySelectorAll('.btn-delete').forEach(button => {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
                 const form = this.closest('.delete-form');
                 
                 Swal.fire({
                     title: 'Hapus Rekam Medis?',
-                    html: `Data pengukuran fisik ini akan <b class="text-rose-500 font-bold">dihapus secara permanen</b> dari sistem.`,
+                    html: `Data pengukuran fisik ini akan <b class="text-rose-500 font-bold">dihapus secara permanen</b> dari sistem. Aksi ini tidak dapat dibatalkan.`,
                     icon: 'warning',
+                    iconColor: '#f43f5e', 
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, Hapus Data',
-                    cancelButtonText: 'Batal',
-                    reverseButtons: true,
+                    confirmButtonText: '<i class="fas fa-trash-alt mr-1"></i> Ya, Hapus',
+                    cancelButtonText: 'Batalkan',
+                    reverseButtons: true, 
+                    buttonsStyling: false, 
                     customClass: { 
-                        popup: 'swal2-popup nexus-swal', 
+                        popup: 'nexus-swal-popup animate-up', 
+                        title: 'nexus-swal-title',
+                        htmlContainer: 'nexus-swal-text',
+                        actions: 'nexus-swal-actions',
                         confirmButton: 'swal-btn-danger',
                         cancelButton: 'swal-btn-cancel'
                     },
-                    buttonsStyling: false
+                    showClass: { popup: '' }, // override default swal anim to use our custom animate-up
+                    hideClass: { popup: 'swal2-hide' }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        showLoader();
+                        Swal.fire({
+                            title: 'Menghapus Data...',
+                            text: 'Sistem sedang membersihkan rekam medis.',
+                            allowOutsideClick: false,
+                            showConfirmButton: false,
+                            customClass: { popup: 'nexus-swal-popup', title: 'nexus-swal-title', htmlContainer: 'nexus-swal-text' },
+                            willOpen: () => { Swal.showLoading(); }
+                        });
                         form.submit();
                     }
                 });
             });
         });
+
+        // SUCCESS/ERROR TOAST NOTIFICATIONS (Gaya Nexus)
+        @if(session('success'))
+            const Toast = Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+                customClass: { popup: 'nexus-glass-card border border-emerald-200 !rounded-2xl !p-3' }
+            });
+            Toast.fire({
+                icon: 'success',
+                title: '<span class="text-sm font-bold text-slate-800 ml-1">{{ session('success') }}</span>'
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                title: 'Perhatian Sistem',
+                text: '{{ session('error') }}',
+                icon: 'error',
+                iconColor: '#f43f5e',
+                confirmButtonText: 'Mengerti',
+                buttonsStyling: false,
+                customClass: { 
+                    popup: 'nexus-swal-popup animate-up', 
+                    title: 'nexus-swal-title',
+                    htmlContainer: 'nexus-swal-text',
+                    confirmButton: 'swal-btn-danger w-full mt-4'
+                }
+            });
+        @endif
     });
 </script>
 @endpush

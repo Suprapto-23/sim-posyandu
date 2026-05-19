@@ -8,248 +8,215 @@ use App\Models\AbsensiDetail;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support5\Facades\Log;
 
 class AbsensiController extends Controller
 {
+    /**
+     * Mapping kategori string ke namespace Model terkait.
+     */
+    private array $modelMapping = [
+        'balita' => Balita::class,
+        'remaja' => Remaja::class,
+        'lansia' => Lansia::class,
+    ];
+
     /**
      * =========================================================================
      * 1. HALAMAN UTAMA INPUT ABSENSI (PRESENSI)
      * =========================================================================
      */
-    public function index(Request $request)
+    public function index(Request $request): View|RedirectResponse
     {
-        // Proteksi ketat: Hanya izinkan 3 entitas utama
         $kategori = $request->get('kategori', 'balita');
-        if (!in_array($kategori, ['balita', 'remaja', 'lansia'])) {
+        
+        // Anti-Tampering: Validasi kategori via mapping array
+        if (!array_key_exists($kategori, $this->modelMapping)) {
             return redirect()->route('kader.absensi.index', ['kategori' => 'balita']);
         }
 
         $pasiens = $this->getPasienByKategori($kategori);
         $tanggal = today()->format('Y-m-d');
 
-        // Cek sesi hari ini dengan Eager Loading untuk efisiensi
+        // Eager Loading rincian absensi hari ini
         $sesiHariIni = AbsensiPosyandu::with(['details' => function($query) {
-                $query->select('absensi_id', 'pasien_id', 'hadir', 'keterangan');
+                $query->select('id', 'absensi_id', 'pasien_id', 'hadir', 'keterangan');
             }])
             ->where('kategori', $kategori)
             ->whereDate('tanggal_posyandu', $tanggal)
             ->first();
 
-        // Mapping data absensi yang sudah terisi ke dalam array memory
-        $absensiData = [];
-        $pertemuanBerikutnya = AbsensiPosyandu::where('kategori', $kategori)->count() + 1;
-
-        if ($sesiHariIni) {
-            foreach ($sesiHariIni->details as $detail) {
-                $absensiData[$detail->pasien_id] = [
-                    'hadir'      => $detail->hadir,
-                    'keterangan' => $detail->keterangan
-                ];
-            }
-            $pertemuanBerikutnya = $sesiHariIni->nomor_pertemuan; 
-        }
-
-        // Kalkulasi Statistik Sidebar
-        $statsPerKategori = [];
-        foreach (['balita', 'remaja', 'lansia'] as $kat) {
-            $statsPerKategori[$kat] = [
-                'total_pertemuan' => AbsensiPosyandu::where('kategori', $kat)->count(),
-                'total_pasien'    => $this->getPasienByKategori($kat)->count(),
-            ];
-        }
-
-        return view('kader.absensi.index', compact(
-            'kategori', 'pasiens', 'pertemuanBerikutnya', 'sesiHariIni', 'statsPerKategori', 'absensiData'
-        ));
+        return view('kader.absensi.index', compact('pasiens', 'kategori', 'tanggal', 'sesiHariIni'));
     }
 
     /**
      * =========================================================================
-     * 2. MESIN PENYIMPANAN MASSAL (TRANSAKSI AMAN & OPTIMAL)
+     * 2. ENGINE PENYIMPANAN DATA (SMART INSERT & UPDATE)
      * =========================================================================
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        // Validasi strict
+        $kategori = $request->input('kategori');
+        
+        if (!array_key_exists($kategori, $this->modelMapping)) {
+            return back()->with('error', 'Kategori layanan tidak valid.');
+        }
+
+        // 1. Validasi Struktur Request Dasar
         $request->validate([
-            'kategori'   => 'required|in:balita,remaja,lansia',
-            'kehadiran'  => 'required|array', 
+            'kehadiran'  => 'required|array',
             'keterangan' => 'nullable|array',
         ]);
 
-        $kategori = $request->kategori;
-        $tanggal  = today()->format('Y-m-d');
-        
+        $kehadiranData = $request->input('kehadiran');
+        $pasienIds = array_keys($kehadiranData);
+        $modelClass = $this->modelMapping[$kategori];
+
+        // 2. CRITICAL SECURITY LOCK: Validasi keaslian ID Pasien di Database
+        $validCount = $modelClass::whereIn('id', $pasienIds)->count();
+        if ($validCount !== count($pasienIds)) {
+            return back()->with('error', 'Sistem mendeteksi adanya manipulasi data ID warga! Proses dibatalkan.');
+        }
+
         DB::beginTransaction();
         try {
-            // A. Inisialisasi atau Ambil Sesi Master
-            $sesi = AbsensiPosyandu::firstOrCreate(
+            $tanggal = today();
+            
+            // Generate atau dapatkan nomor pertemuan berjalan di bulan ini
+            $nomorPertemuan = AbsensiPosyandu::where('kategori', $kategori)
+                ->where('bulan', $tanggal->month)
+                ->where('tahun', $tanggal->year)
+                ->count() + 1;
+
+            // 3. Simpan / Dapatkan Header Sesi Absensi
+            $absensi = AbsensiPosyandu::firstOrCreate(
                 [
                     'kategori'         => $kategori,
-                    'tanggal_posyandu' => $tanggal
+                    'tanggal_posyandu' => $tanggal->format('Y-m-d'),
                 ],
                 [
-                    'kode_absensi'     => 'ABS-' . strtoupper(substr($kategori, 0, 3)) . '-' . date('Ymd') . '-' . rand(1000,9999),
-                    'nomor_pertemuan'  => AbsensiPosyandu::where('kategori', $kategori)->count() + 1,
-                    'bulan'            => date('m'),
-                    'tahun'            => date('Y'),
-                    'dicatat_oleh'     => auth()->id(),
+                    'kode_absensi'     => 'ABS-' . strtoupper($kategori) . '-' . $tanggal->format('YmdHis'),
+                    'nomor_pertemuan'  => $nomorPertemuan,
+                    'bulan'            => $tanggal->month,
+                    'tahun'            => $tanggal->year,
+                    'dicatat_oleh'     => auth()->id() ?? 1,
                 ]
             );
 
-            // B. Proses Detail Absensi (Upsert Logic)
-            foreach ($request->kehadiran as $pasien_id => $statusHadir) {
-                // Konversi boolean strict
-                $isHadir = filter_var($statusHadir, FILTER_VALIDATE_BOOLEAN);
-                $keterangan = !$isHadir ? ($request->keterangan[$pasien_id] ?? null) : null;
-
-                AbsensiDetail::updateOrCreate(
+            // 4. Proses Upsert Rincian Menggunakan Keunggulan Polymorphic
+            foreach ($kehadiranData as $pasienId => $status) {
+                $absensi->details()->updateOrCreate(
                     [
-                        'absensi_id'  => $sesi->id,
-                        'pasien_id'   => $pasien_id,
-                        'pasien_type' => $kategori
+                        'pasien_id'   => $pasienId,
+                        'pasien_type' => $modelClass, // Menyimpan class model polimorfik
                     ],
                     [
-                        'hadir'       => $isHadir,
-                        'keterangan'  => $keterangan,
-                        'updated_at'  => now(),
+                        'hadir'       => (bool) $status,
+                        'keterangan'  => $request->input("keterangan.$pasienId"),
                     ]
                 );
             }
 
             DB::commit();
-            return redirect()->route('kader.absensi.success')
-                             ->with('success', 'Data presensi berhasil disinkronisasi ke server.');
+            return redirect()->route('kader.absensi.success', ['id' => $absensi->id]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Kegagalan Sync Absensi Kader ({$kategori}): " . $e->getMessage());
-            return back()->with('error', 'Integritas data gagal! Sistem membatalkan penyimpanan otomatis.');
+            Log::error('Kegagalan Sistem Absensi (Store): ' . $e->getMessage());
+            return back()->with('error', 'Kegagalan database saat memproses absensi.');
         }
     }
 
     /**
      * =========================================================================
-     * 3. HALAMAN ANIMASI SUKSES
+     * 3. ENGINE NOTIFIKASI SUKSES (SUCCESS SCREEN)
      * =========================================================================
      */
-    public function success()
+    public function success($id): View|RedirectResponse
     {
-        return view('kader.absensi.success');
+        $absensi = AbsensiPosyandu::with(['pencatat', 'details'])->findOrFail($id);
+        return view('kader.absensi.success', compact('absensi'));
     }
 
     /**
      * =========================================================================
-     * 4. HALAMAN DETAIL ABSENSI (DIOPTIMALKAN DARI N+1 QUERY PROBLEM)
+     * 4. ARSIP & RIWAYAT ABSENSI BULANAN
      * =========================================================================
      */
-    public function show($id)
+    public function riwayat(Request $request): View
     {
-        $absensi = AbsensiPosyandu::with('pencatat')->findOrFail($id);
-        $details = AbsensiDetail::where('absensi_id', $id)->get();
+        $bulan = $request->get('bulan', today()->month);
+        $tahun = $request->get('tahun', today()->year);
 
-        // BULK QUERY OPTIMIZATION 
-        $pasienIds = $details->pluck('pasien_id')->toArray();
-        
-        $pasienData = match($absensi->kategori) {
-            'remaja' => Remaja::whereIn('id', $pasienIds)->select('id', 'nama_lengkap', 'nik')->get()->keyBy('id'),
-            'lansia' => Lansia::whereIn('id', $pasienIds)->select('id', 'nama_lengkap', 'nik')->get()->keyBy('id'),
-            default  => Balita::whereIn('id', $pasienIds)->select('id', 'nama_lengkap', 'nik')->get()->keyBy('id'),
-        };
-
-        // Menyuntikkan relasi ke collection
-        $details->map(function ($d) use ($pasienData) {
-            $d->pasien_data = $pasienData->get($d->pasien_id);
-            return $d;
-        });
-
-        $totalPasien = $details->count();
-        $totalHadir  = $details->where('hadir', true)->count();
-        $totalAbsen  = $totalPasien - $totalHadir;
-
-        // Ambil riwayat sesi lain untuk sidebar navigasi cepat
-        $semuaSesi = AbsensiPosyandu::where('kategori', $absensi->kategori)
-            ->select('id', 'nomor_pertemuan', 'tanggal_posyandu')
+        // Menggunakan Local Scopes dari model AbsensiPosyandu yang sudah kita rapihkan
+        $riwayats = AbsensiPosyandu::with(['pencatat'])
+            ->withCount(['details', 'hadir'])
+            ->periode($bulan, $tahun)
             ->orderBy('tanggal_posyandu', 'desc')
-            ->limit(10)
             ->get();
 
-        return view('kader.absensi.show', compact(
-            'absensi', 'details', 'totalHadir', 'totalAbsen', 'totalPasien', 'semuaSesi'
-        ));
+        return view('kader.absensi.riwayat', compact('riwayats', 'bulan', 'tahun'));
     }
 
     /**
      * =========================================================================
-     * 5. HALAMAN DAFTAR RIWAYAT (HISTORY)
+     * 5. MANIFEST DETAIL SESI (Memanfaatkan Polymorphic Eager Loading)
      * =========================================================================
      */
-    public function riwayat(Request $request)
+    public function show($id): View
     {
-        $kategori = $request->get('kategori');
-        $bulan    = $request->get('bulan');
+        // Berkat Polymorphic, kita tinggal panggil 'details.pasien'
+        // Eloquent otomatis tahu relasi ke tabel Balita/Remaja/Lansia secara instan!
+        $absensi = AbsensiPosyandu::with([
+            'pencatat', 
+            'details.pasien:id,nama_lengkap,nik'
+        ])->findOrFail($id);
 
-        $query = AbsensiPosyandu::withCount([
-            'details as total_hadir' => function ($query) {
-                $query->where('hadir', true);
-            },
-            'details as total_pasien'
-        ])->latest('tanggal_posyandu');
-
-        if ($kategori && in_array($kategori, ['balita', 'remaja', 'lansia'])) {
-            $query->where('kategori', $kategori);
-        }
-
-        if ($bulan) {
-            $parts = explode('-', $bulan);
-            if (count($parts) === 2) {
-                $query->whereYear('tanggal_posyandu', $parts[0])
-                      ->whereMonth('tanggal_posyandu', $parts[1]);
-            }
-        }
-
-        $riwayat = $query->paginate(15)->withQueryString();
-
-        return view('kader.absensi.riwayat', compact('riwayat'));
+        return view('kader.absensi.show', compact('absensi'));
     }
 
     /**
      * =========================================================================
-     * 6. FUNGSI HAPUS (DELETE DENGAN PENGAMANAN)
+     * 6. PROSES DESTRUKSI DATA (HAPUS PERTEMUAN)
      * =========================================================================
      */
-    public function destroy($id)
+    public function destroy($id): RedirectResponse
     {
         DB::beginTransaction();
         try {
             $absensi = AbsensiPosyandu::findOrFail($id);
-            AbsensiDetail::where('absensi_id', $absensi->id)->delete();
-            $absensi->delete();
             
+            // Hapus detail terlebih dahulu untuk menjaga integritas foreign key
+            $absensi->details()->delete();
+            $absensi->delete();
+
             DB::commit();
             return back()->with('success', 'Riwayat presensi berhasil dihanguskan dari sistem.');
             
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Kegagalan Destruksi Absensi: ' . $e->getMessage());
-            return back()->with('error', 'Terdapat kunci relasi. Sistem menolak penghapusan data.');
+            return back()->with('error', 'Terdapat kunci relasi aktif. Sistem menolak penghapusan data.');
         }
     }
 
     /**
      * =========================================================================
-     * 7. CORE ENGINE: PENARIKAN DATA ENTITAS PASIEN
+     * 7. CORE ENGINE: PENARIKAN DATA ENTITAS PASIEN (OPTIMIZED)
      * =========================================================================
      */
     private function getPasienByKategori(string $kategori)
     {
         return match($kategori) {
-            // Anak Balita: Strictly 12 - 59 Bulan sesuai standar medis Kemenkes
-            'balita' => Balita::whereRaw('TIMESTAMPDIFF(MONTH, tanggal_lahir, CURDATE()) BETWEEN 12 AND 59')
+            // Anak Balita: 12 - 59 Bulan. Menggunakan rentang tanggal agar ramah Database Indexing
+            'balita' => Balita::whereBetween('tanggal_lahir', [
+                                  now()->subMonths(59)->startOfDay()->format('Y-m-d'),
+                                  now()->subMonths(12)->endOfDay()->format('Y-m-d')
+                              ])
                               ->select('id', 'nama_lengkap', 'nik')
                               ->orderBy('nama_lengkap')
                               ->get(),

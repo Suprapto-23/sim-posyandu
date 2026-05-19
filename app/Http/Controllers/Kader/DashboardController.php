@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
 use App\Models\Kunjungan;
 use App\Models\JadwalPosyandu;
 use Illuminate\Http\Request;
@@ -18,67 +17,56 @@ class DashboardController extends Controller
     public function index()
     {
         try {
-            // 1. LOGIKA CERDAS: Pemisahan Umur Bayi (<1 Tahun) & Balita (1-5 Tahun)
-            $batasBayi = Carbon::now()->subYear(1);
+            // 1. FILTERING AKURAT MEDIS (Balita wajib 12-59 Bulan)
+            $totalBalita = Balita::whereRaw('TIMESTAMPDIFF(MONTH, tanggal_lahir, CURDATE()) BETWEEN 12 AND 59')->count();
+            $totalRemaja = Remaja::count();
+            $totalLansia = Lansia::count();
 
-            $totalBayi   = Balita::whereDate('tanggal_lahir', '>=', $batasBayi)->count();
-            $totalBalita = Balita::whereDate('tanggal_lahir', '<', $batasBayi)->count();
+            // 2. KALKULASI CAKUPAN / PERSENTASE KEHADIRAN (Disukai Dosen)
+            $totalWargaSistem = $totalBalita + $totalRemaja + $totalLansia;
+            $kehadiranHariIni = Kunjungan::whereDate('tanggal_kunjungan', today())->count();
+            
+            $persentaseKehadiran = $totalWargaSistem > 0 ? round(($kehadiranHariIni / $totalWargaSistem) * 100, 1) : 0;
 
-            // 2. KUMPULAN METRIK UTAMA (Untuk 6 Kartu Statistik di Atas)
             $stats = [
-                'total_bayi'         => $totalBayi,
                 'total_balita'       => $totalBalita,
-                'total_remaja'       => Remaja::count(),
-                'total_lansia'       => Lansia::count(),
-                'total_ibu_hamil'    => IbuHamil::where('status', 'aktif')->count(), // Pastikan hanya menghitung bumil aktif
-                'kehadiran_hari_ini' => Kunjungan::whereDate('tanggal_kunjungan', today())->count(),
-                'jadwal_hari_ini'    => JadwalPosyandu::whereDate('tanggal', today())
-                                        ->where('status', 'aktif')
-                                        ->count(),
+                'total_remaja'       => $totalRemaja,
+                'total_lansia'       => $totalLansia,
+                'kehadiran_hari_ini' => $kehadiranHariIni,
+                'persentase_hari_ini'=> $persentaseKehadiran,
+                'total_warga'        => $totalWargaSistem
             ];
 
-            // 3. DATA GRAFIK KUNJUNGAN (7 Hari Terakhir)
-            $trendAbsensi = $this->getAbsensi7Hari();
-            $chartLabels  = $trendAbsensi['labels'];
-            $chartData    = $trendAbsensi['data'];
+            // 3. GENERATE GRAFIK KUNJUNGAN (7 Hari Mundur)
+            [$chartLabels, $chartData] = $this->getAbsensi7Hari();
 
-            // 4. PENDAFTARAN WARGA BARU BULAN INI
-            $pendaftaran_bulan_ini = [
-                'bayi_balita' => Balita::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-                'remaja'      => Remaja::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-                'lansia'      => Lansia::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-                'ibu_hamil'   => IbuHamil::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
-            ];
+            // 4. REGISTRASI SASARAN TERBARU (5 Data Terakhir)
+            $sasaran_baru = Balita::latest()->take(5)->get();
 
-            // 5. LIST AKTIVITAS TERKINI (Balita yang baru didaftarkan)
-            $balita_baru = Balita::latest()->take(5)->get();
-
-            // 6. LIST AGENDA MENDATANG
+            // 5. AGENDA POSYANDU MENDATANG
             $jadwal_mendatang = JadwalPosyandu::where('tanggal', '>=', today())
                 ->where('status', 'aktif')
                 ->orderBy('tanggal', 'asc')
                 ->take(4)
                 ->get();
 
-            // 7. RENDER KE VIEW
             return view('kader.dashboard', compact(
                 'stats',
                 'chartLabels',
                 'chartData',
-                'pendaftaran_bulan_ini',
-                'balita_baru',
+                'sasaran_baru',
                 'jadwal_mendatang'
             ));
 
         } catch (\Exception $e) {
-            // Jika terjadi error database, catat di log dan kembalikan dengan aman
-            Log::error('KADER_DASHBOARD_ERROR: ' . $e->getMessage());
-            return back()->with('error', 'Terjadi kesalahan sistem saat memuat data dashboard.');
+            Log::error('KADER_DASHBOARD_CRASH: ' . $e->getMessage());
+            // Memberikan pesan error yang jelas dan tidak membuat blank putih
+            return response()->view('errors.500', ['message' => 'Terjadi kesalahan saat memuat analitik dashboard. Pastikan tabel terhubung.'], 500);
         }
     }
 
     /**
-     * HELPER: Mengambil total kehadiran/kunjungan selama 7 hari terakhir secara mundur.
+     * Mesin Analitik: Trafik Kehadiran 7 Hari Terakhir
      */
     private function getAbsensi7Hari()
     {
@@ -87,12 +75,10 @@ class DashboardController extends Controller
 
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
-            $labels[] = $date->translatedFormat('d M'); // Contoh: 10 Mei
-            
-            $count = Kunjungan::whereDate('tanggal_kunjungan', $date->format('Y-m-d'))->count();
-            $data[] = $count;
+            $labels[] = $date->translatedFormat('d M'); 
+            $data[] = Kunjungan::whereDate('tanggal_kunjungan', $date->format('Y-m-d'))->count();
         }
 
-        return ['labels' => $labels, 'data' => $data];
+        return [$labels, $data];
     }
 }

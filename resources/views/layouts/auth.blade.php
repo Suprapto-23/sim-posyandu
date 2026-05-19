@@ -114,25 +114,7 @@
             user-select: none; pointer-events: none;
         }
 
-        /* "PosyanduCare" text logo — Posyandu dark, Care amber */
-        .brand-wordmark {
-            font-family: var(--poppins);
-            font-size: clamp(24px, 2.8vw, 34px);
-            font-weight: 900;
-            letter-spacing: -.04em;
-            line-height: 1;
-            margin: 0 0 10px;
-            color: var(--g900);
-        }
-        .brand-wordmark span { color: var(--amber); }
-
-        .brand-tagline {
-            margin: 0 0 6px;
-            font-size: clamp(14px, 1.5vw, 16px);
-            font-weight: 700;
-            color: var(--s700);
-            letter-spacing: -.01em;
-        }
+        
 
         /* Amber divider line + diamond */
         .brand-divider {
@@ -562,11 +544,6 @@
         <section class="brand-side" aria-label="PosyanduCare branding">
 
             <img src="{{ asset('img/logo.png') }}" alt="Logo PosyanduCare" class="brand-logo">
-
-            <h1 class="brand-wordmark">Posyandu<span>Care</span></h1>
-
-            <p class="brand-tagline">Sehat Bersama, Tumbuh Setiap Generasi</p>
-
             <div class="brand-divider" aria-hidden="true">
                 <span class="bd-line l"></span>
                 <span class="bd-dot"></span>
