@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     | Default Database Connection Name
     |--------------------------------------------------------------------------
-    | Pastikan di Vercel, variabel DB_CONNECTION diset ke 'mysql'
+    | Pastikan Vercel Anda memiliki environment variable: DB_CONNECTION=mysql
     */
     'default' => env('DB_CONNECTION', 'mysql'),
 
@@ -40,9 +40,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            /* Optimasi SSL untuk Vercel: 
-               Menonaktifkan verifikasi sertifikat server karena 
-               lingkungan serverless tidak memiliki akses ke CA bundle.
+            /* Optimasi SSL untuk Vercel:
+               Menggunakan deteksi dinamis untuk konstanta PDO baru/lama 
+               agar tidak memicu deprecation error di PHP 8.5+.
             */
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (defined('Pdo\Mysql::ATTR_SSL_CA') ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
