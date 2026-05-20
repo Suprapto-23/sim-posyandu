@@ -8,7 +8,6 @@ return [
     |--------------------------------------------------------------------------
     | Default Database Connection Name
     |--------------------------------------------------------------------------
-    | Pastikan Vercel Anda memiliki environment variable: DB_CONNECTION=mysql
     */
     'default' => env('DB_CONNECTION', 'mysql'),
 
@@ -40,14 +39,14 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            /* Optimasi SSL untuk Vercel:
-               Menggunakan deteksi dinamis untuk konstanta PDO baru/lama 
-               agar tidak memicu deprecation error di PHP 8.5+.
+            /* Bypass Verifikasi SSL Aiven Tanpa Menghapus Nilai 'false' 
+               dan tetap menangkal error Deprecated di PHP 8.5
             */
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                (defined('Pdo\Mysql::ATTR_SSL_CA') ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            'options' => extension_loaded('pdo_mysql') ? [
                 (defined('Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT') ? \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT : PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT) => false,
-            ]) : [],
+            ] + (env('MYSQL_ATTR_SSL_CA') && env('MYSQL_ATTR_SSL_CA') !== 'null' ? [
+                (defined('Pdo\Mysql::ATTR_SSL_CA') ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA')
+            ] : []) : [],
         ],
 
         'mariadb' => [
@@ -65,10 +64,11 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'options' => extension_loaded('pdo_mysql') ? array_filter([
-                (defined('Pdo\Mysql::ATTR_SSL_CA') ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            'options' => extension_loaded('pdo_mysql') ? [
                 (defined('Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT') ? \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT : PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT) => false,
-            ]) : [],
+            ] + (env('MYSQL_ATTR_SSL_CA') && env('MYSQL_ATTR_SSL_CA') !== 'null' ? [
+                (defined('Pdo\Mysql::ATTR_SSL_CA') ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA')
+            ] : []) : [],
         ],
 
         'pgsql' => [
