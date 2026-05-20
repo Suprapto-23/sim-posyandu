@@ -6,11 +6,12 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        if (Schema::hasTable('jadwal_posyandu')) {
+            return;
+        }
+
         Schema::create('jadwal_posyandu', function (Blueprint $table) {
             $table->id();
             $table->string('judul');
@@ -20,19 +21,13 @@ return new class extends Migration
             $table->time('waktu_selesai');
             $table->string('lokasi');
             $table->string('kategori')->nullable();
-            $table->string('target_peserta'); // semua, balita, remaja, lansia
-            $table->string('status')->default('aktif'); // aktif, selesai, dibatalkan
-            
-            // Relasi ke user yang membuat jadwal
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            
+            $table->string('target_peserta');
+            $table->string('status')->default('aktif');
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('jadwal_posyandu');

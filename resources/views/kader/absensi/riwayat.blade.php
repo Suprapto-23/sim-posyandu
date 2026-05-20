@@ -1,334 +1,619 @@
 @extends('layouts.kader')
 
-@section('title', 'Riwayat Absensi Posyandu')
-@section('page-name', 'Arsip Sesi Absensi')
+@section('title', 'Riwayat Absensi')
+
+@php
+    use Carbon\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    Carbon::setLocale('id');
+
+    $riwayats = $riwayats ?? $riwayat ?? collect();
+    $bulan = (int) ($bulan ?? request('bulan', now()->month));
+    $tahun = (int) ($tahun ?? request('tahun', now()->year));
+    $kategoriAktif = $kategori ?? request('kategori');
+
+    $bulanOptions = [
+        1 => 'Januari',
+        2 => 'Februari',
+        3 => 'Maret',
+        4 => 'April',
+        5 => 'Mei',
+        6 => 'Juni',
+        7 => 'Juli',
+        8 => 'Agustus',
+        9 => 'September',
+        10 => 'Oktober',
+        11 => 'November',
+        12 => 'Desember',
+    ];
+
+    $kategoriMenus = [
+        '' => [
+            'label' => 'Semua Kategori',
+            'icon' => 'fa-layer-group',
+        ],
+        'balita' => [
+            'label' => 'Balita / Anak',
+            'icon' => 'fa-child-reaching',
+        ],
+        'remaja' => [
+            'label' => 'Remaja',
+            'icon' => 'fa-user-graduate',
+        ],
+        'lansia' => [
+            'label' => 'Lansia',
+            'icon' => 'fa-person-cane',
+        ],
+    ];
+
+    $kategoriLabel = function ($kategori) {
+        return match($kategori) {
+            'balita' => 'Balita / Anak',
+            'remaja' => 'Remaja',
+            'lansia' => 'Lansia',
+            default => 'Sasaran',
+        };
+    };
+
+    $kategoriIcon = function ($kategori) {
+        return match($kategori) {
+            'balita' => 'fa-child-reaching',
+            'remaja' => 'fa-user-graduate',
+            'lansia' => 'fa-person-cane',
+            default => 'fa-users',
+        };
+    };
+
+    $totalSesi = $riwayats->count();
+    $totalPeserta = $riwayats->sum(fn ($item) => (int) ($item->total_peserta ?? $item->details_count ?? 0));
+    $totalHadir = $riwayats->sum(fn ($item) => (int) ($item->total_hadir ?? 0));
+    $totalTidakHadir = max(0, $totalPeserta - $totalHadir);
+    $persentase = $totalPeserta > 0 ? round(($totalHadir / $totalPeserta) * 100) : 0;
+
+    $routeHas = fn ($name) => Route::has($name);
+@endphp
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
 <style>
-    /* ====================================================================
-       1. GLOBAL HEALTHCARE EMERALD THEME
-       ==================================================================== */
-    html { scroll-behavior: smooth; }
-    body { 
-        background-color: #f0fdf4; 
-        background-image: 
-            radial-gradient(at 100% 0%, hsla(148, 100%, 97%, 1) 0, transparent 50%), 
-            radial-gradient(at 0% 100%, hsla(45, 100%, 96%, 1) 0, transparent 50%);
-        background-attachment: fixed;
-        -webkit-font-smoothing: antialiased; 
-    }
-    .gpu-layer { transform: translateZ(0); will-change: transform, opacity; }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
 
-    /* ====================================================================
-       2. MODERN GLASSMORPHISM COMPONENTS
-       ==================================================================== */
-    .glass-panel {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        box-shadow: 0 12px 40px -12px rgba(6, 78, 59, 0.06);
-    }
-    .glass-card {
-        background: rgba(255, 255, 255, 0.55);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .glass-card:hover {
-        background: rgba(255, 255, 255, 0.95);
-        border-color: rgba(16, 185, 129, 0.4);
-        transform: translateY(-2px);
-        box-shadow: 0 14px 28px -6px rgba(6, 78, 59, 0.08);
+    .history-page {
+        position: relative;
+        isolation: isolate;
+        font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+        animation: historyIn .2s ease-out both;
     }
 
-    /* ====================================================================
-       3. PREMIUM NATIVE SELECTS & FILTERS
-       ==================================================================== */
-    .premium-select {
-        appearance: none; -webkit-appearance: none;
-        background-color: rgba(255, 255, 255, 0.7); 
-        border: 1px solid rgba(16, 185, 129, 0.25); 
-        color: #064e3b; font-size: 0.85rem; font-weight: 700;
-        border-radius: 14px; padding: 0.7rem 2.5rem 0.7rem 1.25rem; width: 100%; cursor: pointer;
-        transition: all 0.25s ease; backdrop-filter: blur(8px);
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23059669'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-        background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem;
-    }
-    .premium-select:focus { background-color: #ffffff; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); outline: none; }
-
-    /* List Row History System */
-    .history-list-row {
-        background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 18px;
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        display: flex; flex-direction: column;
-    }
-    @media (min-width: 1024px) {
-        .history-list-row { flex-direction: row; align-items: center; }
-    }
-    .history-list-row:hover {
-        background: #ffffff; border-color: rgba(16, 185, 129, 0.3);
-        box-shadow: 0 12px 24px -6px rgba(6, 78, 59, 0.06); transform: translateY(-2px);
+    .history-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 10% 8%, rgba(16,185,129,.14), transparent 28%),
+            radial-gradient(circle at 88% 12%, rgba(245,158,11,.11), transparent 26%),
+            linear-gradient(135deg, #f7fffc 0%, #f8fafc 54%, #fffaf1 100%);
     }
 
-    /* Progress Indicator Bar */
-    .bar-track { width: 100%; height: 6px; background-color: #e2e8f0; border-radius: 99px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s ease-out; }
+    @keyframes historyIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
 
-    /* ====================================================================
-       4. ANIMATIONS STAGGER
-       ==================================================================== */
-    @keyframes snappyFadeUp {
-        0% { opacity: 0; transform: translateY(15px); }
-        100% { opacity: 1; transform: translateY(0); }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-    .stagger-list > * { opacity: 0; animation: snappyFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .stagger-list > *:nth-child(1) { animation-delay: 40ms; }
-    .stagger-list > *:nth-child(2) { animation-delay: 80ms; }
-    .stagger-list > *:nth-child(3) { animation-delay: 120ms; }
-    .stagger-list > *:nth-child(4) { animation-delay: 160ms; }
+
+    .history-hero {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 30%),
+            radial-gradient(circle at 88% 18%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(236,253,245,.78));
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .history-hero::after {
+        content: "";
+        position: absolute;
+        right: -80px;
+        bottom: -110px;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: rgba(16,185,129,.12);
+        pointer-events: none;
+    }
+
+    .history-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+        border-radius: 999px;
+        border: 1px solid rgba(16,185,129,.18);
+        background: rgba(236,253,245,.88);
+        color: #047857;
+        padding: .68rem 1rem;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+
+    .history-surface {
+        border: 1px solid rgba(226,232,240,.88);
+        background: rgba(255,255,255,.92);
+        box-shadow: 0 14px 34px rgba(15,23,42,.05);
+    }
+
+    .history-stat {
+        border-radius: 26px;
+        border: 1px solid rgba(226,232,240,.86);
+        box-shadow: 0 12px 28px rgba(15,23,42,.04);
+    }
+
+    .stat-emerald {
+        background: linear-gradient(145deg, #ffffff, #ecfdf5);
+        border-color: rgba(16,185,129,.18);
+    }
+
+    .stat-gold {
+        background: linear-gradient(145deg, #ffffff, #fff8eb);
+        border-color: rgba(245,158,11,.16);
+    }
+
+    .stat-rose {
+        background: linear-gradient(145deg, #ffffff, #fff1f2);
+        border-color: rgba(244,63,94,.14);
+    }
+
+    .stat-sky {
+        background: linear-gradient(145deg, #ffffff, #f0f9ff);
+        border-color: rgba(14,165,233,.14);
+    }
+
+    .history-action {
+        border-radius: 18px;
+        font-weight: 900;
+        transition: background .15s ease, transform .15s ease, border-color .15s ease;
+    }
+
+    .history-action:hover {
+        transform: translateY(-1px);
+    }
+
+    .history-primary {
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: white;
+        box-shadow: 0 12px 24px rgba(5,150,105,.16);
+    }
+
+    .history-dark {
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: white;
+        box-shadow: 0 12px 24px rgba(15,23,42,.13);
+    }
+
+    .history-outline {
+        border: 1px solid rgba(16,185,129,.18);
+        background: white;
+        color: #047857;
+    }
+
+    .history-outline:hover {
+        background: #ecfdf5;
+    }
+
+    .filter-input {
+        border: 1px solid rgba(226,232,240,.9);
+        background: white;
+        outline: none;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .filter-input:focus {
+        border-color: rgba(16,185,129,.28);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+    }
+
+    .history-row {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(226,232,240,.86);
+        background: #fff;
+        box-shadow: 0 8px 22px rgba(15,23,42,.035);
+        transition: border-color .14s ease, background .14s ease;
+    }
+
+    .history-row::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 16px;
+        bottom: 16px;
+        width: 4px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #10b981, #f59e0b);
+        opacity: .75;
+    }
+
+    .history-row:hover {
+        border-color: rgba(16,185,129,.25);
+        background: #fbfffd;
+    }
+
+    .progress-track {
+        height: 9px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #059669, #10b981, #f59e0b);
+    }
+
+    .history-scroll {
+        max-height: 650px;
+        overflow-y: auto;
+        padding-right: .35rem;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .history-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .history-scroll::-webkit-scrollbar-track {
+        background: rgba(226,232,240,.55);
+        border-radius: 999px;
+    }
+
+    .history-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #10b981, #f59e0b);
+        border-radius: 999px;
+    }
+
+    @media (max-width: 640px) {
+        .history-action:hover {
+            transform: none;
+        }
+
+        .history-scroll {
+            max-height: none;
+            overflow: visible;
+            padding-right: 0;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .history-page,
+        .history-action {
+            animation: none !important;
+            transition: none !important;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
-{{-- PRELOADER ENGINES --}}
-<div id="smoothLoader" class="fixed inset-0 bg-emerald-950/20 backdrop-blur-md z-[9999] flex flex-col items-center justify-center transition-all duration-200 opacity-100 pointer-events-auto">
-    <div class="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-3"></div>
-    <p class="text-emerald-900 font-black tracking-widest text-[9px] uppercase font-poppins">Memuat Arsip...</p>
-</div>
+<div class="history-page space-y-6">
 
-<div class="max-w-[1300px] mx-auto pb-16 mt-2 relative z-10 gpu-layer stagger-list">
-
-    {{-- HEADER BRAND --}}
-    <div class="mb-6 px-1">
-        <h1 class="text-[24px] md:text-[26px] font-black text-emerald-950 tracking-tight font-poppins leading-none mb-1.5">Arsip Sesi Absensi</h1>
-        <p class="text-[10px] font-bold text-emerald-700/80 uppercase tracking-widest">Manajemen Rekam Kehadiran &bull; Database Historis</p>
-    </div>
-
-    {{-- 1. MAIN ACCENT BANNER --}}
-    <div class="bg-white rounded-[24px] border border-emerald-100 shadow-sm p-6 md:p-8 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-        <div class="absolute right-0 top-0 w-64 h-64 bg-emerald-50 rounded-bl-full blur-2xl pointer-events-none z-0"></div>
-        
-        <div class="flex items-center gap-4 relative z-10">
-            <div class="w-14 h-14 rounded-[16px] bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center text-[26px] shadow-md shrink-0">
-                <i class="ph-fill ph-archive-box"></i>
-            </div>
+    {{-- HERO --}}
+    <section class="history-hero rounded-[32px] p-5 sm:p-6 lg:p-7">
+        <div class="relative z-10 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-                <h2 class="text-xl font-black text-emerald-950 tracking-tight font-poppins leading-none mb-1.5">Log Registrasi Kehadiran Warga</h2>
-                <p class="text-emerald-800/80 font-medium text-[12.5px]">Kelola, saring, dan tinjau seluruh riwayat pendaftaran meja 1 posyandu.</p>
+                <div class="history-badge mb-4">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    Arsip Kehadiran
+                </div>
+
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Riwayat Absensi Posyandu
+                </h1>
+
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Pantau seluruh sesi presensi berdasarkan bulan, tahun, dan kategori sasaran. Jadi tidak perlu bongkar catatan manual yang nasibnya sering lebih kusut dari kabel charger.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 sm:flex">
+                @if($routeHas('kader.absensi.index'))
+                    <a href="{{ route('kader.absensi.index') }}" class="history-action history-primary inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        Presensi Baru
+                    </a>
+                @endif
+
+                @if($routeHas('kader.dashboard'))
+                    <a href="{{ route('kader.dashboard') }}" class="history-action history-dark inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
+                        <i class="fa-solid fa-chart-simple"></i>
+                        Dashboard
+                    </a>
+                @endif
             </div>
         </div>
-    </div>
+    </section>
 
-    {{-- 2. PREMIUM FILTER TOOLBAR (Clean Healthcare Pill Tabs Select) --}}
-    @php
-        $reqKategori = request('kategori', '');
-        $reqBulanStr = request('bulan');
-        $selTahun = $reqBulanStr ? substr($reqBulanStr, 0, 4) : '';
-        $selBulan = $reqBulanStr ? substr($reqBulanStr, 5, 2) : '';
-        $tahunSaatIni = date('Y');
+    {{-- STAT --}}
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="history-stat stat-sky p-5">
+            <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Total Sesi</p>
+            <h2 class="mt-3 text-3xl font-black text-slate-900">{{ number_format($totalSesi) }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">{{ $bulanOptions[$bulan] ?? '-' }} {{ $tahun }}</p>
+        </div>
 
-        $mapBulan = ['01'=>'Januari', '02'=>'Februari', '03'=>'Maret', '04'=>'April', '05'=>'Mei', '06'=>'Juni', '07'=>'Juli', '08'=>'Agustus', '09'=>'September', '10'=>'Oktober', '11'=>'November', '12'=>'Desember'];
-    @endphp
+        <div class="history-stat stat-emerald p-5">
+            <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Total Hadir</p>
+            <h2 class="mt-3 text-3xl font-black text-emerald-700">{{ number_format($totalHadir) }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">{{ $persentase }}% dari peserta tercatat</p>
+        </div>
 
-    <div class="glass-panel p-4 rounded-[20px] mb-6 flex flex-col xl:flex-row items-center gap-3 relative z-20">
-        <form id="filterForm" action="{{ route('kader.absensi.riwayat') }}" method="GET" class="w-full flex flex-col md:flex-row items-center gap-3">
-            <input type="hidden" name="bulan" id="hiddenBulan" value="{{ request('bulan') }}">
+        <div class="history-stat stat-rose p-5">
+            <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Tidak Hadir</p>
+            <h2 class="mt-3 text-3xl font-black text-rose-600">{{ number_format($totalTidakHadir) }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Tidak hadir / belum hadir</p>
+        </div>
 
-            <div class="w-full md:w-[35%] relative">
-                <select name="kategori" class="premium-select">
-                    <option value="">Semua Kategori Sasaran</option>
-                    <option value="balita" {{ $reqKategori == 'balita' ? 'selected' : '' }}>Balita (12-59 Bulan)</option>
-                    <option value="remaja" {{ $reqKategori == 'remaja' ? 'selected' : '' }}>Remaja</option>
-                    <option value="lansia" {{ $reqKategori == 'lansia' ? 'selected' : '' }}>Lansia</option>
-                </select>
-            </div>
+        <div class="history-stat stat-gold p-5">
+            <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Total Peserta</p>
+            <h2 class="mt-3 text-3xl font-black text-slate-900">{{ number_format($totalPeserta) }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Akumulasi dari semua sesi</p>
+        </div>
+    </section>
 
-            <div class="w-full md:w-[25%] relative">
-                <select id="valBulan" class="premium-select">
-                    <option value="">Pilih Bulan</option>
-                    @foreach($mapBulan as $val => $label)
-                        <option value="{{ $val }}" {{ $selBulan == $val ? 'selected' : '' }}>{{ $label }}</option>
+    {{-- FILTER --}}
+    <section class="history-surface rounded-[30px] p-5">
+        <form method="GET" action="{{ route('kader.absensi.riwayat') }}" class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Bulan</label>
+                <select name="bulan" class="filter-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    @foreach($bulanOptions as $key => $label)
+                        <option value="{{ $key }}" {{ $bulan === $key ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
                     @endforeach
                 </select>
             </div>
 
-            <div class="w-full md:w-[20%] relative">
-                <select id="valTahun" class="premium-select">
-                    <option value="">Tahun</option>
-                    @for($y = $tahunSaatIni; $y >= 2022; $y--)
-                        <option value="{{ $y }}" {{ $selTahun == $y ? 'selected' : '' }}>{{ $y }}</option>
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tahun</label>
+                <select name="tahun" class="filter-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    @for($year = now()->year + 1; $year >= now()->year - 5; $year--)
+                        <option value="{{ $year }}" {{ $tahun === $year ? 'selected' : '' }}>
+                            {{ $year }}
+                        </option>
                     @endfor
                 </select>
             </div>
 
-            <div class="w-full md:w-[20%] flex items-center gap-2">
-                <button type="submit" onclick="window.showLoader()" class="flex-1 bg-emerald-700 text-white font-black text-[11px] uppercase tracking-widest rounded-[14px] py-3.5 hover:bg-emerald-800 transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 border border-emerald-600/30">
-                    <i class="ph-bold ph-funnel text-[14px]"></i> Saring
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Kategori</label>
+                <select name="kategori" class="filter-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    @foreach($kategoriMenus as $key => $item)
+                        <option value="{{ $key }}" {{ (string) $kategoriAktif === (string) $key ? 'selected' : '' }}>
+                            {{ $item['label'] }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="submit" class="history-action history-primary inline-flex h-12 flex-1 items-center justify-center gap-2 px-5 text-sm lg:flex-none">
+                    <i class="fa-solid fa-filter"></i>
+                    Filter
                 </button>
-                @if(request('kategori') || request('bulan'))
-                    <a href="{{ route('kader.absensi.riwayat') }}" onclick="window.showLoader()" class="w-[44px] h-[44px] shrink-0 bg-rose-50 text-rose-500 rounded-[14px] flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all border border-rose-100 shadow-sm active:scale-95" title="Reset Filter">
-                        <i class="ph-bold ph-arrow-counter-clockwise text-[15px]"></i>
-                    </a>
-                @endif
+
+                <a href="{{ route('kader.absensi.riwayat') }}" class="history-action history-outline inline-flex h-12 items-center justify-center gap-2 px-5 text-sm">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
             </div>
         </form>
-    </div>
+    </section>
 
-    {{-- 3. HISTORY MANIFEST LIST --}}
-    @if(count($riwayat) > 0)
-        <div class="space-y-3.5 relative z-10" id="riwayatList">
-            @foreach($riwayat as $item)
-                @php
-                    $totalPasien = $item->total_pasien;
-                    $totalHadir  = $item->total_hadir;
-                    $persentase  = $totalPasien > 0 ? round(($totalHadir / $totalPasien) * 100) : 0;
-                    
-                    // Dynamic Theme Injector berdasarkan persentase kehadiran
-                    $color = 'emerald'; 
-                    if($persentase < 50) $color = 'rose'; 
-                    elseif($persentase < 75) $color = 'amber'; 
+    {{-- LIST RIWAYAT --}}
+    <section class="history-surface rounded-[30px] p-5">
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-lg font-black text-slate-900">Daftar Sesi Presensi</h3>
+                <p class="text-xs font-bold text-slate-400">
+                    Menampilkan {{ number_format($totalSesi) }} sesi pada periode {{ $bulanOptions[$bulan] ?? '-' }} {{ $tahun }}.
+                </p>
+            </div>
 
-                    $tgl = \Carbon\Carbon::parse($item->tanggal_posyandu)->locale('id');
-                @endphp
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
+                <input
+                    type="text"
+                    id="searchRiwayat"
+                    placeholder="Cari kode, kategori, tanggal..."
+                    class="filter-input h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700 sm:w-80"
+                >
+            </div>
+        </div>
 
-                <div class="history-list-row p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    
-                    {{-- Calendar Block & Meta Info (Kiri) --}}
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-4 flex-1 min-w-0">
-                        <div class="w-12 h-12 bg-emerald-50 border border-emerald-100/60 rounded-[14px] flex flex-col items-center justify-center shrink-0 text-emerald-800 shadow-sm">
-                            <span class="text-[16px] font-black leading-none font-poppins">{{ $tgl->format('d') }}</span>
-                            <span class="text-[8.5px] font-black uppercase tracking-widest mt-0.5">{{ $tgl->translatedFormat('M y') }}</span>
-                        </div>
-                        
-                        <div class="min-w-0">
-                            <h4 class="text-[14.5px] font-black text-slate-800 font-poppins truncate mb-1" title="{{ $item->kode_absensi }}">{{ $item->kode_absensi }}</h4>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-emerald-200/50 text-emerald-800 bg-emerald-50/60">
-                                    {{ str_replace('_', ' ', $item->kategori) }} ({{ $item->kategori === 'balita' ? '12-59 Bln' : 'Sasaran' }})
-                                </span>
-                                <span class="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border border-amber-200/60 text-amber-700 bg-amber-50/60">
-                                    Pertemuan #{{ $item->nomor_pertemuan }}
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-bold ml-1 flex items-center gap-1"><i class="ph-bold ph-clock"></i> {{ $item->created_at->format('H:i') }} WIB</span>
+        @if($riwayats->isNotEmpty())
+            <div class="history-scroll space-y-4">
+                @foreach($riwayats as $item)
+                    @php
+                        $peserta = (int) ($item->total_peserta ?? $item->details_count ?? 0);
+                        $hadir = (int) ($item->total_hadir ?? 0);
+                        $tidakHadir = max(0, $peserta - $hadir);
+                        $persenItem = $peserta > 0 ? round(($hadir / $peserta) * 100) : 0;
+
+                        $tanggalItem = !empty($item->tanggal_posyandu)
+                            ? Carbon::parse($item->tanggal_posyandu)->translatedFormat('d F Y')
+                            : '-';
+
+                        $searchText = strtolower(($item->kode_absensi ?? '') . ' ' . $kategoriLabel($item->kategori) . ' ' . $tanggalItem);
+                    @endphp
+
+                    <div class="history-row rounded-[24px] p-4 sm:p-5" data-search="{{ $searchText }}">
+                        <div class="grid gap-4 xl:grid-cols-[1.3fr_1fr_auto] xl:items-center">
+                            <div class="flex min-w-0 items-center gap-4">
+                                <div class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
+                                    <i class="fa-solid {{ $kategoriIcon($item->kategori) }}"></i>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] text-emerald-700">
+                                            {{ $kategoriLabel($item->kategori) }}
+                                        </span>
+
+                                        <span class="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] text-amber-700">
+                                            Pertemuan {{ $item->nomor_pertemuan ?? '-' }}
+                                        </span>
+                                    </div>
+
+                                    <h4 class="truncate text-base font-black text-slate-900">
+                                        {{ $item->kode_absensi ?? 'Kode Absensi' }}
+                                    </h4>
+
+                                    <p class="mt-1 text-xs font-bold text-slate-400">
+                                        <i class="fa-regular fa-calendar mr-1"></i>
+                                        {{ $tanggalItem }}
+                                        <span class="mx-2">•</span>
+                                        Dicatat oleh {{ $item->kader->name ?? $item->kader->nama ?? 'Kader' }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="mb-2 flex items-center justify-between">
+                                    <span class="text-xs font-black text-slate-500">Kehadiran</span>
+                                    <span class="text-xs font-black text-emerald-700">{{ $persenItem }}%</span>
+                                </div>
+
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width: {{ $persenItem }}%"></div>
+                                </div>
+
+                                <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                                    <div class="rounded-2xl bg-slate-50 p-3">
+                                        <p class="text-sm font-black text-slate-900">{{ number_format($peserta) }}</p>
+                                        <p class="mt-1 text-[10px] font-black uppercase text-slate-400">Peserta</p>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-emerald-50 p-3">
+                                        <p class="text-sm font-black text-emerald-700">{{ number_format($hadir) }}</p>
+                                        <p class="mt-1 text-[10px] font-black uppercase text-emerald-600">Hadir</p>
+                                    </div>
+
+                                    <div class="rounded-2xl bg-rose-50 p-3">
+                                        <p class="text-sm font-black text-rose-600">{{ number_format($tidakHadir) }}</p>
+                                        <p class="mt-1 text-[10px] font-black uppercase text-rose-500">Absen</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-2 sm:flex-row xl:flex-col">
+                                @if($routeHas('kader.absensi.show'))
+                                    <a href="{{ route('kader.absensi.show', $item->id) }}" class="history-action history-primary inline-flex items-center justify-center gap-2 px-4 py-3 text-xs">
+                                        <i class="fa-solid fa-eye"></i>
+                                        Detail
+                                    </a>
+                                @endif
+
+                                @if($routeHas('kader.absensi.index'))
+                                    <a href="{{ route('kader.absensi.index', ['kategori' => $item->kategori]) }}" class="history-action history-outline inline-flex items-center justify-center gap-2 px-4 py-3 text-xs">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                        Update
+                                    </a>
+                                @endif
+
+                                @if($routeHas('kader.absensi.destroy'))
+                                    <form method="POST" action="{{ route('kader.absensi.destroy', $item->id) }}" class="delete-history-form">
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <button type="submit" class="history-action inline-flex w-full items-center justify-center gap-2 rounded-[18px] border border-rose-200 bg-white px-4 py-3 text-xs font-black text-rose-600 hover:bg-rose-50">
+                                            <i class="fa-solid fa-trash"></i>
+                                            Hapus
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </div>
                     </div>
-
-                    {{-- Dynamic Progress Fill (Tengah) --}}
-                    <div class="w-full lg:w-[260px] shrink-0 mt-1 lg:mt-0">
-                        <div class="flex justify-between items-end mb-1.5">
-                            <p class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Hadir <span class="text-slate-700 ml-0.5">{{ $totalHadir }}/{{ $totalPasien }} Warga</span></p>
-                            <p class="text-[13px] font-black text-{{ $color }}-600 font-poppins">{{ $persentase }}%</p>
-                        </div>
-                        <div class="bar-track">
-                            <div class="bar-fill {{ $color == 'emerald' ? 'bg-emerald-500' : ($color == 'amber' ? 'bg-amber-500' : 'bg-rose-500') }}" style="width: {{ $persentase }}%;"></div>
-                        </div>
-                    </div>
-
-                    {{-- Action Control Gateways (Kanan) --}}
-                    <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto mt-2 lg:mt-0">
-                        <a href="{{ route('kader.absensi.show', $item->id) }}" onclick="window.showLoader()" class="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 font-black text-[10px] uppercase tracking-widest rounded-[12px] transition-colors flex items-center justify-center gap-1 shadow-sm active:scale-95">
-                            <i class="ph-bold ph-eye text-[14px]"></i> Periksa
-                        </a>
-                        <form action="{{ route('kader.absensi.destroy', $item->id) }}" method="POST" class="delete-form m-0 flex-1 sm:flex-none">
-                            @csrf @method('DELETE')
-                            <button type="button" class="btn-delete w-full sm:w-[40px] h-[40px] bg-white border border-slate-200 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-[12px] transition-colors flex items-center justify-center shadow-sm active:scale-95" title="Eliminasi Arsip">
-                                <i class="ph-bold ph-trash text-[15px]"></i>
-                                <span class="sm:hidden ml-1.5 font-black text-[10px] uppercase tracking-widest">Hapus Sesi</span>
-                            </button>
-                        </form>
-                    </div>
-
-                </div>
-            @endforeach
-        </div>
-    @else
-        {{-- EMPTY STATE HOVER COMPONENT --}}
-        <div class="text-center py-16 px-4 bg-white rounded-[20px] border border-emerald-100 shadow-sm relative z-10">
-            <div class="w-14 h-14 bg-emerald-50 border border-emerald-100/60 rounded-[14px] flex items-center justify-center text-emerald-400 text-[28px] mx-auto mb-3">
-                <i class="ph-fill ph-folder-open"></i>
+                @endforeach
             </div>
-            <h4 class="text-[14px] font-black text-emerald-950 uppercase tracking-widest mb-1 font-poppins">Arsip Nihil</h4>
-            <p class="text-[11.5px] text-slate-500 font-medium max-w-sm mx-auto">Sistem tidak menemukan berkas log kehadiran yang sesuai dengan filter filter parameter saringan Anda.</p>
-        </div>
-    @endif
 
-    {{-- SYSTEM NATIVE PAGINATION --}}
-    <div class="mt-6">
-        {{ $riwayat->links() }}
-    </div>
+            <div id="emptySearchBox" class="mt-5 hidden rounded-[24px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                <div class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-white text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <p class="text-sm font-black text-slate-500">Data tidak ditemukan dari pencarian.</p>
+            </div>
+        @else
+            <div class="rounded-[26px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-white text-slate-400">
+                    <i class="fa-regular fa-folder-open text-xl"></i>
+                </div>
 
+                <h3 class="text-lg font-black text-slate-800">Belum ada riwayat absensi</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-500">
+                    Belum ada presensi pada filter yang dipilih. Buat presensi baru dulu, jangan cuma berharap data muncul dari alam gaib.
+                </p>
+
+                @if($routeHas('kader.absensi.index'))
+                    <a href="{{ route('kader.absensi.index') }}" class="history-action history-primary mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
+                        <i class="fa-solid fa-plus"></i>
+                        Buat Presensi
+                    </a>
+                @endif
+            </div>
+        @endif
+    </section>
 </div>
+@endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-    window.hideLoader = () => { const l = document.getElementById('smoothLoader'); if(l) { l.classList.remove('opacity-100','pointer-events-auto'); l.classList.add('opacity-0','pointer-events-none'); setTimeout(()=> l.style.display = 'none', 200); } };
-    window.showLoader = () => { const l = document.getElementById('smoothLoader'); if(l) { l.style.display = 'flex'; l.classList.remove('opacity-0','pointer-events-none'); l.classList.add('opacity-100','pointer-events-auto'); } };
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('searchRiwayat');
+        const rows = Array.from(document.querySelectorAll('.history-row'));
+        const emptySearchBox = document.getElementById('emptySearchBox');
 
-    window.onload = hideLoader;
-    document.addEventListener('DOMContentLoaded', hideLoader);
-    window.addEventListener('pageshow', hideLoader);
+        searchInput?.addEventListener('input', (event) => {
+            const keyword = event.target.value.toLowerCase().trim();
+            let visible = 0;
 
-    // FILTER INTEGRITY VALIDATION
-    document.getElementById('filterForm').addEventListener('submit', function(e) {
-        let m = document.getElementById('valBulan').value;
-        let y = document.getElementById('valTahun').value;
-        
-        if (m && y) {
-            document.getElementById('hiddenBulan').value = y + '-' + m;
-        } else if (m || y) {
-            e.preventDefault();
-            hideLoader();
-            Swal.fire({
-                title: 'Parameter Kurang',
-                html: 'Harap tentukan kombinasi <b class="text-emerald-700">Bulan</b> dan <b class="text-emerald-700">Tahun</b> secara berpasangan untuk melakukan filtering data.',
-                icon: 'info',
-                confirmButtonColor: '#047857',
-                confirmButtonText: 'Mengerti',
-                customClass: { popup: 'rounded-[20px]' }
+            rows.forEach(row => {
+                const text = row.dataset.search || '';
+                const match = text.includes(keyword);
+
+                row.style.display = match ? '' : 'none';
+
+                if (match) {
+                    visible++;
+                }
             });
-        } else {
-            document.getElementById('hiddenBulan').value = '';
-        }
-    });
 
-    // CRITICAL DELETION SAFETY LOCK (SWEETALERT CODES)
-    document.querySelectorAll('.btn-delete').forEach(button => {
-        button.addEventListener('click', function() {
-            const form = this.closest('.delete-form');
-            Swal.fire({
-                title: 'Hapus Permanen Sesi?',
-                html: 'Tindakan ini akan <b class="text-rose-500">menghapus permanen</b> log manifest kehadiran dan seluruh rincian status rekam medis terkait pertemuan ini dari database.',
-                icon: 'warning', 
-                showCancelButton: true,
-                confirmButtonColor: '#e11d48',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Hapus',
-                cancelButtonText: 'Batal',
-                reverseButtons: true,
-                customClass: { popup: 'rounded-[20px]' }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    showLoader();
-                    form.submit();
+            if (emptySearchBox) {
+                emptySearchBox.classList.toggle('hidden', visible > 0 || keyword === '');
+            }
+        });
+
+        document.querySelectorAll('.delete-history-form').forEach(form => {
+            form.addEventListener('submit', (event) => {
+                const ok = confirm('Yakin ingin menghapus riwayat presensi ini? Data detail kehadiran pada sesi ini juga akan terhapus.');
+
+                if (!ok) {
+                    event.preventDefault();
                 }
             });
         });
     });
-
-    // CORNER NOTIFICATION TOAST ENGINGE
-    @if(session('success'))
-        const Toast = Swal.mixin({
-            toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
-        });
-        Toast.fire({ icon: 'success', title: "{{ session('success') }}" });
-    @endif
 </script>
 @endpush
-@endsection

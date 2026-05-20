@@ -4,132 +4,147 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 
-/**
- * =========================================================================
- * IMUNISASI MODEL (NEXUS ULTIMATE EDITION)
- * =========================================================================
- * Mesin utama pengelola riwayat vaksinasi. Dilengkapi dengan Virtual
- * Attributes (Accessors) dan Analytics Scopes untuk UI Dashboard yang cerdas.
- */
 class Imunisasi extends Model
 {
     use HasFactory;
 
     protected $table = 'imunisasis';
 
-    // Proteksi dinamis, mempermudah Controller
-    protected $guarded = ['id'];
-
-    // 1. AUTO-APPEND VIRTUAL COLUMNS
-    // Atribut ini akan otomatis dikalkulasi dan dikirim ke Frontend (View/JSON)
-    // Sangat berguna untuk mencegah Blade Error (Null Pointer) di View.
-    protected $appends = [
-        'nama_penerima',
-        'nik_penerima',
-        'kategori_sasaran',
-        'kategori_vaksin_badge'
+    protected $fillable = [
+        'kunjungan_id',
+        'jenis_imunisasi',
+        'vaksin',
+        'batch_number',
+        'tanggal_imunisasi',
+        'catatan',
     ];
 
-    // 2. DATA CASTING
-    // Memastikan presisi format saat ditarik dari Database
     protected $casts = [
         'tanggal_imunisasi' => 'date',
-        'expiry_date'       => 'date',
-        'dosis'             => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * RELASI DATABASE
-     */
     public function kunjungan()
     {
         return $this->belongsTo(Kunjungan::class, 'kunjungan_id');
     }
 
-    /**
-     * =================================================================
-     * 3. ACCESSORS (FAILSAFE & SMART UI LOGIC)
-     * =================================================================
-     */
-
-    /**
-     * SAFE PULL: Mengambil nama tanpa risiko sistem crash jika data pasien terhapus
-     */
-    public function getNamaPenerimaAttribute()
+    public function getNamaPenerimaAttribute(): string
     {
-        return $this->kunjungan?->pasien?->nama_lengkap ?? 'Data Terhapus / Anonim';
+        return $this->kunjungan?->pasien?->nama_lengkap
+            ?? $this->kunjungan?->pasien?->nama
+            ?? 'Data sasaran tidak ditemukan';
     }
 
-    /**
-     * SAFE PULL: Mengambil NIK
-     */
-    public function getNikPenerimaAttribute()
+    public function getNikPenerimaAttribute(): string
     {
         return $this->kunjungan?->pasien?->nik ?? '-';
     }
 
-    /**
-     * Mengidentifikasi kategori secara langsung dari relasi Polymorphic
-     */
-    public function getKategoriSasaranAttribute()
+    public function getKategoriSasaranAttribute(): string
     {
         $type = $this->kunjungan?->pasien_type;
-        if (!$type) return 'Umum';
-        
-        return match(class_basename($type)) {
-            'Balita'   => 'Balita',
-            'Remaja'   => 'Remaja',
-            'Lansia'   => 'Lansia',
-            default    => 'Umum'
+
+        if (!$type) {
+            return 'Tidak diketahui';
+        }
+
+        return match (class_basename($type)) {
+            'Balita' => 'Balita / Anak',
+            'Remaja' => 'Remaja',
+            'Lansia' => 'Lansia',
+            default => 'Sasaran',
         };
     }
 
-    /**
-     * SMART BADGING: Memberikan kode warna UI otomatis berdasarkan jenis vaksin
-     * Membantu Kader melihat jenis imunisasi secara visual di Tabel Index.
-     */
-    public function getKategoriVaksinBadgeAttribute()
+    public function getNamaPetugasAttribute(): string
     {
-        $vaksin = strtolower($this->vaksin);
-        
-        // Kategori Imunisasi Dasar Lengkap (IDL) Bayi/Balita (Warna Sky/Biru)
-        if (str_contains($vaksin, 'bcg') || str_contains($vaksin, 'polio') || 
-            str_contains($vaksin, 'hepatitis') || str_contains($vaksin, 'dpt') || 
-            str_contains($vaksin, 'hib') || str_contains($vaksin, 'campak') || 
-            str_contains($vaksin, 'mr') || str_contains($vaksin, 'pentabio') || 
-            str_contains($vaksin, 'pcv') || str_contains($vaksin, 'rotavirus')) {
-            return 'sky'; 
-        }
-        
-        
-
-        // Kategori Vaksin Lainnya (Warna Indigo)
-        return 'indigo'; 
+        return $this->kunjungan?->petugas?->name
+            ?? $this->kunjungan?->petugas?->nama
+            ?? 'Bidan / Petugas';
     }
 
-    /**
-     * =================================================================
-     * 4. SCOPES (ANALYTICS BUILDER)
-     * Digunakan oleh Controller untuk menghitung Metrik Dashboard secara instan
-     * =================================================================
-     */
+    public function getTanggalLabelAttribute(): string
+    {
+        if (!$this->tanggal_imunisasi) {
+            return '-';
+        }
 
-    // Hitung capaian imunisasi bulan ini
+        return Carbon::parse($this->tanggal_imunisasi)
+            ->locale('id')
+            ->translatedFormat('d F Y');
+    }
+
+    public function getJamLabelAttribute(): string
+    {
+        if (!$this->created_at) {
+            return '-';
+        }
+
+        return Carbon::parse($this->created_at)
+            ->timezone('Asia/Jakarta')
+            ->format('H:i') . ' WIB';
+    }
+
+    public function getVaksinLabelAttribute(): string
+    {
+        return $this->vaksin ?: $this->jenis_imunisasi ?: 'Imunisasi';
+    }
+
+    public function getBatchLabelAttribute(): string
+    {
+        return $this->batch_number ?: '-';
+    }
+
+    public function getCatatanLabelAttribute(): string
+    {
+        return $this->catatan ?: 'Tidak ada catatan tambahan.';
+    }
+
+    public function getBadgeThemeAttribute(): array
+    {
+        $text = strtolower(($this->jenis_imunisasi ?? '') . ' ' . ($this->vaksin ?? ''));
+
+        if (
+            str_contains($text, 'bcg') ||
+            str_contains($text, 'polio') ||
+            str_contains($text, 'dpt') ||
+            str_contains($text, 'hepatitis') ||
+            str_contains($text, 'hib') ||
+            str_contains($text, 'campak') ||
+            str_contains($text, 'mr') ||
+            str_contains($text, 'pcv') ||
+            str_contains($text, 'rotavirus')
+        ) {
+            return [
+                'label' => 'Imunisasi Dasar',
+                'class' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                'icon' => 'fa-syringe',
+            ];
+        }
+
+        return [
+            'label' => 'Imunisasi Tambahan',
+            'class' => 'bg-amber-50 text-amber-700 border-amber-100',
+            'icon' => 'fa-shield-heart',
+        ];
+    }
+
     public function scopeBulanIni($query)
     {
-        return $query->whereMonth('tanggal_imunisasi', Carbon::now()->month)
-                     ->whereYear('tanggal_imunisasi', Carbon::now()->year);
+        return $query
+            ->whereMonth('tanggal_imunisasi', now()->month)
+            ->whereYear('tanggal_imunisasi', now()->year);
     }
 
-    // Filter spesifik target Balita
     public function scopeTargetBalita($query)
     {
-        return $query->whereHas('kunjungan', function($q) {
-            $q->where('pasien_type', 'App\Models\Balita');
+        return $query->whereHas('kunjungan', function ($q) {
+            $q->where('pasien_type', \App\Models\Balita::class)
+              ->orWhere('pasien_type', 'like', '%Balita%');
         });
     }
-
-    
 }

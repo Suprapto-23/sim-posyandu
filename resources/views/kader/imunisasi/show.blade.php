@@ -1,167 +1,212 @@
 @extends('layouts.kader')
-@section('title', 'Detail Arsip Vaksinasi')
-@section('page-name', 'Log Vaksinasi Warga')
+
+@section('title', 'Detail Riwayat Imunisasi')
+
+@php
+    use Illuminate\Support\Facades\Route;
+
+    $theme = $imunisasi->badge_theme;
+    $routeHas = fn ($name) => Route::has($name);
+@endphp
 
 @push('styles')
 <style>
-    /* =================================================================
-       NEXUS SAAS DESIGN SYSTEM (PURE DETAIL VIEW)
-       ================================================================= */
-    
-    /* Animasi Masuk */
-    .animate-fade-in { opacity: 0; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Kartu Detail Utama */
-    .nexus-card {
-        background: #ffffff; border: 1px solid #e2e8f0; border-radius: 28px;
-        box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.04); overflow: hidden; position: relative;
+    .detail-imunisasi {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
     }
-    
-    /* Blok Data (Soft & Precision UI) */
-    .data-block {
-        background: #ffffff; border: 1px solid #f1f5f9; border-radius: 20px;
-        padding: 1.25rem 1.5rem; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.01);
-    }
-    .data-block:hover { border-color: #cbd5e1; box-shadow: 0 6px 15px -3px rgba(15, 23, 42, 0.03); transform: translateY(-2px); }
 
-    /* Tipografi Lembut (Anti-Kaku) */
-    .data-label { display: block; font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
-    .data-value { font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 600; color: #1e293b; line-height: 1.4; display: block; }
-    
-    .pill-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
+    .detail-imunisasi::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.12), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            linear-gradient(135deg, #f8fffc, #f8fafc 58%, #fffaf0);
+    }
+
+    .panel-soft {
+        border: 1px solid rgba(226,232,240,.88);
+        background: rgba(255,255,255,.95);
+        box-shadow: 0 10px 28px rgba(15,23,42,.045);
+    }
+
+    .hero-soft {
+        border: 1px solid rgba(167,243,208,.7);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.14), transparent 30%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.12), transparent 30%),
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(236,253,245,.76));
+    }
+
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        body * {
+            visibility: hidden !important;
+        }
+
+        #printArea, #printArea * {
+            visibility: visible !important;
+        }
+
+        #printArea {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            background: white !important;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
+<div class="detail-imunisasi space-y-5">
 
-@php
-    // =================================================================
-    // SMART DATA EXTRACTION (Dari Model Imunisasi)
-    // =================================================================
-    $nama       = $imunisasi->nama_penerima;
-    $nik        = $imunisasi->nik_penerima;
-    $kategori   = $imunisasi->kategori_sasaran;
-    $badgeColor = $imunisasi->kategori_vaksin_badge; // 'sky', 'pink', atau 'indigo'
-    
-    // Ikon disesuaikan dengan warna tema
-    $iconTheme  = match($badgeColor) { 'sky' => 'fa-baby', 'pink' => 'fa-female', default => 'fa-syringe' };
-@endphp
+    <section class="hero-soft rounded-[28px] p-5 sm:p-6 no-print">
+        <div class="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-file-medical"></i>
+                    Detail Read Only
+                </div>
 
-<div class="max-w-[950px] mx-auto animate-fade-in pb-16 relative z-10 mt-2">
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Detail Riwayat Imunisasi
+                </h1>
 
-    {{-- AURA BACKGROUND DYNAMIC --}}
-    <div class="fixed top-0 right-0 w-[400px] h-[400px] bg-{{ $badgeColor }}-500/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-    <div class="fixed bottom-0 left-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Arsip imunisasi balita yang dicatat oleh Bidan atau petugas kesehatan. Kader hanya melihat data untuk pemantauan dan laporan.
+                </p>
+            </div>
 
-    {{-- 1. HEADER NAVIGASI (Bersih, Tanpa Tombol Cetak) --}}
-    <div class="mb-8 flex items-center gap-4 relative z-10">
-        <a href="{{ route('kader.imunisasi.index') }}" class="w-12 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-50 hover:text-indigo-600 transition-colors shadow-sm shrink-0">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight font-poppins mb-0.5">Detail Arsip Vaksinasi</h1>
-            <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Terekam di Database Sistem</span>
+            <div class="grid grid-cols-2 gap-3 sm:flex">
+                @if($routeHas('kader.imunisasi.index'))
+                    <a href="{{ route('kader.imunisasi.index') }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white px-5 py-3 text-sm font-black text-emerald-700">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Kembali
+                    </a>
+                @endif
+
+                <button type="button" onclick="window.print()" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">
+                    <i class="fa-solid fa-print"></i>
+                    Cetak
+                </button>
             </div>
         </div>
-    </div>
+    </section>
 
-    {{-- 2. KARTU DETAIL UTAMA (Panel Informasi Murni) --}}
-    <div class="nexus-card">
-        
-        {{-- Ornamen Latar Belakang Kartu --}}
-        <div class="absolute right-0 top-0 w-64 h-64 bg-{{ $badgeColor }}-500/10 rounded-bl-full pointer-events-none blur-3xl"></div>
-
-        {{-- HERO BANNER (Highlight Vaksin) --}}
-        <div class="bg-white p-8 md:p-10 border-b border-slate-100 relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
-            <div class="w-24 h-24 rounded-[24px] bg-{{ $badgeColor }}-50 border border-{{ $badgeColor }}-100 text-{{ $badgeColor }}-600 flex items-center justify-center text-4xl shadow-sm shrink-0 transform -rotate-3">
-                <i class="fas fa-shield-virus"></i>
-            </div>
-            <div class="flex-1 flex flex-col justify-center">
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 text-[9px] font-bold uppercase tracking-widest rounded-md mb-3 shadow-sm w-max mx-auto md:mx-0">
-                    <i class="fas fa-check-circle"></i> Pemberian Sukses
-                </div>
-                <h2 class="text-3xl md:text-4xl font-bold text-slate-800 font-poppins mb-2 tracking-tight">{{ $imunisasi->vaksin }}</h2>
-                <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-1">
-                    <span class="pill-badge bg-{{ $badgeColor }}-600 text-white shadow-sm">Dosis Ke-{{ $imunisasi->dosis }}</span>
-                    <span class="pill-badge bg-slate-50 text-slate-600 border border-slate-200">{{ $imunisasi->jenis_imunisasi }}</span>
-                </div>
-            </div>
-        </div>
-
-        {{-- GRID INFORMASI RINCI --}}
-        <div class="bg-[#fcfcfd] p-8 md:p-10 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                
-                {{-- KOLOM KIRI: Identitas & Target --}}
-                <div class="flex flex-col gap-5">
-                    
-                    <div class="data-block bg-white border-slate-200 shadow-sm relative overflow-hidden flex-1">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-slate-50 rounded-bl-full pointer-events-none"></div>
-                        <span class="data-label relative z-10"><i class="far fa-user text-slate-300 mr-1.5"></i> Identitas Penerima</span>
-                        <span class="data-value text-lg mt-1 relative z-10 font-poppins">{{ $nama }}</span>
-                        <span class="text-[11px] font-medium text-slate-500 font-mono mt-1 block relative z-10">NIK: {{ $nik }}</span>
+    <div id="printArea" class="space-y-5">
+        <section class="panel-soft rounded-[28px] p-5 sm:p-6">
+            <div class="grid gap-5 xl:grid-cols-[1.2fr_.8fr] xl:items-center">
+                <div class="flex items-start gap-4">
+                    <div class="grid h-16 w-16 shrink-0 place-items-center rounded-3xl bg-emerald-50 text-emerald-700">
+                        <i class="fa-solid fa-syringe text-xl"></i>
                     </div>
-                    
-                    <div class="data-block">
-                        <span class="data-label mb-3"><i class="fas fa-users text-slate-300 mr-1.5"></i> Kategori Sasaran</span>
-                        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest border bg-{{ $badgeColor }}-50 text-{{ $badgeColor }}-700 border-{{ $badgeColor }}-200">
-                            <i class="fas {{ $iconTheme }}"></i> {{ $kategori }}
+
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $theme['class'] }}">
+                            <i class="fa-solid {{ $theme['icon'] }}"></i>
+                            {{ $theme['label'] }}
                         </span>
-                    </div>
 
-                    <div class="data-block">
-                        <span class="data-label"><i class="far fa-hospital text-slate-300 mr-1.5"></i> Lokasi Pelaksanaan</span>
-                        <span class="data-value mt-1 text-[0.95rem] font-medium">{{ $imunisasi->penyelenggara ?? 'Posyandu Terpadu / Puskesmas Desa' }}</span>
-                    </div>
+                        <h2 class="mt-3 text-2xl font-black tracking-[-.04em] text-slate-900">
+                            {{ $imunisasi->vaksin_label }}
+                        </h2>
 
+                        <p class="mt-2 text-sm font-bold text-slate-500">
+                            {{ $imunisasi->jenis_imunisasi }}
+                        </p>
+                    </div>
                 </div>
 
-                {{-- KOLOM KANAN: Medis & Otoritas --}}
-                <div class="flex flex-col gap-5">
-                    
-                    <div class="data-block bg-{{ $badgeColor }}-50/50 border-{{ $badgeColor }}-100">
-                        <span class="data-label text-{{ $badgeColor }}-600"><i class="far fa-calendar-check mr-1.5"></i> Waktu Eksekusi Medis</span>
-                        <span class="data-value text-{{ $badgeColor }}-900 mt-1 text-[1.1rem]">
-                            {{ \Carbon\Carbon::parse($imunisasi->tanggal_imunisasi)->locale('id')->isoFormat('dddd, D MMMM Y') }}
-                        </span>
-                        <span class="text-[10px] font-medium text-{{ $badgeColor }}-500 mt-1 block">
-                            Tercatat pada: {{ \Carbon\Carbon::parse($imunisasi->created_at)->timezone('Asia/Jakarta')->format('H:i') }} WIB
-                        </span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tanggal</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->tanggal_label }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="data-block py-4">
-                            <span class="data-label"><i class="fas fa-barcode text-slate-300 mr-1"></i> No. Batch</span>
-                            <span class="data-value font-mono text-[0.85rem] mt-1">{{ $imunisasi->batch_number ?? 'KOSONG' }}</span>
-                        </div>
-                        <div class="data-block py-4">
-                            <span class="data-label"><i class="far fa-hourglass text-slate-300 mr-1"></i> Exp Date</span>
-                            <span class="data-value mt-1 text-[0.85rem] font-medium">
-                                {{ $imunisasi->expiry_date ? \Carbon\Carbon::parse($imunisasi->expiry_date)->format('d / m / Y') : '-' }}
-                            </span>
-                        </div>
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Jam Input</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->jam_label }}</p>
                     </div>
-
-                    <div class="data-block flex-1 flex flex-col justify-center">
-                        <span class="data-label"><i class="fas fa-user-md text-slate-300 mr-1.5"></i> Tenaga Kesehatan (Otoritas)</span>
-                        <div class="flex items-center gap-3 mt-2">
-                            <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 font-bold shrink-0">
-                                {{ strtoupper(substr($imunisasi->kunjungan?->petugas?->name ?? 'B', 0, 1)) }}
-                            </div>
-                            <div>
-                                <span class="data-value font-poppins text-[0.95rem]">{{ $imunisasi->kunjungan?->petugas?->name ?? 'Bidan Desa (Sistem)' }}</span>
-                                <span class="text-[10px] font-medium text-slate-400 block mt-0.5">Verifikator Medis Meja 5</span>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
-
             </div>
-        </div>
+        </section>
+
+        <section class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            <div class="panel-soft rounded-[28px] p-5 xl:col-span-7">
+                <h3 class="text-lg font-black text-slate-900">Identitas Sasaran</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Data balita penerima imunisasi.
+                </p>
+
+                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nama Balita</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->nama_penerima }}</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">NIK</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->nik_penerima }}</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Kategori</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->kategori_sasaran }}</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Dicatat Oleh</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->nama_petugas }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-soft rounded-[28px] p-5 xl:col-span-5">
+                <h3 class="text-lg font-black text-slate-900">Detail Vaksin</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Informasi tindakan imunisasi.
+                </p>
+
+                <div class="mt-4 space-y-3">
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Jenis Imunisasi</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->jenis_imunisasi }}</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nama Vaksin</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->vaksin_label }}</p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-white p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nomor Batch</p>
+                        <p class="mt-2 text-sm font-black text-slate-900">{{ $imunisasi->batch_label }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-soft rounded-[28px] p-5">
+            <h3 class="text-lg font-black text-slate-900">Catatan</h3>
+            <p class="mt-1 text-xs font-bold text-slate-400">
+                Catatan tambahan dari petugas kesehatan.
+            </p>
+
+            <div class="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <p class="text-sm font-bold leading-6 text-slate-600">
+                    {{ $imunisasi->catatan_label }}
+                </p>
+            </div>
+        </section>
     </div>
 </div>
 @endsection

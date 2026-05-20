@@ -102,10 +102,10 @@ class AbsensiPosyandu extends Model
         return $this->hasMany(AbsensiDetail::class, 'absensi_id')->where('hadir', false);
     }
 
-    public function kader(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'dicatat_oleh');
-    }
+    public function kader()
+{
+    return $this->belongsTo(\App\Models\User::class, 'dicatat_oleh');
+}
 
     public static function normalizeKategori(?string $kategori): string
     {

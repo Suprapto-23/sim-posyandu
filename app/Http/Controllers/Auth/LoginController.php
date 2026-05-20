@@ -26,61 +26,73 @@ class LoginController extends Controller
      |  PROCESS LOGIN
      ───────────────────────────────────────── */
     public function login(Request $request)
-    {
-        $request->validate([
-            'login'    => 'required|string',
-            'password' => 'required|string',
-        ], [
-            'login.required'    => 'Email atau username wajib diisi.',
-            'password.required' => 'Password wajib diisi.',
-        ]);
+{
+    // Ambil identitas login dari beberapa kemungkinan nama input.
+    // Ini bikin controller tahan banting kalau form pakai name="login", "email", atau "username".
+    $identifier = $request->input('login')
+        ?? $request->input('email')
+        ?? $request->input('username')
+        ?? $request->input('identifier');
 
-        // 1. Validasi format identitas
-        $loginType = $this->getLoginType($request->login);
+    $request->merge([
+        'login' => trim((string) $identifier),
+    ]);
 
-        if (! $loginType) {
-            return back()->withErrors([
-                'login' => 'Format tidak valid. Gunakan email, username, atau NIK (16 digit angka).',
-            ])->onlyInput('login');
-        }
+    $request->validate([
+        'login'    => 'required|string',
+        'password' => 'required|string',
+    ], [
+        'login.required'    => 'Email atau username wajib diisi.',
+        'password.required' => 'Password wajib diisi.',
+    ]);
 
-        // 2. Cari user di database
-        $user = $this->findUserByLogin($request->login, $loginType);
+    // 1. Validasi format identitas
+    $loginType = $this->getLoginType($request->login);
 
-        if (! $user) {
-            return back()->withErrors([
-                'login' => 'Akun tidak ditemukan. Identitas yang Anda masukkan belum terdaftar di sistem.',
-            ])->onlyInput('login');
-        }
-
-        // 3. Cek status akun
-        if ($user->status !== 'active') {
-            return back()->withErrors([
-                'login' => 'Akun Anda tidak aktif. Hubungi admin Posyandu untuk mengaktifkan akun.',
-            ])->onlyInput('login');
-        }
-
-        // 4. Verifikasi password
-        if (! Hash::check($request->password, $user->password)) {
-            $this->writeLoginLog($user->id, $request, 'failed');
-
-            return back()->withErrors([
-                'password' => 'Password salah.',
-            ])->onlyInput('login');
-        }
-
-        // 5. Login berhasil
-        Auth::login($user, $request->filled('remember'));
-        $request->session()->regenerate();
-        $request->session()->put('login_role', $user->role);
-        $request->session()->put('login_user_id', $user->id);
-        $request->session()->save();
-
-        $this->writeLoginLog($user->id, $request, 'success');
-        $this->updateLastLogin($user);
-
-        return redirect()->to($this->getRedirectUrl($user->role));
+    if (! $loginType) {
+        return back()->withErrors([
+            'login' => 'Format tidak valid. Gunakan email, username, atau NIK 16 digit angka.',
+        ])->withInput($request->only('login'));
     }
+
+    // 2. Cari user di database
+    $user = $this->findUserByLogin($request->login, $loginType);
+
+    if (! $user) {
+        return back()->withErrors([
+            'login' => 'Akun tidak ditemukan. Identitas yang Anda masukkan belum terdaftar di sistem.',
+        ])->withInput($request->only('login'));
+    }
+
+    // 3. Cek status akun
+    if ($user->status !== 'active') {
+        return back()->withErrors([
+            'login' => 'Akun Anda tidak aktif. Hubungi admin Posyandu untuk mengaktifkan akun.',
+        ])->withInput($request->only('login'));
+    }
+
+    // 4. Verifikasi password
+    if (! Hash::check($request->password, $user->password)) {
+        $this->writeLoginLog($user->id, $request, 'failed');
+
+        return back()->withErrors([
+            'password' => 'Password salah.',
+        ])->withInput($request->only('login'));
+    }
+
+    // 5. Login berhasil
+    Auth::login($user, $request->boolean('remember'));
+
+    $request->session()->regenerate();
+    $request->session()->put('login_role', $user->role);
+    $request->session()->put('login_user_id', $user->id);
+    $request->session()->save();
+
+    $this->writeLoginLog($user->id, $request, 'success');
+    $this->updateLastLogin($user);
+
+    return redirect()->to($this->getRedirectUrl($user->role));
+}
 
     /* ─────────────────────────────────────────
      |  LOGOUT
@@ -178,19 +190,23 @@ class LoginController extends Controller
      * Tulis log login (gagal maupun sukses).
      */
     private function writeLoginLog(int $userId, Request $request, string $status): void
-    {
-        try {
-            LoginLog::create([
-                'user_id'    => $userId,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'login_at'   => now(),
-                'status'     => $status,
-            ]);
-        } catch (\Exception) {
-            // Silent — jangan ganggu proses login
+{
+    try {
+        if (! class_exists(\App\Models\LoginLog::class)) {
+            return;
         }
+
+        \App\Models\LoginLog::create([
+            'user_id'    => $userId,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'login_at'   => now(),
+            'status'     => $status,
+        ]);
+    } catch (\Throwable $e) {
+        // Silent, jangan ganggu proses login
     }
+}
 
     /**
      * Perbarui kolom last_login_at.

@@ -13,7 +13,7 @@
 @if($errors->any())
   <script>
     document.addEventListener('DOMContentLoaded',function(){
-      @if($errors->has('nik'))
+      @if($errors->has('login'))
         NxAlert.fire({
           type:'error',
           title:'NIK Tidak Terdaftar',
@@ -68,7 +68,7 @@
   </script>
 @endif
 
-<form id="loginFormEngine" method="POST" action="{{ route('login') }}" novalidate>
+<form id="loginFormEngine" method="POST" action="{{ route('login.post') }}" novalidate>
   @csrf
 
   {{-- NIK Field --}}
@@ -76,21 +76,21 @@
     <label for="nikInput" class="field-label">NIK atau Email</label>
     <div class="field-wrap">
       <input
-        type="text"
-        id="nikInput"
-        name="nik"
-        class="field-input {{ $errors->has('nik') ? 'is-err' : '' }}"
-        placeholder="Masukkan NIK (16 digit) atau email"
-        value="{{ old('nik') }}"
-        autocomplete="username"
-        inputmode="text"
-        required
-      >
+  type="text"
+  id="nikInput"
+  name="login"
+  class="field-input {{ $errors->has('login') ? 'is-err' : '' }}"
+  placeholder="Masukkan NIK, email, atau username"
+  value="{{ old('login') }}"
+  autocomplete="username"
+  inputmode="text"
+  required
+>
       <i class="fa-solid fa-user fi-icon-l" aria-hidden="true"></i>
     </div>
-    <span class="field-msg err {{ $errors->has('nik') ? 'show' : '' }}" id="nikMsg">
-      {{ $errors->first('nik') }}
-    </span>
+   <span class="field-msg err {{ $errors->has('login') ? 'show' : '' }}" id="nikMsg">
+  {{ $errors->first('login') }}
+</span>
   </div>
 
   {{-- Password Field --}}
@@ -164,12 +164,19 @@
 
   if(!form)return;
 
-  nikEl.addEventListener('blur',function(){
-    var v=nikEl.value.trim();
-    if(!v){setErr(nikEl,nikMsg,'NIK atau email tidak boleh kosong.');}
-    else if(!isNIK(v)&&!isEmail(v)){setErr(nikEl,nikMsg,'Masukkan NIK 16 digit atau format email yang valid.');}
-    else{clearErr(nikEl,nikMsg);}
-  });
+ nikEl.addEventListener('blur',function(){
+  var v=nikEl.value.trim();
+
+  if(!v){
+    setErr(nikEl,nikMsg,'NIK, email, atau username tidak boleh kosong.');
+  }
+  else if(!isNIK(v)&&!isEmail(v)&&!isUsername(v)){
+    setErr(nikEl,nikMsg,'Masukkan NIK 16 digit, email valid, atau username.');
+  }
+  else{
+    clearErr(nikEl,nikMsg);
+  }
+});
   passEl.addEventListener('blur',function(){
     if(!passEl.value){setErr(passEl,passMsg,'Sandi tidak boleh kosong.');}
     else{clearErr(passEl,passMsg);}

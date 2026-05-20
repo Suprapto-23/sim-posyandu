@@ -11,6 +11,7 @@ use App\Models\Pemeriksaan;
 use App\Models\Remaja;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -26,33 +27,51 @@ class DashboardController extends Controller
         $totalLansia = Lansia::count();
         $totalSasaran = $totalBalita + $totalRemaja + $totalLansia;
 
-        $absensiQueryHariIni = AbsensiDetail::whereHas('absensi', function ($query) use ($today) {
+        $absensiHariIni = AbsensiDetail::whereHas('absensi', function ($query) use ($today) {
             $query->whereDate('tanggal_posyandu', $today->toDateString());
         });
 
-        $totalAbsensiTercatat = (clone $absensiQueryHariIni)->count();
-        $hadirHariIni = (clone $absensiQueryHariIni)->where('hadir', true)->count();
+        $totalAbsensiHariIni = (clone $absensiHariIni)->count();
+        $hadirHariIni = (clone $absensiHariIni)->where('hadir', true)->count();
 
-        $targetAbsensiHariIni = $totalAbsensiTercatat > 0
-            ? $totalAbsensiTercatat
+        $targetAbsensiHariIni = $totalAbsensiHariIni > 0
+            ? $totalAbsensiHariIni
             : $totalSasaran;
 
         $persentaseHadir = $targetAbsensiHariIni > 0
             ? round(($hadirHariIni / $targetAbsensiHariIni) * 100, 1)
             : 0;
 
-        $pengukuranPending = Pemeriksaan::whereIn('kategori_pasien', $this->kategoriAktif)
-            ->pending()
+        $pemeriksaanBase = Pemeriksaan::whereIn('kategori_pasien', $this->kategoriAktif);
+
+        $hasStatusVerifikasi = Schema::hasColumn('pemeriksaans', 'status_verifikasi');
+        $hasTanggalPeriksa = Schema::hasColumn('pemeriksaans', 'tanggal_periksa');
+
+        $pengukuranBulanIni = (clone $pemeriksaanBase)
+            ->when($hasTanggalPeriksa, function ($query) use ($now) {
+                $query->whereMonth('tanggal_periksa', $now->month)
+                    ->whereYear('tanggal_periksa', $now->year);
+            })
             ->count();
 
-        $pengukuranBulanIni = Pemeriksaan::whereIn('kategori_pasien', $this->kategoriAktif)
-            ->bulanIni()
-            ->count();
+        $pengukuranPending = $hasStatusVerifikasi
+            ? (clone $pemeriksaanBase)
+                ->where(function ($query) {
+                    $query->whereNull('status_verifikasi')
+                        ->orWhereIn('status_verifikasi', ['pending', 'menunggu', 'belum_divalidasi']);
+                })
+                ->count()
+            : 0;
 
-        $pengukuranTervalidasi = Pemeriksaan::whereIn('kategori_pasien', $this->kategoriAktif)
-            ->verified()
-            ->bulanIni()
-            ->count();
+        $pengukuranTervalidasi = $hasStatusVerifikasi
+            ? (clone $pemeriksaanBase)
+                ->whereIn('status_verifikasi', ['verified', 'terverifikasi', 'valid', 'disetujui'])
+                ->when($hasTanggalPeriksa, function ($query) use ($now) {
+                    $query->whereMonth('tanggal_periksa', $now->month)
+                        ->whereYear('tanggal_periksa', $now->year);
+                })
+                ->count()
+            : 0;
 
         $jadwalHariIni = JadwalPosyandu::whereDate('tanggal', $today->toDateString())
             ->where('status', 'aktif')
@@ -135,33 +154,30 @@ class DashboardController extends Controller
             ->take(5)
             ->get()
             ->map(fn ($item) => (object) [
-                'nama' => $item->nama_lengkap,
+                'nama' => $item->nama_lengkap ?? $item->nama ?? 'Tanpa Nama',
                 'kategori' => 'Balita / Anak',
                 'created_at' => $item->created_at,
                 'icon' => 'fa-child-reaching',
-                'color' => 'emerald',
             ]);
 
         $remaja = Remaja::latest()
             ->take(5)
             ->get()
             ->map(fn ($item) => (object) [
-                'nama' => $item->nama_lengkap,
+                'nama' => $item->nama_lengkap ?? $item->nama ?? 'Tanpa Nama',
                 'kategori' => 'Remaja',
                 'created_at' => $item->created_at,
                 'icon' => 'fa-user-graduate',
-                'color' => 'indigo',
             ]);
 
         $lansia = Lansia::latest()
             ->take(5)
             ->get()
             ->map(fn ($item) => (object) [
-                'nama' => $item->nama_lengkap,
+                'nama' => $item->nama_lengkap ?? $item->nama ?? 'Tanpa Nama',
                 'kategori' => 'Lansia',
                 'created_at' => $item->created_at,
                 'icon' => 'fa-person-cane',
-                'color' => 'amber',
             ]);
 
         return $balita
@@ -174,17 +190,36 @@ class DashboardController extends Controller
 
     private function getPengukuranTerbaru(): Collection
     {
-        return Pemeriksaan::with(['kunjungan.pasien', 'pemeriksa'])
-            ->whereIn('kategori_pasien', $this->kategoriAktif)
+        $query = Pemeriksaan::whereIn('kategori_pasien', $this->kategoriAktif)
             ->latest('created_at')
             ->take(5)
-            ->get()
-            ->map(fn ($item) => (object) [
-                'nama' => $item->nama_pasien,
-                'kategori' => ucfirst($item->kategori_pasien ?? '-'),
-                'tanggal' => $item->tanggal_periksa,
-                'status' => $item->status_verifikasi_text,
-                'badge' => $item->status_verifikasi_badge,
-            ]);
+            ->get();
+
+        return $query->map(function ($item) {
+            $status = $item->status_verifikasi ?? null;
+
+            $statusText = match ($status) {
+                'verified', 'terverifikasi', 'valid', 'disetujui' => 'Tervalidasi',
+                'rejected', 'ditolak' => 'Ditolak',
+                default => 'Menunggu',
+            };
+
+            $badge = match ($statusText) {
+                'Tervalidasi' => 'emerald',
+                'Ditolak' => 'rose',
+                default => 'amber',
+            };
+
+            return (object) [
+                'nama' => $item->nama_pasien
+                    ?? $item->pasien?->nama_lengkap
+                    ?? $item->kunjungan?->pasien?->nama_lengkap
+                    ?? 'Data sasaran',
+                'kategori' => ucfirst(str_replace('_', ' ', $item->kategori_pasien ?? '-')),
+                'tanggal' => $item->tanggal_periksa ?? $item->created_at,
+                'status' => $statusText,
+                'badge' => $badge,
+            ];
+        });
     }
 }
