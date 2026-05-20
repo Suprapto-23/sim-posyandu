@@ -25,7 +25,6 @@ use App\Http\Controllers\Kader\DashboardController   as KaderDashboard;
 use App\Http\Controllers\Kader\BalitaController;
 use App\Http\Controllers\Kader\RemajaController;
 use App\Http\Controllers\Kader\LansiaController;
-use App\Http\Controllers\Kader\IbuHamilController;
 use App\Http\Controllers\Kader\PemeriksaanController;
 use App\Http\Controllers\Kader\ImunisasiController;
 use App\Http\Controllers\Kader\KunjunganController;
@@ -208,12 +207,6 @@ Route::middleware(['auth', 'role:kader'])->prefix('kader')->name('kader.')->grou
         // Data Balita
         Route::delete('balita/bulk-delete', [BalitaController::class, 'bulkDelete'])->name('balita.bulk-delete');
         Route::post('balita/{id}/sync', [BalitaController::class, 'syncUser'])->name('balita.sync');
-        Route::resource('balita', BalitaController::class);
-
-        // Data Ibu Hamil
-        Route::delete('ibu-hamil/bulk-delete', [IbuHamilController::class, 'bulkDelete'])->name('ibu-hamil.bulk-delete');
-        Route::post('ibu-hamil/{id}/sync', [IbuHamilController::class, 'syncUser'])->name('ibu-hamil.sync');
-        Route::resource('ibu-hamil', IbuHamilController::class);
 
         // Data Remaja
         Route::delete('remaja/bulk-delete', [RemajaController::class, 'bulkDelete'])->name('remaja.bulk-delete');

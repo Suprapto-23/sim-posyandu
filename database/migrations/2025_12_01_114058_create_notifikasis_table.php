@@ -12,9 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifikasis', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
+    $table->id();
+    // TAMBAHKAN BARIS INI JIKA BELUM ADA:
+    $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+    
+    // ... (kolom lain seperti judul, pesan, is_read, dll) ...
+    $table->timestamps();
+});
     }
 
     /**

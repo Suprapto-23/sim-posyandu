@@ -80,10 +80,7 @@ class PemeriksaanController extends Controller
         if ($kategori === 'balita') {
             $rules['lingkar_kepala'] = 'nullable|numeric|min:10|max:100';
             $rules['suhu_tubuh']     = 'nullable|numeric|min:30|max:45';
-        } elseif ($kategori === 'ibu_hamil') {
-            $rules['lingkar_lengan'] = 'nullable|numeric|min:10|max:100';
-            $rules['tekanan_darah']  = 'nullable|string|max:15';
-            $rules['usia_kehamilan'] = 'nullable|integer|min:1|max:45';
+        
         } elseif ($kategori === 'lansia') {
             $rules['tekanan_darah']  = 'nullable|string|max:15';
             $rules['lingkar_perut']  = 'nullable|numeric|min:20|max:200';
@@ -183,10 +180,7 @@ class PemeriksaanController extends Controller
         if ($kategori === 'balita') {
             $rules['lingkar_kepala'] = 'nullable|numeric|min:10|max:100';
             $rules['suhu_tubuh']     = 'nullable|numeric|min:30|max:45';
-        } elseif ($kategori === 'ibu_hamil') {
-            $rules['lingkar_lengan'] = 'nullable|numeric|min:10|max:100';
-            $rules['tekanan_darah']  = 'nullable|string|max:15';
-            $rules['usia_kehamilan'] = 'nullable|integer|min:1|max:45';
+        
         } elseif ($kategori === 'lansia') {
             $rules['tekanan_darah']  = 'nullable|string|max:15';
             $rules['lingkar_perut']  = 'nullable|numeric|min:20|max:200';

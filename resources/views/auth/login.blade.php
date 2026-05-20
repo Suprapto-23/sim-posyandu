@@ -1,175 +1,181 @@
-﻿@extends('layouts.auth')
+﻿{{-- ▸ Konten ini di-inject ke @yield('content') di auth-layout.blade.php --}}
+{{-- File: resources/views/auth/login.blade.php --}}
 
-@section('title', 'Selamat Datang | PosyanduCare')
+@extends('layouts.auth')
+@section('title','Masuk')
 
 @section('content')
 
-<h1 class="card-title">Selamat Datang Kembali!</h1>
+<h2 class="card-title">Selamat Datang Kembali!</h2>
 <p class="card-sub">Masuk untuk melanjutkan ke Portal PosyanduCare</p>
 
-<form method="POST" action="{{ route('login.post') }}" id="loginFormEngine">
-    @csrf
+{{-- ── Laravel session errors ── --}}
+@if($errors->any())
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      @if($errors->has('nik'))
+        NxAlert.fire({
+          type:'error',
+          title:'NIK Tidak Terdaftar',
+          message:'NIK yang Anda masukkan <strong>belum terdaftar</strong> di sistem.<br>Silakan hubungi admin Posyandu untuk pendaftaran akun.',
+          confirmText:'Mengerti'
+        });
+      @elseif($errors->has('password'))
+        NxAlert.fire({
+          type:'error',
+          title:'Sandi Salah',
+          message:'Password yang Anda masukkan tidak sesuai.<br>Periksa kembali atau gunakan <strong>Lupa password?</strong> di bawah.',
+          confirmText:'Coba Lagi'
+        });
+      @elseif($errors->has('inactive'))
+        NxAlert.fire({
+          type:'warning',
+          title:'Akun Tidak Aktif',
+          message:'Akun Anda belum diaktifkan.<br>Silakan hubungi petugas Posyandu untuk aktivasi.',
+          confirmText:'Mengerti'
+        });
+      @elseif($errors->has('locked'))
+        NxAlert.fire({
+          type:'warning',
+          title:'Akun Terkunci',
+          message:'Akun Anda terkunci sementara karena terlalu banyak percobaan gagal.<br>Coba lagi dalam <strong>30 menit</strong> atau hubungi admin.',
+          confirmText:'Mengerti'
+        });
+      @else
+        NxAlert.fire({
+          type:'error',
+          title:'Login Gagal',
+          message:'{{ $errors->first() }}',
+          confirmText:'Tutup'
+        });
+      @endif
+    });
+  </script>
+@endif
 
-    <div class="field">
-        <label for="login" class="field-label">Email atau Username</label>
-        <div class="field-wrap">
-            <i class="fa-regular fa-user fi-l"></i>
-            <input type="text" id="login" name="login" value="{{ old('login') }}"
-                class="field-input {{ $errors->has('login') ? 'err' : '' }}"
-                placeholder="Masukkan email atau username"
-                required autofocus autocomplete="off">
-        </div>
+{{-- ── Flash success ── --}}
+@if(session('status'))
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      NxAlert.fire({
+        type:'success',
+        title:'Berhasil',
+        message:'{{ session("status") }}',
+        confirmText:'Tutup',
+        timer:4000
+      });
+    });
+  </script>
+@endif
+
+<form id="loginFormEngine" method="POST" action="{{ route('login') }}" novalidate>
+  @csrf
+
+  {{-- NIK Field --}}
+  <div class="field">
+    <label for="nikInput" class="field-label">NIK atau Email</label>
+    <div class="field-wrap">
+      <input
+        type="text"
+        id="nikInput"
+        name="nik"
+        class="field-input {{ $errors->has('nik') ? 'is-err' : '' }}"
+        placeholder="Masukkan NIK (16 digit) atau email"
+        value="{{ old('nik') }}"
+        autocomplete="username"
+        inputmode="text"
+        required
+      >
+      <i class="fa-solid fa-user fi-icon-l" aria-hidden="true"></i>
     </div>
+    <span class="field-msg err {{ $errors->has('nik') ? 'show' : '' }}" id="nikMsg">
+      {{ $errors->first('nik') }}
+    </span>
+  </div>
 
-    <div class="field">
-        <label for="password" class="field-label">Password</label>
-        <div class="field-wrap">
-            <i class="fa-solid fa-lock fi-l"></i>
-            <input type="password" id="password" name="password"
-                class="field-input {{ $errors->has('password') ? 'err' : '' }}"
-                placeholder="Masukkan password"
-                required autocomplete="current-password">
-            <button type="button" class="fi-eye" onclick="togglePw()" aria-label="Tampilkan password">
-                <i class="fa-regular fa-eye-slash" id="eyeIcon"></i>
-            </button>
-        </div>
+  {{-- Password Field --}}
+  <div class="field">
+    <label for="passInput" class="field-label">Sandi</label>
+    <div class="field-wrap">
+      <input
+        type="password"
+        id="passInput"
+        name="password"
+        class="field-input {{ $errors->has('password') ? 'is-err' : '' }}"
+        placeholder="Masukkan sandi Anda"
+        autocomplete="current-password"
+        required
+      >
+      <i class="fa-solid fa-lock fi-icon-l" aria-hidden="true"></i>
+      <button type="button" class="fi-eye" id="eyeBtn" aria-label="Tampilkan/sembunyikan sandi">
+        <i class="fa-solid fa-eye"></i>
+      </button>
     </div>
+    <span class="field-msg err {{ $errors->has('password') ? 'show' : '' }}" id="passMsg">
+      {{ $errors->first('password') }}
+    </span>
+  </div>
 
-    <div class="forgot"><a href="#">Lupa password?</a></div>
+  <!--  -->
 
-    <button type="submit" id="submitActionBtn" class="btn-submit">
-        <span id="submitTxt">Masuk</span>
-        <i class="fa-solid fa-arrow-right" id="submitIcon"></i>
-    </button>
+  {{-- Submit Button --}}
+  <button type="submit" class="btn-submit" id="submitActionBtn">
+    <span id="submitTxt">Masuk</span>
+    <i class="fa-solid fa-arrow-right ic-arrow" id="submitIcon" aria-hidden="true"></i>
+    <span class="ic-spin" aria-hidden="true"></span>
+  </button>
+
 </form>
 
-<p class="account-note">
-    Akun Anda didaftarkan oleh petugas Posyandu.<br>
-    Hubungi petugas setempat atau <a href="#">minta bantuan di sini</a>.
-</p>
+{{-- Admin note --}}
+<div class="admin-note" role="note">
+  <div class="admin-note-icon" aria-hidden="true">
+    <i class="fa-solid fa-circle-info"></i>
+  </div>
+  <p class="admin-note-text">
+    Akun dibuat oleh petugas Posyandu. Belum punya akun atau ada kendala?
+    <a href="mailto:admin@posyanducare.id">Hubungi admin</a>.
+  </p>
+</div>
 
 @endsection
 
 @push('scripts')
 <script>
-function togglePw() {
-    var inp  = document.getElementById('password');
-    var ico  = document.getElementById('eyeIcon');
-    var show = inp.type === 'password';
-    inp.type = show ? 'text' : 'password';
-    ico.classList.toggle('fa-eye-slash', !show);
-    ico.classList.toggle('fa-eye', show);
-}
+/* ── CLIENT-SIDE VALIDATION ── */
+(function(){
+  var form    = document.getElementById('loginFormEngine');
+  var nikEl   = document.getElementById('nikInput');
+  var passEl  = document.getElementById('passInput');
+  var nikMsg  = document.getElementById('nikMsg');
+  var passMsg = document.getElementById('passMsg');
 
-document.addEventListener('DOMContentLoaded', function () {
-    var form = document.getElementById('loginFormEngine');
-    if (!form || form.dataset.bound) return;
-    form.dataset.bound = '1';
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var btn = document.getElementById('submitActionBtn');
-        var txt = document.getElementById('submitTxt');
-        var ico = document.getElementById('submitIcon');
-        if (btn) btn.disabled = true;
-        if (txt) txt.textContent = 'Membuka portal...';
-        if (ico) {
-            ico.classList.remove('fa-arrow-right');
-            ico.classList.add('fa-circle-notch', 'fa-spin');
-        }
-        if (typeof window.runLoginTransition === 'function') {
-            window.runLoginTransition(form);
-        } else {
-            form.submit();
-        }
-    });
-});
-</script>
+  function setErr(input,msgEl,text){
+    input.classList.add('is-err');
+    msgEl.textContent=text;
+    msgEl.classList.add('show','err');
+  }
+  function clearErr(input,msgEl){
+    input.classList.remove('is-err');
+    msgEl.classList.remove('show');
+  }
+  function isEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);}
+  function isNIK(v){return /^\d{16}$/.test(v);}
 
-{{-- ── ALERT: identitas (email/username/NIK) ── --}}
-@if($errors->has('login'))
-@php
-    $loginErr   = $errors->first('login');
-    $isNotFound = str_contains($loginErr, 'tidak ditemukan') || str_contains($loginErr, 'belum terdaftar');
-    $isInactive = str_contains($loginErr, 'tidak aktif');
-    $isFormat   = str_contains($loginErr, 'Format') || str_contains($loginErr, 'tidak valid');
-@endphp
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    @if($isNotFound)
-    window.NxAlert.fire({
-        type        : 'error',
-        title       : 'Akun Tidak Ditemukan',
-        message     : 'Identitas yang Anda masukkan <strong>belum terdaftar</strong> di sistem PosyanduCare.'
-                    + '<br><br>Pastikan email, username, atau NIK sudah benar. Jika belum memiliki akun, hubungi petugas Posyandu setempat.',
-        confirmText : 'Mengerti',
-    });
-    @elseif($isInactive)
-    window.NxAlert.fire({
-        type        : 'error',
-        title       : 'Akun Dinonaktifkan',
-        message     : 'Akun Anda saat ini <strong>tidak aktif</strong> dan tidak dapat digunakan untuk masuk.'
-                    + '<br><br>Silakan hubungi petugas atau admin Posyandu untuk mengaktifkan kembali akun Anda.',
-        confirmText : 'Mengerti',
-    });
-    @elseif($isFormat)
-    window.NxAlert.fire({
-        type        : 'error',
-        title       : 'Format Tidak Valid',
-        message     : 'Masukkan <strong>email</strong>, <strong>username</strong>, atau <strong>NIK (16 digit angka)</strong> yang valid untuk masuk ke sistem.',
-        confirmText : 'Coba Lagi',
-    });
-    @else
-    window.NxAlert.fire({
-        type        : 'error',
-        title       : 'Login Gagal',
-        message     : @json($loginErr),
-        confirmText : 'Coba Lagi',
-    });
-    @endif
-});
-</script>
-@endif
+  if(!form)return;
 
-{{-- ── ALERT: password salah ── --}}
-@if($errors->has('password'))
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    window.NxAlert.fire({
-        type        : 'error',
-        title       : 'Password Salah',
-        message     : 'Password yang Anda masukkan <strong>tidak cocok</strong> dengan akun ini.'
-                    + '<br><br>Periksa huruf kapital dan spasi, atau gunakan fitur <em>Lupa password</em> jika Anda lupa.',
-        confirmText : 'Coba Lagi',
-    });
-});
+  nikEl.addEventListener('blur',function(){
+    var v=nikEl.value.trim();
+    if(!v){setErr(nikEl,nikMsg,'NIK atau email tidak boleh kosong.');}
+    else if(!isNIK(v)&&!isEmail(v)){setErr(nikEl,nikMsg,'Masukkan NIK 16 digit atau format email yang valid.');}
+    else{clearErr(nikEl,nikMsg);}
+  });
+  passEl.addEventListener('blur',function(){
+    if(!passEl.value){setErr(passEl,passMsg,'Sandi tidak boleh kosong.');}
+    else{clearErr(passEl,passMsg);}
+  });
+  nikEl.addEventListener('input',function(){if(nikEl.classList.contains('is-err'))clearErr(nikEl,nikMsg);});
+  passEl.addEventListener('input',function(){if(passEl.classList.contains('is-err'))clearErr(passEl,passMsg);});
+})();
 </script>
-@endif
-
-{{-- ── ALERT: pesan sesi (logout, dll) ── --}}
-@if(session('info'))
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    window.NxAlert.fire({
-        type        : 'success',
-        title       : 'Informasi',
-        message     : @json(session('info')),
-        confirmText : 'Tutup',
-        timer       : 4000,
-    });
-});
-</script>
-@endif
-
-@if(session('error'))
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    window.NxAlert.fire({
-        type        : 'error',
-        title       : 'Terjadi Kesalahan',
-        message     : @json(session('error')),
-        confirmText : 'Tutup',
-    });
-});
-</script>
-@endif
 @endpush
