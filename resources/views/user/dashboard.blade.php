@@ -131,7 +131,7 @@
             </div>
 
             {{-- B. STATUS KESEHATAN MULTI-ROLE (GRID PRESISI) --}}
-            @if((isset($dataAnak) && $dataAnak->isNotEmpty()) || isset($dataLansia) || isset($dataRemaja) || isset($dataBumil))
+            @if((isset($dataAnak) && $dataAnak->isNotEmpty()) || isset($dataLansia) || isset($dataRemaja))
             <div class="w-full flex flex-col h-full">
                 <div class="flex items-center justify-between mb-4 px-1 shrink-0">
                     <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-file-medical-alt text-rose-500 mr-2"></i> Pantau Kesehatan</h3>
@@ -160,22 +160,7 @@
                         @endforeach
                     @endif
 
-                    {{-- 2. IBU HAMIL --}}
-                    @if(isset($dataBumil) && $dataBumil)
-                        <a href="{{ route('user.ibu_hamil.show', $dataBumil->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(236,72,153,0.1)] hover:border-pink-300 transition-all group">
-                            <div class="flex items-center gap-3 mb-4 flex-1">
-                                <div class="w-10 h-10 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center text-lg shrink-0 border border-pink-100"><i class="fas fa-female"></i></div>
-                                <div>
-                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-pink-600 transition-colors line-clamp-1">{{ $dataBumil->nama_lengkap }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kehamilan & Kandungan</p>
-                                </div>
-                            </div>
-                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Pantau Kehamilan</span>
-                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-pink-50 group-hover:text-pink-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
-                            </div>
-                        </a>
-                    @endif
+                  
 
                     {{-- 3. LANSIA --}}
                     @if(isset($dataLansia) && $dataLansia)

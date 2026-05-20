@@ -178,7 +178,6 @@
                                     <option value="posyandu" {{ old('kategori', $jadwal->kategori) == 'posyandu' ? 'selected' : '' }}>Posyandu Rutin (Antropometri)</option>
                                     <option value="imunisasi" {{ old('kategori', $jadwal->kategori) == 'imunisasi' ? 'selected' : '' }}>Vaksinasi & Imunisasi Dasar</option>
                                     <option value="pemeriksaan" {{ old('kategori', $jadwal->kategori) == 'pemeriksaan' ? 'selected' : '' }}>Pemeriksaan Khusus (ANC, PTM)</option>
-                                    <option value="konseling" {{ old('kategori', $jadwal->kategori) == 'konseling' ? 'selected' : '' }}>Penyuluhan & Edukasi Warga</option>
                                     <option value="lainnya" {{ old('kategori', $jadwal->kategori) == 'lainnya' ? 'selected' : '' }}>Kegiatan Lainnya</option>
                                 </select>
                                 <i class="fas fa-tags input-icon"></i>
@@ -193,7 +192,6 @@
                                 <select name="target_peserta" required class="med-input select-custom @error('target_peserta') is-invalid @enderror">
                                     <option value="semua" {{ old('target_peserta', $jadwal->target_peserta) == 'semua' ? 'selected' : '' }}>Semua Warga Terdaftar (Umum)</option>
                                     <option value="balita" {{ old('target_peserta', $jadwal->target_peserta) == 'balita' ? 'selected' : '' }}>Khusus Ibu & Balita / Bayi</option>
-                                    <option value="ibu_hamil" {{ old('target_peserta', $jadwal->target_peserta) == 'ibu_hamil' ? 'selected' : '' }}>Khusus Ibu Hamil (Bumil)</option>
                                     <option value="remaja" {{ old('target_peserta', $jadwal->target_peserta) == 'remaja' ? 'selected' : '' }}>Khusus Remaja (Posyandu Remaja)</option>
                                     <option value="lansia" {{ old('target_peserta', $jadwal->target_peserta) == 'lansia' ? 'selected' : '' }}>Khusus Lansia (Geriatri / PTM)</option>
                                 </select>

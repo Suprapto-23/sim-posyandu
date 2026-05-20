@@ -68,7 +68,6 @@
                                 <select name="target_peserta" required class="form-input bg-indigo-50 border-indigo-100 text-indigo-800 cursor-pointer focus:ring-4 focus:ring-indigo-100 focus:bg-white">
                                     <option value="semua">Semua Warga (Umum)</option>
                                     <option value="balita">Balita & Anak</option>
-                                    <option value="ibu_hamil">Ibu Hamil</option>
                                     <option value="remaja">Remaja</option>
                                     <option value="lansia">Lansia</option>
                                 </select>

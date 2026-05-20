@@ -18,7 +18,6 @@ use Carbon\Carbon;
  * Dashboard "universal" — ditampilkan jika:
  * - User punya multi-peran (orang_tua sekaligus lansia, dst.)
  * - User belum terdaftar (umum) → minta isi NIK
- * - User role bumil (belum ada halaman spesifik)
  *
  * Untuk user single-peran, HomeController sudah redirect
  * ke halaman spesifik mereka (balita/remaja/lansia) SEBELUM
@@ -43,7 +42,6 @@ class DashboardController extends Controller
         $dataAnak   = $ctx['balitas'];
         $dataRemaja = $ctx['remaja'];
         $dataLansia = $ctx['lansia'];
-        $dataBumil  = $ctx['bumil'];
 
         // Grafik pertumbuhan untuk balita pertama (jika ada)
         $grafikData = [];
@@ -100,7 +98,6 @@ class DashboardController extends Controller
             'dataAnak',
             'dataRemaja',
             'dataLansia',
-            'dataBumil',
             'grafikData',
             'jadwalTerdekat',
             'notifikasiTerbaru',
@@ -148,7 +145,6 @@ class DashboardController extends Controller
         if (in_array('orang_tua', $peranUser)) $targets[] = 'balita';
         if (in_array('remaja', $peranUser))    $targets[] = 'remaja';
         if (in_array('lansia', $peranUser))    $targets[] = 'lansia';
-        if (in_array('bumil', $peranUser))     $targets[] = 'ibu_hamil';
 
         return JadwalPosyandu::where('status', 'aktif')
             ->whereIn('target_peserta', $targets)

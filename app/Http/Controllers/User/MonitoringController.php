@@ -42,14 +42,7 @@ class MonitoringController extends Controller
                 ]));
             }
 
-            $ibuHamils = collect();
-            if ($ctx['bumil']) {
-                $ibuHamils->push($ctx['bumil']->load([
-                    'kunjungans' => function($query) { $query->latest('tanggal_kunjungan'); },
-                    'kunjungans.pemeriksaan',
-                    'pemeriksaan_terakhir'
-                ]));
-            }
+           
 
             $lansias = collect();
             if ($ctx['lansia']) {
@@ -61,11 +54,10 @@ class MonitoringController extends Controller
             }
 
             // 3. FLAG KETERSEDIAAN DATA (Untuk UI Empty State)
-            $hasData = $balitas->isNotEmpty() || $ibuHamils->isNotEmpty() || $remajas->isNotEmpty() || $lansias->isNotEmpty();
+            $hasData = $balitas->isNotEmpty() || $remajas->isNotEmpty() || $lansias->isNotEmpty();
 
             return view('user.monitoring.index', compact(
                 'balitas', 
-                'ibuHamils', 
                 'remajas', 
                 'lansias',
                 'hasData'

@@ -46,7 +46,6 @@
     $kategoriRaw = strtolower(class_basename($kunjungan->pasien_type ?? ''));
     $kategoriConfig = match($kategoriRaw) {
         'balita', 'bayi'                 => ['label' => 'Bayi & Balita', 'icon' => 'fa-baby', 'theme' => 'bg-cyan-100 text-cyan-600 border-cyan-200'],
-        'ibuhamil', 'ibu_hamil', 'bumil' => ['label' => 'Ibu Hamil', 'icon' => 'fa-female', 'theme' => 'bg-pink-100 text-pink-600 border-pink-200'],
         default                          => ['label' => 'Umum', 'icon' => 'fa-user', 'theme' => 'bg-slate-100 text-slate-600 border-slate-200']
     };
 @endphp

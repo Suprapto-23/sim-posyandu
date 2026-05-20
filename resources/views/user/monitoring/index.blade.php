@@ -48,12 +48,7 @@
             </div>
         @endforeach
 
-        {{-- Loop Panel Ibu Hamil --}}
-        @foreach($ibuHamils as $bumil)
-            <div class="pasien-card transition-all duration-300 transform" data-nama="{{ strtolower($bumil->nama_lengkap) }}">
-                @include('user.components.panel_ibu_hamil', ['data' => $bumil])
-            </div>
-        @endforeach
+        
 
         {{-- Loop Panel Remaja --}}
         @foreach($remajas as $remaja)

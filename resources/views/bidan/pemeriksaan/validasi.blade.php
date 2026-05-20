@@ -77,23 +77,7 @@
                                 <p class="text-slate-400 font-medium">Kadar Hemoglobin (HB)</p>
                                 <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->hb ?? '-' }} g/dL</p>
                             </div>
-                        @elseif(str_contains($kategori, 'hamil') || $kategori === 'ibu_hamil')
-                            <div class="border-b border-slate-100 pb-2">
-                                <p class="text-slate-400 font-medium">Tinggi Fundus (TFU)</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tinggi_fundus ?? '-' }} cm</p>
-                            </div>
-                            <div class="border-b border-slate-100 pb-2">
-                                <p class="text-slate-400 font-medium">Detak Jantung Janin (DJJ)</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->djj ?? '-' }} bpm</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">LILA Ibu</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lila ?? '-' }} cm</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
-                            </div>
+                        
                         @elseif($kategori === 'lansia')
                             <div class="border-b border-slate-100 pb-2">
                                 <p class="text-slate-400 font-medium">Tekanan Darah</p>
@@ -143,19 +127,7 @@
                                     <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">"{{ $analisis['pesan'] }}"</p>
                                     <p class="text-xs text-teal-300 mt-3 italic"><i class="fas fa-lightbulb text-amber-400 mr-1"></i> Saran: {{ $analisis['rekomendasi'] }}</p>
                                 </div>
-                            @elseif(str_contains($kategori, 'hamil') || $kategori === 'ibu_hamil')
-                                <div class="flex flex-col gap-2 text-xs border-b border-white/10 pb-3">
-                                    <p>• Batas LILA Ibu: <span class="text-slate-300 font-bold">{{ $analisis['lila']['status'] }}</span></p>
-                                    <p>• Batas Tensi: <span class="text-slate-300 font-bold">{{ $analisis['tensi']['status'] }}</span></p>
-                                    <p>• Detak Janin (DJJ): <span class="text-slate-300 font-bold">{{ $analisis['djj']['status'] }}</span></p>
-                                </div>
-                                <div class="mt-4">
-                                    <p class="text-[11px] text-slate-400 uppercase font-bold">Tingkat Risiko Kehamilan:</p>
-                                    <h5 class="text-base font-black {{ $analisis['kesimpulan']['risiko'] === 'Tinggi' ? 'text-rose-400' : 'text-emerald-400' }} mt-0.5">
-                                        {{ $analisis['kesimpulan']['status'] }}
-                                    </h5>
-                                    <p class="text-xs text-slate-300 mt-1 leading-relaxed">"{{ $analisis['kesimpulan']['pesan'] }}"</p>
-                                </div>
+                            
                             @elseif($kategori === 'lansia')
                                 <div>
                                     <p class="text-[11px] text-slate-400 uppercase font-bold">Rekomendasi Skrining PTM:</p>

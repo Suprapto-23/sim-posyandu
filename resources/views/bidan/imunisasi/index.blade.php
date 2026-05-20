@@ -48,7 +48,7 @@
                     <h1 class="text-3xl font-black tracking-tight font-poppins">Buku Register Imunisasi</h1>
                 </div>
                 <p class="text-[14px] font-medium text-cyan-100 max-w-xl leading-relaxed">
-                    Pusat pencatatan riwayat pemberian imunisasi dasar Balita dan Tetanus Toxoid (TT) Ibu Hamil. Seluruh data terintegrasi secara otomatis ke EMR KIA.
+                    Pusat pencatatan riwayat pemberian imunisasi dasar Balita . Seluruh data terintegrasi secara otomatis ke EMR KIA.
                 </p>
             </div>
         </div>
@@ -109,7 +109,6 @@
                         // Mapping Visual Demografi
                         $config = match($kategoriRaw) {
                             'balita', 'bayi' => ['theme' => 'bg-sky-50 text-sky-600 border-sky-100', 'badge' => 'text-sky-600 border-sky-200', 'ico' => 'fa-baby', 'label' => 'Balita'],
-                            'ibuhamil', 'ibu_hamil', 'bumil' => ['theme' => 'bg-pink-50 text-pink-600 border-pink-100', 'badge' => 'text-pink-600 border-pink-200', 'ico' => 'fa-female', 'label' => 'Ibu Hamil'],
                             default => ['theme' => 'bg-slate-50 text-slate-600 border-slate-100', 'badge' => 'text-slate-600 border-slate-200', 'ico' => 'fa-user', 'label' => 'Umum'],
                         };
                     @endphp

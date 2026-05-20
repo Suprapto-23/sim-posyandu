@@ -104,7 +104,6 @@
                     @php
                         $katDisplay = match($pemeriksaan->kategori_pasien) {
                             'balita' => 'Bayi & Balita (0-5 Tahun)',
-                            'ibu_hamil' => 'Ibu Hamil',
                             'remaja' => 'Remaja',
                             'lansia' => 'Lansia',
                             default => strtoupper(str_replace('_', ' ', $pemeriksaan->kategori_pasien))
@@ -177,7 +176,6 @@
             
             $themeMap = [
                 'balita' => ['color' => 'sky', 'icon' => 'fa-child', 'title' => 'Pemeriksaan Balita', 'desc' => 'Pengukuran spesifik tumbuh kembang balita (1-5 Tahun).'],
-                'ibu_hamil' => ['color' => 'pink', 'icon' => 'fa-female', 'title' => 'Pemeriksaan Ibu Hamil', 'desc' => 'Pemantauan kesehatan kehamilan.'],
                 'remaja' => ['color' => 'indigo', 'icon' => 'fa-user-graduate', 'title' => 'Pemeriksaan Remaja', 'desc' => 'Skrining kesehatan fisik berkala remaja.'],
                 'lansia' => ['color' => 'emerald', 'icon' => 'fa-wheelchair', 'title' => 'Cek Medis Lansia', 'desc' => 'Pengecekan indikator penyakit tidak menular (PTM).']
             ];
@@ -222,29 +220,7 @@
                 </div>
                 @endif
 
-                {{-- KONTEN IBU HAMIL --}}
-                @if($kat == 'ibu_hamil')
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 md:gap-8">
-                    <div>
-                        <label class="form-label text-pink-800">Usia Kehamilan</label>
-                        <div class="input-wrapper">
-                            <input type="number" name="usia_kehamilan" value="{{ $pemeriksaan->usia_kehamilan }}" class="form-input focus:border-pink-500 focus:ring-pink-100">
-                            <span class="unit">mgg</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="form-label text-pink-800">Tensi Darah</label>
-                        <input type="text" name="tekanan_darah" value="{{ $pemeriksaan->tekanan_darah }}" class="form-input font-mono focus:border-pink-500 focus:ring-pink-100" placeholder="120/80">
-                    </div>
-                    <div>
-                        <label class="form-label text-rose-600">Lingkar Lengan (LiLA) <span class="text-rose-500">*</span></label>
-                        <div class="input-wrapper">
-                            <input type="number" step="0.1" id="lila_bumil" name="lingkar_lengan" value="{{ $pemeriksaan->lingkar_lengan }}" class="form-input border-rose-200 focus:border-rose-500 focus:ring-rose-100">
-                            <span class="unit">cm</span>
-                        </div>
-                    </div>
-                </div>
-                @endif
+                
 
                 {{-- KONTEN REMAJA --}}
                 @if($kat == 'remaja')
@@ -408,20 +384,18 @@
 
     // 2. DETEKSI DINI RISIKO KEK SAAT EDIT
     function cekLila() {
-        const bumil = document.getElementById('lila_bumil');
         const remaja = document.getElementById('lila_remaja');
-        const val = parseFloat((bumil ? bumil.value : null) || (remaja ? remaja.value : null));
+        const val = parseFloat(|| (remaja ? remaja.value : null));
         const kat = document.getElementById('kategori_pasien').value; 
         const jk = document.getElementById('pasien_jk').value;
         const warn = document.getElementById('warn_kek');
 
-        if (val > 0 && val < 23.5 && (kat === 'ibu_hamil' || (kat === 'remaja' && jk === 'P'))) {
+        if (val > 0 && val < 23.5 || (kat === 'remaja' && jk === 'P'))) {
             warn.classList.remove('hidden'); warn.classList.add('flex');
         } else {
             warn.classList.add('hidden'); warn.classList.remove('flex');
         }
     }
-    document.getElementById('lila_bumil')?.addEventListener('input', cekLila);
     document.getElementById('lila_remaja')?.addEventListener('input', cekLila);
     cekLila(); // Init KEK check on load
 

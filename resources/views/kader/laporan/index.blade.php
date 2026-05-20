@@ -90,7 +90,6 @@
     @php
         $reports = [
             ['type' => 'balita', 'title' => 'Laporan Balita', 'desc' => 'Tumbuh Kembang & Status Gizi', 'icon' => 'fa-baby', 'base' => 'sky'],
-            ['type' => 'ibu_hamil', 'title' => 'Laporan Ibu Hamil', 'desc' => 'Pemeriksaan & Risiko KEK', 'icon' => 'fa-female', 'base' => 'pink'],
             ['type' => 'remaja', 'title' => 'Laporan Remaja', 'desc' => 'Skrining Kesehatan PTM', 'icon' => 'fa-user-graduate', 'base' => 'indigo'],
             ['type' => 'lansia', 'title' => 'Laporan Lansia', 'desc' => 'Pemeriksaan Tensi & Lab', 'icon' => 'fa-wheelchair', 'base' => 'emerald'],
             ['type' => 'imunisasi', 'title' => 'Laporan Imunisasi', 'desc' => 'Rekapitulasi Vaksin Warga', 'icon' => 'fa-shield-virus', 'base' => 'violet'],

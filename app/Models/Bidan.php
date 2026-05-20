@@ -21,10 +21,7 @@ class Bidan extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function konselingRemaja()
-    {
-        return $this->hasMany(KonselingRemaja::class, 'bidan_id');
-    }
+   
 
     public function pemeriksaans()
     {

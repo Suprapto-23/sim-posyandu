@@ -27,7 +27,7 @@ class Kunjungan extends Model
 
     public function pasien()
     {
-        // Fitur Polimorfik: Bisa menyambung ke Balita, Remaja, Lansia, ATAU IbuHamil
+        // Fitur Polimorfik: Bisa menyambung ke Balita, Remaja, Lansia
         return $this->morphTo();
     }
 
@@ -51,10 +51,7 @@ class Kunjungan extends Model
         return $this->hasMany(Vitamin::class);
     }
 
-    public function konsultasi()
-    {
-        return $this->hasOne(Konsultasi::class);
-    }
+    
 
     // Accessor: Mengambil Nama Lengkap dari model mana pun yang terhubung
     public function getNamaPasienAttribute()
@@ -73,7 +70,6 @@ class Kunjungan extends Model
             'umum'        => 'Kunjungan Umum',
             'imunisasi'   => 'Imunisasi',
             'pemeriksaan' => 'Pemeriksaan',
-            'konsultasi'  => 'Konsultasi',
             'darurat'     => 'Darurat'
         ];
         

@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
 use App\Models\JadwalPosyandu;
 use Carbon\Carbon;
 
@@ -48,7 +47,6 @@ class DashboardController extends Controller
                 'total_balita'  => Balita::count(),
                 'total_remaja'  => Remaja::count(),
                 'total_lansia'  => Lansia::count(),
-                'total_bumil'   => IbuHamil::count(),
             ];
         } catch (\Throwable $e) {
             Log::warning('AdminDashboard::buildStats — ' . $e->getMessage());

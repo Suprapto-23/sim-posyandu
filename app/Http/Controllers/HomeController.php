@@ -24,7 +24,6 @@ use App\Traits\DetectsUserPeran;
  *       orang_tua → /user/balita   (KMS Anak)
  *       remaja    → /user/remaja
  *       lansia    → /user/lansia
- *       bumil     → /user/dashboard (ibu hamil sementara di dashboard)
  *       multi-peran → /user/dashboard
  *       umum      → /user/dashboard (dengan pesan minta isi NIK)
  *

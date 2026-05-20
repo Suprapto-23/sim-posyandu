@@ -36,7 +36,6 @@ class LaporanController extends Controller
         $ringkasan = [
             'total'      => $data->count(),
             'balita'     => $data->where('kategori_pasien', 'balita')->count(),
-            'ibu_hamil'  => $data->whereIn('kategori_pasien', ['ibu_hamil', 'bumil'])->count(),
             'remaja'     => $data->where('kategori_pasien', 'remaja')->count(),
             'lansia'     => $data->where('kategori_pasien', 'lansia')->count(),
             'stunting'   => $data->filter(fn($p) => in_array(strtolower($p->status_gizi), ['stunting', 'buruk']))->count(),
@@ -75,7 +74,6 @@ class LaporanController extends Controller
 
         $judulJenis = match($jenis) {
             'balita'    => 'Kesehatan Anak & Balita',
-            'ibu_hamil' => 'Pemeriksaan Ibu Hamil',
             'remaja'    => 'Kesehatan Remaja',
             'lansia'    => 'Kesehatan Lansia',
             default     => 'Layanan Medis Terpadu',

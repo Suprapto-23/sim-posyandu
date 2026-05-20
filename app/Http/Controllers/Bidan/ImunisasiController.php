@@ -13,7 +13,6 @@ use Carbon\Carbon;
 use App\Models\Kunjungan;
 use App\Models\Imunisasi;
 use App\Models\Balita;
-use App\Models\IbuHamil;
 
 class ImunisasiController extends Controller
 {
@@ -34,7 +33,7 @@ class ImunisasiController extends Controller
                 $query->where(function($q) use ($search) {
                     $q->where('vaksin', 'like', "%{$search}%")
                       ->orWhereHas('kunjungan', function ($kunjunganQuery) use ($search) {
-                          $kunjunganQuery->whereHasMorph('pasien', [\App\Models\Balita::class, \App\Models\IbuHamil::class], function ($pasienQuery) use ($search) {
+                          $kunjunganQuery->whereHasMorph('pasien', [\App\Models\Balita::class], function ($pasienQuery) use ($search) {
                               $pasienQuery->where('nama_lengkap', 'like', "%{$search}%")
                                           ->orWhere('nik', 'like', "%{$search}%");
                           });
@@ -62,7 +61,6 @@ class ImunisasiController extends Controller
         // Ini menggantikan Fetch API eksternal yang rawan error di Alpine.js
         $masterData = [
             'balita'    => Balita::select('id', 'nama_lengkap as nama', 'nik')->get(),
-            'ibu_hamil' => IbuHamil::select('id', 'nama_lengkap as nama', 'nik')->get(),
         ];
 
         return view('bidan.imunisasi.create', compact('masterData'));
@@ -76,7 +74,7 @@ class ImunisasiController extends Controller
         // Validasi input dasar
         $request->validate([
             'pasien_id'         => 'required|integer',
-            'kategori'          => 'required|in:balita,ibu_hamil', // Standarisasi nama string biasa
+            'kategori'          => 'required|in:balita',
             'jenis_imunisasi'   => 'required|string|max:100',
             'vaksin'            => 'required|string|max:100',
             'dosis'             => 'required|string|max:50',
@@ -93,7 +91,6 @@ class ImunisasiController extends Controller
             // (Mencegah user iseng menginjeksi class lain dari inspect element browser)
             $modelMap = [
                 'balita'    => \App\Models\Balita::class,
-                'ibu_hamil' => \App\Models\IbuHamil::class,
             ];
             $pasienTypeClass = $modelMap[$request->kategori];
 

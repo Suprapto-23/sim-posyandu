@@ -65,7 +65,6 @@
                                 <select name="target_peserta" required class="form-input bg-indigo-50 border-indigo-100 text-indigo-800 cursor-pointer">
                                     <option value="semua" {{ $jadwal->target_peserta == 'semua' ? 'selected' : '' }}>Semua Warga</option>
                                     <option value="balita" {{ $jadwal->target_peserta == 'balita' ? 'selected' : '' }}>Balita & Anak</option>
-                                    <option value="ibu_hamil" {{ $jadwal->target_peserta == 'ibu_hamil' ? 'selected' : '' }}>Ibu Hamil</option>
                                     <option value="remaja" {{ $jadwal->target_peserta == 'remaja' ? 'selected' : '' }}>Remaja</option>
                                     <option value="lansia" {{ $jadwal->target_peserta == 'lansia' ? 'selected' : '' }}>Lansia</option>
                                 </select>

@@ -97,7 +97,7 @@
             </div>
             <div>
                 <h1 class="text-[26px] font-black text-slate-800 tracking-tight font-poppins leading-none">Log Injeksi KIA</h1>
-                <p class="text-[13px] font-semibold text-slate-500 mt-1.5">Layanan Imunisasi Balita dan Tetanus Toxoid Ibu Hamil.</p>
+                <p class="text-[13px] font-semibold text-slate-500 mt-1.5">Layanan Imunisasi Balita </p>
             </div>
         </div>
         <a href="{{ route('bidan.imunisasi.index') }}" class="inline-flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 text-slate-600 font-bold text-[11.5px] uppercase tracking-widest rounded-[16px] hover:bg-slate-50 hover:text-cyan-600 transition-all shadow-sm">
@@ -111,7 +111,6 @@
         
         {{-- Input Tersembunyi --}}
         <input type="hidden" name="pasien_id" x-model="pasienId">
-        {{-- Note: Kategori pasien (balita/ibu_hamil) sudah dihandle langsung oleh input radio di Langkah 1 --}}
 
         {{-- HEADER FORM --}}
         <div class="px-8 md:px-12 py-8 border-b border-slate-100 bg-slate-50/50">
@@ -148,18 +147,7 @@
                     </div>
                 </label>
 
-                <label class="cat-label">
-                    <input type="radio" name="kategori" value="ibu_hamil" x-model="kategori" @change="resetPencarian()" class="sr-only cat-radio">
-                    <div class="cat-box">
-                        <div class="icon-circle w-14 h-14 rounded-[16px] bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center text-2xl transition-all duration-300 shrink-0">
-                            <i class="fas fa-female"></i>
-                        </div>
-                        <div class="text-left flex-1">
-                            <span class="cat-text font-black text-slate-800 text-[17px] transition-colors duration-300 block font-poppins tracking-tight">Ibu Hamil</span>
-                            <span class="text-[10.5px] text-slate-400 font-bold uppercase tracking-widest mt-1 block">Tetanus Toxoid (TT)</span>
-                        </div>
-                    </div>
-                </label>
+               
             </div>
         </div>
 
@@ -257,7 +245,6 @@
                             <option value="Dasar Lengkap (0-11 Bulan)" x-show="kategori === 'balita'">Dasar Lengkap (0-11 Bulan)</option>
                             <option value="Lanjutan Baduta (18-24 Bulan)" x-show="kategori === 'balita'">Lanjutan Baduta (18-24 Bulan)</option>
                             <option value="Imunisasi Anak Sekolah (BIAS)" x-show="kategori === 'balita'">Imunisasi Anak Sekolah (BIAS)</option>
-                            <option value="Imunisasi TT" x-show="kategori === 'ibu_hamil'">Imunisasi TT (Ibu Hamil)</option>
                         </select>
                         <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[12px]"></i>
                     </div>

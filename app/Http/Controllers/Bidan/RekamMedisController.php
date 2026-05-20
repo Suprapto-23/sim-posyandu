@@ -27,7 +27,6 @@ class RekamMedisController extends Controller
             // Mapping Model Polimorfik
             $models = [
                 'balita'    => \App\Models\Balita::class,
-                'ibu_hamil' => \App\Models\IbuHamil::class,
                 'lansia'    => \App\Models\Lansia::class,
                 'remaja'    => \App\Models\Remaja::class,
             ];
@@ -69,7 +68,6 @@ class RekamMedisController extends Controller
         try {
             $models = [
                 'balita'    => \App\Models\Balita::class,
-                'ibu_hamil' => \App\Models\IbuHamil::class,
                 'lansia'    => \App\Models\Lansia::class,
                 'remaja'    => \App\Models\Remaja::class,
             ];

@@ -79,13 +79,17 @@
                     $badgeBadge = match($tipe) {
                         'Balita'   => 'bg-sky-50 text-sky-700 border-sky-200',
                         'Remaja'   => 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                        'IbuHamil' => 'bg-pink-50 text-pink-700 border-pink-200',
                         'Lansia'   => 'bg-emerald-50 text-emerald-700 border-emerald-200',
                         default    => 'bg-slate-50 text-slate-700 border-slate-200'
                     };
                 @endphp
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 border {{ $badgeBadge }} text-[9px] font-black uppercase tracking-widest rounded-md mb-3 shadow-sm">
-                    <i class="fas fa-tag"></i> {{ match($tipe) { 'IbuHamil' => 'Ibu Hamil', default => $tipe } }}
+                    <i class="fas fa-tag"></i> {{ match($tipe) {
+    'Balita' => 'Balita / Anak',
+    'Remaja' => 'Remaja',
+    'Lansia' => 'Lansia',
+    default => $tipe
+} }}
                 </div>
                 <h2 class="text-3xl md:text-4xl font-black text-slate-800 font-poppins mb-2 tracking-tight">{{ $kunjungan->pasien->nama_lengkap ?? 'Data Terhapus' }}</h2>
                 <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
@@ -144,7 +148,7 @@
                             {{-- Kosong --}}
                             @if(!$kunjungan->pemeriksaan && (!$kunjungan->imunisasis || $kunjungan->imunisasis->count() == 0))
                             <div class="p-3 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-bold text-[11px]">
-                                Hanya Konsultasi Umum / Presensi
+                                Data ini hanya berisi presensi atau kunjungan umum tanpa pengukuran fisik.
                             </div>
                             @endif
                         </div>

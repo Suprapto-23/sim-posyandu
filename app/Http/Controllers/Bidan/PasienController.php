@@ -8,7 +8,6 @@ use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
 use App\Models\Pemeriksaan;
-use App\Models\IbuHamil; // Pastikan model IbuHamil sudah Anda buat
 
 class PasienController extends Controller
 {
@@ -34,26 +33,6 @@ class PasienController extends Controller
         return view('bidan.pasien.balita', compact('balitas'));
     }
 
-
-    // ========================================================================
-    // 2. DATABASE IBU HAMIL (KIA)
-    // ========================================================================
-    public function ibuHamil(Request $request)
-    {
-        $query = IbuHamil::with('pemeriksaan_terakhir');
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('nama_lengkap', 'like', "%{$search}%")
-                  ->orWhere('nik', 'like', "%{$search}%");
-            });
-        }
-
-        $ibu_hamils = $query->latest()->paginate(10)->withQueryString();
-
-        return view('bidan.pasien.ibu_hamil', compact('ibu_hamils'));
-    }
 
 
     // ========================================================================

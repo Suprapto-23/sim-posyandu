@@ -18,7 +18,6 @@ use App\Http\Controllers\Bidan\PemeriksaanController as BidanPemeriksaan;
 use App\Http\Controllers\Bidan\JadwalController      as BidanJadwal;
 use App\Http\Controllers\Bidan\PasienController      as BidanPasien;
 use App\Http\Controllers\Bidan\RekamMedisController as BidanRekamMedisController;
-use App\Http\Controllers\Bidan\KonselingController   as BidanKonseling;
 
 // Kader
 use App\Http\Controllers\Kader\DashboardController   as KaderDashboard;
@@ -40,12 +39,10 @@ use App\Http\Controllers\User\DashboardController   as UserDashboard;
 use App\Http\Controllers\User\BalitaController      as UserBalita;
 use App\Http\Controllers\User\RemajaController      as UserRemaja;
 use App\Http\Controllers\User\LansiaController      as UserLansia;
-use App\Http\Controllers\User\IbuHamilController    as UserIbuHamil;
 use App\Http\Controllers\User\JadwalController      as UserJadwal;
 use App\Http\Controllers\User\ProfileController     as UserProfile;
 use App\Http\Controllers\User\NotifikasiController  as UserNotifikasi;
 use App\Http\Controllers\User\RiwayatController;
-use App\Http\Controllers\User\KonselingController   as UserKonseling;
 
 
 
@@ -121,12 +118,7 @@ Route::prefix('bidan')->name('bidan.')->middleware(['auth', 'checkstatus', 'role
     });
 
     // ---------------------------------------------------------------
-    // 3. E-RUJUKAN PUSKESMAS
-    // ---------------------------------------------------------------
-    Route::prefix('rujukan')->name('rujukan.')->group(function () {
-        Route::get('/',         [\App\Http\Controllers\Bidan\RujukanController::class, 'index'])->name('index');
-        Route::get('/{id}/cetak', [\App\Http\Controllers\Bidan\RujukanController::class, 'cetak'])->name('cetak');
-    });
+  
 
     // ---------------------------------------------------------------
     // 4. BUKU REGISTER IMUNISASI (KIA)
@@ -147,7 +139,6 @@ Route::prefix('bidan')->name('bidan.')->middleware(['auth', 'checkstatus', 'role
     // Pemantauan Tren Kesehatan per Demografi
     Route::prefix('pasien')->name('pasien.')->group(function () {
         Route::get('/balita',    [\App\Http\Controllers\Bidan\PasienController::class, 'balita'])->name('balita');
-        Route::get('/ibu-hamil', [\App\Http\Controllers\Bidan\PasienController::class, 'ibuHamil'])->name('ibu_hamil');
         Route::get('/remaja',    [\App\Http\Controllers\Bidan\PasienController::class, 'remaja'])->name('remaja');
         Route::get('/lansia',    [\App\Http\Controllers\Bidan\PasienController::class, 'lansia'])->name('lansia');
     });
@@ -158,15 +149,7 @@ Route::prefix('bidan')->name('bidan.')->middleware(['auth', 'checkstatus', 'role
         Route::get('/show/{pasien_type}/{pasien_id}', [\App\Http\Controllers\Bidan\RekamMedisController::class, 'show'])->name('show');
     });
 
-    // ---------------------------------------------------------------
-    // 6. KONSELING WARGA (LIVE CHAT MEDIS)
-    // ---------------------------------------------------------------
-    Route::prefix('konseling')->name('konseling.')->group(function () {
-        Route::get('/',                  [\App\Http\Controllers\Bidan\KonselingController::class, 'index'])->name('index');
-        Route::get('/fetch-list',        [\App\Http\Controllers\Bidan\KonselingController::class, 'fetchList'])->name('fetch-list');
-        Route::get('/fetch-chat/{user_id}', [\App\Http\Controllers\Bidan\KonselingController::class, 'fetchChat'])->name('fetch-chat');
-        Route::post('/reply/{user_id}',  [\App\Http\Controllers\Bidan\KonselingController::class, 'reply'])->name('reply');
-    });
+    
 
     // ---------------------------------------------------------------
     // 7. AGENDA & JADWAL POSYANDU
@@ -302,7 +285,7 @@ Route::prefix('user')->name('user.')->middleware(['auth','checkstatus','role:use
     // [TAMBAHAN BARU] Rute untuk melengkapi sistem monitoring
     Route::get('/remaja/{id}/show', [\App\Http\Controllers\User\RemajaController::class, 'show'])->name('remaja.show');
     Route::get('/lansia/{id}/show', [\App\Http\Controllers\User\LansiaController::class, 'show'])->name('lansia.show');
-    Route::get('/ibu-hamil/{id}/show', [\App\Http\Controllers\User\IbuHamilController::class, 'show'])->name('ibu_hamil.show');
+     
  
     // ── 5. Riwayat Rekam Medis Terpadu ──────────────────────────────────
     Route::get('/riwayat', [RiwayatController::class, 'index'])->name('riwayat.index');

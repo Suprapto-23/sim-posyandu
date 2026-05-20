@@ -116,7 +116,6 @@
             <div class="w-10 h-10 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center text-lg border border-slate-100"><i class="fas fa-id-badge"></i></div>
             <div>
                 <h5 class="font-bold text-slate-800 text-[14px] uppercase tracking-widest font-poppins">Profil Pasien</h5>
-                <p class="text-[11px] font-medium text-slate-500 mt-0.5">Informasi rujukan pangkalan data.</p>
             </div>
         </div>
         
@@ -135,7 +134,7 @@
                     <span class="data-label">Kategori Sasaran</span>
                     @php
                         $katDisplay = match($pemeriksaan->kategori_pasien) {
-                            'balita' => 'Balita / Bayi', 'ibu_hamil' => 'Ibu Hamil', 'remaja' => 'Remaja', 'lansia' => 'Lansia',
+                            'balita' => 'Balita', 'remaja' => 'Remaja', 'lansia' => 'Lansia',
                             default => strtoupper(str_replace('_', ' ', $pemeriksaan->kategori_pasien))
                         };
                     @endphp
@@ -224,7 +223,6 @@
         
         $themeMap = [
             'balita' => ['color' => 'sky', 'icon' => 'fa-child', 'title' => 'Pengukuran Balita'],
-            'ibu_hamil' => ['color' => 'pink', 'icon' => 'fa-female', 'title' => 'Pemeriksaan Ibu Hamil'],
             'remaja' => ['color' => 'indigo', 'icon' => 'fa-user-graduate', 'title' => 'Pemeriksaan Remaja'],
             'lansia' => ['color' => 'emerald', 'icon' => 'fa-wheelchair', 'title' => 'Cek Medis Lansia']
         ];
@@ -262,22 +260,7 @@
                     </div>
                 @endif
 
-                {{-- KONTEN IBU HAMIL --}}
-                @if($kat == 'ibu_hamil')
-                    <div class="data-block bg-pink-50/40 border-pink-100 flex flex-col justify-center">
-                        <span class="data-label text-pink-700">Usia Kehamilan</span>
-                        <span class="data-value text-pink-900">{{ $pemeriksaan->usia_kehamilan ?? '-' }} <span class="data-unit">mgg</span></span>
-                    </div>
-                    <div class="data-block bg-pink-50/40 border-pink-100 flex flex-col justify-center">
-                        <span class="data-label text-pink-700">Tensi Darah</span>
-                        <span class="data-value text-pink-900 font-mono">{{ $pemeriksaan->tekanan_darah ?? '-' }}</span>
-                    </div>
-                    <div class="data-block bg-rose-50 border-rose-100 md:col-span-2 flex flex-col justify-center">
-                        <span class="data-label text-rose-700">Lingkar Lengan (LiLA)</span>
-                        <span class="data-value text-rose-700 text-xl font-bold">{{ $pemeriksaan->lingkar_lengan ?? '-' }} <span class="data-unit text-rose-500">cm</span></span>
-                    </div>
-                @endif
-
+                
                 {{-- KONTEN REMAJA --}}
                 @if($kat == 'remaja')
                     <div class="data-block bg-indigo-50/40 border-indigo-100 flex flex-col justify-center">

@@ -93,21 +93,7 @@
             </div>
         </a>
 
-        {{-- KARTU 2: IBU HAMIL --}}
-        <a href="{{ route('bidan.pasien.ibu_hamil') }}" class="smooth-route block group">
-            <div class="dir-card p-6 flex items-center gap-5">
-                <div class="icon-box w-14 h-14 rounded-[16px] bg-pink-50 text-pink-500 border border-pink-100 flex items-center justify-center text-xl shrink-0">
-                    <i class="fas fa-female"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate mb-1">Ibu Hamil</h3>
-                    <p class="text-[12px] font-medium text-slate-500 truncate">Manajemen ANC & Deteksi Risiko</p>
-                </div>
-                <div class="nav-btn w-10 h-10 rounded-[14px] bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shrink-0">
-                    <i class="fas fa-arrow-right"></i>
-                </div>
-            </div>
-        </a>
+       
 
         {{-- KARTU 3: REMAJA --}}
         <a href="{{ route('bidan.pasien.remaja') }}" class="smooth-route block group">

@@ -70,7 +70,6 @@ class JadwalPosyandu extends Model
     {
         return match($this->target_peserta) {
             'balita'    => 'sky',       // Biru Bayi/Balita
-            'ibu_hamil' => 'pink',      // Merah Muda Ibu Hamil
             'remaja'    => 'indigo',    // Ungu/Indigo Remaja
             'lansia'    => 'emerald',   // Hijau Lansia
             default     => 'violet',    // Umum/Semua Warga
@@ -84,7 +83,6 @@ class JadwalPosyandu extends Model
     {
         return match($this->target_peserta) {
             'balita'    => 'Balita & Anak',
-            'ibu_hamil' => 'Ibu Hamil',
             'remaja'    => 'Remaja',
             'lansia'    => 'Lansia',
             default     => 'Semua Warga',

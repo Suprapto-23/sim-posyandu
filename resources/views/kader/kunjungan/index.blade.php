@@ -95,7 +95,6 @@
                 @foreach([
                     'semua'     => ['label' => 'Semua', 'icon' => 'fa-list'],
                     'balita'    => ['label' => 'Balita', 'icon' => 'fa-baby'],
-                    'ibu_hamil' => ['label' => 'Ibu Hamil', 'icon' => 'fa-female'],
                     'remaja'    => ['label' => 'Remaja', 'icon' => 'fa-user-graduate'],
                     'lansia'    => ['label' => 'Lansia', 'icon' => 'fa-user-clock']
                 ] as $val => $data)
@@ -143,7 +142,6 @@
                                 $badge = match($tipe) {
                                     'Balita'   => 'bg-sky-50 text-sky-600 border-sky-200',
                                     'Remaja'   => 'bg-indigo-50 text-indigo-600 border-indigo-200',
-                                    'IbuHamil' => 'bg-pink-50 text-pink-600 border-pink-200',
                                     'Lansia'   => 'bg-emerald-50 text-emerald-600 border-emerald-200',
                                     default    => 'bg-slate-50 text-slate-600 border-slate-200'
                                 };
@@ -170,7 +168,12 @@
                                     <div class="flex flex-col gap-1.5 items-start">
                                         <span class="text-[14px] font-black text-slate-800 font-poppins truncate max-w-[240px]">{{ $kunjungan->pasien->nama_lengkap ?? 'Data Terhapus' }}</span>
                                         <span class="pill-badge border shadow-sm {{ $badge }}">
-                                            <i class="fas fa-tag"></i> {{ match($tipe) { 'IbuHamil' => 'Ibu Hamil', default => $tipe } }}
+                                            <i class="fas fa-tag"></i> {{ match($tipe) {
+    'Balita' => 'Balita / Anak',
+    'Remaja' => 'Remaja',
+    'Lansia' => 'Lansia',
+    default => $tipe
+} }}
                                         </span>
                                     </div>
                                 </td>
@@ -185,7 +188,7 @@
                                             <span class="pill-badge bg-teal-50 text-teal-700 border border-teal-200"><i class="fas fa-syringe"></i> Vaksinasi</span>
                                         @endif
                                         @if(!$kunjungan->pemeriksaan && (!$kunjungan->imunisasis || $kunjungan->imunisasis->count() == 0))
-                                            <span class="pill-badge bg-slate-100 text-slate-600 border border-slate-200"><i class="fas fa-comment"></i> Konsultasi Umum</span>
+                                            <span class="pill-badge bg-slate-100 text-slate-600 border border-slate-200"><i class="fas fa-comment"></i> Kunjungan Umum</span>
                                         @endif
                                     </div>
                                     @if($kunjungan->keluhan)

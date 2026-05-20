@@ -13,14 +13,12 @@ use App\Models\Pemeriksaan;
 // INJEKSI OTAL MEDIS (SERVICES)
 use App\Services\AnalisisBalitaService;
 use App\Services\AnalisisRemajaService;
-use App\Services\AnalisisIbuHamilService;
 use App\Services\AnalisisLansiaService;
 
 class PemeriksaanController extends Controller
 {
     protected $balitaService;
     protected $remajaService;
-    protected $bumilService;
     protected $lansiaService;
 
     /**
@@ -29,12 +27,10 @@ class PemeriksaanController extends Controller
     public function __construct(
         AnalisisBalitaService $balitaService,
         AnalisisRemajaService $remajaService,
-        AnalisisIbuHamilService $bumilService,
         AnalisisLansiaService $lansiaService
     ) {
         $this->balitaService = $balitaService;
         $this->remajaService = $remajaService;
-        $this->bumilService  = $bumilService;
         $this->lansiaService = $lansiaService;
     }
 
@@ -116,8 +112,6 @@ class PemeriksaanController extends Controller
                 }
                 
                 $analisis = $this->remajaService->analisisIMT($usiaTahun, $jk, $imtValue);
-            } elseif (str_contains($kategori, 'hamil') || $kategori === 'ibu_hamil') {
-                $analisis = $this->bumilService->analisisKomprehensif($pemeriksaan);
             } elseif ($kategori === 'lansia') {
                 $jk = $pasien->jenis_kelamin ?? 'L';
                 $analisis = $this->lansiaService->analisisKomprehensif($pemeriksaan, $jk);
@@ -149,7 +143,7 @@ class PemeriksaanController extends Controller
         try {
             $pemeriksaan = Pemeriksaan::findOrFail($id);
 
-            // Hitung IMT otomatis untuk kategori remaja/lansia/bumil jika belum terisi
+            // Hitung IMT otomatis untuk kategori remaja/lansia jika belum terisi
             $imt = $pemeriksaan->imt;
             if (empty($imt) && $pemeriksaan->berat_badan > 0 && $pemeriksaan->tinggi_badan > 0) {
                 $imt = round($pemeriksaan->berat_badan / (($pemeriksaan->tinggi_badan / 100) ** 2), 2);

@@ -80,7 +80,6 @@ class Imunisasi extends Model
         
         return match(class_basename($type)) {
             'Balita'   => 'Balita',
-            'IbuHamil' => 'Ibu Hamil',
             'Remaja'   => 'Remaja',
             'Lansia'   => 'Lansia',
             default    => 'Umum'
@@ -104,10 +103,7 @@ class Imunisasi extends Model
             return 'sky'; 
         }
         
-        // Kategori Tetanus Toxoid untuk Ibu Hamil / Catin (Warna Pink)
-        if (str_contains($vaksin, 'tt') || str_contains($vaksin, 'tetanus')) {
-            return 'pink'; 
-        }
+        
 
         // Kategori Vaksin Lainnya (Warna Indigo)
         return 'indigo'; 
@@ -135,11 +131,5 @@ class Imunisasi extends Model
         });
     }
 
-    // Filter spesifik target Ibu Hamil
-    public function scopeTargetIbuHamil($query)
-    {
-        return $query->whereHas('kunjungan', function($q) {
-            $q->where('pasien_type', 'App\Models\IbuHamil');
-        });
-    }
+    
 }

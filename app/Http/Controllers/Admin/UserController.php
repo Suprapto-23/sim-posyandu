@@ -14,7 +14,6 @@ use App\Models\User;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
 
 class UserController extends Controller
 {
@@ -51,10 +50,7 @@ class UserController extends Controller
                       ->orWhereIn('nik', Balita::select('nik_ibu')->whereNotNull('nik_ibu'))
                       ->orWhereIn('nik', Balita::select('nik_ayah')->whereNotNull('nik_ayah'))
                       ->orWhereIn('id', Balita::select('user_id')->whereNotNull('user_id'));
-                } elseif ($kat == 'bumil') {
-                    $q->whereIn('nik', IbuHamil::select('nik')->whereNotNull('nik'))
-                      ->orWhereIn('id', IbuHamil::select('user_id')->whereNotNull('user_id'));
-                }
+                } 
             });
         }
 
@@ -282,13 +278,8 @@ public function store(Request $request)
                 : Lansia::where('user_id', $user->id)->first();
         } catch (\Throwable $e) { $lansia = null; }
 
-        try {
-            $bumil = $nik
-                ? IbuHamil::where('user_id', $user->id)->orWhere('nik', $nik)->first()
-                : IbuHamil::where('user_id', $user->id)->first();
-        } catch (\Throwable $e) { $bumil = null; }
-
-        return compact('balita', 'remaja', 'lansia', 'bumil');
+        
+        return compact('balita', 'remaja', 'lansia');
     }
 
     private function makePassword(): string

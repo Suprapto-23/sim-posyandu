@@ -56,7 +56,6 @@
                     <select name="jenis_data" id="jenis_data" required class="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 text-[14px] rounded-2xl px-5 py-4 outline-none font-bold focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
                         <option value="">-- Pilih Tujuan Modul --</option>
                         <option value="balita" {{ old('jenis_data', $type ?? '') == 'balita' ? 'selected' : '' }}>👶 Modul Data Anak & Balita</option>
-                        <option value="ibu_hamil" {{ old('jenis_data', $type ?? '') == 'ibu_hamil' ? 'selected' : '' }}>🤰 Modul Data Ibu Hamil</option>
                         <option value="remaja" {{ old('jenis_data', $type ?? '') == 'remaja' ? 'selected' : '' }}>🎓 Modul Data Remaja</option>
                         <option value="lansia" {{ old('jenis_data', $type ?? '') == 'lansia' ? 'selected' : '' }}>🧓 Modul Data Lansia</option>
                     </select>

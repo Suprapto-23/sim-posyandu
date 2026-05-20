@@ -93,7 +93,7 @@
                 </div>
                 <div>
                     <h1 class="text-[26px] md:text-[30px] font-bold text-slate-800 tracking-tight font-poppins leading-none mb-1">Cakupan Imunisasi</h1>
-                    <p class="text-slate-500 font-medium text-[13.5px]">Monitoring riwayat vaksinasi balita dan tetanus ibu hamil.</p>
+                    <p class="text-slate-500 font-medium text-[13.5px]">Monitoring riwayat vaksinasi balita.</p>
                 </div>
             </div>
         </div>
@@ -137,9 +137,6 @@
                 </div>
                 <div class="ios-btn segment-btn {{ $reqKat === 'balita' ? 'active' : '' }}" data-kategori="balita">
                     Balita
-                </div>
-                <div class="ios-btn segment-btn {{ $reqKat === 'ibu_hamil' ? 'active' : '' }}" data-kategori="ibu_hamil">
-                    Ibu Hamil
                 </div>
             </div>
 

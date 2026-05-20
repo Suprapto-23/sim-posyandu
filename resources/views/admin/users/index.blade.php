@@ -96,9 +96,6 @@
         <a href="{{ route('admin.users.index', ['kategori' => 'balita', 'search' => request('search')]) }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 flex items-center gap-2 {{ request('kategori') == 'balita' ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30' : 'bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-600 border border-slate-200' }}">
             <i class="fas fa-baby text-sm"></i> Orang Tua Balita
         </a>
-        <a href="{{ route('admin.users.index', ['kategori' => 'bumil', 'search' => request('search')]) }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 flex items-center gap-2 {{ request('kategori') == 'bumil' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30' : 'bg-white text-slate-500 hover:bg-pink-50 hover:text-pink-600 border border-slate-200' }}">
-            <i class="fas fa-female text-sm"></i> Ibu Hamil
-        </a>
         <a href="{{ route('admin.users.index', ['kategori' => 'remaja', 'search' => request('search')]) }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 flex items-center gap-2 {{ request('kategori') == 'remaja' ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200' }}">
             <i class="fas fa-user-graduate text-sm"></i> Remaja
         </a>

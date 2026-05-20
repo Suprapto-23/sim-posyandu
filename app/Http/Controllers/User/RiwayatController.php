@@ -30,9 +30,6 @@ class RiwayatController extends Controller
             $targets[] = ['id' => $ctx['remaja']->id, 'kat' => 'remaja', 'nama' => $ctx['remaja']->nama_lengkap ?? $ctx['remaja']->nama];
         }
         
-        if ($ctx['bumil']) {
-            $targets[] = ['id' => $ctx['bumil']->id, 'kat' => 'ibu_hamil', 'nama' => $ctx['bumil']->nama_lengkap ?? $ctx['bumil']->nama];
-        }
 
         // 2. Cek anak-anaknya (Balita/Bayi)
         if ($ctx['balitas']->isNotEmpty()) {

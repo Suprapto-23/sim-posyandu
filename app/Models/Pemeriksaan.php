@@ -77,7 +77,6 @@ class Pemeriksaan extends Model
     public function balita()   { return $this->belongsTo(Balita::class, 'balita_id'); }
     public function remaja()   { return $this->belongsTo(Remaja::class, 'remaja_id'); }
     public function lansia()   { return $this->belongsTo(Lansia::class, 'lansia_id'); }
-    public function ibuHamil() { return $this->belongsTo(IbuHamil::class, 'ibu_hamil_id'); }
 
 
     /**

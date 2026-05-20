@@ -104,7 +104,6 @@
                                         $badgeStyle = match($kat) {
                                             'balita' => 'bg-teal-50 text-teal-700 border-teal-100',
                                             'remaja' => 'bg-indigo-50 text-indigo-700 border-indigo-100',
-                                            'ibu hamil', 'ibu_hamil' => 'bg-rose-50 text-rose-700 border-rose-100',
                                             'lansia' => 'bg-amber-50 text-amber-700 border-amber-100',
                                             default => 'bg-slate-100 text-slate-600 border-slate-200'
                                         };

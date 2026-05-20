@@ -87,23 +87,7 @@
                                 <p class="text-slate-400 font-medium">Kadar Hemoglobin (HB)</p>
                                 <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->hb ?? '-' }} g/dL</p>
                             </div>
-                        @elseif(str_contains($kategori, 'hamil') || $kategori === 'ibu_hamil')
-                            <div class="border-b border-slate-100 pb-2">
-                                <p class="text-slate-400 font-medium">Tinggi Fundus (TFU)</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tinggi_fundus ?? '-' }} cm</p>
-                            </div>
-                            <div class="border-b border-slate-100 pb-2">
-                                <p class="text-slate-400 font-medium">Detak Jantung Janin (DJJ)</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->djj ?? '-' }} bpm</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">LILA Ibu</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lila ?? '-' }} cm</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
-                            </div>
+                        
                         @elseif($kategori === 'lansia')
                             <div class="border-b border-slate-100 pb-2">
                                 <p class="text-slate-400 font-medium">Tekanan Darah</p>

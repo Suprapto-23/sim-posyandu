@@ -15,7 +15,7 @@ use App\Models\Kunjungan;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
+ 
 
 /**
  * =========================================================================
@@ -45,7 +45,7 @@ class PemeriksaanController extends Controller
 
         if (!empty($search)) {
             $query->whereHas('kunjungan', function($q) use ($search) {
-                $q->whereHasMorph('pasien', [Balita::class, Remaja::class, Lansia::class, IbuHamil::class], function ($morphQ) use ($search) {
+                $q->whereHasMorph('pasien', [Balita::class, Remaja::class, Lansia::class], function ($morphQ) use ($search) {
                     $morphQ->where('nama_lengkap', 'like', "%{$search}%")->orWhere('nik', 'like', "%{$search}%");
                 });
             });
@@ -68,7 +68,7 @@ class PemeriksaanController extends Controller
     {
         $rules = [
             'pasien_id'       => 'required',
-            'kategori_pasien' => 'required|in:balita,ibu_hamil,remaja,lansia',
+             'kategori_pasien' => 'required|in:balita,remaja,lansia',
             'tanggal_periksa' => 'required|date|before_or_equal:today',
             'berat_badan'     => 'nullable|numeric|min:0.1|max:300',
             'tinggi_badan'    => 'nullable|numeric|min:10|max:250',
@@ -125,7 +125,6 @@ class PemeriksaanController extends Controller
                 'kolesterol'      => $request->kolesterol,
                 'asam_urat'       => $request->asam_urat,
                 'hemoglobin'      => $request->hemoglobin,
-                'usia_kehamilan'  => $request->usia_kehamilan,
                 'keluhan'         => $request->keluhan,
                 'catatan_kader'   => $request->catatan_kader,
                 'status_verifikasi' => 'pending',
@@ -213,7 +212,6 @@ class PemeriksaanController extends Controller
                 'gula_darah'        => $request->gula_darah ?? $pemeriksaan->gula_darah,
                 'kolesterol'        => $request->kolesterol ?? $pemeriksaan->kolesterol,
                 'asam_urat'         => $request->asam_urat ?? $pemeriksaan->asam_urat,
-                'usia_kehamilan'    => $request->usia_kehamilan ?? $pemeriksaan->usia_kehamilan,
                 'keluhan'           => $request->keluhan,
                 'catatan_kader'     => $request->catatan_kader,
                 'status_verifikasi' => $pemeriksaan->status_verifikasi === 'ditolak' ? 'pending' : $pemeriksaan->status_verifikasi,
@@ -288,7 +286,6 @@ class PemeriksaanController extends Controller
     {
         return match($kategori) {
             'balita'    => 'App\Models\Balita',
-            'ibu_hamil' => 'App\Models\IbuHamil',
             'remaja'    => 'App\Models\Remaja',
             'lansia'    => 'App\Models\Lansia',
             default     => 'App\Models\User',
@@ -307,8 +304,6 @@ class PemeriksaanController extends Controller
         try {
             if ($kategori === 'balita') {
                 $data = Balita::select('id', 'nama_lengkap as nama', 'nik', 'jenis_kelamin')->orderBy('nama_lengkap')->get();
-            } elseif ($kategori === 'ibu_hamil') {
-                $data = IbuHamil::where('status', 'aktif')->select('id', 'nama_lengkap as nama', 'nik')->orderBy('nama_lengkap')->get();
             } elseif ($kategori === 'remaja') {
                 // Perlu 'jenis_kelamin' untuk memicu warning KEK pada Remaja Putri
                 $data = Remaja::select('id', 'nama_lengkap as nama', 'nik', 'jenis_kelamin')->orderBy('nama_lengkap')->get();

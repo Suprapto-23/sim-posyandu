@@ -125,7 +125,7 @@
 
         {{-- Card 3: Alert Risiko (Waspada Medis Terintegrasi) --}}
         @php
-            $totalRisiko = ($alertRisiko['balita_waspada'] ?? 0) + ($alertRisiko['lansia_metabolik'] ?? 0) + ($alertRisiko['bumil_resti'] ?? 0);
+            $totalRisiko = ($alertRisiko['balita_waspada'] ?? 0) + ($alertRisiko['lansia_metabolik'] ?? 0);
             $risikoColor = $totalRisiko > 0 ? 'amber' : 'slate';
         @endphp
         <div class="nexus-glass-card p-5 md:p-6 flex flex-col justify-between group overflow-hidden relative min-h-[140px]">
@@ -184,7 +184,6 @@
                                 
                                 $warnaKat = match(strtolower($kategori)) {
                                     'balita' => 'text-rose-600 bg-rose-50 border-rose-100',
-                                    'ibu hamil', 'ibu_hamil' => 'text-pink-600 bg-pink-50 border-pink-100',
                                     'remaja' => 'text-sky-600 bg-sky-50 border-sky-100',
                                     'lansia' => 'text-emerald-600 bg-emerald-50 border-emerald-100',
                                     default => 'text-slate-600 bg-slate-50 border-slate-100'
@@ -245,7 +244,6 @@
                     </div>
                     <div class="flex flex-col gap-2.5 w-full sm:w-auto">
                         <div class="flex justify-between items-center gap-4 text-[11px] font-bold"><span class="text-rose-500"><i class="fas fa-circle text-[8px] mr-1.5"></i>Balita</span> <span class="text-slate-800">{{ $demografi['balita'] ?? 0 }}</span></div>
-                        <div class="flex justify-between items-center gap-4 text-[11px] font-bold"><span class="text-pink-500"><i class="fas fa-circle text-[8px] mr-1.5"></i>Ibu Hamil</span> <span class="text-slate-800">{{ $demografi['ibu_hamil'] ?? 0 }}</span></div>
                         <div class="flex justify-between items-center gap-4 text-[11px] font-bold"><span class="text-sky-500"><i class="fas fa-circle text-[8px] mr-1.5"></i>Remaja</span> <span class="text-slate-800">{{ $demografi['remaja'] ?? 0 }}</span></div>
                         <div class="flex justify-between items-center gap-4 text-[11px] font-bold"><span class="text-emerald-500"><i class="fas fa-circle text-[8px] mr-1.5"></i>Lansia</span> <span class="text-slate-800">{{ $demografi['lansia'] ?? 0 }}</span></div>
                     </div>
@@ -322,7 +320,6 @@
         
         const donutData = [
             {{ $demografi['balita'] ?? 0 }}, 
-            {{ $demografi['ibu_hamil'] ?? 0 }}, 
             {{ $demografi['remaja'] ?? 0 }}, 
             {{ $demografi['lansia'] ?? 0 }}
         ];
@@ -334,7 +331,7 @@
         window._demoChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Balita', 'Ibu Hamil', 'Remaja', 'Lansia'],
+                labels: ['Balita', 'Remaja', 'Lansia'],
                 datasets: [{ 
                     data: finalData, 
                     backgroundColor: bgColors, 

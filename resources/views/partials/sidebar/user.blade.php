@@ -13,8 +13,6 @@
                     Str::startsWith($route, 'user.balita') ||
                     Str::startsWith($route, 'user.remaja') ||
                     Str::startsWith($route, 'user.lansia') ||
-                    Str::startsWith($route, 'user.ibu_hamil') ||
-                    Str::startsWith($route, 'user.ibu-hamil');
 
     $isRiwayat    = Str::startsWith($route, 'user.riwayat');
     $isNotifikasi = Str::startsWith($route, 'user.notifikasi') || Str::startsWith($route, 'notifikasi');

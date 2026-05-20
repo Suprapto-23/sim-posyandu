@@ -46,7 +46,7 @@ class ImportController extends Controller
     {
         // 1. Validasi Input dari Form
         $request->validate([
-            'jenis_data' => 'required|in:balita,remaja,lansia', // Tambahkan 'ibu_hamil' jika file Importnya sudah Anda buat
+            'jenis_data' => 'required|in:balita,remaja,lansia', 
             'file'       => 'required|file|mimes:xlsx,xls,csv|max:10240', // Maksimal 10MB
         ]);
 
@@ -189,7 +189,7 @@ class ImportController extends Controller
     public function downloadTemplate($type)
     {
         // Proteksi keamanan: pastikan tipenya valid
-        if (!in_array($type, ['balita', 'remaja', 'lansia', 'ibu_hamil'])) {
+        if (!in_array($type, ['balita', 'remaja', 'lansia'])) {
             abort(404, 'Kategori template tidak ditemukan.');
         }
 

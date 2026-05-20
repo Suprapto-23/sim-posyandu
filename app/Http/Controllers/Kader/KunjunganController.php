@@ -10,7 +10,7 @@ use App\Models\Kunjungan;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
+
 
 /**
  * =========================================================================
@@ -39,7 +39,6 @@ class KunjunganController extends Controller
             $pasienType = match($kategori) {
                 'remaja'    => 'App\Models\Remaja',
                 'lansia'    => 'App\Models\Lansia',
-                'ibu_hamil' => 'App\Models\IbuHamil',
                 default     => 'App\Models\Balita',
             };
             $query->where('pasien_type', $pasienType);
@@ -47,7 +46,7 @@ class KunjunganController extends Controller
 
         // Pencarian Real-Time Cerdas (Menyisir 4 Tabel Sekaligus)
         if (!empty($search)) {
-            $query->whereHasMorph('pasien', [Balita::class, Remaja::class, Lansia::class, IbuHamil::class], function ($morphQ) use ($search) {
+            $query->whereHasMorph('pasien', [Balita::class, Remaja::class, Lansia::class], function ($morphQ) use ($search) {
                 $morphQ->where('nama_lengkap', 'like', "%{$search}%")
                        ->orWhere('nik', 'like', "%{$search}%");
             });

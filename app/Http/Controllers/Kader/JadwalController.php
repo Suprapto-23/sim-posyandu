@@ -70,7 +70,7 @@ class JadwalController extends Controller
         $request->validate([
             'judul'          => 'required|string|max:255',
             'kategori'       => 'required|in:kesehatan_ibu_anak,imunisasi,penyuluhan,pemeriksaan_lansia,lainnya',
-            'target_peserta' => 'required|in:semua,balita,remaja,ibu_hamil,lansia',
+            'target_peserta' => 'required|in:semua,balita,remaja,lansia',
             'tanggal'        => 'required|date|after_or_equal:today',
             'waktu_mulai'    => 'required',
             'waktu_selesai'  => 'required|after:waktu_mulai',
@@ -202,7 +202,7 @@ class JadwalController extends Controller
         if ($target === 'semua') return User::whereIn('role', ['user', 'warga'])->pluck('id')->toArray();
 
         $table = match($target) {
-            'balita' => 'balitas', 'remaja' => 'remajas', 'lansia' => 'lansias', 'ibu_hamil' => 'ibu_hamils', default => null
+            'balita' => 'balitas', 'remaja' => 'remajas', 'lansia' => 'lansias', default => null
         };
 
         return ($table && \Schema::hasTable($table)) ? DB::table($table)->whereNotNull('user_id')->pluck('user_id')->toArray() : [];

@@ -40,11 +40,10 @@ class JadwalController extends Controller
             if (in_array('orang_tua', $ctx['peran'])) $hakAkses[] = 'balita';
             if (in_array('remaja',    $ctx['peran'])) $hakAkses[] = 'remaja';
             if (in_array('lansia',    $ctx['peran'])) $hakAkses[] = 'lansia';
-            if (in_array('bumil',     $ctx['peran'])) $hakAkses[] = 'ibu_hamil';
 
             // 2. Filter Tab (Standarisasi 'filter')
             $filterTarget = $request->get('filter', 'semua');
-            $validFilters = ['semua', 'balita', 'remaja', 'lansia', 'ibu_hamil'];
+            $validFilters = ['semua', 'balita', 'remaja', 'lansia'];
             
             if (!in_array($filterTarget, $validFilters)) {
                 $filterTarget = 'semua';
@@ -79,7 +78,6 @@ class JadwalController extends Controller
                 'balita'    => (clone $base)->where('target_peserta', 'balita')->count(),
                 'remaja'    => (clone $base)->where('target_peserta', 'remaja')->count(),
                 'lansia'    => (clone $base)->where('target_peserta', 'lansia')->count(),
-                'ibu_hamil' => (clone $base)->where('target_peserta', 'ibu_hamil')->count(),
                 'mendatang' => (clone $base)->whereDate('tanggal', '>=', Carbon::today())->count(),
             ];
 

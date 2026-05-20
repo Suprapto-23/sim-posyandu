@@ -151,16 +151,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-[2rem] border border-pink-50 p-6 shadow-sm hover:shadow-xl hover:shadow-pink-100 hover:-translate-y-1 hover:border-pink-100 transition-all relative overflow-hidden group animate-stagger-up delay-200">
-                <div class="absolute right-0 top-0 w-24 h-24 bg-pink-50 rounded-bl-full -mr-4 -mt-4 opacity-50 transition-transform group-hover:scale-110"></div>
-                <div class="relative z-10 flex justify-between items-center">
-                    <div>
-                        <p class="text-[11px] font-black text-pink-400 uppercase tracking-widest mb-1">Ibu Hamil</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_bumil'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-14 h-14 rounded-full bg-pink-50 text-pink-500 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform"><i class="fas fa-female"></i></div>
-                </div>
-            </div>
+            
 
             <div class="bg-white rounded-[2rem] border border-indigo-50 p-6 shadow-sm hover:shadow-xl hover:shadow-indigo-100 hover:-translate-y-1 hover:border-indigo-100 transition-all relative overflow-hidden group animate-stagger-up delay-300">
                 <div class="absolute right-0 top-0 w-24 h-24 bg-indigo-50 rounded-bl-full -mr-4 -mt-4 opacity-50 transition-transform group-hover:scale-110"></div>

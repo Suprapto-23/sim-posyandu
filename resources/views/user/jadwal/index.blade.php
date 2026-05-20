@@ -31,13 +31,6 @@
             </a>
         @endif
 
-        @if(in_array('ibu_hamil', $hakAkses))
-            <a href="{{ route('user.jadwal.index', ['filter' => 'ibu_hamil']) }}" 
-               class="whitespace-nowrap flex items-center gap-2 px-5 py-2.5 rounded-xl border font-bold text-xs transition-all {{ $filterTarget == 'ibu_hamil' ? 'bg-pink-500 text-white border-pink-500 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-pink-300 hover:bg-pink-50' }}">
-                <i class="fas fa-female {{ $filterTarget == 'ibu_hamil' ? 'text-white' : 'text-pink-500' }}"></i> Ibu Hamil
-                <span class="px-2 py-0.5 rounded-md text-[10px] {{ $filterTarget == 'ibu_hamil' ? 'bg-pink-400 text-white' : 'bg-slate-100 text-slate-500' }}">{{ $summary['ibu_hamil'] }}</span>
-            </a>
-        @endif
 
         @if(in_array('remaja', $hakAkses))
             <a href="{{ route('user.jadwal.index', ['filter' => 'remaja']) }}" 
@@ -69,7 +62,6 @@
                 $targetColor = 'text-teal-600 bg-teal-50 border-teal-100';
                 $targetLabel = 'Umum / Semua';
                 if($jadwal->target_peserta == 'balita') { $targetColor = 'text-sky-600 bg-sky-50 border-sky-100'; $targetLabel = 'Posyandu Balita'; }
-                if($jadwal->target_peserta == 'ibu_hamil') { $targetColor = 'text-pink-600 bg-pink-50 border-pink-100'; $targetLabel = 'Ibu Hamil'; }
                 if($jadwal->target_peserta == 'remaja') { $targetColor = 'text-indigo-600 bg-indigo-50 border-indigo-100'; $targetLabel = 'Posyandu Remaja'; }
                 if($jadwal->target_peserta == 'lansia') { $targetColor = 'text-orange-600 bg-orange-50 border-orange-100'; $targetLabel = 'Posyandu Lansia'; }
             @endphp

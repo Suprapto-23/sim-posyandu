@@ -10,7 +10,6 @@ use Carbon\Carbon;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
 use App\Models\Pemeriksaan;
 use App\Models\JadwalPosyandu;
 
@@ -23,7 +22,7 @@ class DashboardController extends Controller
     {
         // 1. STATISTIK UTAMA (Beban Kerja Hari Ini & Total Cakupan)
         $stats = [
-            'total_pasien' => Balita::count() + Remaja::count() + Lansia::count() + IbuHamil::count(),
+            'total_pasien' => Balita::count() + Remaja::count() + Lansia::count(),
             'menunggu_validasi' => Pemeriksaan::where('status_verifikasi', 'pending')->count(),
             'selesai_divalidasi' => Pemeriksaan::where('status_verifikasi', 'verified')
                                         ->whereDate('tanggal_periksa', Carbon::today())
@@ -38,13 +37,7 @@ class DashboardController extends Controller
 $pemeriksaanHariIni = Pemeriksaan::whereDate('created_at', Carbon::today())->get();
 
         $alertRisiko = [
-            // Ibu Hamil dengan Tensi Tinggi (Risiko Preeklampsia)
-            'bumil_resti' => $pemeriksaanHariIni->filter(function($p) {
-                if (strtolower($p->kategori_pasien) !== 'ibu hamil' && strtolower($p->kategori_pasien) !== 'ibu_hamil') return false;
-                $sistolik = (int) explode('/', $p->tekanan_darah ?? '0/0')[0];
-                return $sistolik >= 140;
-            })->count(),
-
+            
             // Lansia dengan Gula Darah >= 200 (Indikasi Diabetes)
             'lansia_metabolik' => $pemeriksaanHariIni->filter(function($p) {
                 if (strtolower($p->kategori_pasien) !== 'lansia') return false;
@@ -75,7 +68,6 @@ $pemeriksaanHariIni = Pemeriksaan::whereDate('created_at', Carbon::today())->get
         // 5. DATA GRAFIK DEMOGRAFI (Donut Chart)
         $demografi = [
             'balita'    => Balita::count(),
-            'ibu_hamil' => IbuHamil::count(),
             'remaja'    => Remaja::count(),
             'lansia'    => Lansia::count(),
         ];

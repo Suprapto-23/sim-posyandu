@@ -55,13 +55,7 @@
                     $kategoriLabel = 'Tumbuh Kembang Anak'; 
                     $glowColor = 'teal';
                 }
-                elseif($katPasien == 'ibu_hamil' || $katPasien == 'bumil') { 
-                    $cardBorder = 'border-rose-100 hover:border-rose-300 hover:shadow-rose-100/40'; 
-                    $iconBg = 'bg-gradient-to-tr from-rose-400 to-purple-500 text-white'; 
-                    $icon = 'fa-person-pregnant'; 
-                    $kategoriLabel = 'Pemeriksaan Kehamilan'; 
-                    $glowColor = 'rose';
-                }
+                
                 elseif($katPasien == 'remaja') { 
                     $cardBorder = 'border-indigo-100 hover:border-indigo-300 hover:shadow-indigo-100/40'; 
                     $iconBg = 'bg-gradient-to-tr from-indigo-500 to-sky-400 text-white'; 

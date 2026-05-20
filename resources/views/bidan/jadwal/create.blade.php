@@ -162,7 +162,6 @@
                                     <option value="posyandu" {{ old('kategori') == 'posyandu' ? 'selected' : '' }}>Posyandu Rutin (Antropometri)</option>
                                     <option value="imunisasi" {{ old('kategori') == 'imunisasi' ? 'selected' : '' }}>Vaksinasi & Imunisasi Dasar</option>
                                     <option value="pemeriksaan" {{ old('kategori') == 'pemeriksaan' ? 'selected' : '' }}>Pemeriksaan Khusus (ANC, PTM)</option>
-                                    <option value="konseling" {{ old('kategori') == 'konseling' ? 'selected' : '' }}>Penyuluhan & Edukasi Warga</option>
                                     <option value="lainnya" {{ old('kategori') == 'lainnya' ? 'selected' : '' }}>Kegiatan Lainnya</option>
                                 </select>
                                 <i class="fas fa-tags input-icon"></i>
@@ -177,7 +176,6 @@
                                 <select name="target_peserta" required class="med-input select-custom border-cyan-200 bg-cyan-50/20 focus:border-cyan-500 @error('target_peserta') is-invalid @enderror">
                                     <option value="semua" {{ old('target_peserta') == 'semua' ? 'selected' : '' }}>Semua Warga Terdaftar (Umum)</option>
                                     <option value="balita" {{ old('target_peserta') == 'balita' ? 'selected' : '' }}>Khusus Ibu & Balita / Bayi</option>
-                                    <option value="ibu_hamil" {{ old('target_peserta') == 'ibu_hamil' ? 'selected' : '' }}>Khusus Ibu Hamil (Bumil)</option>
                                     <option value="remaja" {{ old('target_peserta') == 'remaja' ? 'selected' : '' }}>Khusus Remaja (Posyandu Remaja)</option>
                                     <option value="lansia" {{ old('target_peserta') == 'lansia' ? 'selected' : '' }}>Khusus Lansia (Geriatri / PTM)</option>
                                 </select>

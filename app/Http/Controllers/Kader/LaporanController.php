@@ -34,7 +34,7 @@ class LaporanController extends Controller
         $bulan  = (int) ($request->query('bulan') ?? $request->bulan ?? date('m'));
         $tahun  = (int) ($request->query('tahun') ?? $request->tahun ?? date('Y'));
 
-        $validTypes = ['balita', 'ibu_hamil', 'remaja', 'lansia', 'imunisasi'];
+        $validTypes = ['balita', 'remaja', 'lansia', 'imunisasi'];
         if (!in_array($type, $validTypes)) {
             return back()->with('error', 'Kategori laporan tidak terdaftar dalam protokol sistem.');
         }

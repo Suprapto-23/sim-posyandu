@@ -20,7 +20,7 @@ return new class extends Migration
             $table->time('waktu_selesai');
             $table->string('lokasi');
             $table->string('kategori')->nullable();
-            $table->string('target_peserta'); // balita, ibu_hamil, remaja, lansia, umum
+            $table->string('target_peserta'); // semua, balita, remaja, lansia
             $table->string('status')->default('aktif'); // aktif, selesai, dibatalkan
             
             // Relasi ke user yang membuat jadwal

@@ -53,7 +53,6 @@
     // PERBAIKAN FATAL TAILWIND: Mapping Kelas Utuh (Anti-PurgeCSS)
     $config = match($pasien_type) {
         'balita'    => ['bg' => 'bg-sky-50', 'text' => 'text-sky-600', 'border' => 'border-sky-100', 'grad' => 'from-sky-400 to-sky-600', 'icon' => 'fa-baby', 'label' => 'Bayi & Balita'],
-        'ibu_hamil' => ['bg' => 'bg-pink-50', 'text' => 'text-pink-600', 'border' => 'border-pink-100', 'grad' => 'from-pink-400 to-pink-600', 'icon' => 'fa-female', 'label' => 'Ibu Hamil'],
         'remaja'    => ['bg' => 'bg-indigo-50', 'text' => 'text-indigo-600', 'border' => 'border-indigo-100', 'grad' => 'from-indigo-400 to-indigo-600', 'icon' => 'fa-user-graduate', 'label' => 'Remaja'],
         'lansia'    => ['bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-100', 'grad' => 'from-emerald-400 to-emerald-600', 'icon' => 'fa-wheelchair', 'label' => 'Geriatri / Lansia'],
         default     => ['bg' => 'bg-slate-50', 'text' => 'text-slate-600', 'border' => 'border-slate-100', 'grad' => 'from-slate-400 to-slate-600', 'icon' => 'fa-user', 'label' => 'Umum'],

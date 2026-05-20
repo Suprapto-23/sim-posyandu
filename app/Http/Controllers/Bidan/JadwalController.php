@@ -13,8 +13,6 @@ use App\Models\JadwalPosyandu;
 use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\Balita;
-use App\Models\IbuHamil;
-// (Remaja & Lansia dihapus sesuai kesepakatan SOP Posyandu sebelumnya)
 
 class JadwalController extends Controller
 {
@@ -38,8 +36,8 @@ class JadwalController extends Controller
             'waktu_mulai'    => 'required',
             'waktu_selesai'  => 'required',
             'lokasi'         => 'required|string',
-            'kategori'       => 'required|in:imunisasi,pemeriksaan,konseling,posyandu,lainnya',
-            'target_peserta' => 'required|in:semua,balita,ibu_hamil', 
+            'kategori'       => 'required|in:imunisasi,pemeriksaan,posyandu',
+            'target_peserta' => 'required|in:semua,balita', 
         ]);
 
         DB::beginTransaction();
@@ -131,10 +129,7 @@ class JadwalController extends Controller
         } elseif ($request->target_peserta == 'balita') {
             $nikOrtu = Balita::pluck('nik_ibu')->merge(Balita::pluck('nik_ayah'))->filter()->unique();
             $wargaUsers = User::whereIn('nik', $nikOrtu)->pluck('id');
-        } elseif ($request->target_peserta == 'ibu_hamil') {
-            $nikBumil = IbuHamil::pluck('nik')->filter()->unique();
-            $wargaUsers = User::whereIn('nik', $nikBumil)->pluck('id');
-        }
+        } 
 
         $judulWarga = "Jadwal {$kategoriTeks} Baru!";
         $pesanWarga = "Halo! Jangan lupa hadir pada agenda {$kategoriTeks} yang akan dilaksanakan pada {$tanggalFormat} di {$request->lokasi}. {$request->deskripsi}";

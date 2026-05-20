@@ -12,7 +12,7 @@ use Carbon\Carbon;
 use App\Models\Imunisasi;
 use App\Models\Kunjungan;
 use App\Models\Balita;
-use App\Models\IbuHamil;
+
 
 /**
  * =========================================================================
@@ -114,9 +114,6 @@ class ImunisasiController extends Controller
             'statBalita'   => (clone $baseQuery)->whereHas('kunjungan', function($q) {
                                   $q->where('pasien_type', 'like', '%Balita%');
                               })->count(),
-            'statBumil'    => (clone $baseQuery)->whereHas('kunjungan', function($q) {
-                                  $q->where('pasien_type', 'like', '%IbuHamil%');
-                              })->count(),
         ];
     }
 
@@ -129,13 +126,10 @@ class ImunisasiController extends Controller
             return; // Lewati jika pilihannya "Semua"
         }
 
-        $query->whereHas('kunjungan', function($q) use ($kategori) {
-            if ($kategori === 'ibu_hamil') {
-                $q->where('pasien_type', 'like', '%IbuHamil%');
-            } else {
-                $q->where('pasien_type', 'like', '%Balita%');
-            }
-        });
+        $query->whereHas('kunjungan', function ($q) {
+    $q->where('pasien_type', 'like', '%Balita%')
+      ->orWhere('pasien_type', 'balita');
+});
     }
 
     /**
@@ -153,9 +147,9 @@ class ImunisasiController extends Controller
               ->orWhere('jenis_imunisasi', 'like', "%{$search}%")
               ->orWhere('batch_number', 'like', "%{$search}%")
             
-            // Pencarian Sekunder: Menyelam otomatis ke Tabel Pasien (Balita & Bumil)
+            // Pencarian Sekunder: Menyelam otomatis ke Tabel Pasien (Balita)
               ->orWhereHas('kunjungan', function($q2) use ($search) {
-                  $q2->whereHasMorph('pasien', [Balita::class, IbuHamil::class], function($morphQ) use ($search) {
+                  $q2->whereHasMorph('pasien', [Balita::class], function($morphQ) use ($search) {
                       $morphQ->where('nama_lengkap', 'like', "%{$search}%")
                              ->orWhere('nik', 'like', "%{$search}%");
                   });

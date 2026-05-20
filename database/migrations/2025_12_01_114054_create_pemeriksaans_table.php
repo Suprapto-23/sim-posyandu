@@ -28,7 +28,7 @@ return new class extends Migration
             $table->integer('denyut_nadi')->nullable(); // bpm
             $table->integer('respirasi')->nullable(); // napas/menit
             
-            // Lab Sederhana (Lansia/Ibu Hamil)
+            // Lab Sederhana (Lansia)
             $table->integer('gula_darah')->nullable(); // mg/dL
             $table->integer('kolesterol')->nullable(); // mg/dL
             $table->integer('asam_urat')->nullable(); // mg/dL

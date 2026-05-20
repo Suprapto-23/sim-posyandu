@@ -5,7 +5,6 @@ namespace App\Traits;
 use App\Models\Balita;
 use App\Models\Remaja;
 use App\Models\Lansia;
-use App\Models\IbuHamil;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -65,7 +64,7 @@ trait DetectsUserPeran
             return [
                 'nik' => null, 'peran' => ['umum'], 
                 'balitas' => collect(), 'remaja' => null, 
-                'lansia' => null, 'bumil' => null, 'is_multi_peran' => false
+                'lansia' => null, 'is_multi_peran' => false
             ];
         }
 
@@ -75,7 +74,6 @@ trait DetectsUserPeran
         $balitas = collect();
         $remaja  = null;
         $lansia  = null;
-        $bumil   = null;
 
         if ($nik) {
             try {
@@ -118,19 +116,6 @@ trait DetectsUserPeran
             } catch (\Throwable $e) {
                 Log::warning('DetectsUserPeran: lansia check error - ' . $e->getMessage());
             }
-
-            try {
-                $bumil = IbuHamil::where('nik', $nik)
-                    ->orWhere('user_id', $user->id)
-                    ->where('status', 'aktif')
-                    ->first();
-
-                if ($bumil) {
-                    $peran[] = 'bumil';
-                }
-            } catch (\Throwable $e) {
-                Log::warning('DetectsUserPeran: ibu_hamil check error - ' . $e->getMessage());
-            }
         }
 
         // Jika tidak ada peran yang cocok
@@ -144,7 +129,6 @@ trait DetectsUserPeran
             'balitas'       => $balitas,
             'remaja'        => $remaja,
             'lansia'        => $lansia,
-            'bumil'         => $bumil,
             'is_multi_peran'=> count($peran) > 1,
         ];
     }
@@ -152,12 +136,12 @@ trait DetectsUserPeran
     /**
      * Shortcut: ambil peran utama (peran pertama yang terdeteksi).
      * Digunakan untuk redirect otomatis di HomeController.
-     * Prioritas: orang_tua > remaja > lansia > bumil > umum
+     * Prioritas: orang_tua > remaja > lansia  > umum
      */
     public function getPeranUtama($user): string
     {
         $ctx = $this->getUserContext($user);
-        $prioritas = ['orang_tua', 'bumil', 'remaja', 'lansia', 'umum'];
+        $prioritas = ['orang_tua', 'remaja', 'lansia', 'umum'];
 
         foreach ($prioritas as $p) {
             if (in_array($p, $ctx['peran'])) {
