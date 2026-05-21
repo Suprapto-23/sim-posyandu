@@ -224,11 +224,11 @@ Route::middleware(['auth', 'role:kader'])
     Route::resource('imunisasi', ImunisasiController::class)
         ->except(['create', 'store', 'edit', 'update', 'destroy']);
 
-    // Jadwal, read-only dari Bidan
-    Route::prefix('jadwal')->name('jadwal.')->group(function () {
-        Route::get('/', [JadwalController::class, 'index'])->name('index');
-        Route::get('/{jadwal}', [JadwalController::class, 'show'])->name('show');
-    });
+    // Jadwal Posyandu - Read Only untuk Kader
+Route::prefix('jadwal')->name('jadwal.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Kader\JadwalController::class, 'index'])->name('index');
+    Route::get('/{jadwal}', [\App\Http\Controllers\Kader\JadwalController::class, 'show'])->name('show');
+});
 
     // Import Data
     Route::prefix('import')->name('import.')->group(function () {

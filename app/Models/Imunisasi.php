@@ -61,11 +61,11 @@ class Imunisasi extends Model
     }
 
     public function getNamaPetugasAttribute(): string
-    {
-        return $this->kunjungan?->petugas?->name
-            ?? $this->kunjungan?->petugas?->nama
-            ?? 'Bidan / Petugas';
-    }
+{
+    return $this->kunjungan?->petugas?->name
+        ?? $this->kunjungan?->petugas?->nama
+        ?? 'Bidan';
+}
 
     public function getTanggalLabelAttribute(): string
     {

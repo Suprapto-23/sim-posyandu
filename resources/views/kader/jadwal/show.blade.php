@@ -1,177 +1,359 @@
 @extends('layouts.kader')
-@section('title', 'Detail Agenda')
-@section('page-name', 'Detail Agenda Acara')
+
+@section('title', 'Detail Jadwal Posyandu')
+@section('page-name', 'Detail Jadwal Posyandu')
+
+@php
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    Carbon::setLocale('id');
+
+    $routeHas = fn ($name) => Route::has($name);
+
+    $statusData = $jadwal->status_badge ?? [
+        'color' => 'slate',
+        'icon' => 'fa-info-circle',
+        'text' => ucfirst($jadwal->status ?? '-')
+    ];
+
+    $tanggal = $jadwal->tanggal
+        ? Carbon::parse($jadwal->tanggal)->translatedFormat('l, d F Y')
+        : '-';
+
+    $tanggalSingkat = $jadwal->tanggal
+        ? Carbon::parse($jadwal->tanggal)->translatedFormat('d M Y')
+        : '-';
+
+    $isToday = $jadwal->tanggal
+        ? Carbon::parse($jadwal->tanggal)->isToday()
+        : false;
+
+    $targetLabel = $jadwal->label_target
+        ?? match($jadwal->target_peserta ?? 'umum') {
+            'balita' => 'Balita / Anak',
+            'remaja' => 'Remaja',
+            'lansia' => 'Lansia',
+            default => 'Umum',
+        };
+
+    $statusClass = match($jadwal->status) {
+        'aktif' => 'bg-emerald-50/90 text-emerald-700 border-emerald-100',
+        'selesai' => 'bg-slate-100/90 text-slate-600 border-slate-200',
+        'dibatalkan' => 'bg-rose-50/90 text-rose-700 border-rose-100',
+        default => 'bg-amber-50/90 text-amber-700 border-amber-100',
+    };
+
+    $waktuLabel = $jadwal->waktu_lengkap
+        ?? (Carbon::parse($jadwal->waktu_mulai)->format('H:i') . ' - ' . Carbon::parse($jadwal->waktu_selesai)->format('H:i') . ' WIB');
+
+    $kategoriLabel = $jadwal->kategori
+        ? ucwords(str_replace('_', ' ', $jadwal->kategori))
+        : 'Pelayanan Posyandu';
+@endphp
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .poster-bg { background-image: radial-gradient(circle at top right, rgba(139, 92, 246, 0.05), transparent 50%), radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.05), transparent 50%); }
-    
-    /* Radar Broadcast Effect */
-    .radar-pulse { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
-    @keyframes pulse-ring { 
-        0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.6); transform: scale(1); } 
-        70% { box-shadow: 0 0 0 25px rgba(79, 70, 229, 0); transform: scale(1.02); } 
-        100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); transform: scale(1); } 
+    .jadwal-detail-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
+    }
+
+    .jadwal-detail-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
+    }
+
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .info-card {
+        border: 1px solid rgba(226,232,240,.78);
+        background: rgba(255,255,255,.62);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .info-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 18px 34px rgba(15,23,42,.055);
+    }
+
+    .timeline-card {
+        border: 1px solid rgba(255,255,255,.74);
+        background: rgba(255,255,255,.56);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .timeline-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 34px rgba(15,23,42,.055);
     }
 </style>
 @endpush
 
 @section('content')
-<div class="max-w-[850px] mx-auto animate-slide-up pb-10">
-    
-    {{-- TOMBOL NAVIGASI --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div class="flex items-center gap-3">
-            <a href="{{ route('kader.jadwal.index') }}" class="loader-trigger w-12 h-12 bg-white border border-slate-200 text-slate-500 rounded-[14px] flex items-center justify-center hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all shadow-sm">
-                <i class="fas fa-arrow-left"></i>
-            </a>
+<div class="jadwal-detail-page space-y-5">
+
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-poppins">Undangan Posyandu</h1>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    Detail Jadwal Read Only
+                </div>
+
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Detail Jadwal Posyandu
+                </h1>
+
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Kader melihat detail jadwal yang dibuat oleh Bidan sebagai acuan pelaksanaan kegiatan Posyandu.
+                    Perubahan jadwal dilakukan oleh Bidan melalui modul Bidan.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row">
+                @if($routeHas('kader.jadwal.index'))
+                    <a href="{{ route('kader.jadwal.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Kembali
+                    </a>
+                @endif
+
+                @if($routeHas('kader.dashboard'))
+                    <a href="{{ route('kader.dashboard') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(15,23,42,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-800">
+                        <i class="fa-solid fa-chart-simple"></i>
+                        Dashboard
+                    </a>
+                @endif
             </div>
         </div>
-        
-        <div class="flex gap-2">
-            <a href="{{ route('kader.jadwal.edit', $jadwal->id) }}" class="loader-trigger px-5 py-3 bg-amber-50 text-amber-600 border border-amber-200 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-100 transition-colors flex items-center justify-center gap-2 flex-1 sm:flex-auto shadow-sm">
-                <i class="fas fa-pen"></i> Edit
-            </a>
-            <form action="{{ route('kader.jadwal.destroy', $jadwal->id) }}" method="POST" id="deleteForm" class="flex-1 sm:flex-auto m-0">
-                @csrf @method('DELETE')
-                <button type="button" onclick="confirmDelete()" class="w-full px-5 py-3 bg-white border border-slate-200 text-rose-500 font-black text-xs uppercase tracking-widest rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-colors flex items-center justify-center gap-2 shadow-sm">
-                    <i class="fas fa-trash-alt"></i> Hapus
-                </button>
-            </form>
+    </section>
+
+    {{-- SUMMARY --}}
+    <section class="glass-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 xl:grid-cols-[1.25fr_.75fr] xl:items-center">
+            <div class="flex items-start gap-4">
+                <div class="grid h-16 w-16 shrink-0 place-items-center rounded-3xl bg-emerald-50/90 text-emerald-700">
+                    <i class="fa-solid fa-calendar-days text-xl"></i>
+                </div>
+
+                <div class="min-w-0">
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $statusClass }}">
+                            <i class="fa-solid {{ $statusData['icon'] ?? 'fa-circle-info' }}"></i>
+                            {{ $statusData['text'] ?? ucfirst($jadwal->status ?? '-') }}
+                        </span>
+
+                        <span class="inline-flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-amber-700">
+                            <i class="fa-solid fa-users"></i>
+                            {{ $targetLabel }}
+                        </span>
+
+                        @if($isToday)
+                            <span class="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-sky-700">
+                                <i class="fa-solid fa-bolt"></i>
+                                Hari Ini
+                            </span>
+                        @endif
+                    </div>
+
+                    <h2 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                        {{ $jadwal->judul }}
+                    </h2>
+
+                    <p class="mt-2 text-sm font-bold leading-6 text-slate-500">
+                        {{ $kategoriLabel }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-emerald-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">Tanggal</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $tanggalSingkat }}</p>
+                </div>
+
+                <div class="rounded-2xl bg-amber-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-700">Waktu</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $waktuLabel }}</p>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
-    {{-- KARTU POSTER DIGITAL --}}
-    <div class="bg-white rounded-[32px] border border-slate-200/80 shadow-[0_15px_50px_-10px_rgba(0,0,0,0.06)] overflow-hidden mb-8 relative poster-bg">
-        
-        <div class="absolute right-0 top-0 w-64 h-64 bg-violet-500/10 rounded-bl-full pointer-events-none blur-3xl"></div>
+    {{-- READ ONLY INFO --}}
+    <section class="rounded-[26px] border border-emerald-100 bg-emerald-50/80 p-4">
+        <div class="flex items-start gap-3">
+            <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-emerald-700">
+                <i class="fa-solid fa-lock"></i>
+            </div>
 
-        <div class="p-8 md:p-14 text-center border-b border-slate-100 relative z-10">
-            @if($jadwal->status == 'aktif') 
-                <span class="inline-flex items-center gap-2 px-5 py-2 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-full mb-6 border border-emerald-200 shadow-sm"><div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div> Segera Dilaksanakan</span>
-            @elseif($jadwal->status == 'selesai') 
-                <span class="inline-flex items-center gap-2 px-5 py-2 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full mb-6 border border-slate-200 shadow-sm"><i class="fas fa-check-circle"></i> Sudah Selesai</span>
-            @else 
-                <span class="inline-flex items-center gap-2 px-5 py-2 bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest rounded-full mb-6 border border-rose-200 shadow-sm"><i class="fas fa-times-circle"></i> Dibatalkan</span> 
+            <div>
+                <h3 class="text-sm font-black text-emerald-800">Jadwal Terkunci untuk Kader</h3>
+                <p class="mt-1 text-xs font-bold leading-5 text-emerald-700">
+                    Kader hanya melihat jadwal sebagai acuan kegiatan. Pembuatan, perubahan, pembatalan, dan penghapusan jadwal dilakukan oleh Bidan.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {{-- DETAIL --}}
+    <section class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+
+        {{-- INFORMASI JADWAL --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-7">
+            <div class="mb-4">
+                <h3 class="text-lg font-black text-slate-900">Informasi Jadwal</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Detail utama kegiatan Posyandu.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tanggal Pelaksanaan</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $tanggal }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Waktu</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $waktuLabel }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Lokasi</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $jadwal->lokasi }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Target Sasaran</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $targetLabel }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Kategori Kegiatan</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $kategoriLabel }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Status</p>
+                    <p class="mt-2">
+                        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $statusClass }}">
+                            <i class="fa-solid {{ $statusData['icon'] ?? 'fa-circle-info' }}"></i>
+                            {{ $statusData['text'] ?? ucfirst($jadwal->status ?? '-') }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {{-- DESKRIPSI --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-5">
+            <div class="mb-4">
+                <h3 class="text-lg font-black text-slate-900">Catatan Jadwal</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Keterangan dari Bidan terkait kegiatan ini.
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <p class="text-sm font-bold leading-6 text-slate-600">
+                    {{ $jadwal->deskripsi ?: 'Tidak ada catatan tambahan dari Bidan.' }}
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {{-- ALUR SISTEM --}}
+    <section class="glass-panel rounded-[30px] p-5">
+        <div class="mb-4">
+            <h3 class="text-lg font-black text-slate-900">Alur Jadwal</h3>
+            <p class="mt-1 text-xs font-bold text-slate-400">
+                Pembagian peran pada data jadwal Posyandu.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="timeline-card rounded-2xl border-emerald-100 bg-emerald-50/70 p-4">
+                <div class="mb-3 grid h-11 w-11 place-items-center rounded-2xl bg-white/70 text-emerald-700">
+                    <i class="fa-solid fa-user-nurse"></i>
+                </div>
+                <h4 class="text-sm font-black text-slate-900">Dibuat Bidan</h4>
+                <p class="mt-1 text-xs font-bold leading-5 text-slate-500">
+                    Bidan membuat dan mengatur jadwal kegiatan Posyandu.
+                </p>
+            </div>
+
+            <div class="timeline-card rounded-2xl border-amber-100 bg-amber-50/70 p-4">
+                <div class="mb-3 grid h-11 w-11 place-items-center rounded-2xl bg-white/70 text-amber-700">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <h4 class="text-sm font-black text-slate-900">Digunakan Kader</h4>
+                <p class="mt-1 text-xs font-bold leading-5 text-slate-500">
+                    Kader menggunakan jadwal sebagai acuan pelayanan, absensi, dan pengukuran.
+                </p>
+            </div>
+
+            <div class="timeline-card rounded-2xl border-sky-100 bg-sky-50/70 p-4">
+                <div class="mb-3 grid h-11 w-11 place-items-center rounded-2xl bg-white/70 text-sky-700">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h4 class="text-sm font-black text-slate-900">Dilihat Warga</h4>
+                <p class="mt-1 text-xs font-bold leading-5 text-slate-500">
+                    Warga melihat jadwal aktif sebagai informasi kegiatan Posyandu.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {{-- ACTION --}}
+    <section class="glass-panel rounded-[26px] p-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-900">Detail jadwal selesai ditampilkan</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Untuk mengubah jadwal, gunakan akun Bidan melalui modul Jadwal Bidan.
+                </p>
+            </div>
+
+            @if($routeHas('kader.jadwal.index'))
+                <a href="{{ route('kader.jadwal.index') }}"
+                   class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="fa-solid fa-list"></i>
+                    Daftar Jadwal
+                </a>
             @endif
-            
-            <h2 class="text-4xl md:text-5xl font-black text-slate-800 font-poppins mb-4 tracking-tight leading-tight">{{ $jadwal->judul }}</h2>
-            
-            <div class="inline-flex items-center gap-2 bg-indigo-50 px-4 py-1.5 rounded-lg border border-indigo-100">
-                <i class="fas fa-users text-indigo-400"></i>
-                <p class="text-indigo-700 font-black uppercase tracking-widest text-[11px]">Kepada: {{ str_replace('_', ' ', $jadwal->target_peserta) }}</p>
-            </div>
         </div>
-
-        <div class="p-8 md:p-12 grid grid-cols-1 sm:grid-cols-2 gap-8 text-left relative z-10 bg-slate-50/50">
-            
-            <div class="flex items-start gap-4 p-5 bg-white border border-slate-200/80 rounded-[24px] shadow-sm hover:border-violet-300 transition-colors group">
-                <div class="w-14 h-14 rounded-[16px] bg-violet-100 text-violet-600 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform"><i class="far fa-calendar-check"></i></div>
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tanggal Pelaksanaan</p>
-                    <p class="text-[16px] font-black text-slate-800">{{ \Carbon\Carbon::parse($jadwal->tanggal)->translatedFormat('l, d F Y') }}</p>
-                </div>
-            </div>
-
-            <div class="flex items-start gap-4 p-5 bg-white border border-slate-200/80 rounded-[24px] shadow-sm hover:border-sky-300 transition-colors group">
-                <div class="w-14 h-14 rounded-[16px] bg-sky-100 text-sky-600 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform"><i class="far fa-clock"></i></div>
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Waktu (WIB)</p>
-                    <p class="text-[16px] font-black text-slate-800">{{ \Carbon\Carbon::parse($jadwal->waktu_mulai)->format('H:i') }} - {{ \Carbon\Carbon::parse($jadwal->waktu_selesai)->format('H:i') }}</p>
-                </div>
-            </div>
-
-            <div class="flex items-start gap-4 p-5 bg-white border border-slate-200/80 rounded-[24px] shadow-sm hover:border-rose-300 transition-colors group sm:col-span-2">
-                <div class="w-14 h-14 rounded-[16px] bg-rose-100 text-rose-500 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform"><i class="fas fa-map-marker-alt"></i></div>
-                <div class="flex-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lokasi Kegiatan</p>
-                    <p class="text-[16px] font-black text-slate-800">{{ $jadwal->lokasi }}</p>
-                </div>
-            </div>
-            
-            @if($jadwal->deskripsi)
-            <div class="sm:col-span-2 p-6 bg-amber-50 border border-amber-200 rounded-[24px] shadow-sm">
-                <p class="text-[11px] font-black text-amber-700 uppercase tracking-widest mb-2"><i class="fas fa-info-circle mr-1"></i> Catatan & Persyaratan</p>
-                <p class="text-[14px] font-bold text-amber-900 leading-relaxed">"{{ $jadwal->deskripsi }}"</p>
-            </div>
-            @endif
-        </div>
-
-        {{-- BROADCAST SECTION (Hanya muncul jika jadwal masih aktif) --}}
-        @if($jadwal->status == 'aktif')
-        <div class="p-8 md:p-14 text-center border-t border-slate-100 bg-white">
-            <div class="w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4 border border-indigo-100 text-indigo-500 text-3xl"><i class="fas fa-satellite-dish"></i></div>
-            <h4 class="text-xl font-black text-slate-800 font-poppins mb-2">Sebarkan Undangan Sekarang?</h4>
-            <p class="text-[13px] font-medium text-slate-500 max-w-md mx-auto mb-8 leading-relaxed">Ketuk tombol di bawah untuk mengirimkan notifikasi *Push* langsung ke aplikasi warga yang terdaftar sebagai Target Peserta.</p>
-            
-            <form action="{{ route('kader.jadwal.broadcast', $jadwal->id) }}" method="POST" id="formBroadcast">
-                @csrf
-                <button type="submit" id="btnBroadcast" class="inline-flex items-center justify-center gap-3 px-10 py-4 bg-indigo-600 text-white font-black text-[14px] rounded-[18px] hover:bg-indigo-700 transition-all uppercase tracking-widest w-full sm:w-auto shadow-lg shadow-indigo-200 radar-pulse border border-indigo-500">
-                    <i class="fas fa-paper-plane text-lg"></i> Siarkan ke Warga
-                </button>
-            </form>
-        </div>
-        @endif
-
-    </div>
+    </section>
 </div>
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    const broadcastForm = document.getElementById('formBroadcast');
-    if(broadcastForm) {
-        broadcastForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            Swal.fire({
-                title: 'Menyiarkan Sinyal...',
-                html: '<p class="text-sm font-medium text-slate-500 mt-2">Sistem sedang mendistribusikan notifikasi push ke aplikasi warga. Harap tunggu...</p>',
-                allowOutsideClick: false, showConfirmButton: false,
-                willOpen: () => { Swal.showLoading(); }
-            });
-
-            fetch(this.action, {
-                method: 'POST', body: new FormData(this),
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    Swal.fire({ icon: 'success', title: 'Broadcast Terkirim!', text: data.message, confirmButtonColor: '#4f46e5', customClass: { popup: 'rounded-3xl' }});
-                    const btn = document.getElementById('btnBroadcast');
-                    btn.classList.remove('radar-pulse');
-                    btn.innerHTML = '<i class="fas fa-check-double text-lg"></i> Berhasil Terkirim';
-                    btn.classList.replace('bg-indigo-600', 'bg-emerald-500');
-                    btn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-600');
-                    btn.classList.replace('border-indigo-500', 'border-emerald-500');
-                    btn.classList.replace('shadow-indigo-200', 'shadow-emerald-200');
-                    btn.disabled = true;
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message });
-                }
-            })
-            .catch(err => {
-                Swal.fire({ icon: 'error', title: 'Koneksi Terputus', text: 'Gagal menghubungi server.' });
-            });
-        });
-    }
-
-    function confirmDelete() {
-        Swal.fire({
-            title: 'Hapus Agenda?', text: "Jadwal yang dihapus tidak bisa dikembalikan.",
-            icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal', reverseButtons: true,
-            customClass: { popup: 'rounded-3xl' }
-        }).then((result) => {
-            if (result.isConfirmed) document.getElementById('deleteForm').submit();
-        });
-    }
-</script>
-@endpush
 @endsection

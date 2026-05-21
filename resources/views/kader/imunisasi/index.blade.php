@@ -92,7 +92,7 @@
                 </h1>
 
                 <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Kader hanya melihat arsip imunisasi yang sudah dicatat oleh Bidan. Data ini digunakan sebagai pemantauan dan bahan laporan, bukan untuk input tindakan medis.
+                    Kader hanya melihat riwayat imunisasi balita yang dicatat oleh Bidan. Data ini digunakan Kader untuk pemantauan dan bahan laporan, bukan untuk menambah atau mengubah data imunisasi.
                 </p>
             </div>
 
@@ -213,9 +213,9 @@
                             </div>
 
                             <div>
-                                <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Dicatat Oleh</p>
-                                <p class="mt-1 text-sm font-black text-slate-900">{{ $imun->nama_petugas }}</p>
-                                <p class="mt-1 text-xs font-bold text-slate-400">Bidan / Petugas</p>
+                                <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Dicatat Bidan</p>
+<p class="mt-1 text-sm font-black text-slate-900">{{ $imun->nama_petugas }}</p>
+<p class="mt-1 text-xs font-bold text-slate-400">Bidan</p>
                             </div>
 
                             <a href="{{ route('kader.imunisasi.show', $imun->id) }}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">
