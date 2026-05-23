@@ -1,125 +1,399 @@
 @extends('layouts.kader')
-@section('title', 'Riwayat Import')
-@section('page-name', 'Log & History')
+
+@section('title', 'Riwayat Import Data')
+@section('page-name', 'Riwayat Import Data')
+
+@php
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    Carbon::setLocale('id');
+
+    $routeHas = fn ($name) => Route::has($name);
+
+    $typeMeta = [
+        'balita' => [
+            'label' => 'Balita / Anak',
+            'icon' => 'fa-child-reaching',
+            'class' => 'border-emerald-100 bg-emerald-50/80 text-emerald-700',
+        ],
+        'remaja' => [
+            'label' => 'Remaja',
+            'icon' => 'fa-user-graduate',
+            'class' => 'border-sky-100 bg-sky-50/80 text-sky-700',
+        ],
+        'lansia' => [
+            'label' => 'Lansia',
+            'icon' => 'fa-person-cane',
+            'class' => 'border-amber-100 bg-amber-50/80 text-amber-700',
+        ],
+    ];
+
+    $statusMeta = [
+        'completed' => [
+            'label' => 'Berhasil',
+            'icon' => 'fa-circle-check',
+            'class' => 'border-emerald-100 bg-emerald-50/80 text-emerald-700',
+        ],
+        'processing' => [
+            'label' => 'Diproses',
+            'icon' => 'fa-clock',
+            'class' => 'border-amber-100 bg-amber-50/80 text-amber-700',
+        ],
+        'failed' => [
+            'label' => 'Gagal',
+            'icon' => 'fa-circle-xmark',
+            'class' => 'border-rose-100 bg-rose-50/80 text-rose-700',
+        ],
+    ];
+
+    $jenisData = $jenisData ?? request('jenis_data', 'semua');
+    $status = $status ?? request('status', 'semua');
+    $tanggal = $tanggal ?? request('tanggal');
+    $search = $search ?? request('search', '');
+
+    $totalImport = $imports->total() ?? 0;
+@endphp
 
 @push('styles')
 <style>
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .import-history-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
+    }
+
+    .import-history-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
+    }
+
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .input-premium {
+        border: 1px solid rgba(226,232,240,.9);
+        background: rgba(255,255,255,.72);
+        outline: none;
+        transition: all .3s ease-in-out;
+    }
+
+    .input-premium:focus {
+        border-color: rgba(16,185,129,.42);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+        background: rgba(255,255,255,.86);
+    }
+
+    .card-hover {
+        transition: all .3s ease-in-out;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 20px 46px rgba(15,23,42,.075);
+    }
+
+    .scroll-soft {
+        max-height: 640px;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .scroll-soft::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
+
+    .scroll-soft::-webkit-scrollbar-track {
+        background: rgba(241,245,249,.8);
+        border-radius: 999px;
+    }
+
+    .scroll-soft::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #10b981, #f59e0b);
+        border-radius: 999px;
+    }
 </style>
 @endpush
 
 @section('content')
-<div class="max-w-[1400px] mx-auto animate-slide-up pb-10">
+<div class="import-history-page space-y-5">
 
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 mt-4">
-        <div class="flex items-center gap-5">
-            <div class="w-16 h-16 rounded-[20px] bg-white text-indigo-600 border border-indigo-100 flex items-center justify-center text-3xl shadow-sm shrink-0">
-                <i class="fas fa-server"></i>
-            </div>
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight font-poppins">Log Server</h1>
-                <p class="text-slate-500 mt-1 font-medium text-[13px]">Jejak rekam aktivitas *mass-upload* database posyandu.</p>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    Riwayat Import
+                </div>
+
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Riwayat Import Data Warga
+                </h1>
+
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Halaman ini menampilkan jejak upload Excel oleh Kader. Riwayat digunakan untuk memeriksa file, kategori data, jumlah baris tersimpan, dan status proses import.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if($routeHas('kader.import.index'))
+                    <a href="{{ route('kader.import.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-layer-group"></i>
+                        Pusat Import
+                    </a>
+                @endif
+
+                @if($routeHas('kader.import.create'))
+                    <a href="{{ route('kader.import.create') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-upload"></i>
+                        Import Baru
+                    </a>
+                @endif
             </div>
         </div>
-        <a href="{{ route('kader.import.create') }}" class="loader-trigger inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-indigo-600 text-white font-black text-[12px] uppercase tracking-widest rounded-[16px] hover:bg-indigo-700 shadow-[0_8px_20px_rgba(79,70,229,0.3)] hover:-translate-y-0.5 transition-all">
-            <i class="fas fa-plus"></i> Import Baru
-        </a>
-    </div>
+    </section>
 
-    @if($imports->count() > 0)
-    <div class="premium-card overflow-hidden">
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
-                <thead>
-                    <tr class="bg-slate-50/90 backdrop-blur-sm border-b border-slate-100">
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-100/50">Detail File</th>
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-100/50">Waktu Eksekusi</th>
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center border-r border-slate-100/50">Status Mesin</th>
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center border-r border-slate-100/50">Target Modul</th>
-                        <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Manajemen</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    @foreach($imports as $import)
-                    <tr class="hover:bg-slate-50/60 transition-colors group">
-                        
-                        <td class="px-6 py-5 border-r border-slate-100/50">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-[12px] bg-slate-100 text-slate-400 flex items-center justify-center text-lg border border-slate-200 group-hover:bg-indigo-50 group-hover:text-indigo-500 group-hover:border-indigo-200 transition-colors shrink-0">
-                                    <i class="fas fa-file-excel"></i>
-                                </div>
-                                <div>
-                                    <p class="font-black text-slate-800 text-[14px] font-poppins mb-0.5 truncate max-w-[250px]">{{ $import->nama_file }}</p>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID Log: #{{ str_pad($import->id, 5, '0', STR_PAD_LEFT) }}</p>
-                                </div>
-                            </div>
-                        </td>
+    
+    {{-- FILTER --}}
+    <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+        <form method="GET" action="{{ route('kader.import.history') }}" class="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_170px_190px_170px_auto]">
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Cari Log</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ $search }}"
+                        class="input-premium h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700"
+                        placeholder="Cari nama file, catatan, atau jenis data..."
+                    >
+                </div>
+            </div>
 
-                        <td class="px-6 py-5 border-r border-slate-100/50">
-                            <p class="font-bold text-slate-800 text-[13px] mb-1">{{ $import->created_at->translatedFormat('d M Y') }}</p>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded inline-block"><i class="far fa-clock"></i> {{ $import->created_at->format('H:i:s') }} WIB</p>
-                        </td>
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tanggal</label>
+                <input
+                    type="date"
+                    name="tanggal"
+                    value="{{ $tanggal }}"
+                    class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700"
+                >
+            </div>
 
-                        <td class="px-6 py-5 text-center border-r border-slate-100/50">
-                            @if($import->status == 'completed')
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-200 shadow-sm">
-                                    <i class="fas fa-check-circle"></i> Selesai
-                                </span>
-                            @elseif($import->status == 'processing')
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest border border-amber-200 shadow-sm animate-pulse">
-                                    <i class="fas fa-sync fa-spin"></i> Proses
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 text-[10px] font-black uppercase tracking-widest border border-rose-200 shadow-sm">
-                                    <i class="fas fa-times-circle"></i> Gagal
-                                </span>
-                            @endif
-                        </td>
-
-                        <td class="px-6 py-5 text-center border-r border-slate-100/50">
-                            <span class="inline-flex px-3 py-1 bg-white text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-slate-200 shadow-sm">
-                                <i class="fas fa-database mr-1 text-slate-400"></i> {{ $import->jenis_data }}
-                            </span>
-                        </td>
-
-                        <td class="px-6 py-5 text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('kader.import.show', $import->id) }}" class="loader-trigger inline-flex w-10 h-10 rounded-[12px] bg-white border border-slate-200 items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 shadow-sm transition-all hover:scale-110" title="Lihat Terminal Log">
-                                    <i class="fas fa-terminal"></i>
-                                </a>
-                                <form action="{{ route('kader.import.destroy', $import->id) }}" method="POST" onsubmit="return confirm('Hapus jejak log ini?');" class="inline-block m-0">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn-press inline-flex w-10 h-10 rounded-[12px] bg-white border border-slate-200 items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 shadow-sm transition-all" title="Hapus Riwayat">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-
-                    </tr>
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Jenis Data</label>
+                <select name="jenis_data" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    <option value="semua" {{ $jenisData === 'semua' ? 'selected' : '' }}>Semua Data</option>
+                    @foreach($typeMeta as $key => $item)
+                        <option value="{{ $key }}" {{ $jenisData === $key ? 'selected' : '' }}>
+                            {{ $item['label'] }}
+                        </option>
                     @endforeach
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="px-8 py-5 border-t border-slate-100 bg-slate-50/50">
-            {{ $imports->links() }}
-        </div>
-    </div>
-    @else
-    <div class="text-center py-24 relative overflow-hidden bg-white rounded-[32px] border border-slate-200 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)]">
-        <div class="absolute inset-0 flex items-center justify-center opacity-[0.02] text-[300px] pointer-events-none"><i class="fas fa-server"></i></div>
-        <div class="w-24 h-24 bg-slate-50 rounded-[24px] flex items-center justify-center text-slate-300 mx-auto mb-6 text-4xl shadow-inner border border-slate-100 relative z-10"><i class="fas fa-box-open"></i></div>
-        <h4 class="text-xl font-black text-slate-800 font-poppins relative z-10">Database Log Kosong</h4>
-        <p class="text-[14px] text-slate-500 mt-2 max-w-sm mx-auto relative z-10 font-medium">Anda belum pernah melakukan import massal. Riwayat masih bersih.</p>
-        <a href="{{ route('kader.import.create') }}" class="loader-trigger inline-flex items-center gap-2 mt-8 text-indigo-600 font-black uppercase tracking-widest text-[12px] hover:text-white relative z-10 bg-indigo-50 hover:bg-indigo-600 px-6 py-3.5 rounded-xl transition-colors border border-indigo-200 shadow-sm">
-            <i class="fas fa-bolt text-lg"></i> Mulai Eksekusi Pertama
-        </a>
-    </div>
-    @endif
+                </select>
+            </div>
 
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Status</label>
+                <select name="status" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    <option value="semua" {{ $status === 'semua' ? 'selected' : '' }}>Semua Status</option>
+                    @foreach($statusMeta as $key => $item)
+                        <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>
+                            {{ $item['label'] }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit"
+                        class="h-12 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="fa-solid fa-filter mr-1"></i>
+                    Filter
+                </button>
+
+                <a href="{{ route('kader.import.history') }}"
+                   class="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-white/60 text-slate-500 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-emerald-700">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </a>
+            </div>
+        </form>
+    </section>
+
+    {{-- LIST --}}
+    <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-lg font-black text-slate-900">Daftar Riwayat Import</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Menampilkan log upload file Excel berdasarkan filter aktif.
+                </p>
+            </div>
+
+            <span class="w-fit rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">
+                {{ $totalImport }} Log
+            </span>
+        </div>
+
+        @if(isset($imports) && $imports->count())
+            <div class="scroll-soft">
+                <div class="space-y-3">
+                    @foreach($imports as $import)
+                        @php
+                        $totalTerbaca = $import->total_data ?? null;
+$dataBaru = $import->data_berhasil ?? $import->data_tersimpan ?? 0;
+$dataTidakMasuk = $import->data_gagal ?? (
+    $totalTerbaca !== null ? max(0, $totalTerbaca - $dataBaru) : null
+);
+                            $statusData = $statusMeta[$import->status] ?? $statusMeta['processing'];
+                            $typeData = $typeMeta[$import->jenis_data] ?? [
+                                'label' => ucfirst($import->jenis_data ?? '-'),
+                                'icon' => 'fa-database',
+                                'class' => 'border-slate-100 bg-slate-50/80 text-slate-700',
+                            ];
+
+                            $tanggalImport = $import->created_at
+                                ? $import->created_at->translatedFormat('d F Y')
+                                : '-';
+
+                            $jamImport = $import->created_at
+                                ? $import->created_at->format('H:i') . ' WIB'
+                                : '-';
+
+                            $creatorName = $import->creator?->name
+                                ?? $import->creator?->nama
+                                ?? 'Kader';
+                        @endphp
+
+                        <article class="card-hover rounded-[26px] border border-white/70 bg-white/56 p-4 backdrop-blur-md">
+                            <div class="grid gap-4 xl:grid-cols-[1.3fr_170px_170px_130px_auto] xl:items-center">
+                                <div class="min-w-0">
+                                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                                        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $typeData['class'] }}">
+                                            <i class="fa-solid {{ $typeData['icon'] }}"></i>
+                                            {{ $typeData['label'] }}
+                                        </span>
+
+                                        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $statusData['class'] }}">
+                                            <i class="fa-solid {{ $statusData['icon'] }}"></i>
+                                            {{ $statusData['label'] }}
+                                        </span>
+                                    </div>
+
+                                    <h3 class="truncate text-base font-black text-slate-900">
+                                        {{ $import->nama_file }}
+                                    </h3>
+
+                                    <p class="mt-1 text-xs font-bold text-slate-400">
+                                        ID Log #{{ str_pad($import->id, 5, '0', STR_PAD_LEFT) }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Waktu Upload</p>
+                                    <p class="mt-1 text-sm font-black text-slate-900">{{ $tanggalImport }}</p>
+                                    <p class="mt-1 text-xs font-bold text-slate-400">{{ $jamImport }}</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Diunggah Oleh</p>
+                                    <p class="mt-1 text-sm font-black text-slate-900">{{ $creatorName }}</p>
+                                    <p class="mt-1 text-xs font-bold text-slate-400">Kader</p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Data Baru</p>
+<p class="mt-1 text-2xl font-black text-slate-900">{{ $dataBaru }}</p>
+<p class="mt-1 text-xs font-bold text-slate-400">
+    @if($totalTerbaca !== null)
+        dari {{ $totalTerbaca }} baris
+    @else
+        Log lama
+    @endif
+</p>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2 xl:justify-end">
+                                    @if($routeHas('kader.import.show'))
+                                        <a href="{{ route('kader.import.show', $import->id) }}"
+                                           class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-black text-white shadow-[0_10px_20px_rgba(5,150,105,.14)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                                            <i class="fa-solid fa-eye"></i>
+                                            Detail
+                                        </a>
+                                    @endif
+
+                                    @if($routeHas('kader.import.destroy'))
+                                        <form method="POST"
+                                              action="{{ route('kader.import.destroy', $import->id) }}"
+                                              onsubmit="return confirm('Hapus riwayat import ini? Data warga yang sudah masuk tidak ikut terhapus.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50/80 px-4 py-2.5 text-xs font-black text-rose-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-100/80">
+                                                <i class="fa-solid fa-trash"></i>
+                                                Hapus Log
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+
+            @if($imports->hasPages())
+                <div class="mt-5">
+                    {{ $imports->links() }}
+                </div>
+            @endif
+        @else
+            <div class="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
+                <div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/60 text-slate-400 backdrop-blur-md">
+                    <i class="fa-solid fa-folder-open text-xl"></i>
+                </div>
+
+                <h3 class="mt-4 text-lg font-black text-slate-900">Riwayat Import Kosong</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
+                    Belum ada aktivitas import yang cocok dengan filter saat ini. Mulai import baru kalau database warga masih perlu diisi massal.
+                </p>
+
+                @if($routeHas('kader.import.create'))
+                    <a href="{{ route('kader.import.create') }}"
+                       class="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-upload"></i>
+                        Import Pertama
+                    </a>
+                @endif
+            </div>
+        @endif
+    </section>
 </div>
 @endsection

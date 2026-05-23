@@ -1,392 +1,704 @@
 @extends('layouts.kader')
 
-@section('title', 'Pendaftaran Balita Baru')
-@section('page-name', 'Meja 4: Pendaftaran')
+@section('title', 'Tambah Data Balita')
+@section('page-name', 'Tambah Data Balita')
+
+@php
+    use Illuminate\Support\Facades\Route;
+
+    $routeHas = fn ($name) => Route::has($name);
+@endphp
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
-    /* =========================================================
-     * NEXUS PREMIUM DESIGN SYSTEM 
-     * UI/UX Terintegrasi - Presisi, Clean, & Smooth Transitions
-     * ========================================================= */
-    
-    .animate-nexus-in { 
-        opacity: 0; 
-        animation: nexusIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
-    }
-    @keyframes nexusIn { 
-        from { opacity: 0; transform: translateY(30px) scale(0.99); } 
-        to { opacity: 1; transform: translateY(0) scale(1); } 
+    .balita-create-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
     }
 
-    /* CARD SYSTEM */
-    .card-nexus {
-        background: #ffffff;
-        border-radius: 2.5rem;
-        border: 1px solid rgba(241, 245, 249, 0.8);
-        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.05);
-        transition: all 0.4s ease;
+    .balita-create-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
     }
 
-    /* INPUT SYSTEM */
-    .form-label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 800;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-bottom: 0.8rem;
-        padding-left: 0.5rem;
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
     }
 
-    .form-input-nexus {
-        width: 100%;
-        background-color: #f8fafc;
-        border: 2px solid #f1f5f9;
-        color: #0f172a;
-        font-size: 0.95rem;
-        border-radius: 1.25rem;
-        padding: 1.1rem 1.5rem;
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .input-premium {
+        border: 1px solid rgba(226,232,240,.9);
+        background: rgba(255,255,255,.72);
         outline: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-weight: 700;
+        transition: all .3s ease-in-out;
     }
 
-    .form-input-nexus:focus {
-        background-color: #ffffff;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.1);
-    }
-    
-    .form-input-nexus::placeholder {
-        color: #94a3b8;
-        font-weight: 500;
+    .input-premium:focus {
+        border-color: rgba(16,185,129,.42);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+        background: rgba(255,255,255,.86);
     }
 
-    /* RADIO BUTTON CARD SYSTEM */
-    .nexus-radio-group { display: flex; gap: 1rem; }
-    .nexus-radio-card { flex: 1; cursor: pointer; position: relative; }
-    .nexus-radio-card input { position: absolute; opacity: 0; }
-    .nexus-radio-ui {
-        padding: 1.1rem; text-align: center; border-radius: 1.25rem; border: 2px solid #f1f5f9;
-        background: #f8fafc; color: #94a3b8; font-weight: 800; font-size: 0.85rem;
-        transition: all 0.3s ease; display: block; letter-spacing: 0.05em;
-    }
-    .nexus-radio-card input:checked + .nexus-radio-ui {
-        border-color: #3b82f6; background: #eff6ff; color: #2563eb;
-        box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.15);
+    .input-error {
+        border-color: rgba(244,63,94,.45) !important;
+        box-shadow: 0 0 0 4px rgba(244,63,94,.08) !important;
     }
 
-    /* BUTTON SYSTEM */
-    .btn-nexus-save {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        color: white; padding: 1.2rem 3rem; border-radius: 1.5rem;
-        font-weight: 800; font-size: 0.9rem; text-transform: uppercase;
-        letter-spacing: 0.05em; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: none; box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.4);
-        display: inline-flex; items-center; justify-content: center; gap: 0.75rem;
-        cursor: pointer;
-    }
-    .btn-nexus-save:hover:not(:disabled) { 
-        transform: translateY(-3px); 
-        box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.5); 
-    }
-    .btn-nexus-save:disabled {
-        background: #94a3b8; box-shadow: none; cursor: not-allowed; transform: none;
+    .gender-card {
+        border: 1px solid rgba(226,232,240,.82);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
     }
 
-    .btn-nexus-back {
-        color: #64748b; font-weight: 800; font-size: 0.85rem; text-transform: uppercase;
-        letter-spacing: 0.05em; padding: 1.2rem 2.5rem; transition: all 0.3s ease;
-        border-radius: 1.5rem; border: 2px solid transparent; display: inline-flex; items-center; gap: 0.75rem;
-    }
-    .btn-nexus-back:hover { 
-        color: #334155; background: #f8fafc; border-color: #e2e8f0; 
+    .gender-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.28);
+        box-shadow: 0 18px 38px rgba(15,23,42,.06);
     }
 
-    /* =========================================================
-     * SWEETALERT 2 - NEXUS CRM THEME (Soft, Rounded, Glassy)
-     * ========================================================= */
-    .swal2-container.nexus-swal-backdrop {
-        background: rgba(15, 23, 42, 0.4) !important;
-        backdrop-filter: blur(8px) !important;
+    .gender-card.active {
+        border-color: rgba(16,185,129,.40);
+        background: rgba(236,253,245,.86);
+        box-shadow: 0 14px 32px rgba(5,150,105,.08);
     }
-    .nexus-swal-popup {
-        border-radius: 2.5rem !important;
-        padding: 2.5rem 2rem !important;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2) !important;
-        border: 1px solid rgba(255, 255, 255, 0.8) !important;
-        background: #ffffff !important;
-    }
-    .nexus-swal-title {
-        font-weight: 900 !important; color: #0f172a !important;
-        font-size: 1.75rem !important; margin-bottom: 1rem !important; letter-spacing: -0.025em !important;
-    }
-    .nexus-swal-html { margin: 0 !important; padding: 0 !important; }
-    .nexus-swal-icon { border: none !important; margin: 0 auto 1.5rem auto !important; }
-    .nexus-swal-confirm {
-        background: #2563eb !important; border-radius: 1.25rem !important;
-        padding: 1rem 3rem !important; font-weight: 800 !important; font-size: 0.9rem !important;
-        text-transform: uppercase !important; letter-spacing: 0.05em !important;
-        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3) !important;
-        border: none !important; transition: all 0.3s ease !important;
-    }
-    .nexus-swal-confirm:hover { background: #1d4ed8 !important; transform: translateY(-2px) !important; }
 
-    /* FULLSCREEN LOADER */
-    #nexusLoader {
-        position: fixed; inset: 0; background: rgba(255,255,255,0.85);
-        backdrop-filter: blur(12px); z-index: 9999; display: flex;
-        flex-direction: column; align-items: center; justify-content: center;
-        transition: opacity 0.5s ease;
+    .toast-custom {
+        position: fixed;
+        right: 24px;
+        top: 96px;
+        z-index: 90;
+        width: min(420px, calc(100vw - 32px));
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-10px);
+        transition: all .3s ease-in-out;
+    }
+
+    .toast-custom.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 640px) {
+        .toast-custom {
+            left: 16px;
+            right: 16px;
+            top: 82px;
+        }
     }
 </style>
 @endpush
 
 @section('content')
-{{-- Animated Global Loader --}}
-<div id="nexusLoader" class="opacity-0 pointer-events-none">
-    <div class="relative flex items-center justify-center">
-        <div class="w-24 h-24 border-[6px] border-blue-600/10 border-t-blue-600 rounded-full animate-spin"></div>
-        <i class="fas fa-child absolute text-blue-600 text-3xl"></i>
-    </div>
-    <h2 class="mt-8 text-xl font-black text-slate-800">Menyinkronkan Data</h2>
-    <p class="mt-2 text-xs font-bold text-blue-600 uppercase tracking-[0.2em]">Sistem Manajemen Posyandu</p>
-</div>
+<div class="balita-create-page space-y-5">
 
-<div class="max-w-4xl mx-auto space-y-10 pb-24">
-    {{-- Header Content --}}
-    <div class="flex flex-col items-center text-center space-y-4 animate-nexus-in">
-        <div class="w-20 h-20 bg-gradient-to-br from-blue-50 to-sky-100 rounded-[1.75rem] flex items-center justify-center text-blue-600 text-3xl shadow-sm border border-blue-200/50">
-            <i class="fas fa-clipboard-user"></i>
-        </div>
-        <div>
-            <h1 class="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">Registrasi Balita</h1>
-            <p class="text-slate-500 text-sm font-semibold mt-2">Gunakan <b class="text-blue-600">NIK Anak</b> sebagai kredensial utama sistem.</p>
-        </div>
-    </div>
-
-    {{-- Perhatikan Action Route menggunakan kader.data.balita.store --}}
-    <form action="{{ route('kader.data.balita.store') }}" method="POST" id="formBalita" class="space-y-8 animate-nexus-in" style="animation-delay: 0.1s">
-        @csrf
-
-        {{-- SEKSI 1: IDENTITAS UTAMA --}}
-        <div class="card-nexus p-8 md:p-12">
-            <div class="flex items-center gap-4 mb-10 pb-6 border-b border-slate-100">
-                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shrink-0">
-                    <i class="fas fa-id-card"></i>
+    {{-- CUSTOM TOAST --}}
+    <div id="customToast" class="toast-custom">
+        <div class="rounded-[24px] border border-rose-100 bg-white/80 p-4 shadow-[0_22px_60px_rgba(15,23,42,.22)] backdrop-blur-xl">
+            <div class="flex gap-3">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
+                    <i class="fa-solid fa-circle-exclamation"></i>
                 </div>
                 <div>
-                    <h3 class="text-xl font-black text-slate-800 tracking-tight">Identitas Anak</h3>
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sesuai Kartu Keluarga / KIA</p>
+                    <p class="text-sm font-black text-slate-900">Form belum lengkap</p>
+                    <p id="customToastText" class="mt-1 text-xs font-bold leading-5 text-slate-500">
+                        Lengkapi data wajib terlebih dahulu.
+                    </p>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                <div class="md:col-span-2">
-                    <label class="form-label">Nama Lengkap Balita <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nama_lengkap" class="form-input-nexus" placeholder="Masukkan nama anak..." required value="{{ old('nama_lengkap') }}">
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-child-reaching"></i>
+                    Input Data Balita
                 </div>
 
-                <div>
-                    <label class="form-label">NIK Anak (16 Digit) <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nik" id="nik" maxlength="16" minlength="16" class="form-input-nexus" placeholder="Contoh: 3326..." required value="{{ old('nik') }}">
-                </div>
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Tambah Data Balita
+                </h1>
 
-                <div>
-                    <label class="form-label">Jenis Kelamin <span class="text-rose-500">*</span></label>
-                    <div class="nexus-radio-group">
-                        <label class="nexus-radio-card">
-                            <input type="radio" name="jenis_kelamin" value="L" required {{ old('jenis_kelamin') == 'L' ? 'checked' : '' }}>
-                            <span class="nexus-radio-ui">LAKI-LAKI</span>
-                        </label>
-                        <label class="nexus-radio-card">
-                            <input type="radio" name="jenis_kelamin" value="P" required {{ old('jenis_kelamin') == 'P' ? 'checked' : '' }}>
-                            <span class="nexus-radio-ui">PEREMPUAN</span>
-                        </label>
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Masukkan data Balita sebagai sasaran layanan Posyandu. Data ini digunakan untuk absensi, pengukuran fisik, imunisasi, rekam kesehatan, dan laporan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if($routeHas('kader.data.balita.index'))
+                    <a href="{{ route('kader.data.balita.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Kembali
+                    </a>
+                @endif
+
+                @if($routeHas('kader.import.create'))
+                    <a href="{{ route('kader.import.create', ['type' => 'balita']) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(15,23,42,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-800">
+                        <i class="fa-solid fa-file-import"></i>
+                        Import Excel
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- SERVER ERROR --}}
+    @if($errors->any() || session('error'))
+        <section class="rounded-[24px] border border-rose-100 bg-rose-50/80 p-4 text-sm font-bold text-rose-700">
+            <div class="mb-2 flex items-center gap-2 font-black">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Data belum bisa disimpan
+            </div>
+
+            @if(session('error'))
+                <p class="leading-6">{{ session('error') }}</p>
+            @endif
+
+            @if($errors->any())
+                <ul class="ml-5 list-disc space-y-1">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+    @endif
+
+    <form id="balitaForm" method="POST" action="{{ route('kader.data.balita.store') }}" class="grid grid-cols-1 gap-5 xl:grid-cols-12" novalidate>
+        @csrf
+
+        {{-- LEFT FORM --}}
+        <section class="space-y-5 xl:col-span-8">
+
+            {{-- IDENTITAS --}}
+            <div class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">1. Identitas Balita</h2>
+                        <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                            Gunakan data sesuai dokumen keluarga atau catatan Posyandu.
+                        </p>
                     </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Kota Tempat Lahir</label>
-                    <input type="text" name="tempat_lahir" class="form-input-nexus" placeholder="Sesuai akta kelahiran" value="{{ old('tempat_lahir') }}">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Nama Lengkap <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_lengkap"
+                            id="nama_lengkap"
+                            value="{{ old('nama_lengkap') }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_lengkap') input-error @enderror"
+                            placeholder="Contoh: Ahmad Fauzan"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('nama_lengkap')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            NIK Balita <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nik"
+                            id="nik"
+                            value="{{ old('nik') }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nik') input-error @enderror"
+                            placeholder="16 digit NIK"
+                            inputmode="numeric"
+                            maxlength="16"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('nik')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Tempat Lahir <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="tempat_lahir"
+                            id="tempat_lahir"
+                            value="{{ old('tempat_lahir') }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tempat_lahir') input-error @enderror"
+                            placeholder="Contoh: Pekalongan"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('tempat_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Tanggal Lahir <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="date"
+                            name="tanggal_lahir"
+                            id="tanggal_lahir"
+                            value="{{ old('tanggal_lahir') }}"
+                            max="{{ now('Asia/Jakarta')->toDateString() }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tanggal_lahir') input-error @enderror"
+                            required
+                        >
+                        @error('tanggal_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                        <p id="usiaPreview" class="mt-2 text-xs font-bold text-slate-400">
+                            Usia akan dihitung otomatis setelah tanggal lahir dipilih.
+                        </p>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Tanggal Lahir <span class="text-rose-500">*</span></label>
-                    <input type="date" name="tanggal_lahir" id="tanggal_lahir" class="form-input-nexus" required value="{{ old('tanggal_lahir') }}">
+                <div class="mt-5">
+                    <label class="mb-3 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                        Jenis Kelamin <span class="text-rose-500">*</span>
+                    </label>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label class="gender-card {{ old('jenis_kelamin') === 'L' ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-gender-card="L">
+                            <input type="radio" name="jenis_kelamin" value="L" class="sr-only gender-radio" {{ old('jenis_kelamin') === 'L' ? 'checked' : '' }}>
+                            <div class="flex items-center gap-3">
+                                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-sky-50 text-sky-700">
+                                    <i class="fa-solid fa-mars"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">Laki-laki</p>
+                                    <p class="mt-1 text-xs font-bold text-slate-400">Kode: L</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="gender-card {{ old('jenis_kelamin') === 'P' ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-gender-card="P">
+                            <input type="radio" name="jenis_kelamin" value="P" class="sr-only gender-radio" {{ old('jenis_kelamin') === 'P' ? 'checked' : '' }}>
+                            <div class="flex items-center gap-3">
+                                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-pink-50 text-pink-700">
+                                    <i class="fa-solid fa-venus"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">Perempuan</p>
+                                    <p class="mt-1 text-xs font-bold text-slate-400">Kode: P</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    @error('jenis_kelamin')
+                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
-        </div>
 
-        {{-- SEKSI 2: KELUARGA --}}
-        <div class="card-nexus p-8 md:p-12">
-            <div class="flex items-center gap-4 mb-10 pb-6 border-b border-slate-100">
-                <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-xl shrink-0">
-                    <i class="fas fa-users"></i>
+            {{-- ORANG TUA --}}
+            <div class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-50/90 text-amber-700">
+                        <i class="fa-solid fa-people-roof"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">2. Orang Tua dan Domisili</h2>
+                        <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                            Data keluarga digunakan untuk identifikasi dan pelacakan sasaran.
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="text-xl font-black text-slate-800 tracking-tight">Keluarga & Domisili</h3>
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Data Orang Tua Wali</p>
+
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Nama Ibu <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_ibu"
+                            id="nama_ibu"
+                            value="{{ old('nama_ibu') }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_ibu') input-error @enderror"
+                            placeholder="Nama ibu kandung / wali"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('nama_ibu')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Nama Ayah
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_ayah"
+                            id="nama_ayah"
+                            value="{{ old('nama_ayah') }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_ayah') input-error @enderror"
+                            placeholder="Boleh dikosongkan"
+                            autocomplete="off"
+                        >
+                        @error('nama_ayah')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Alamat Tinggal <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                            name="alamat"
+                            id="alamat"
+                            rows="4"
+                            class="input-premium w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 @error('alamat') input-error @enderror"
+                            placeholder="Contoh: Dusun Krajan RT 01 RW 02"
+                            required
+                        >{{ old('alamat') }}</textarea>
+                        @error('alamat')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                <div>
-                    <label class="form-label">Nama Ibu Kandung <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nama_ibu" class="form-input-nexus" placeholder="Masukkan nama ibu..." required value="{{ old('nama_ibu') }}">
+            {{-- DATA LAHIR --}}
+            <div class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
+                        <i class="fa-solid fa-weight-scale"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">3. Data Lahir</h2>
+                        <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                            Boleh dikosongkan jika data lahir belum tersedia.
+                        </p>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Nama Ayah</label>
-                    <input type="text" name="nama_ayah" class="form-input-nexus" placeholder="Masukkan nama ayah..." value="{{ old('nama_ayah') }}">
-                </div>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Berat Lahir
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="number"
+                                name="berat_lahir"
+                                id="berat_lahir"
+                                value="{{ old('berat_lahir') }}"
+                                class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('berat_lahir') input-error @enderror"
+                                placeholder="Contoh: 3.2"
+                                min="0"
+                                step="0.01"
+                            >
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
+                        </div>
+                        @error('berat_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
 
-                <div class="md:col-span-2">
-                    <label class="form-label">Alamat Tinggal / Domisili <span class="text-rose-500">*</span></label>
-                    <textarea name="alamat" rows="3" class="form-input-nexus" placeholder="Contoh: Jl. Diponegoro RT 01 RW 02..." required>{{ old('alamat') }}</textarea>
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Panjang Lahir
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="number"
+                                name="panjang_lahir"
+                                id="panjang_lahir"
+                                value="{{ old('panjang_lahir') }}"
+                                class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('panjang_lahir') input-error @enderror"
+                                placeholder="Contoh: 49"
+                                min="0"
+                                step="0.01"
+                            >
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
+                        </div>
+                        @error('panjang_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        {{-- TOMBOL AKSI --}}
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mt-12">
-            <a href="{{ route('kader.data.balita.index') }}" class="btn-nexus-back">
-                <i class="fas fa-arrow-left"></i> Kembali
-            </a>
-            <button type="submit" id="btnSubmit" class="btn-nexus-save">
-                <i class="fas fa-save"></i> Simpan Pendaftaran
-            </button>
-        </div>
+        {{-- RIGHT PANEL --}}
+        <aside class="space-y-5 xl:col-span-4">
+            <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">Validasi Aktif</h2>
+                        <p class="mt-1 text-xs font-bold text-slate-400">
+                            Sistem menolak data tidak valid.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-3 text-xs font-bold text-slate-500">
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>NIK Balita wajib 16 digit dan tidak boleh duplikat.</p>
+                    </div>
+
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>Tanggal lahir tidak boleh melebihi hari ini.</p>
+                    </div>
+
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>Nama lengkap, nama ibu, dan alamat wajib diisi.</p>
+                    </div>
+
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>Akun warga akan dicocokkan otomatis berdasarkan NIK.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-[30px] border border-amber-100 bg-amber-50/70 p-4 sm:p-5">
+                <div class="flex items-start gap-3">
+                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-amber-700">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-black text-amber-800">Catatan Pengisian</h3>
+                        <p class="mt-1 text-xs font-bold leading-5 text-amber-700">
+                            Isi data Balita secara konsisten. Data yang kosong pada bagian berat dan panjang lahir masih bisa dilengkapi saat pembaruan data.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        {{-- ACTION --}}
+        <section class="glass-panel rounded-[26px] p-4 xl:col-span-12">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h3 class="text-sm font-black text-slate-900">Simpan Data Balita</h3>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        Setelah disimpan, data masuk ke database Balita dan dapat digunakan pada fitur layanan Posyandu.
+                    </p>
+                </div>
+
+                <button type="submit"
+                        id="submitBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Simpan Balita
+                </button>
+            </div>
+        </section>
     </form>
 </div>
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('formBalita');
-        const btnSubmit = document.getElementById('btnSubmit');
-        const loader = document.getElementById('nexusLoader');
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('balitaForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const toast = document.getElementById('customToast');
+    const toastText = document.getElementById('customToastText');
+    const genderCards = document.querySelectorAll('[data-gender-card]');
+    const genderRadios = document.querySelectorAll('.gender-radio');
+    const tanggalLahir = document.getElementById('tanggal_lahir');
+    const usiaPreview = document.getElementById('usiaPreview');
+    const nikInput = document.getElementById('nik');
 
-        // ==========================================
-        // 1. SETUP SWEETALERT NEXUS STYLE
-        // ==========================================
-        const nexusAlert = Swal.mixin({
-            customClass: {
-                container: 'nexus-swal-backdrop',
-                popup: 'nexus-swal-popup',
-                title: 'nexus-swal-title',
-                htmlContainer: 'nexus-swal-html',
-                icon: 'nexus-swal-icon',
-                confirmButton: 'nexus-swal-confirm'
-            },
-            buttonsStyling: false,
-            showClass: { popup: 'animate__animated animate__zoomIn animate__faster' },
-            hideClass: { popup: 'animate__animated animate__fadeOut animate__faster' }
+    let toastTimer = null;
+
+    const showToast = (message) => {
+        toastText.textContent = message;
+        toast.classList.add('show');
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3600);
+    };
+
+    const setError = (el) => {
+        if (el) el.classList.add('input-error');
+    };
+
+    const clearError = (el) => {
+        if (el) el.classList.remove('input-error');
+    };
+
+    const updateGenderUI = () => {
+        const selected = document.querySelector('.gender-radio:checked')?.value;
+
+        genderCards.forEach(card => {
+            card.classList.toggle('active', card.dataset.genderCard === selected);
         });
+    };
 
-        // ==========================================
-        // 2. INPUT FORMATTER
-        // ==========================================
-        document.getElementById('nik').addEventListener('input', function(e) {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+    genderRadios.forEach(radio => {
+        radio.addEventListener('change', updateGenderUI);
+    });
 
-        // ==========================================
-        // 3. UI HANDLER (LOADER)
-        // ==========================================
-        function setLoader(state) {
-            if (state) {
-                loader.classList.remove('opacity-0', 'pointer-events-none');
-                loader.classList.add('opacity-100', 'pointer-events-auto');
-                btnSubmit.disabled = true;
-                btnSubmit.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Menyimpan...`;
-            } else {
-                loader.classList.add('opacity-0', 'pointer-events-none');
-                loader.classList.remove('opacity-100', 'pointer-events-auto');
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = `<i class="fas fa-save"></i> Simpan Pendaftaran`;
+    nikInput?.addEventListener('input', () => {
+        nikInput.value = nikInput.value.replace(/\D/g, '').slice(0, 16);
+        clearError(nikInput);
+    });
+
+    const calculateAgeMonths = (dateValue) => {
+        if (!dateValue) return null;
+
+        const birthDate = new Date(dateValue + 'T00:00:00');
+        const today = new Date();
+
+        if (birthDate > today) return 'future';
+
+        let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+        months += today.getMonth() - birthDate.getMonth();
+
+        if (today.getDate() < birthDate.getDate()) {
+            months -= 1;
+        }
+
+        return Math.max(0, months);
+    };
+
+    const updateAgePreview = () => {
+        const result = calculateAgeMonths(tanggalLahir.value);
+
+        clearError(tanggalLahir);
+
+        if (result === null) {
+            usiaPreview.textContent = 'Usia akan dihitung otomatis setelah tanggal lahir dipilih.';
+            usiaPreview.className = 'mt-2 text-xs font-bold text-slate-400';
+            return;
+        }
+
+        if (result === 'future') {
+            usiaPreview.textContent = 'Tanggal lahir tidak boleh melebihi hari ini.';
+            usiaPreview.className = 'mt-2 text-xs font-bold text-rose-600';
+            setError(tanggalLahir);
+            return;
+        }
+
+        const tahun = Math.floor(result / 12);
+        const bulan = result % 12;
+
+        usiaPreview.textContent = tahun > 0
+            ? `Perkiraan usia: ${tahun} tahun ${bulan} bulan.`
+            : `Perkiraan usia: ${bulan} bulan.`;
+
+        usiaPreview.className = 'mt-2 text-xs font-bold text-emerald-600';
+    };
+
+    tanggalLahir?.addEventListener('change', updateAgePreview);
+
+    form?.addEventListener('submit', (event) => {
+        const requiredFields = [
+            { id: 'nama_lengkap', label: 'Nama lengkap Balita wajib diisi.' },
+            { id: 'nik', label: 'NIK Balita wajib diisi 16 digit.' },
+            { id: 'tempat_lahir', label: 'Tempat lahir wajib diisi.' },
+            { id: 'tanggal_lahir', label: 'Tanggal lahir wajib diisi.' },
+            { id: 'nama_ibu', label: 'Nama ibu wajib diisi.' },
+            { id: 'alamat', label: 'Alamat tinggal wajib diisi.' },
+        ];
+
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+
+        for (const field of requiredFields) {
+            const el = document.getElementById(field.id);
+
+            if (!el || !String(el.value).trim()) {
+                event.preventDefault();
+                setError(el);
+                showToast(field.label);
+                el?.focus();
+                return;
             }
         }
 
-        // Matikan loader saat user menekan tombol 'Back' di browser
-        window.addEventListener('pageshow', function() { setLoader(false); });
+        if (!/^\d{16}$/.test(nikInput.value.trim())) {
+            event.preventDefault();
+            setError(nikInput);
+            showToast('NIK Balita harus berisi tepat 16 digit angka.');
+            nikInput.focus();
+            return;
+        }
 
-        // ==========================================
-        // 4. PENANGKAP ERROR BACKEND (LARAVEL)
-        // ==========================================
-        @if ($errors->any())
-            nexusAlert.fire({
-                icon: 'error',
-                title: 'Verifikasi Gagal',
-                html: `
-                    <div class="bg-rose-50/50 border border-rose-100 rounded-3xl p-6 mt-2 text-left">
-                        <ul class="space-y-3">
-                            @foreach ($errors->all() as $error)
-                                @php
-                                    // Menerjemahkan error NIK bawaan Laravel agar lebih profesional
-                                    $pesanError = str_replace('nik has already been taken.', 'Sistem mendeteksi NIK ini sudah terdaftar. Gunakan NIK yang belum didaftarkan.', $error);
-                                    $pesanError = str_replace('The nik must be at least 16 characters.', 'NIK harus berisi tepat 16 digit angka.', $pesanError);
-                                @endphp
-                                <li class="flex items-start gap-3 text-rose-700">
-                                    <div class="w-6 h-6 rounded-full bg-rose-200/50 flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-exclamation text-rose-600 text-xs"></i></div>
-                                    <span class="font-bold text-[13px] leading-relaxed">{{ $pesanError }}</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                `,
-                confirmButtonText: 'Koreksi Data'
-            });
-        @endif
+        if (!document.querySelector('.gender-radio:checked')) {
+            event.preventDefault();
+            showToast('Pilih jenis kelamin Balita terlebih dahulu.');
+            return;
+        }
 
-        // ==========================================
-        // 5. CORE LOGIC SUBMIT (ANTI-STUCK & BUG FIX)
-        // ==========================================
-        form.addEventListener('submit', function(e) {
-            e.preventDefault(); // KUNCI: Selalu tahan form untuk validasi UI
+        const ageCheck = calculateAgeMonths(tanggalLahir.value);
 
-            const tglLahirVal = document.getElementById('tanggal_lahir').value;
-            if (!tglLahirVal) return;
+        if (ageCheck === 'future') {
+            event.preventDefault();
+            setError(tanggalLahir);
+            showToast('Tanggal lahir tidak boleh melebihi hari ini.');
+            tanggalLahir.focus();
+            return;
+        }
 
-            // Kalkulasi Usia Bulan
-            const dob = new Date(tglLahirVal);
-            const today = new Date();
-            let diffMonths = (today.getFullYear() - dob.getFullYear()) * 12;
-            diffMonths -= dob.getMonth();
-            diffMonths += today.getMonth();
-            if (today.getDate() < dob.getDate()) diffMonths--;
-
-            // Validasi Usia Lokal
-            if (diffMonths >= 60 || diffMonths < 0) {
-                nexusAlert.fire({
-                    icon: 'warning',
-                    title: 'Usia Tidak Memenuhi',
-                    html: `
-                        <div class="bg-amber-50 border border-amber-100 rounded-3xl p-5 mt-2">
-                            <p class="text-[13px] font-bold text-amber-700 leading-relaxed">
-                                Usia anak terdeteksi <b class="text-amber-900">${diffMonths} bulan</b>. Pendaftaran balita dibatasi maksimal 59 bulan.
-                            </p>
-                        </div>
-                    `,
-                    confirmButtonText: 'Tutup Peringatan',
-                    customClass: { confirmButton: 'nexus-swal-confirm !bg-amber-500 hover:!bg-amber-600 !shadow-amber-500/30' }
-                });
-                return;
-            }
-
-            // Jika lulus semua validasi lokal -> Eksekusi Simpan
-            setLoader(true);
-            
-            setTimeout(() => {
-                // BYPASS EVENT LISTENER: Kirim data langsung ke Laravel
-                HTMLFormElement.prototype.submit.call(form);
-            }, 400); // Jeda smooth transisi animasi
-        });
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan Data...';
     });
+
+    updateGenderUI();
+    updateAgePreview();
+});
 </script>
 @endpush

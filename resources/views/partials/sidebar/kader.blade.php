@@ -20,7 +20,7 @@
 
     // Rapihkan fallback route jika ada perbedaan penamaan di web.php
     $dataMenus = [
-        ['Balita & Anak', $to('kader.data.balita.index', 'kader.balita.index'), Str::startsWith($route, ['kader.data.balita', 'kader.balita'])],
+        ['Balita', $to('kader.data.balita.index', 'kader.balita.index'), Str::startsWith($route, ['kader.data.balita', 'kader.balita'])],
         ['Remaja', $to('kader.data.remaja.index', 'kader.remaja.index'), Str::startsWith($route, ['kader.data.remaja', 'kader.remaja'])],
         ['Lansia', $to('kader.data.lansia.index', 'kader.lansia.index'), Str::startsWith($route, ['kader.data.lansia', 'kader.lansia'])],
     ];

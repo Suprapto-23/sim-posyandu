@@ -230,15 +230,16 @@ Route::prefix('jadwal')->name('jadwal.')->group(function () {
     Route::get('/{jadwal}', [\App\Http\Controllers\Kader\JadwalController::class, 'show'])->name('show');
 });
 
-    // Import Data
-    Route::prefix('import')->name('import.')->group(function () {
-        Route::get('/', [ImportController::class, 'index'])->name('history');
-        Route::get('/create', [ImportController::class, 'create'])->name('index');
-        Route::post('/store', [ImportController::class, 'store'])->name('store');
-        Route::get('/template/{type}', [ImportController::class, 'downloadTemplate'])->name('template');
-        Route::get('/{id}', [ImportController::class, 'show'])->name('show');
-        Route::delete('/{id}', [ImportController::class, 'destroy'])->name('destroy');
-    });
+   // Import Data Warga - Kader
+Route::prefix('import')->name('import.')->group(function () {
+    Route::get('/', [ImportController::class, 'index'])->name('index');
+    Route::get('/create', [ImportController::class, 'create'])->name('create');
+    Route::post('/', [ImportController::class, 'store'])->name('store');
+    Route::get('/history', [ImportController::class, 'history'])->name('history');
+    Route::get('/template/{type}', [ImportController::class, 'downloadTemplate'])->name('template');
+    Route::get('/{id}', [ImportController::class, 'show'])->whereNumber('id')->name('show');
+    Route::delete('/{id}', [ImportController::class, 'destroy'])->whereNumber('id')->name('destroy');
+});
 
     // Laporan Bulanan
     Route::get('laporan', [LaporanController::class, 'index'])->name('laporan.index');

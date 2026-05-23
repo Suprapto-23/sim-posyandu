@@ -22,29 +22,66 @@ class BalitaController extends Controller
      * =========================================================================
      */
     public function index(Request $request)
-    {
-        $search = $request->get('search');
+{
+    $search = trim((string) $request->get('search', ''));
+    $statusAkun = $request->get('status_akun', 'semua');
 
-        $query = Balita::with('pemeriksaan_terakhir')->latest('created_at');
-
-        // Pencarian Instan Server-Side
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('nama_lengkap', 'like', "%{$search}%")
-                  ->orWhere('nik', 'like', "%{$search}%")
-                  ->orWhere('nama_ibu', 'like', "%{$search}%");
-            });
-        }
-
-        // PISAHKAN BERDASARKAN UMUR BULAN MENGGUNAKAN RAW SQL
-        // 1. Bayi: 0 sampai 11 Bulan
-        $bayis = (clone $query)->whereRaw('TIMESTAMPDIFF(MONTH, tanggal_lahir, CURDATE()) < 12')->get();
-        
-        // 2. Balita: 12 sampai 59 Bulan (Anak > 59 Bulan otomatis terfilter keluar)
-        $balitas = (clone $query)->whereRaw('TIMESTAMPDIFF(MONTH, tanggal_lahir, CURDATE()) BETWEEN 12 AND 59')->get();
-
-        return view('kader.data.balita.index', compact('bayis', 'balitas', 'search'));
+    if (!in_array($statusAkun, ['semua', 'terhubung', 'belum'], true)) {
+        $statusAkun = 'semua';
     }
+
+    $baseQuery = Balita::query()
+        ->with(['pemeriksaan_terakhir', 'user']);
+
+    $statTotal = (clone $baseQuery)->count();
+
+    $statTerhubung = (clone $baseQuery)
+        ->whereNotNull('user_id')
+        ->count();
+
+    $statBelumTerhubung = (clone $baseQuery)
+        ->whereNull('user_id')
+        ->count();
+
+    $statBulanIni = (clone $baseQuery)
+        ->whereMonth('created_at', now('Asia/Jakarta')->month)
+        ->whereYear('created_at', now('Asia/Jakarta')->year)
+        ->count();
+
+    $query = Balita::query()
+        ->with(['pemeriksaan_terakhir', 'user'])
+        ->latest('created_at');
+
+    if ($statusAkun === 'terhubung') {
+        $query->whereNotNull('user_id');
+    }
+
+    if ($statusAkun === 'belum') {
+        $query->whereNull('user_id');
+    }
+
+    if ($search !== '') {
+        $query->where(function ($q) use ($search) {
+            $q->where('nama_lengkap', 'like', "%{$search}%")
+                ->orWhere('nik', 'like', "%{$search}%")
+                ->orWhere('nama_ibu', 'like', "%{$search}%")
+                ->orWhere('nama_ayah', 'like', "%{$search}%")
+                ->orWhere('alamat', 'like', "%{$search}%");
+        });
+    }
+
+    $items = $query->paginate(10)->withQueryString();
+
+    return view('kader.data.balita.index', compact(
+        'items',
+        'search',
+        'statusAkun',
+        'statTotal',
+        'statTerhubung',
+        'statBelumTerhubung',
+        'statBulanIni'
+    ));
+}
 
     /**
      * =========================================================================
@@ -207,7 +244,9 @@ class BalitaController extends Controller
         $usiaBulan = $tanggalLahir->diffInMonths(now());
         
         if ($usiaBulan >= 60) {
-            return back()->withInput()->with('error', "Pembaruan Ditolak! Anda mengatur tanggal lahir menjadi di atas 5 Tahun. Silakan mutasikan anak ini ke modul lain.");
+            return back()
+    ->withInput()
+    ->with('error', 'Pembaruan ditolak. Tanggal lahir membuat usia Balita melewati batas layanan yang digunakan pada modul ini.');
         }
 
         DB::beginTransaction();

@@ -1,390 +1,617 @@
 @extends('layouts.kader')
 
-@section('title', 'Detail Profil Anak')
-@section('page-name', 'Buku Medis Anak')
+@section('title', 'Detail Data Balita')
+@section('page-name', 'Detail Data Balita')
+
+@php
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    Carbon::setLocale('id');
+
+    $routeHas = fn ($name) => Route::has($name);
+
+    $tanggalLahir = $balita->tanggal_lahir ? Carbon::parse($balita->tanggal_lahir) : null;
+
+    $usiaText = '-';
+    if ($tanggalLahir) {
+        $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
+        $usiaText = $diff->y > 0
+            ? $diff->y . ' tahun ' . $diff->m . ' bulan'
+            : $diff->m . ' bulan ' . $diff->d . ' hari';
+    }
+
+    $genderLabel = $balita->jenis_kelamin === 'L'
+        ? 'Laki-laki'
+        : ($balita->jenis_kelamin === 'P' ? 'Perempuan' : '-');
+
+    $genderClass = $balita->jenis_kelamin === 'L'
+        ? 'border-sky-100 bg-sky-50/80 text-sky-700'
+        : 'border-pink-100 bg-pink-50/80 text-pink-700';
+
+    $kunjungans = $balita->kunjungans ?? collect();
+
+    $totalLayanan = $kunjungans->count();
+
+    $kunjunganTerakhir = $kunjungans->first();
+
+    $riwayatImunisasi = $kunjungans->filter(function ($kunjungan) {
+        return ($kunjungan->jenis_kunjungan ?? null) === 'imunisasi';
+    });
+
+    $totalVaksin = 0;
+    foreach ($riwayatImunisasi as $kunjungan) {
+        $totalVaksin += count($kunjungan->imunisasis ?? []);
+    }
+
+    $akunTerhubung = $userTerhubung ?? $balita->user ?? null;
+@endphp
 
 @push('styles')
 <style>
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .animate-slide-up-delay-1 { opacity: 0; animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards; }
-    .animate-slide-up-delay-2 { opacity: 0; animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    
-    .glass-card { background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 10px 40px -10px rgba(79, 70, 229, 0.05); }
-    
-    /* Desain Tabel CRM Terpadu */
-    .crm-table th { background: #f8fafc; color: #64748b; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; padding: 1.25rem 1rem; border-bottom: 1px solid #e2e8f0; }
-    .crm-table th:first-child { border-top-left-radius: 20px; }
-    .crm-table th:last-child { border-top-right-radius: 20px; }
-    .crm-table td { padding: 1rem 1rem; vertical-align: middle; border-bottom: 1px solid #f1f5f9; transition: all 0.2s ease; }
-    .crm-table tr:hover td { background-color: #f8fafc; }
-    .crm-table tr:last-child td { border-bottom: none; }
+    .balita-show-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
+    }
+
+    .balita-show-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
+    }
+
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .info-card {
+        border: 1px solid rgba(226,232,240,.78);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .info-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 18px 34px rgba(15,23,42,.055);
+    }
+
+    .card-hover {
+        transition: all .3s ease-in-out;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 20px 46px rgba(15,23,42,.075);
+    }
+
+    .scroll-soft {
+        max-height: 520px;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .scroll-soft::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
+
+    .scroll-soft::-webkit-scrollbar-track {
+        background: rgba(241,245,249,.8);
+        border-radius: 999px;
+    }
+
+    .scroll-soft::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #10b981, #f59e0b);
+        border-radius: 999px;
+    }
 </style>
 @endpush
 
 @section('content')
-<div id="smoothLoader" class="fixed inset-0 bg-slate-50/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center transition-all duration-300 opacity-100 pointer-events-auto">
-    <div class="relative w-20 h-20 flex items-center justify-center mb-4">
-        <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
-        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-folder-open text-indigo-600 text-2xl animate-pulse"></i></div>
-    </div>
-    <p class="text-indigo-900 font-black tracking-widest text-[11px] animate-pulse uppercase">MEMBUKA BUKU KIA...</p>
-</div>
+<div class="balita-show-page space-y-5">
 
-<div class="max-w-7xl mx-auto relative pb-12 z-10">
-    
-    {{-- AURA BACKGROUND --}}
-    <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-400/20 rounded-full blur-[80px] pointer-events-none z-0"></div>
-
-    {{-- HEADER PAGE --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 relative z-10 animate-slide-up">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('kader.data.balita.index') }}" onclick="showLoader()" class="w-14 h-14 bg-white border border-slate-200 text-slate-500 rounded-[16px] flex items-center justify-center hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-[0_4px_15px_rgba(0,0,0,0.02)] group">
-                <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform text-lg"></i>
-            </a>
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-                <div class="inline-flex items-center gap-1.5 text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100"><i class="fas fa-book-medical"></i> Buku KIA Digital</div>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-poppins">Profil Pasien Anak</h1>
-            </div>
-        </div>
-        <a href="{{ route('kader.data.balita.edit', $balita->id) }}" onclick="showLoader()" class="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-slate-700 border border-slate-200 font-black text-[11px] rounded-full hover:bg-amber-500 hover:text-white hover:border-amber-500 shadow-sm transition-all hover:-translate-y-1 uppercase tracking-widest w-full md:w-auto">
-            <i class="fas fa-pen-nib"></i> Edit Master Data
-        </a>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
-        
-        {{-- ========================================== --}}
-        {{-- PANEL KIRI: PROFIL IDENTITAS (4 KOLOM)     --}}
-        {{-- ========================================== --}}
-        <div class="lg:col-span-4 space-y-6 animate-slide-up">
-            <div class="glass-card rounded-[32px] overflow-hidden sticky top-24 border border-slate-200/80 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] flex flex-col">
-                
-                {{-- KARTU NAMA & AVATAR --}}
-                <div class="bg-gradient-to-br from-indigo-600 to-violet-600 px-6 py-10 text-center relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
-                    <div class="absolute bottom-0 left-0 w-32 h-32 bg-black/20 rounded-full blur-2xl transform -translate-x-1/2 translate-y-1/2"></div>
-
-                    <div class="w-24 h-24 mx-auto bg-white rounded-[24px] shadow-2xl flex items-center justify-center text-indigo-500 text-4xl font-black relative z-10 border-4 border-white/20 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                        {{ strtoupper(substr($balita->nama_lengkap, 0, 1)) }}
-                    </div>
-                    
-                    <h2 class="text-xl font-black text-white mt-5 relative z-10 font-poppins tracking-tight leading-tight">{{ $balita->nama_lengkap }}</h2>
-                    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-black/20 text-indigo-50 text-[10px] font-black rounded-full mt-3 relative z-10 backdrop-blur-md border border-white/10 tracking-widest uppercase">
-                        <i class="fas fa-fingerprint text-indigo-300"></i> NIK: {{ $balita->nik ?? 'TIDAK ADA' }}
-                    </div>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-child-reaching"></i>
+                    Detail Balita
                 </div>
 
-                {{-- INFORMASI DASAR --}}
-                <div class="p-6 bg-white/60 flex-1 flex flex-col">
-                    @php
-                        $lahir = \Carbon\Carbon::parse($balita->tanggal_lahir);
-                        $sekarang = \Carbon\Carbon::now();
-                        $diffM = (int) $lahir->diffInMonths($sekarang);
-                        if ($diffM < 12) {
-                            $diffD = (int) $lahir->diffInDays($sekarang);
-                            $umurCetak = $diffM < 1 ? $diffD . ' Hari' : $diffM . ' Bulan';
-                            $kategoriLabel = 'Bayi';
-                            $kategoriColor = 'text-sky-500';
-                            $kategoriBg = 'bg-sky-50';
-                            $kategoriBorder = 'border-sky-100';
-                        } else {
-                            $t = floor($diffM / 12);
-                            $b = $diffM % 12;
-                            $umurCetak = $b > 0 ? "{$t} Thn {$b} Bln" : "{$t} Tahun";
-                            $kategoriLabel = 'Balita';
-                            $kategoriColor = 'text-rose-500';
-                            $kategoriBg = 'bg-rose-50';
-                            $kategoriBorder = 'border-rose-100';
-                        }
-                    @endphp
-                    
-                    <div class="grid grid-cols-2 gap-4 text-center mb-6">
-                        <div class="p-4 bg-white rounded-[20px] border border-slate-100 shadow-sm">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Usia Fisik</p>
-                            <p class="text-lg font-black text-slate-800 font-poppins">{{ $umurCetak }}</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest {{ $kategoriBg }} {{ $kategoriColor }} {{ $kategoriBorder }} border mt-1">{{ $kategoriLabel }}</span>
-                        </div>
-                        <div class="p-4 bg-white rounded-[20px] border border-slate-100 shadow-sm">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Gender</p>
-                            <div class="flex flex-col items-center justify-center h-full">
-                                @if($balita->jenis_kelamin == 'L') 
-                                    <div class="w-8 h-8 rounded-full bg-sky-50 border border-sky-100 text-sky-500 flex items-center justify-center text-sm mb-1"><i class="fas fa-mars"></i></div>
-                                    <p class="text-[10px] font-black text-slate-800 uppercase tracking-widest">Laki-Laki</p>
-                                @else 
-                                    <div class="w-8 h-8 rounded-full bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center text-sm mb-1"><i class="fas fa-venus"></i></div>
-                                    <p class="text-[10px] font-black text-slate-800 uppercase tracking-widest">Perempuan</p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Detail Data Balita
+                </h1>
 
-                    <div class="space-y-3 mb-6">
-                        <div class="flex items-center gap-4 p-4 rounded-[20px] bg-slate-50/50 border border-slate-100 shadow-sm">
-                            <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0"><i class="fas fa-calendar-alt"></i></div>
-                            <div>
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Tanggal Lahir</span>
-                                <span class="text-[12px] font-bold text-slate-800">{{ \Carbon\Carbon::parse($balita->tanggal_lahir)->translatedFormat('d F Y') }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center gap-4 p-4 rounded-[20px] bg-slate-50/50 border border-slate-100 shadow-sm">
-                            <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-500 flex items-center justify-center shrink-0"><i class="fas fa-weight"></i></div>
-                            <div class="flex-1 flex justify-between items-center">
-                                <div>
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Berat Lahir</span>
-                                    <span class="text-[12px] font-bold text-slate-800">{{ $balita->berat_lahir ?? '-' }} <span class="text-[9px] text-slate-400">kg</span></span>
-                                </div>
-                                <div class="w-px h-6 bg-slate-200 mx-2"></div>
-                                <div>
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Panjang Lahir</span>
-                                    <span class="text-[12px] font-bold text-slate-800">{{ $balita->panjang_lahir ?? '-' }} <span class="text-[9px] text-slate-400">cm</span></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center gap-4 p-4 rounded-[20px] bg-rose-50/30 border border-rose-100 shadow-sm">
-                            <div class="w-10 h-10 rounded-xl bg-white text-rose-500 flex items-center justify-center shrink-0 border border-rose-100"><i class="fas fa-female"></i></div>
-                            <div>
-                                <span class="text-[9px] font-black text-rose-400 uppercase tracking-widest block mb-0.5">Nama Ibu (Akses)</span>
-                                <span class="text-[12px] font-black text-rose-800 block mb-0.5">{{ $balita->nama_ibu }}</span>
-                                <span class="text-[9px] font-bold text-rose-500 font-mono tracking-wide"><i class="fas fa-fingerprint"></i> {{ $balita->nik_ibu }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-auto border-t border-slate-200/60 pt-6">
-                        @if($userTerhubung)
-                            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-[20px] flex items-center gap-4 shadow-sm">
-                                <div class="w-10 h-10 bg-white text-emerald-500 rounded-full flex items-center justify-center shadow-sm shrink-0"><i class="fas fa-check-circle text-lg"></i></div>
-                                <div>
-                                    <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Aplikasi Terhubung</p>
-                                    <p class="text-[12px] font-bold text-emerald-800 truncate max-w-[150px]">{{ $userTerhubung->name }}</p>
-                                </div>
-                            </div>
-                        @else
-                            {{-- BUG FIX: Menggunakan form agar sinkronisasi berjalan normal tanpa error GET --}}
-                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-[20px] text-center shadow-sm">
-                                <div class="w-10 h-10 bg-white text-slate-400 rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm"><i class="fas fa-link-slash text-sm"></i></div>
-                                <p class="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3">Akun Ibu Belum Terhubung</p>
-                                <form action="{{ route('kader.data.balita.sync', $balita->id) }}" method="POST" class="m-0">
-                                    @csrf
-                                    <button type="submit" onclick="return confirm('Pindai ulang dan sambungkan akun dengan NIK Ibu?')" class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-slate-300 shadow-sm text-indigo-600 text-[10px] font-black rounded-full hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors w-full uppercase tracking-widest">
-                                        <i class="fas fa-sync-alt mr-2"></i> Pindai NIK Ibu
-                                    </button>
-                                </form>
-                            </div>
-                        @endif
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        {{-- ========================================== --}}
-        {{-- PANEL KANAN: REKAM MEDIS & LAYANAN (8 COL) --}}
-        {{-- ========================================== --}}
-        <div class="lg:col-span-8 flex flex-col gap-6">
-            
-            {{-- WIDGET STATISTIK UNTUK MENGISI RUANG KOSONG --}}
-            @php
-                $riwayatImunisasi = collect();
-                $totalVaksin = 0;
-                $kunjunganTerakhir = null;
-                
-                if($balita->kunjungans) {
-                    $riwayatImunisasi = $balita->kunjungans->where('jenis_kunjungan', 'imunisasi');
-                    foreach($riwayatImunisasi as $kjg) {
-                        $totalVaksin += count($kjg->imunisasis ?? []);
-                    }
-                    $kunjunganTerakhir = $balita->kunjungans->first();
-                }
-            @endphp
-            
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slide-up-delay-1">
-                <div class="glass-card bg-white p-5 rounded-[24px] flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[14px] bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shrink-0"><i class="fas fa-clipboard-list"></i></div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Layanan</p>
-                        <p class="text-xl font-black text-slate-800 font-poppins">{{ count($balita->kunjungans) }} <span class="text-xs font-bold text-slate-500 font-sans">Kali</span></p>
-                    </div>
-                </div>
-                
-                <div class="glass-card bg-white p-5 rounded-[24px] flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[14px] bg-teal-50 text-teal-600 flex items-center justify-center text-xl shrink-0"><i class="fas fa-shield-virus"></i></div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Vaksin Diterima</p>
-                        <p class="text-xl font-black text-slate-800 font-poppins">{{ $totalVaksin }} <span class="text-xs font-bold text-slate-500 font-sans">Dosis</span></p>
-                    </div>
-                </div>
-                
-                <div class="glass-card bg-white p-5 rounded-[24px] flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[14px] bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0"><i class="fas fa-history"></i></div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Update Terakhir</p>
-                        @if($kunjunganTerakhir)
-                            <p class="text-[12px] font-black text-slate-800 font-poppins">{{ \Carbon\Carbon::parse($kunjunganTerakhir->tanggal_kunjungan)->format('d M Y') }}</p>
-                        @else
-                            <p class="text-[12px] font-bold text-slate-400 italic">Belum ada</p>
-                        @endif
-                    </div>
-                </div>
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Halaman ini menampilkan identitas Balita, status akun warga, data lahir, dan riwayat layanan Posyandu yang sudah tercatat.
+                </p>
             </div>
 
-            {{-- TABEL RIWAYAT KUNJUNGAN --}}
-            <div class="glass-card rounded-[32px] overflow-hidden border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-slide-up-delay-2 flex-1 flex flex-col">
-                <div class="p-6 md:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50/50">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-[20px] bg-white text-indigo-600 flex items-center justify-center text-2xl shadow-sm border border-slate-200"><i class="fas fa-stethoscope"></i></div>
-                        <div>
-                            <h3 class="text-xl font-black text-slate-800 font-poppins">Riwayat Medis & Antropometri</h3>
-                            <p class="text-[12px] font-medium text-slate-500 mt-1">Log timbangan dan pelayanan Posyandu</p>
-                        </div>
-                    </div>
-                    <a href="{{ route('kader.pemeriksaan.create') }}?kategori=balita&pasien_id={{ $balita->id }}" onclick="showLoader()" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white font-black text-[11px] rounded-full hover:bg-indigo-700 shadow-[0_4px_15px_rgba(79,70,229,0.3)] transition-all shrink-0 uppercase tracking-widest hover:-translate-y-1 w-full sm:w-auto">
-                        <i class="fas fa-plus"></i> Input Kunjungan
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if($routeHas('kader.data.balita.index'))
+                    <a href="{{ route('kader.data.balita.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Kembali
                     </a>
+                @endif
+
+                @if($routeHas('kader.data.balita.edit'))
+                    <a href="{{ route('kader.data.balita.edit', $balita->id) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-pen"></i>
+                        Edit Data
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- PROFILE SUMMARY --}}
+    <section class="glass-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 xl:grid-cols-[1.15fr_.85fr] xl:items-center">
+            <div class="flex items-start gap-4">
+                <div class="grid h-20 w-20 shrink-0 place-items-center rounded-[28px] bg-emerald-50/90 text-emerald-700 shadow-[0_14px_28px_rgba(5,150,105,.10)]">
+                    <span class="text-2xl font-black">
+                        {{ strtoupper(substr($balita->nama_lengkap ?? 'B', 0, 1)) }}
+                    </span>
                 </div>
 
-                <div class="p-4 flex-1">
-                    <div class="overflow-x-auto custom-scrollbar">
-                        <table class="w-full text-left whitespace-nowrap min-w-[700px] crm-table">
-                            <thead>
-                                <tr>
-                                    <th class="pl-6">Waktu Kunjungan</th>
-                                    <th>Layanan</th>
-                                    <th>Hasil Fisik</th>
-                                    <th class="text-right pr-6">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($balita->kunjungans ?? [] as $kunjungan)
-                                <tr>
-                                    <td class="pl-6">
-                                        <div class="flex flex-col">
-                                            <span class="font-black text-slate-800 text-[13px] mb-1">{{ \Carbon\Carbon::parse($kunjungan->tanggal_kunjungan)->format('d M Y') }}</span>
-                                            <span class="inline-flex items-center gap-1 text-[9px] font-bold text-slate-400 bg-white border border-slate-100 w-max px-2 py-0.5 rounded shadow-sm"><i class="far fa-clock"></i> {{ \Carbon\Carbon::parse($kunjungan->tanggal_kunjungan)->format('H:i') }} WIB</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if($kunjungan->jenis_kunjungan == 'imunisasi')
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-50 text-teal-700 text-[9px] font-black border border-teal-100 uppercase tracking-widest"><i class="fas fa-syringe"></i> Imunisasi</span>
-                                        @elseif($kunjungan->jenis_kunjungan == 'pemeriksaan')
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-[9px] font-black border border-indigo-100 uppercase tracking-widest"><i class="fas fa-balance-scale"></i> Pemeriksaan Fisik</span>
-                                        @else
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-[9px] font-black border border-slate-200 uppercase tracking-widest"><i class="fas fa-user-md"></i> Kunjungan Umum</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($kunjungan->pemeriksaan)
-                                            <div class="flex items-center gap-3">
-                                                <div class="flex flex-col bg-white border border-slate-100 rounded-xl px-3 py-1.5 shadow-sm text-center">
-                                                    <span class="text-[8px] text-slate-400 font-black uppercase tracking-widest mb-0.5">BB</span>
-                                                    <span class="text-[12px] font-black text-indigo-600">{{ $kunjungan->pemeriksaan->berat_badan ?? '-' }}<span class="text-[9px] text-slate-400">kg</span></span>
-                                                </div>
-                                                <div class="flex flex-col bg-white border border-slate-100 rounded-xl px-3 py-1.5 shadow-sm text-center">
-                                                    <span class="text-[8px] text-slate-400 font-black uppercase tracking-widest mb-0.5">TB</span>
-                                                    <span class="text-[12px] font-black text-emerald-600">{{ $kunjungan->pemeriksaan->tinggi_badan ?? '-' }}<span class="text-[9px] text-slate-400">cm</span></span>
-                                                </div>
-                                            </div>
-                                        @else
-                                            <span class="text-[10px] font-bold text-slate-400 italic">Tanpa antropometri</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-right pr-6">
-                                        <a href="{{ route('kader.kunjungan.show', $kunjungan->id) }}" onclick="showLoader()" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all shadow-sm">
-                                            <i class="fas fa-chevron-right text-[10px]"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="4" class="px-8 py-20 text-center border-none">
-                                        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mx-auto mb-4 text-2xl border border-slate-100 shadow-inner"><i class="fas fa-folder-open"></i></div>
-                                        <h4 class="font-black text-slate-800 text-lg font-poppins tracking-tight">Data Masih Kosong</h4>
-                                        <p class="text-[12px] font-medium text-slate-500 mt-1 max-w-sm mx-auto">Silakan tambahkan data kunjungan baru untuk mengisi riwayat log medis anak ini.</p>
-                                    </td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                <div class="min-w-0">
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-emerald-700">
+                            <i class="fa-solid fa-child-reaching"></i>
+                            Balita
+                        </span>
+
+                        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $genderClass }}">
+                            <i class="fa-solid {{ $balita->jenis_kelamin === 'L' ? 'fa-mars' : 'fa-venus' }}"></i>
+                            {{ $genderLabel }}
+                        </span>
                     </div>
+
+                    <h2 class="break-words text-2xl font-black tracking-[-.04em] text-slate-900">
+                        {{ $balita->nama_lengkap }}
+                    </h2>
+
+                    <p class="mt-2 text-sm font-bold leading-6 text-slate-500">
+                        NIK {{ $balita->nik ?? '-' }}
+                    </p>
                 </div>
             </div>
 
-            {{-- PANEL IMUNISASI --}}
-            @if($riwayatImunisasi->count() > 0)
-            <div class="glass-card rounded-[32px] overflow-hidden border border-teal-100 shadow-[0_8px_30px_rgb(20,184,166,0.05)] animate-slide-up-delay-2">
-                <div class="p-6 md:p-8 border-b border-teal-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-teal-50/50">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-[20px] bg-white text-teal-500 flex items-center justify-center text-2xl shadow-sm border border-teal-100"><i class="fas fa-shield-virus"></i></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-emerald-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">Usia</p>
+                    <p class="mt-2 text-lg font-black text-slate-900">{{ $usiaText }}</p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">Berdasarkan tanggal lahir</p>
+                </div>
+
+                <div class="rounded-2xl bg-amber-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-700">Akun Warga</p>
+                    <p class="mt-2 text-lg font-black text-slate-900">
+                        {{ $akunTerhubung ? 'Terhubung' : 'Belum' }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        {{ $akunTerhubung ? 'User tersedia' : 'Perlu sinkron' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- STATUS AKUN --}}
+    <section class="rounded-[24px] border {{ $akunTerhubung ? 'border-emerald-100 bg-emerald-50/70 text-emerald-700' : 'border-amber-100 bg-amber-50/70 text-amber-700' }} p-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70">
+                    <i class="fa-solid {{ $akunTerhubung ? 'fa-circle-check' : 'fa-link-slash' }}"></i>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black">
+                        {{ $akunTerhubung ? 'Data Balita Terhubung dengan Akun Warga' : 'Data Balita Belum Terhubung dengan Akun Warga' }}
+                    </h3>
+
+                    <p class="mt-1 text-xs font-bold leading-5">
+                        @if($akunTerhubung)
+                            Akun warga yang terhubung: {{ $akunTerhubung->name ?? $akunTerhubung->nama ?? '-' }}.
+                        @else
+                            Gunakan sinkron akun untuk mencocokkan NIK Balita dengan akun user/warga yang sudah dibuat oleh Admin.
+                        @endif
+                    </p>
+                </div>
+            </div>
+
+            @if(!$akunTerhubung && $routeHas('kader.data.balita.sync'))
+                <form method="POST" action="{{ route('kader.data.balita.sync', $balita->id) }}">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(245,158,11,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-600">
+                        <i class="fa-solid fa-rotate"></i>
+                        Sinkron Akun
+                    </button>
+                </form>
+            @endif
+        </div>
+    </section>
+
+    {{-- CONTENT GRID --}}
+    <section class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+
+        {{-- IDENTITAS --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-7">
+            <div class="mb-4">
+                <h3 class="text-lg font-black text-slate-900">Identitas Balita</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Data utama sasaran yang digunakan pada layanan Posyandu.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nama Lengkap</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $balita->nama_lengkap ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">NIK Balita</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $balita->nik ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Jenis Kelamin</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $genderLabel }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tempat Lahir</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $balita->tempat_lahir ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tanggal Lahir</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">
+                        {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
+                    </p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Usia Saat Ini</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $usiaText }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- DATA LAHIR --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-5">
+            <div class="mb-4">
+                <h3 class="text-lg font-black text-slate-900">Data Lahir</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Data awal yang digunakan sebagai informasi dasar pertumbuhan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3">
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Berat Lahir</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $balita->berat_lahir ?? '-' }}
+                        <span class="text-sm text-slate-400">kg</span>
+                    </p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Panjang Lahir</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $balita->panjang_lahir ?? '-' }}
+                        <span class="text-sm text-slate-400">cm</span>
+                    </p>
+                </div>
+
+                <div class="rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-emerald-700">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
                         <div>
-                            <h3 class="text-xl font-black text-teal-900 font-poppins">Sertifikat Imunisasi</h3>
-                            <p class="text-[12px] font-bold text-teal-600 mt-0.5">Daftar log vaksin yang telah diberikan</p>
+                            <p class="text-sm font-black text-emerald-800">Pemantauan Lanjutan</p>
+                            <p class="mt-1 text-xs font-bold leading-5 text-emerald-700">
+                                Pengukuran terbaru akan tercatat melalui fitur Pengukuran Fisik.
+                            </p>
                         </div>
                     </div>
                 </div>
-                
-                <div class="p-6 md:p-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @foreach($riwayatImunisasi as $kjg)
-                            @foreach($kjg->imunisasis ?? [] as $imunisasi)
-                            <div class="flex items-center justify-between p-5 bg-white rounded-[20px] border border-slate-100 shadow-sm hover:border-teal-300 hover:shadow-md transition-all group">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-teal-500 font-black text-lg group-hover:bg-teal-50 transition-colors">
-                                        <i class="fas fa-syringe transform -rotate-45"></i>
-                                    </div>
-                                    <div>
-                                        <p class="font-black text-slate-800 text-[13px] mb-1">{{ $imunisasi->vaksin }}</p>
-                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">{{ $imunisasi->jenis_imunisasi }}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="inline-block px-3 py-1 bg-teal-50 border border-teal-100 text-teal-700 text-[9px] font-black rounded-full mb-1.5 uppercase tracking-widest">Dosis {{ $imunisasi->dosis }}</span>
-                                    <p class="text-[10px] font-bold text-slate-500"><i class="far fa-calendar-check text-slate-400 mr-1"></i> {{ \Carbon\Carbon::parse($imunisasi->tanggal_imunisasi)->format('d M Y') }}</p>
-                                </div>
-                            </div>
-                            @endforeach
-                        @endforeach
+            </div>
+        </div>
+
+        {{-- ORANG TUA --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-black text-slate-900">Data Orang Tua</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Informasi keluarga untuk identifikasi dan pencarian sasaran.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3">
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nama Ibu</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $balita->nama_ibu ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nama Ayah</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $balita->nama_ayah ?? '-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- ALAMAT --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-black text-slate-900">Alamat Domisili</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Lokasi tinggal Balita berdasarkan data yang tercatat.
+                </p>
+            </div>
+
+            <div class="rounded-[24px] border border-white/70 bg-white/56 p-5 backdrop-blur-md">
+                <div class="flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+
+                    <div>
+                        <p class="text-sm font-black text-slate-900">
+                            {{ $balita->alamat ?? '-' }}
+                        </p>
+                        <p class="mt-2 text-xs font-bold leading-5 text-slate-400">
+                            Alamat ini digunakan untuk pendataan sasaran dan kebutuhan laporan wilayah Posyandu.
+                        </p>
                     </div>
                 </div>
             </div>
-            @endif
-
         </div>
-    </div>
+    </section>
+
+    {{-- STATS --}}
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="glass-panel card-hover rounded-[26px] p-5">
+            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                <i class="fa-solid fa-notes-medical"></i>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Total Layanan</p>
+            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $totalLayanan }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Riwayat layanan tercatat</p>
+        </div>
+
+        <div class="glass-panel card-hover rounded-[26px] p-5">
+            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-amber-50/90 text-amber-700">
+                <i class="fa-solid fa-syringe"></i>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Vaksin Tercatat</p>
+            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $totalVaksin }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Dosis imunisasi</p>
+        </div>
+
+        <div class="glass-panel card-hover rounded-[26px] p-5">
+            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Update Terakhir</p>
+            <h2 class="mt-2 text-lg font-black text-slate-900">
+                @if($kunjunganTerakhir && $kunjunganTerakhir->tanggal_kunjungan)
+                    {{ Carbon::parse($kunjunganTerakhir->tanggal_kunjungan)->translatedFormat('d M Y') }}
+                @else
+                    Belum Ada
+                @endif
+            </h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Riwayat layanan terbaru</p>
+        </div>
+    </section>
+
+    {{-- RIWAYAT LAYANAN --}}
+    <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-lg font-black text-slate-900">Riwayat Layanan Posyandu</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Menampilkan riwayat kunjungan, pemeriksaan, atau imunisasi yang tercatat.
+                </p>
+            </div>
+
+            <span class="w-fit rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">
+                {{ $totalLayanan }} Riwayat
+            </span>
+        </div>
+
+        @if($kunjungans->count())
+            <div class="scroll-soft">
+                <div class="space-y-3">
+                    @foreach($kunjungans as $kunjungan)
+                        @php
+                            $jenis = $kunjungan->jenis_kunjungan ?? 'kunjungan';
+
+                            $jenisLabel = match($jenis) {
+                                'imunisasi' => 'Imunisasi',
+                                'pemeriksaan' => 'Pemeriksaan Fisik',
+                                default => 'Kunjungan Posyandu',
+                            };
+
+                            $jenisClass = match($jenis) {
+                                'imunisasi' => 'border-amber-100 bg-amber-50/80 text-amber-700',
+                                'pemeriksaan' => 'border-emerald-100 bg-emerald-50/80 text-emerald-700',
+                                default => 'border-sky-100 bg-sky-50/80 text-sky-700',
+                            };
+
+                            $tanggalKunjungan = $kunjungan->tanggal_kunjungan
+                                ? Carbon::parse($kunjungan->tanggal_kunjungan)
+                                : null;
+
+                            $pemeriksaan = $kunjungan->pemeriksaan ?? null;
+                        @endphp
+
+                        <article class="card-hover rounded-[26px] border border-white/70 bg-white/56 p-4 backdrop-blur-md">
+                            <div class="grid gap-4 xl:grid-cols-[1fr_1fr_1fr_auto] xl:items-center">
+                                <div>
+                                    <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $jenisClass }}">
+                                        <i class="fa-solid {{ $jenis === 'imunisasi' ? 'fa-syringe' : 'fa-stethoscope' }}"></i>
+                                        {{ $jenisLabel }}
+                                    </span>
+
+                                    <h3 class="mt-3 text-sm font-black text-slate-900">
+                                        {{ $tanggalKunjungan ? $tanggalKunjungan->translatedFormat('d F Y') : '-' }}
+                                    </h3>
+
+                                    <p class="mt-1 text-xs font-bold text-slate-400">
+                                        {{ $tanggalKunjungan ? $tanggalKunjungan->format('H:i') . ' WIB' : 'Waktu belum tercatat' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Petugas</p>
+                                    <p class="mt-1 text-sm font-black text-slate-900">
+                                        {{ $kunjungan->petugas?->name ?? $kunjungan->petugas?->nama ?? '-' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Hasil Fisik</p>
+
+                                    @if($pemeriksaan)
+                                        <p class="mt-1 text-sm font-black text-slate-900">
+                                            BB {{ $pemeriksaan->berat_badan ?? '-' }} kg,
+                                            TB {{ $pemeriksaan->tinggi_badan ?? '-' }} cm
+                                        </p>
+                                    @else
+                                        <p class="mt-1 text-sm font-black text-slate-900">
+                                            Belum ada antropometri
+                                        </p>
+                                    @endif
+                                </div>
+
+                                <div class="flex justify-start xl:justify-end">
+                                    <span class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 text-xs font-black text-slate-600">
+                                        <i class="fa-solid fa-lock"></i>
+                                        Arsip
+                                    </span>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+        @else
+            <div class="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
+                <div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/60 text-slate-400 backdrop-blur-md">
+                    <i class="fa-solid fa-folder-open text-xl"></i>
+                </div>
+
+                <h3 class="mt-4 text-lg font-black text-slate-900">Belum Ada Riwayat Layanan</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
+                    Riwayat akan muncul setelah Balita mengikuti absensi, pengukuran fisik, atau layanan Posyandu yang tercatat di sistem.
+                </p>
+            </div>
+        @endif
+    </section>
+
+    {{-- IMUNISASI --}}
+    @if($riwayatImunisasi->count())
+        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+            <div class="mb-4">
+                <h2 class="text-lg font-black text-slate-900">Riwayat Imunisasi</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Arsip imunisasi yang sudah tercatat pada layanan Posyandu.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                @foreach($riwayatImunisasi as $kunjungan)
+                    @foreach($kunjungan->imunisasis ?? [] as $imunisasi)
+                        <article class="card-hover rounded-[24px] border border-amber-100 bg-amber-50/60 p-4">
+                            <div class="mb-3 grid h-11 w-11 place-items-center rounded-2xl bg-white/70 text-amber-700">
+                                <i class="fa-solid fa-syringe"></i>
+                            </div>
+
+                            <h3 class="text-sm font-black text-slate-900">
+                                {{ $imunisasi->vaksin ?? $imunisasi->nama_vaksin ?? '-' }}
+                            </h3>
+
+                            <p class="mt-1 text-xs font-bold text-slate-500">
+                                {{ $imunisasi->jenis_imunisasi ?? '-' }}
+                            </p>
+
+                            <div class="mt-4 rounded-2xl bg-white/60 p-3">
+                                <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tanggal</p>
+                                <p class="mt-1 text-sm font-black text-slate-900">
+                                    @if($imunisasi->tanggal_imunisasi ?? null)
+                                        {{ Carbon::parse($imunisasi->tanggal_imunisasi)->translatedFormat('d F Y') }}
+                                    @else
+                                        -
+                                    @endif
+                                </p>
+                            </div>
+                        </article>
+                    @endforeach
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    {{-- ACTION BOTTOM --}}
+    <section class="glass-panel rounded-[26px] p-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-900">Detail data Balita selesai ditampilkan</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Gunakan tombol edit jika ada data identitas yang perlu diperbarui.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row">
+                @if($routeHas('kader.data.balita.index'))
+                    <a href="{{ route('kader.data.balita.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-list"></i>
+                        Daftar Balita
+                    </a>
+                @endif
+
+                @if($routeHas('kader.data.balita.edit'))
+                    <a href="{{ route('kader.data.balita.edit', $balita->id) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-pen"></i>
+                        Edit Balita
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
 </div>
-
-@push('scripts')
-<script>
-    // System Loader Nexus
-    window.hideLoader = function() {
-        const l = document.getElementById('smoothLoader');
-        if(l) { 
-            l.classList.remove('opacity-100', 'pointer-events-auto'); 
-            l.classList.add('opacity-0', 'pointer-events-none'); 
-            setTimeout(() => l.style.display = 'none', 300); 
-        }
-    };
-
-    window.showLoader = function() {
-        const l = document.getElementById('smoothLoader');
-        if(l) { 
-            l.style.display = 'flex'; 
-            l.classList.remove('opacity-0', 'pointer-events-none'); 
-            l.classList.add('opacity-100', 'pointer-events-auto'); 
-        }
-    };
-
-    document.addEventListener('DOMContentLoaded', window.hideLoader);
-    window.addEventListener('load', window.hideLoader);
-    
-    // Failsafe darurat
-    setTimeout(window.hideLoader, 2500); 
-</script>
-@endpush
 @endsection

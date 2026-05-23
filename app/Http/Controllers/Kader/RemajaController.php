@@ -28,30 +28,88 @@ class RemajaController extends Controller
      * 1. INDEX: Direktori Remaja & Statistik
      */
     public function index(Request $request)
-    {
-        $search = $request->get('search');
-        $query = Remaja::query()->latest('created_at');
+{
+    $search = trim((string) $request->get('search', ''));
+    $statusAkun = $request->get('status_akun', 'semua');
+    $jenisKelamin = $request->get('jenis_kelamin', 'semua');
 
-        // Pencarian Cerdas (Nama, NIK, Sekolah)
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('nama_lengkap', 'LIKE', "%{$search}%")
-                  ->orWhere('nik', 'LIKE', "%{$search}%")
-                  ->orWhere('sekolah', 'LIKE', "%{$search}%");
-            });
-        }
-
-        $remajas = $query->paginate(15)->withQueryString();
-
-        // Statistik untuk Dashboard
-        $stats = [
-            'total'     => Remaja::count(),
-            'laki_laki' => Remaja::where('jenis_kelamin', 'L')->count(),
-            'perempuan' => Remaja::where('jenis_kelamin', 'P')->count(),
-        ];
-
-        return view('kader.data.remaja.index', compact('remajas', 'search', 'stats'));
+    if (!in_array($statusAkun, ['semua', 'terhubung', 'belum'], true)) {
+        $statusAkun = 'semua';
     }
+
+    if (!in_array($jenisKelamin, ['semua', 'L', 'P'], true)) {
+        $jenisKelamin = 'semua';
+    }
+
+    $baseQuery = Remaja::query()
+        ->with(['pemeriksaan_terakhir', 'user']);
+
+    $statTotal = (clone $baseQuery)->count();
+
+    $statLaki = (clone $baseQuery)
+        ->where('jenis_kelamin', 'L')
+        ->count();
+
+    $statPerempuan = (clone $baseQuery)
+        ->where('jenis_kelamin', 'P')
+        ->count();
+
+    $statTerhubung = (clone $baseQuery)
+        ->whereNotNull('user_id')
+        ->count();
+
+    $statBelumTerhubung = (clone $baseQuery)
+        ->whereNull('user_id')
+        ->count();
+
+    $statBulanIni = (clone $baseQuery)
+        ->whereMonth('created_at', now('Asia/Jakarta')->month)
+        ->whereYear('created_at', now('Asia/Jakarta')->year)
+        ->count();
+
+    $query = Remaja::query()
+        ->with(['pemeriksaan_terakhir', 'user'])
+        ->latest('created_at');
+
+    if ($statusAkun === 'terhubung') {
+        $query->whereNotNull('user_id');
+    }
+
+    if ($statusAkun === 'belum') {
+        $query->whereNull('user_id');
+    }
+
+    if ($jenisKelamin !== 'semua') {
+        $query->where('jenis_kelamin', $jenisKelamin);
+    }
+
+    if ($search !== '') {
+        $query->where(function ($q) use ($search) {
+            $q->where('nama_lengkap', 'like', "%{$search}%")
+                ->orWhere('nik', 'like', "%{$search}%")
+                ->orWhere('sekolah', 'like', "%{$search}%")
+                ->orWhere('kelas', 'like', "%{$search}%")
+                ->orWhere('nama_ortu', 'like', "%{$search}%")
+                ->orWhere('telepon_ortu', 'like', "%{$search}%")
+                ->orWhere('alamat', 'like', "%{$search}%");
+        });
+    }
+
+    $items = $query->paginate(10)->withQueryString();
+
+    return view('kader.data.remaja.index', compact(
+        'items',
+        'search',
+        'statusAkun',
+        'jenisKelamin',
+        'statTotal',
+        'statLaki',
+        'statPerempuan',
+        'statTerhubung',
+        'statBelumTerhubung',
+        'statBulanIni'
+    ));
+}
 
     /**
      * 2. CREATE: Tampilkan Form Pendaftaran

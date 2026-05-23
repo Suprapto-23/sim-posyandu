@@ -1,302 +1,750 @@
 @extends('layouts.kader')
 
 @section('title', 'Edit Data Balita')
-@section('page-name', 'Koreksi Profil Anak')
+@section('page-name', 'Edit Data Balita')
+
+@php
+    use Illuminate\Support\Facades\Route;
+
+    $routeHas = fn ($name) => Route::has($name);
+@endphp
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
-    /* ANIMASI MASUK */
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* FORM INPUT CRM NEXUS */
-    .form-label { display: block; font-size: 0.70rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }
-    .form-input {
-        width: 100%; background-color: #f8fafc; border: 2px solid #f1f5f9; color: #1e293b;
-        font-size: 0.875rem; border-radius: 16px; padding: 1rem 1.25rem; outline: none;
-        transition: all 0.3s ease; font-weight: 600; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.01);
+    .balita-edit-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
     }
-    .form-input:focus {
-        background-color: #ffffff; border-color: #f59e0b;
-        box-shadow: 0 4px 20px -3px rgba(245, 158, 11, 0.15); transform: translateY(-2px);
-    }
-    .form-error { border-color: #f43f5e !important; background-color: #fff1f2 !important; }
-    
-    /* KARTU KACA (GLASSMORPHISM) */
-    .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.6); }
 
-    /* SWEETALERT CUSTOM */
-    div:where(.swal2-container) { z-index: 10000 !important; }
-    div:where(.swal2-container).swal2-backdrop-show { backdrop-filter: blur(8px) !important; background: rgba(15, 23, 42, 0.4) !important; }
-    .swal2-popup { border-radius: 32px !important; padding: 2.5rem 2rem !important; background: rgba(255, 255, 255, 0.98) !important; backdrop-filter: blur(16px) !important; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.1) !important; border: 1px solid rgba(255,255,255,0.5) !important; }
-    .swal2-popup .swal2-title { font-family: 'Poppins', sans-serif !important; font-weight: 900 !important; font-size: 1.5rem !important; color: #1e293b !important; }
-    .btn-nexus-warning { background: #f59e0b !important; color: #ffffff !important; border-radius: 100px !important; padding: 12px 28px !important; font-size: 12px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; box-shadow: 0 8px 20px rgba(245,158,11,0.3) !important; transition: all 0.3s ease !important; }
-    .btn-nexus-warning:hover { background: #d97706 !important; transform: translateY(-2px) !important; }
+    .balita-edit-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
+    }
+
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .input-premium {
+        border: 1px solid rgba(226,232,240,.9);
+        background: rgba(255,255,255,.72);
+        outline: none;
+        transition: all .3s ease-in-out;
+    }
+
+    .input-premium:focus {
+        border-color: rgba(16,185,129,.42);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+        background: rgba(255,255,255,.86);
+    }
+
+    .input-error {
+        border-color: rgba(244,63,94,.45) !important;
+        box-shadow: 0 0 0 4px rgba(244,63,94,.08) !important;
+    }
+
+    .gender-card {
+        border: 1px solid rgba(226,232,240,.82);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .gender-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.28);
+        box-shadow: 0 18px 38px rgba(15,23,42,.06);
+    }
+
+    .gender-card.active {
+        border-color: rgba(16,185,129,.40);
+        background: rgba(236,253,245,.86);
+        box-shadow: 0 14px 32px rgba(5,150,105,.08);
+    }
+
+    .toast-custom {
+        position: fixed;
+        right: 24px;
+        top: 96px;
+        z-index: 90;
+        width: min(420px, calc(100vw - 32px));
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-10px);
+        transition: all .3s ease-in-out;
+    }
+
+    .toast-custom.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 640px) {
+        .toast-custom {
+            left: 16px;
+            right: 16px;
+            top: 82px;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
-{{-- PRELOADER --}}
-<div id="smoothLoader" class="fixed inset-0 bg-slate-50/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center transition-all duration-300 opacity-100 pointer-events-auto">
-    <div class="relative w-20 h-20 flex items-center justify-center mb-4">
-        <div class="absolute inset-0 border-4 border-amber-100 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-amber-500 rounded-full border-t-transparent animate-spin"></div>
-        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-edit text-amber-500 text-2xl animate-pulse"></i></div>
-    </div>
-    <p class="text-amber-900 font-black tracking-widest text-[11px] animate-pulse uppercase">MENYIAPKAN DATA...</p>
-</div>
+<div class="balita-edit-page space-y-5">
 
-<div class="max-w-6xl mx-auto animate-slide-up relative z-10 pb-12">
-    
-    {{-- AURA BACKGROUND --}}
-    <div class="absolute top-0 right-0 w-96 h-96 bg-amber-400/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
-
-    {{-- TOMBOL KEMBALI --}}
-    <div class="mb-6 flex items-center gap-3 relative z-10">
-        <a href="{{ route('kader.data.balita.index') }}" onclick="showLoader()" class="w-12 h-12 rounded-[16px] bg-white border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600 transition-all shadow-sm group">
-            <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
-        </a>
-    </div>
-
-    {{-- WARNING HEADER (EDIT MODE) --}}
-    <div class="bg-gradient-to-br from-amber-400 to-orange-500 rounded-[32px] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_15px_40px_-10px_rgba(245,158,11,0.3)] flex flex-col md:flex-row items-center gap-8 z-10">
-        <div class="absolute inset-0 opacity-[0.1] pointer-events-none" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 24px 24px;"></div>
-        
-        <div class="w-20 h-20 md:w-24 md:h-24 rounded-[24px] bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center text-3xl md:text-4xl shrink-0 shadow-lg transform rotate-3 hover:rotate-0 transition-transform">
-            <i class="fas fa-pen-nib"></i>
-        </div>
-        <div class="text-center md:text-left relative z-10">
-            <div class="inline-flex items-center gap-2 bg-white/20 border border-white/30 text-white text-[10px] font-black px-4 py-1.5 rounded-full mb-3 uppercase tracking-widest backdrop-blur-sm">
-                <i class="fas fa-exclamation-triangle text-amber-200"></i> Mode Koreksi Data Aktif
+    {{-- CUSTOM TOAST --}}
+    <div id="customToast" class="toast-custom">
+        <div class="rounded-[24px] border border-rose-100 bg-white/80 p-4 shadow-[0_22px_60px_rgba(15,23,42,.22)] backdrop-blur-xl">
+            <div class="flex gap-3">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-black text-slate-900">Form belum lengkap</p>
+                    <p id="customToastText" class="mt-1 text-xs font-bold leading-5 text-slate-500">
+                        Lengkapi data wajib terlebih dahulu.
+                    </p>
+                </div>
             </div>
-            <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight font-poppins mb-2">Edit Profil Anak</h1>
-            <p class="text-amber-50 font-medium text-[13px] md:text-[14px] max-w-2xl leading-relaxed">Pembaruan data pada modul ini akan secara otomatis memperbarui rekam medis yang terintegrasi dengan akun orang tua.</p>
         </div>
     </div>
 
-    <form action="{{ route('kader.data.balita.update', $balita->id) }}" method="POST" id="formBalita" class="relative z-10">
-        @csrf @method('PUT')
-        
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {{-- KOLOM 1: IDENTITAS ANAK --}}
-            <div class="lg:col-span-7 glass-panel rounded-[32px] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.04)] p-8 md:p-10 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-bl-full pointer-events-none"></div>
-                <div class="flex items-center gap-4 mb-8 border-b border-slate-100 pb-5">
-                    <span class="w-10 h-10 rounded-[14px] bg-amber-500 text-white flex items-center justify-center font-black shadow-md">1</span>
-                    <h3 class="text-xl font-black text-slate-800 font-poppins">Identitas Balita</h3>
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-amber-700">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Mode Edit Data
                 </div>
-                
-                <div class="space-y-6">
-                    <div>
-                        <label class="form-label">Nama Lengkap Anak <span class="text-rose-500">*</span></label>
-                        <input type="text" name="nama_lengkap" value="{{ old('nama_lengkap', $balita->nama_lengkap) }}" required class="form-input @error('nama_lengkap') form-error @enderror">
-                    </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label class="form-label">NIK Balita (Opsional)</label>
-                            <input type="number" name="nik" value="{{ old('nik', $balita->nik) }}" class="form-input">
-                        </div>
-                        <div>
-                            <label class="form-label">Jenis Kelamin <span class="text-rose-500">*</span></label>
-                            <select name="jenis_kelamin" required class="form-input cursor-pointer">
-                                <option value="L" {{ old('jenis_kelamin', $balita->jenis_kelamin) == 'L' ? 'selected' : '' }}>Laki-laki</option>
-                                <option value="P" {{ old('jenis_kelamin', $balita->jenis_kelamin) == 'P' ? 'selected' : '' }}>Perempuan</option>
-                            </select>
-                        </div>
-                    </div>
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Edit Data Balita
+                </h1>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label class="form-label">Tempat Lahir <span class="text-rose-500">*</span></label>
-                            <input type="text" name="tempat_lahir" value="{{ old('tempat_lahir', $balita->tempat_lahir) }}" required class="form-input">
-                        </div>
-                        <div>
-                            <label class="form-label text-amber-600">Tanggal Lahir <span class="text-rose-500">*</span></label>
-                            <input type="date" id="tanggal_lahir" name="tanggal_lahir" value="{{ old('tanggal_lahir', $balita->tanggal_lahir->format('Y-m-d')) }}" required class="form-input cursor-pointer" onchange="calculateAge()">
-                            <div id="age-helper"></div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-[24px] border border-slate-100 mt-4">
-                        <div>
-                            <label class="form-label text-amber-600">Berat Lahir (kg)</label>
-                            <input type="number" step="0.01" name="berat_lahir" value="{{ old('berat_lahir', $balita->berat_lahir) }}" class="form-input bg-white">
-                        </div>
-                        <div>
-                            <label class="form-label text-amber-600">Panjang Lahir (cm)</label>
-                            <input type="number" step="0.01" name="panjang_lahir" value="{{ old('panjang_lahir', $balita->panjang_lahir) }}" class="form-input bg-white">
-                        </div>
-                    </div>
-                </div>
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Perbarui data Balita dengan hati-hati. Perubahan NIK akan memengaruhi proses sinkronisasi akun warga dan pencarian data pada layanan Posyandu.
+                </p>
             </div>
 
-            {{-- KOLOM 2: DATA KELUARGA --}}
-            <div class="lg:col-span-5 bg-white/90 rounded-[32px] border border-slate-200/80 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.03)] p-8 md:p-10 relative overflow-hidden flex flex-col">
-                <div class="absolute right-0 top-0 w-32 h-32 bg-amber-500/10 rounded-bl-full pointer-events-none blur-xl"></div>
-                
-                <div class="flex items-center gap-4 mb-8 border-b border-slate-100 pb-5 relative z-10">
-                    <span class="w-10 h-10 rounded-[14px] bg-slate-400 text-white flex items-center justify-center font-black shadow-md">2</span>
-                    <h3 class="text-xl font-black text-slate-800 font-poppins">Data Keluarga</h3>
-                </div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if($routeHas('kader.data.balita.index'))
+                    <a href="{{ route('kader.data.balita.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Kembali
+                    </a>
+                @endif
 
-                <div class="space-y-6 relative z-10 flex-1">
-                    <div class="p-6 bg-rose-50/50 border border-rose-100 rounded-[24px] shadow-sm">
-                        <label class="form-label text-rose-500"><i class="fas fa-female mr-1"></i> NIK Ibu (Akses Warga) <span class="text-rose-500">*</span></label>
-                        <input type="number" name="nik_ibu" value="{{ old('nik_ibu', $balita->nik_ibu) }}" required class="form-input bg-white focus:bg-white mb-4">
-                        
-                        <label class="form-label text-rose-500"><i class="fas fa-id-card-alt mr-1"></i> Nama Ibu Kandung <span class="text-rose-500">*</span></label>
-                        <input type="text" name="nama_ibu" value="{{ old('nama_ibu', $balita->nama_ibu) }}" required class="form-input bg-white focus:bg-white">
-                    </div>
-                    
-                    <div class="p-6 bg-sky-50/50 border border-sky-100 rounded-[24px] shadow-sm">
-                        <label class="form-label text-sky-600"><i class="fas fa-male mr-1"></i> NIK Ayah (Opsional)</label>
-                        <input type="number" name="nik_ayah" value="{{ old('nik_ayah', $balita->nik_ayah) }}" class="form-input bg-white focus:bg-white mb-4">
-                        
-                        <label class="form-label text-sky-600"><i class="fas fa-id-card-alt mr-1"></i> Nama Ayah (Opsional)</label>
-                        <input type="text" name="nama_ayah" value="{{ old('nama_ayah', $balita->nama_ayah) }}" class="form-input bg-white focus:bg-white">
+                @if($routeHas('kader.data.balita.show'))
+                    <a href="{{ route('kader.data.balita.show', $balita->id) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(15,23,42,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-800">
+                        <i class="fa-solid fa-eye"></i>
+                        Detail
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- SERVER ERROR --}}
+    @if($errors->any() || session('error'))
+        <section class="rounded-[24px] border border-rose-100 bg-rose-50/80 p-4 text-sm font-bold text-rose-700">
+            <div class="mb-2 flex items-center gap-2 font-black">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Data belum bisa diperbarui
+            </div>
+
+            @if(session('error'))
+                <p class="leading-6">{{ session('error') }}</p>
+            @endif
+
+            @if($errors->any())
+                <ul class="ml-5 list-disc space-y-1">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </section>
+    @endif
+
+    <form id="balitaForm" method="POST" action="{{ route('kader.data.balita.update', $balita->id) }}" class="grid grid-cols-1 gap-5 xl:grid-cols-12" novalidate>
+        @csrf
+        @method('PUT')
+
+        {{-- LEFT FORM --}}
+        <section class="space-y-5 xl:col-span-8">
+
+            {{-- IDENTITAS --}}
+            <div class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                        <i class="fa-solid fa-id-card"></i>
                     </div>
 
                     <div>
-                        <label class="form-label"><i class="fas fa-map-marker-alt mr-1"></i> Alamat Domisili <span class="text-rose-500">*</span></label>
-                        <textarea name="alamat" rows="3" required class="form-input bg-white resize-none">{{ old('alamat', $balita->alamat) }}</textarea>
+                        <h2 class="text-lg font-black text-slate-900">1. Identitas Balita</h2>
+                        <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                            Pastikan perubahan identitas sesuai data keluarga atau catatan Posyandu.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Nama Lengkap <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_lengkap"
+                            id="nama_lengkap"
+                            value="{{ old('nama_lengkap', $balita->nama_lengkap) }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_lengkap') input-error @enderror"
+                            placeholder="Contoh: Ahmad Fauzan"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('nama_lengkap')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            NIK Balita <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nik"
+                            id="nik"
+                            value="{{ old('nik', $balita->nik) }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nik') input-error @enderror"
+                            placeholder="16 digit NIK"
+                            inputmode="numeric"
+                            maxlength="16"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('nik')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Tempat Lahir <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="tempat_lahir"
+                            id="tempat_lahir"
+                            value="{{ old('tempat_lahir', $balita->tempat_lahir) }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tempat_lahir') input-error @enderror"
+                            placeholder="Contoh: Pekalongan"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('tempat_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Tanggal Lahir <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="date"
+                            name="tanggal_lahir"
+                            id="tanggal_lahir"
+                            value="{{ old('tanggal_lahir', optional($balita->tanggal_lahir)->format('Y-m-d') ?? $balita->tanggal_lahir) }}"
+                            max="{{ now('Asia/Jakarta')->toDateString() }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tanggal_lahir') input-error @enderror"
+                            required
+                        >
+                        @error('tanggal_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                        <p id="usiaPreview" class="mt-2 text-xs font-bold text-slate-400">
+                            Usia akan dihitung otomatis setelah tanggal lahir dipilih.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <label class="mb-3 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                        Jenis Kelamin <span class="text-rose-500">*</span>
+                    </label>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label class="gender-card {{ old('jenis_kelamin', $balita->jenis_kelamin) === 'L' ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-gender-card="L">
+                            <input type="radio" name="jenis_kelamin" value="L" class="sr-only gender-radio" {{ old('jenis_kelamin', $balita->jenis_kelamin) === 'L' ? 'checked' : '' }}>
+                            <div class="flex items-center gap-3">
+                                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-sky-50 text-sky-700">
+                                    <i class="fa-solid fa-mars"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">Laki-laki</p>
+                                    <p class="mt-1 text-xs font-bold text-slate-400">Kode: L</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="gender-card {{ old('jenis_kelamin', $balita->jenis_kelamin) === 'P' ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-gender-card="P">
+                            <input type="radio" name="jenis_kelamin" value="P" class="sr-only gender-radio" {{ old('jenis_kelamin', $balita->jenis_kelamin) === 'P' ? 'checked' : '' }}>
+                            <div class="flex items-center gap-3">
+                                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-pink-50 text-pink-700">
+                                    <i class="fa-solid fa-venus"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-900">Perempuan</p>
+                                    <p class="mt-1 text-xs font-bold text-slate-400">Kode: P</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    @error('jenis_kelamin')
+                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            {{-- ORANG TUA --}}
+            <div class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-50/90 text-amber-700">
+                        <i class="fa-solid fa-people-roof"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">2. Orang Tua dan Domisili</h2>
+                        <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                            Data keluarga dipakai untuk identifikasi sasaran dan pencarian data.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Nama Ibu <span class="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_ibu"
+                            id="nama_ibu"
+                            value="{{ old('nama_ibu', $balita->nama_ibu) }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_ibu') input-error @enderror"
+                            placeholder="Nama ibu kandung / wali"
+                            autocomplete="off"
+                            required
+                        >
+                        @error('nama_ibu')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Nama Ayah
+                        </label>
+                        <input
+                            type="text"
+                            name="nama_ayah"
+                            id="nama_ayah"
+                            value="{{ old('nama_ayah', $balita->nama_ayah) }}"
+                            class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_ayah') input-error @enderror"
+                            placeholder="Boleh dikosongkan"
+                            autocomplete="off"
+                        >
+                        @error('nama_ayah')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Alamat Tinggal <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                            name="alamat"
+                            id="alamat"
+                            rows="4"
+                            class="input-premium w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 @error('alamat') input-error @enderror"
+                            placeholder="Contoh: Dusun Krajan RT 01 RW 02"
+                            required
+                        >{{ old('alamat', $balita->alamat) }}</textarea>
+                        @error('alamat')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
             </div>
-            
-        </div>
-        
-        {{-- ACTION BUTTONS --}}
-        <div class="mt-8 bg-white border border-slate-200 p-6 md:p-8 rounded-[32px] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] flex flex-col sm:flex-row items-center justify-between gap-6 relative z-30">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-[16px] bg-amber-50 text-amber-500 flex items-center justify-center text-2xl shrink-0"><i class="fas fa-pen-nib"></i></div>
-                <div class="hidden sm:block">
-                    <h4 class="text-[14px] font-black text-slate-800 font-poppins mb-0.5">Koreksi Data Balita</h4>
-                    <p class="text-[12px] font-medium text-slate-500 leading-relaxed">Pastikan perubahan data sudah sesuai dengan buku KIA asli.</p>
+
+            {{-- DATA LAHIR --}}
+            <div class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-5 flex items-start gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
+                        <i class="fa-solid fa-weight-scale"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">3. Data Lahir</h2>
+                        <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                            Lengkapi atau koreksi data lahir jika tersedia.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Berat Lahir
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="number"
+                                name="berat_lahir"
+                                id="berat_lahir"
+                                value="{{ old('berat_lahir', $balita->berat_lahir) }}"
+                                class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('berat_lahir') input-error @enderror"
+                                placeholder="Contoh: 3.2"
+                                min="0"
+                                step="0.01"
+                            >
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
+                        </div>
+                        @error('berat_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                            Panjang Lahir
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="number"
+                                name="panjang_lahir"
+                                id="panjang_lahir"
+                                value="{{ old('panjang_lahir', $balita->panjang_lahir) }}"
+                                class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('panjang_lahir') input-error @enderror"
+                                placeholder="Contoh: 49"
+                                min="0"
+                                step="0.01"
+                            >
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
+                        </div>
+                        @error('panjang_lahir')
+                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
             </div>
-            <div class="flex items-center gap-3 w-full sm:w-auto shrink-0">
-                <a href="{{ route('kader.data.balita.index') }}" onclick="showLoader()" class="flex-1 sm:flex-none px-8 py-4 bg-slate-100 border border-slate-200 text-slate-600 font-extrabold text-[12px] rounded-full hover:bg-slate-200 transition-colors text-center uppercase tracking-widest">
-                    Batalkan
-                </a>
-                <button type="submit" id="btnSubmit" class="flex-1 sm:flex-none px-10 py-4 bg-amber-500 text-white font-black text-[12px] rounded-full hover:bg-amber-600 shadow-[0_8px_20px_rgba(245,158,11,0.3)] hover:-translate-y-1 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
-                    <i class="fas fa-save text-lg"></i> Simpan Perubahan
+        </section>
+
+        {{-- RIGHT PANEL --}}
+        <aside class="space-y-5 xl:col-span-4">
+            <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                        <i class="fa-solid fa-link"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">Status Akun</h2>
+                        <p class="mt-1 text-xs font-bold text-slate-400">
+                            Sinkronisasi warga.
+                        </p>
+                    </div>
+                </div>
+
+                @if($balita->user_id)
+                    <div class="rounded-[24px] border border-emerald-100 bg-emerald-50/80 p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-emerald-700">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-emerald-800">Akun Terhubung</p>
+                                <p class="mt-1 text-xs font-bold leading-5 text-emerald-700">
+                                    Data Balita sudah terhubung dengan akun warga.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="rounded-[24px] border border-amber-100 bg-amber-50/80 p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-amber-700">
+                                <i class="fa-solid fa-circle-exclamation"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-amber-800">Belum Terhubung</p>
+                                <p class="mt-1 text-xs font-bold leading-5 text-amber-700">
+                                    Setelah data disimpan, sistem akan mencoba mencocokkan akun berdasarkan NIK Balita.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </section>
+
+            <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="grid h-12 w-12 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+
+                    <div>
+                        <h2 class="text-lg font-black text-slate-900">Validasi Edit</h2>
+                        <p class="mt-1 text-xs font-bold text-slate-400">
+                            Perubahan tetap dicek backend.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-3 text-xs font-bold text-slate-500">
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>NIK Balita wajib 16 digit dan tidak boleh sama dengan data lain.</p>
+                    </div>
+
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>Tanggal lahir tidak boleh melebihi hari ini.</p>
+                    </div>
+
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>Nama lengkap, nama ibu, dan alamat tetap wajib diisi.</p>
+                    </div>
+
+                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
+                        <i class="fa-solid fa-check text-emerald-600"></i>
+                        <p>Sinkronisasi akun diperbarui ulang setelah penyimpanan.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-[30px] border border-amber-100 bg-amber-50/70 p-4 sm:p-5">
+                <div class="flex items-start gap-3">
+                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-amber-700">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-black text-amber-800">Catatan Edit</h3>
+                        <p class="mt-1 text-xs font-bold leading-5 text-amber-700">
+                            Perubahan data identitas sebaiknya dilakukan hanya jika ada kesalahan input atau pembaruan data resmi.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        {{-- ACTION --}}
+        <section class="glass-panel rounded-[26px] p-4 xl:col-span-12">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h3 class="text-sm font-black text-slate-900">Simpan Perubahan Data Balita</h3>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        Data akan diperbarui dan sinkronisasi akun warga akan dicek ulang.
+                    </p>
+                </div>
+
+                <button type="submit"
+                        id="submitBtn"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Simpan Perubahan
                 </button>
             </div>
-        </div>
-        
+        </section>
     </form>
 </div>
+@endsection
 
+@push('scripts')
 <script>
-    // === 1. PEMBATASAN KALENDER ===
-    const todayDate = new Date();
-    document.getElementById('tanggal_lahir').max = todayDate.toISOString().split('T')[0];
-    
-    // Mencegah klik tanggal yang lebih tua dari 59 bulan di UI
-    const minDate = new Date();
-    minDate.setMonth(minDate.getMonth() - 59);
-    document.getElementById('tanggal_lahir').min = minDate.toISOString().split('T')[0];
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('balitaForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const toast = document.getElementById('customToast');
+    const toastText = document.getElementById('customToastText');
+    const genderCards = document.querySelectorAll('[data-gender-card]');
+    const genderRadios = document.querySelectorAll('.gender-radio');
+    const tanggalLahir = document.getElementById('tanggal_lahir');
+    const usiaPreview = document.getElementById('usiaPreview');
+    const nikInput = document.getElementById('nik');
 
-    document.querySelectorAll('input[type="number"]').forEach(input => {
-        input.addEventListener('input', function() {
-            if (this.value.length > 16) this.value = this.value.slice(0, 16);
+    let toastTimer = null;
+
+    const showToast = (message) => {
+        toastText.textContent = message;
+        toast.classList.add('show');
+
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3600);
+    };
+
+    const setError = (el) => {
+        if (el) el.classList.add('input-error');
+    };
+
+    const clearError = (el) => {
+        if (el) el.classList.remove('input-error');
+    };
+
+    const updateGenderUI = () => {
+        const selected = document.querySelector('.gender-radio:checked')?.value;
+
+        genderCards.forEach(card => {
+            card.classList.toggle('active', card.dataset.genderCard === selected);
         });
+    };
+
+    genderRadios.forEach(radio => {
+        radio.addEventListener('change', updateGenderUI);
     });
 
-    const btnSubmit = document.getElementById('btnSubmit');
+    nikInput?.addEventListener('input', () => {
+        nikInput.value = nikInput.value.replace(/\D/g, '').slice(0, 16);
+        clearError(nikInput);
+    });
 
-    function calculateAge() {
-        const dobInput = document.getElementById('tanggal_lahir').value;
-        const helper = document.getElementById('age-helper');
-        if(!dobInput) { helper.innerHTML = ''; return; }
+    const calculateAgeMonths = (dateValue) => {
+        if (!dateValue) return null;
 
-        const dob = new Date(dobInput);
+        const birthDate = new Date(dateValue + 'T00:00:00');
         const today = new Date();
-        
-        let months = (today.getFullYear() - dob.getFullYear()) * 12;
-        months -= dob.getMonth();
-        months += today.getMonth();
-        if (today.getDate() < dob.getDate()) { months--; }
 
-        if(months < 0) { 
-            helper.innerHTML = '<div class="mt-2 text-rose-500 text-xs font-bold"><i class="fas fa-exclamation-triangle"></i> Tanggal tidak valid</div>'; 
-            btnSubmit.disabled = true;
-            return; 
-        } else if (months >= 60) {
-            helper.innerHTML = '<div class="mt-2 text-rose-500 text-xs font-bold"><i class="fas fa-ban"></i> Usia Melebihi Batas (Max 59 Bulan)</div>'; 
-            btnSubmit.disabled = true;
-            btnSubmit.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+        if (birthDate > today) return 'future';
+
+        let months = (today.getFullYear() - birthDate.getFullYear()) * 12;
+        months += today.getMonth() - birthDate.getMonth();
+
+        if (today.getDate() < birthDate.getDate()) {
+            months -= 1;
+        }
+
+        return Math.max(0, months);
+    };
+
+    const updateAgePreview = () => {
+        const result = calculateAgeMonths(tanggalLahir.value);
+
+        clearError(tanggalLahir);
+
+        if (result === null) {
+            usiaPreview.textContent = 'Usia akan dihitung otomatis setelah tanggal lahir dipilih.';
+            usiaPreview.className = 'mt-2 text-xs font-bold text-slate-400';
             return;
         }
 
-        btnSubmit.disabled = false;
-        btnSubmit.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
-
-        let text = '';
-        let badge = '';
-        if(months < 12) {
-            text = months === 0 ? '0 Bulan (Baru Lahir)' : `${months} Bulan`;
-            badge = '<span class="bg-sky-500 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase ml-2 shadow-sm">Kategori Bayi</span>';
-        } else {
-            const y = Math.floor(months / 12);
-            const m = months % 12;
-            text = m > 0 ? `${y} Tahun ${m} Bulan` : `${y} Tahun`;
-            badge = '<span class="bg-rose-500 text-white px-2 py-0.5 rounded text-[10px] font-black uppercase ml-2 shadow-sm">Kategori Balita</span>';
+        if (result === 'future') {
+            usiaPreview.textContent = 'Tanggal lahir tidak boleh melebihi hari ini.';
+            usiaPreview.className = 'mt-2 text-xs font-bold text-rose-600';
+            setError(tanggalLahir);
+            return;
         }
 
-        helper.innerHTML = `<div class="mt-3 inline-flex items-center bg-amber-50 border border-amber-100 px-4 py-2 rounded-[12px] text-xs font-bold text-amber-700 shadow-sm"><i class="fas fa-info-circle text-amber-500 mr-2 text-lg"></i> Usia tercatat: ${text} ${badge}</div>`;
-    }
+        const tahun = Math.floor(result / 12);
+        const bulan = result % 12;
 
-    if(document.getElementById('tanggal_lahir').value) { calculateAge(); }
+        usiaPreview.textContent = tahun > 0
+            ? `Perkiraan usia: ${tahun} tahun ${bulan} bulan.`
+            : `Perkiraan usia: ${bulan} bulan.`;
 
-    const hideLoader = () => {
-        const l = document.getElementById('smoothLoader');
-        if(l) { l.classList.remove('opacity-100', 'pointer-events-auto'); l.classList.add('opacity-0', 'pointer-events-none'); setTimeout(() => l.style.display = 'none', 300); }
-        if(btnSubmit && !btnSubmit.disabled) { btnSubmit.innerHTML = '<i class="fas fa-save text-lg"></i> Simpan Perubahan'; btnSubmit.classList.remove('opacity-75', 'cursor-wait'); }
-    };
-    const showLoader = () => {
-        const l = document.getElementById('smoothLoader');
-        if(l) { l.style.display = 'flex'; l.classList.remove('opacity-0', 'pointer-events-none'); l.classList.add('opacity-100', 'pointer-events-auto'); }
+        usiaPreview.className = 'mt-2 text-xs font-bold text-emerald-600';
     };
 
-    document.addEventListener('DOMContentLoaded', hideLoader);
-    window.addEventListener('pageshow', hideLoader);
-    
-    // === 2. PENCEGATAN FORM (HARD-BLOCK) ===
-    document.getElementById('formBalita').addEventListener('submit', function(e) {
-        e.preventDefault(); 
-        
-        const dobInput = document.getElementById('tanggal_lahir').value;
-        if(!dobInput) return;
+    tanggalLahir?.addEventListener('change', updateAgePreview);
 
-        const dob = new Date(dobInput);
-        const today = new Date();
-        let months = (today.getFullYear() - dob.getFullYear()) * 12;
-        months -= dob.getMonth();
-        months += today.getMonth();
-        if (today.getDate() < dob.getDate()) { months--; }
+    form?.addEventListener('submit', (event) => {
+        const requiredFields = [
+            { id: 'nama_lengkap', label: 'Nama lengkap Balita wajib diisi.' },
+            { id: 'nik', label: 'NIK Balita wajib diisi 16 digit.' },
+            { id: 'tempat_lahir', label: 'Tempat lahir wajib diisi.' },
+            { id: 'tanggal_lahir', label: 'Tanggal lahir wajib diisi.' },
+            { id: 'nama_ibu', label: 'Nama ibu wajib diisi.' },
+            { id: 'alamat', label: 'Alamat tinggal wajib diisi.' },
+        ];
 
-        if (months >= 60 || months < 0) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Koreksi Ditolak',
-                html: `<p class="mt-2 text-sm text-slate-600">Usia anak melewati batas maksimal sistem (<b>59 Bulan</b>). Data tidak akan disimpan.</p>`,
-                confirmButtonText: 'Baik, Saya Mengerti',
-                buttonsStyling: false,
-                customClass: { confirmButton: 'btn-nexus-warning' }
-            });
-            return false; // Mematikan paksa pengiriman form
+        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+
+        for (const field of requiredFields) {
+            const el = document.getElementById(field.id);
+
+            if (!el || !String(el.value).trim()) {
+                event.preventDefault();
+                setError(el);
+                showToast(field.label);
+                el?.focus();
+                return;
+            }
         }
 
-        btnSubmit.innerHTML = '<i class="fas fa-circle-notch fa-spin text-lg"></i> Menyimpan...';
-        btnSubmit.classList.add('opacity-75', 'cursor-wait');
-        btnSubmit.disabled = true;
-        showLoader();
-        
-        this.submit(); // Lolos validasi, lanjutkan
+        if (!/^\d{16}$/.test(nikInput.value.trim())) {
+            event.preventDefault();
+            setError(nikInput);
+            showToast('NIK Balita harus berisi tepat 16 digit angka.');
+            nikInput.focus();
+            return;
+        }
+
+        if (!document.querySelector('.gender-radio:checked')) {
+            event.preventDefault();
+            showToast('Pilih jenis kelamin Balita terlebih dahulu.');
+            return;
+        }
+
+        const ageCheck = calculateAgeMonths(tanggalLahir.value);
+
+        if (ageCheck === 'future') {
+            event.preventDefault();
+            setError(tanggalLahir);
+            showToast('Tanggal lahir tidak boleh melebihi hari ini.');
+            tanggalLahir.focus();
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan Perubahan...';
     });
+
+    updateGenderUI();
+    updateAgePreview();
+});
 </script>
-@endsection
+@endpush
