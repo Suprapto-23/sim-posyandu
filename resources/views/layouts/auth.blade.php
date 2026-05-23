@@ -6,7 +6,8 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>@yield('title','Masuk') — PosyanduCare</title>
 
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23f8fffe'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23047857'/%3E%3Cstop offset='1' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M10 33 C10 26 15 21 21.5 21 C26 21 29.5 23.5 32 27 C34.5 23.5 38 21 42.5 21 C49 21 54 26 54 33 C54 40 49 45 42.5 45 C38 45 34.5 42.5 32 39 C29.5 42.5 26 45 21.5 45 C15 45 10 40 10 33Z' fill='url(%23g)'/%3E%3Ccircle cx='49' cy='16' r='7' fill='%23f59e0b'/%3E%3C/svg%3E">
+{{-- Favicon: clean green rounded square + white cross-pulse mark --}}
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23047857'/%3E%3Cstop offset='1' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23bg)'/%3E%3C!-- heart-pulse path in white --%3E%3Cpath d='M10 34h8l4-10 6 18 5-14 3 6h18' stroke='%23ffffff' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -425,82 +426,137 @@ button, input, select, textarea { font-family: inherit; }
   40%         { transform: scale(1.15); opacity: 1; }
 }
 
-/* ════════ NEXUS ALERT ════════ */
+/* ════════ NEXUS ALERT — Premium Redesign ════════ */
 .nxa-veil {
   position: fixed; inset: 0; z-index: 99998;
-  display: flex; align-items: center; justify-content: center; padding: 20px;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 0 env(safe-area-inset-bottom,0);
   visibility: hidden; opacity: 0;
-  background: rgba(15,23,42,.22);
-  backdrop-filter: blur(7px);
-  transition: opacity .25s ease, visibility .25s;
+  background: rgba(10,18,35,.32);
+  backdrop-filter: blur(10px) saturate(1.2);
+  transition: opacity .28s ease, visibility .28s;
+}
+/* center on wider screens */
+@media (min-width: 540px) {
+  .nxa-veil { align-items: center; padding: 20px; }
 }
 .nxa-veil.open { visibility: visible; opacity: 1; }
 
 .nxa-panel {
   background: #fff;
-  border-radius: 20px;
-  width: 100%; max-width: 400px;
-  box-shadow: 0 28px 72px rgba(15,23,42,.16), 0 0 0 1px rgba(226,232,240,.55);
+  border-radius: 28px 28px 0 0;
+  width: 100%; max-width: 100%;
+  box-shadow: 0 -4px 40px rgba(15,23,42,.12), 0 -1px 0 rgba(15,23,42,.04);
   overflow: hidden;
-  transform: scale(.88) translateY(24px);
-  opacity: 0;
-  transition: transform .32s var(--E) .03s, opacity .25s ease .03s;
+  transform: translateY(100%);
+  opacity: 1;
+  transition: transform .38s var(--E);
 }
-.nxa-veil.open .nxa-panel { transform: none; opacity: 1; }
+@media (min-width: 540px) {
+  .nxa-panel {
+    border-radius: 24px;
+    max-width: 400px;
+    box-shadow: 0 32px 80px rgba(15,23,42,.18), 0 0 0 1px rgba(226,232,240,.5);
+    transform: scale(.9) translateY(20px);
+    opacity: 0;
+    transition: transform .34s var(--E) .02s, opacity .26s ease .02s;
+  }
+}
+.nxa-veil.open .nxa-panel {
+  transform: translateY(0);
+  opacity: 1;
+}
 
-.nxa-strip { height: 3.5px; width: 100%; }
-.nxa-strip.success { background: linear-gradient(90deg, var(--g700), var(--g400)); }
-.nxa-strip.error   { background: linear-gradient(90deg, #dc2626, #f87171); }
-.nxa-strip.warning { background: linear-gradient(90deg, var(--amber2), var(--amber)); }
-.nxa-strip.info    { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+/* Pull handle — mobile only */
+.nxa-handle {
+  width: 36px; height: 4px; border-radius: 99px;
+  background: var(--s200);
+  margin: 10px auto 0;
+}
+@media (min-width: 540px) { .nxa-handle { display: none; } }
 
-.nxa-body { padding: 28px 32px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+/* Hidden strip — kept for JS compatibility but invisible */
+.nxa-strip { display: none; }
 
+.nxa-body {
+  padding: 24px 28px 28px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+@media (min-width: 540px) {
+  .nxa-body { padding: 32px 36px 28px; }
+}
+
+/* Solid icon circle — premium feel */
 .nxa-badge {
-  width: 58px; height: 58px; border-radius: 50%;
+  width: 64px; height: 64px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 14px; position: relative;
+  margin-bottom: 18px;
+  /* no ::before pulse — cleaner */
 }
-.nxa-badge::before {
-  content: ''; position: absolute; inset: -6px; border-radius: 50%;
-  animation: badgePulse 2.2s ease-in-out infinite; opacity: .13;
-}
-@keyframes badgePulse {
-  0%,100% { transform: scale(.86); opacity: .11; }
-  50%     { transform: scale(1.07); opacity: .2; }
-}
-.nxa-badge.success { background: rgba(16,185,129,.11); }
-.nxa-badge.success::before { background: var(--g500); }
-.nxa-badge.success .nxa-ico { color: var(--g600); }
-.nxa-badge.error   { background: rgba(239,68,68,.09); }
-.nxa-badge.error::before   { background: var(--red); }
-.nxa-badge.error .nxa-ico  { color: var(--red); }
-.nxa-badge.warning { background: rgba(245,158,11,.09); }
-.nxa-badge.warning::before { background: var(--amber); }
-.nxa-badge.warning .nxa-ico { color: var(--amber2); }
-.nxa-badge.info    { background: rgba(37,99,235,.08); }
-.nxa-badge.info::before    { background: #2563eb; }
-.nxa-badge.info .nxa-ico   { color: #2563eb; }
-.nxa-ico { font-size: 24px; display: flex; align-items: center; justify-content: center; }
+.nxa-badge.success { background: linear-gradient(135deg, var(--g700), var(--g500)); }
+.nxa-badge.error   { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+.nxa-badge.warning { background: linear-gradient(135deg, var(--amber2), var(--amber)); }
+.nxa-badge.info    { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+/* Badge icon: white */
+.nxa-ico { font-size: 26px; color: #fff; display: flex; align-items: center; justify-content: center; }
 
-.nxa-title { font-family: var(--display); font-size: 17px; font-weight: 900; color: var(--s900); margin-bottom: 7px; }
-.nxa-msg   { font-size: 13px; color: var(--s600); font-weight: 600; line-height: 1.65; margin-bottom: 22px; }
-.nxa-actions { display: flex; gap: 8px; width: 100%; }
-.nxa-btn {
-  flex: 1; height: 42px; border-radius: 10px; border: none; cursor: pointer;
-  font-size: 13px; font-weight: 700; letter-spacing: .2px;
-  transition: transform .16s var(--E), box-shadow .16s, opacity .14s;
+/* Icon entrance */
+.nxa-veil.open .nxa-badge {
+  animation: badgeIn .4s var(--E) .15s both;
 }
-.nxa-btn:hover  { transform: translateY(-1px); }
-.nxa-btn:active { transform: translateY(0); opacity: .9; }
-.nxa-btn.primary   { background: linear-gradient(135deg, var(--g700), var(--g500)); color: #fff; box-shadow: 0 5px 16px rgba(16,185,129,.24); }
-.nxa-btn.primary:hover { box-shadow: 0 9px 22px rgba(16,185,129,.34); }
-.nxa-btn.secondary { background: var(--s100); color: var(--s700); }
+@keyframes badgeIn {
+  from { transform: scale(.5); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.nxa-title {
+  font-family: var(--display);
+  font-size: 18px; font-weight: 900;
+  color: var(--s900); margin-bottom: 8px;
+  line-height: 1.25;
+}
+.nxa-msg {
+  font-size: 13.5px; color: var(--s600);
+  font-weight: 500; line-height: 1.7;
+  margin-bottom: 26px;
+}
+
+/* Divider before buttons */
+.nxa-actions {
+  display: flex; flex-direction: column; gap: 9px; width: 100%;
+  border-top: 1px solid var(--s100);
+  padding-top: 20px;
+}
+.nxa-btn {
+  width: 100%; height: 50px; border-radius: 14px; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 700; letter-spacing: .2px;
+  transition: transform .18s var(--E), box-shadow .18s, filter .18s;
+}
+.nxa-btn:active { transform: scale(.98); }
+.nxa-btn.primary {
+  background: linear-gradient(135deg, var(--g700), var(--g500));
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(16,185,129,.28);
+}
+.nxa-btn.primary:hover { filter: brightness(1.06); box-shadow: 0 10px 24px rgba(16,185,129,.38); }
+.nxa-btn.secondary {
+  background: var(--s100); color: var(--s600);
+  font-weight: 600;
+}
 .nxa-btn.secondary:hover { background: var(--s200); }
 
-.nxa-timer { width: 100%; height: 2px; background: rgba(16,185,129,.09); border-radius: 99px; overflow: hidden; margin-top: 14px; display: none; }
+/* Timer bar */
+.nxa-timer {
+  width: 100%; height: 2.5px;
+  background: var(--s100); border-radius: 99px;
+  overflow: hidden; margin-top: 18px; display: none;
+}
 .nxa-timer.show { display: block; }
-.nxa-timer-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--g400), var(--g600)); width: 100%; transform-origin: left; }
+.nxa-timer-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--g400), var(--g600));
+  width: 100%; transform-origin: left;
+}
 @keyframes timerShrink { to { transform: scaleX(0); } }
 
 /* ════════ RESPONSIVE ════════ */
@@ -555,9 +611,7 @@ button, input, select, textarea { font-family: inherit; }
   .deco-leaves { width: min(220px, 48vw); }
   .deco-dots   { opacity: .10; }
 
-  /* NxAlert full-width on mobile */
-  .nxa-panel  { max-width: 94vw; }
-  .nxa-body   { padding: 24px 20px 20px; }
+  /* NxAlert: handled via its own media queries above */
 }
 
 /* ── Small phones ── */
@@ -711,6 +765,7 @@ button, input, select, textarea { font-family: inherit; }
 {{-- ════════ NEXUS ALERT ════════ --}}
 <div class="nxa-veil" id="nxaVeil" role="dialog" aria-modal="true" aria-live="assertive">
   <div class="nxa-panel" role="document">
+    <div class="nxa-handle"></div>
     <div class="nxa-strip" id="nxaStrip"></div>
     <div class="nxa-body">
       <div class="nxa-badge" id="nxaBadge">
@@ -757,16 +812,18 @@ window.NxAlert=(function(){
     title.textContent=o.title||'';
     msg.innerHTML   =o.message||'';
     acts.innerHTML  ='';
+    /* Primary button first (top) */
+    var b=document.createElement('button');
+    b.className='nxa-btn primary';b.textContent=o.confirmText||'Tutup';
+    b.onclick=function(){close();if(o.onConfirm)o.onConfirm();};
+    acts.appendChild(b);
+    /* Secondary button below */
     if(o.cancelText){
       var c=document.createElement('button');
       c.className='nxa-btn secondary';c.textContent=o.cancelText;
       c.onclick=function(){close();if(o.onCancel)o.onCancel();};
       acts.appendChild(c);
     }
-    var b=document.createElement('button');
-    b.className='nxa-btn primary';b.textContent=o.confirmText||'Tutup';
-    b.onclick=function(){close();if(o.onConfirm)o.onConfirm();};
-    acts.appendChild(b);
     if(o.timer){
       timer.classList.add('show');
       fill.style.animation='none';fill.offsetHeight;

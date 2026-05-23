@@ -1,220 +1,500 @@
 @extends('layouts.kader')
-@section('title', 'Generator Laporan PDF')
-@section('page-name', 'Pusat Arsip Digital')
+
+@section('title', 'Laporan Kader')
+@section('page-name', 'Laporan Kader')
+
+@php
+    $reportCards = [
+        [
+            'type' => 'balita',
+            'title' => 'Laporan Balita',
+            'desc' => 'Pemeriksaan Balita, status gizi, dan imunisasi terakhir.',
+            'icon' => 'fa-child-reaching',
+            'tone' => 'sky',
+            'count' => $stats['balita'] ?? 0,
+            'check' => $stats['pemeriksaan_balita_bulan_ini'] ?? 0,
+        ],
+        [
+            'type' => 'remaja',
+            'title' => 'Laporan Remaja',
+            'desc' => 'Pemeriksaan Remaja, BB, TB, IMT, TD, dan GDS bila tersedia.',
+            'icon' => 'fa-user-graduate',
+            'tone' => 'emerald',
+            'count' => $stats['remaja'] ?? 0,
+            'check' => $stats['pemeriksaan_remaja_bulan_ini'] ?? 0,
+        ],
+        [
+            'type' => 'lansia',
+            'title' => 'Laporan Lansia',
+            'desc' => 'Pemeriksaan Lansia, kemandirian, tensi, gula, kolesterol, dan asam urat.',
+            'icon' => 'fa-person-cane',
+            'tone' => 'amber',
+            'count' => $stats['lansia'] ?? 0,
+            'check' => $stats['pemeriksaan_lansia_bulan_ini'] ?? 0,
+        ],
+    ];
+
+    $toneClass = function ($tone) {
+        return match($tone) {
+            'sky' => 'bg-sky-50 text-sky-700 border-sky-100',
+            'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+            default => 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        };
+    };
+@endphp
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
-    /* NEXUS ANIMATION SYSTEM */
-    .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .stagger-1 { animation-delay: 0.1s; } .stagger-2 { animation-delay: 0.15s; } .stagger-3 { animation-delay: 0.2s; }
-    .stagger-4 { animation-delay: 0.25s; } .stagger-5 { animation-delay: 0.3s; }
-
-    /* CLEAN NEXUS CARDS */
-    .report-card { 
-        background: #ffffff; 
-        border: 1px solid #f1f5f9; 
-        border-radius: 28px;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 15px -5px rgba(15, 23, 42, 0.03);
-    }
-    .report-card:hover { 
-        transform: translateY(-6px); 
-        box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.12); 
-        border-color: #e2e8f0; z-index: 10;
-    }
-    
-    /* CLEAN CAPSULE SELECTOR */
-    .select-capsule { 
-        appearance: none; width: 100%; cursor: pointer;
-        background-color: #f8fafc; border: 1px solid #e2e8f0; color: #334155;
-        font-size: 0.8rem; font-weight: 800; border-radius: 9999px; padding: 0.8rem 2.5rem 0.8rem 1.25rem;
-        transition: all 0.3s ease; 
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); 
-        background-repeat: no-repeat; background-position: right 1rem center; background-size: 1rem; 
-    }
-    .select-capsule:focus { background-color: #ffffff; border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); outline: none; }
-    
-    /* SOFT BUTTON GENERATE */
-    .btn-generate { 
-        width: 100%; border-radius: 9999px; padding: 1rem; font-weight: 800; font-size: 0.75rem; 
-        text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.3s ease; 
-        display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent;
+    .laporan-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
     }
 
-    /* ==========================================================
-       SWEETALERT NEXUS OVERRIDE (ANTI GAGAL)
-       ========================================================== */
-    .swal2-container.nexus-backdrop { 
-        backdrop-filter: blur(8px) !important; 
-        background: rgba(15, 23, 42, 0.5) !important; 
+    .laporan-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
     }
-    .swal2-popup.nexus-popup {
-        border-radius: 36px !important; /* Memaksa sudut bulat penuh */
-        padding: 2.5rem 2rem !important;
-        background: rgba(255, 255, 255, 0.98) !important;
-        border: 1px solid rgba(226, 232, 240, 0.8) !important;
-        box-shadow: 0 25px 60px -15px rgba(0,0,0,0.15) !important;
-        width: 28em !important;
+
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .input-premium {
+        border: 1px solid rgba(226,232,240,.9);
+        background: rgba(255,255,255,.72);
+        outline: none;
+        transition: all .3s ease-in-out;
+    }
+
+    .input-premium:focus {
+        border-color: rgba(16,185,129,.42);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+        background: rgba(255,255,255,.86);
+    }
+
+    .report-card {
+        border: 1px solid rgba(226,232,240,.78);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .report-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 18px 34px rgba(15,23,42,.055);
+    }
+
+    .report-card.active {
+        border-color: rgba(16,185,129,.42);
+        background: rgba(236,253,245,.86);
+        box-shadow: 0 14px 32px rgba(5,150,105,.08);
+    }
+
+    .preview-frame-shell {
+        border: 1px solid rgba(226,232,240,.86);
+        background: rgba(248,250,252,.72);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+    }
+
+    .pdf-frame {
+        width: 100%;
+        height: 820px;
+        border: 0;
+        background: #f8fafc;
+    }
+
+    .preview-empty {
+        min-height: 300px;
+        border: 1px dashed rgba(148,163,184,.55);
+        background:
+            radial-gradient(circle at 20% 20%, rgba(16,185,129,.08), transparent 30%),
+            radial-gradient(circle at 80% 10%, rgba(245,158,11,.08), transparent 28%),
+            rgba(248,250,252,.72);
+    }
+
+    .fade-in {
+        animation: fadeInUp .35s ease-in-out both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .pdf-frame {
+            height: 640px;
+        }
     }
 </style>
 @endpush
 
 @section('content')
-<div class="max-w-[1300px] mx-auto fade-in-up pb-16 relative z-10">
+<div class="laporan-page space-y-5">
 
-    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-indigo-50 to-blue-50/30 rounded-full blur-3xl pointer-events-none z-0"></div>
-
-    {{-- HEADER BANNER --}}
-    <div class="bg-white/80 backdrop-blur-xl rounded-[36px] border border-white p-8 md:p-12 mb-10 relative overflow-hidden shadow-[0_15px_40px_-15px_rgba(0,0,0,0.05)] flex flex-col lg:flex-row items-center justify-between gap-8 z-10">
-        <div class="absolute -left-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div class="absolute right-10 -bottom-10 w-40 h-40 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
-        
-        <div class="relative z-10 flex flex-col sm:flex-row items-center gap-6 w-full">
-            <div class="w-20 h-20 rounded-[24px] bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-4xl shrink-0 shadow-sm transform -rotate-3 hover:rotate-0 transition-all duration-300">
-                <i class="fas fa-file-pdf"></i>
-            </div>
-            <div class="flex-1 text-center sm:text-left">
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-[0.15em] rounded-full mb-3 shadow-sm">
-                    <i class="fas fa-check-circle"></i> Mesin Cetak Standar Kemenkes
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-file-lines"></i>
+                    Laporan Kader
                 </div>
-                <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight font-poppins mb-2">Pusat Cetak Laporan</h1>
-                <p class="text-slate-500 font-medium text-[13.5px] max-w-2xl leading-relaxed">
-                    Arsip digital terintegrasi. Pilih instrumen laporan dan tentukan periode waktu, sistem akan menyusun data rekam medis menjadi dokumen PDF resmi secara otomatis.
+
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Laporan Pemeriksaan Posyandu
+                </h1>
+
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Buat laporan pemeriksaan berdasarkan sasaran utama: Balita, Remaja, dan Lansia. Laporan ditampilkan dalam format PDF agar siap dicek, dicetak, atau diunduh.
+                </p>
+            </div>
+
+            <div class="rounded-[24px] border border-white/70 bg-white/50 p-4 backdrop-blur-md">
+                <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Tanggal Hari Ini</p>
+                <p class="mt-1 text-sm font-black text-slate-900">
+                    {{ now('Asia/Jakarta')->translatedFormat('d F Y') }}
                 </p>
             </div>
         </div>
-    </div>
+    </section>
 
-    @php
-        $reports = [
-            ['type' => 'balita', 'title' => 'Laporan Balita', 'desc' => 'Tumbuh Kembang & Status Gizi', 'icon' => 'fa-baby', 'base' => 'sky'],
-            ['type' => 'remaja', 'title' => 'Laporan Remaja', 'desc' => 'Skrining Kesehatan PTM', 'icon' => 'fa-user-graduate', 'base' => 'indigo'],
-            ['type' => 'lansia', 'title' => 'Laporan Lansia', 'desc' => 'Pemeriksaan Tensi & Lab', 'icon' => 'fa-wheelchair', 'base' => 'emerald'],
-            ['type' => 'imunisasi', 'title' => 'Laporan Imunisasi', 'desc' => 'Rekapitulasi Vaksin Warga', 'icon' => 'fa-shield-virus', 'base' => 'violet'],
-        ];
-        $currentMonth = date('m');
-        $currentYear = date('Y');
-    @endphp
+    {{-- STATS --}}
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        @foreach($reportCards as $card)
+            <div class="glass-panel rounded-[24px] p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">
+                            {{ str_replace('Laporan ', '', $card['title']) }}
+                        </p>
 
-    {{-- GRID KARTU LAPORAN --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10 justify-center">
-        @foreach($reports as $index => $r)
-        @php $staggerClass = 'stagger-' . (($index % 5) + 1); @endphp
-        
-        <div class="report-card p-8 flex flex-col group {{ $staggerClass }}">
-            <div class="flex items-center gap-5 mb-8">
-                <div class="w-16 h-16 rounded-[20px] bg-{{ $r['base'] }}-50 text-{{ $r['base'] }}-500 flex items-center justify-center text-3xl border border-{{ $r['base'] }}-100 shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                    <i class="fas {{ $r['icon'] }}"></i>
-                </div>
-                <div>
-                    <h3 class="font-black text-slate-800 text-[18px] font-poppins leading-tight">{{ $r['title'] }}</h3>
-                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{{ $r['desc'] }}</p>
+                        <h2 class="mt-2 text-3xl font-black text-slate-900">
+                            {{ $card['count'] }}
+                        </h2>
+
+                        <p class="mt-1 text-xs font-bold text-slate-400">
+                            {{ $card['check'] }} pemeriksaan bulan ini
+                        </p>
+                    </div>
+
+                    <div class="grid h-12 w-12 place-items-center rounded-2xl border {{ $toneClass($card['tone']) }}">
+                        <i class="fa-solid {{ $card['icon'] }}"></i>
+                    </div>
                 </div>
             </div>
+        @endforeach
+    </section>
 
-            <form action="{{ route('kader.laporan.generate') }}" method="GET" class="mt-auto flex flex-col gap-5">
-                <input type="hidden" name="type" value="{{ $r['type'] }}">
-                
-                <div class="flex items-center gap-3">
-                    <div class="w-3/5 relative">
-                        <select name="bulan" class="select-capsule w-full">
-                            @foreach(range(1, 12) as $m)
-                                <option value="{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}" {{ $currentMonth == $m ? 'selected' : '' }}>
-                                    {{ \Carbon\Carbon::create()->month((int)$m)->locale('id')->translatedFormat('F') }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="w-2/5 relative">
-                        <select name="tahun" class="select-capsule w-full pl-4 pr-8">
-                            @foreach(range($currentYear-2, $currentYear) as $y)
-                                <option value="{{ $y }}" {{ $currentYear == $y ? 'selected' : '' }}>{{ $y }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+    {{-- FORM --}}
+    <form method="GET" action="{{ route('kader.laporan.generate') }}" id="laporanForm" class="space-y-5">
+        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+            <div class="mb-5">
+                <h2 class="text-lg font-black text-slate-900">Pilih Jenis Laporan</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Laporan dibagi menjadi 3 sasaran utama agar formatnya jelas dan tidak berlebihan.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                @foreach($reportCards as $card)
+                    <label class="report-card cursor-pointer rounded-[24px] p-4" data-report-card="{{ $card['type'] }}">
+                        <input
+                            type="radio"
+                            name="jenis_laporan"
+                            value="{{ $card['type'] }}"
+                            class="sr-only report-radio"
+                            {{ $loop->first ? 'checked' : '' }}
+                        >
+
+                        <div class="flex items-start gap-3">
+                            <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border {{ $toneClass($card['tone']) }}">
+                                <i class="fa-solid {{ $card['icon'] }}"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-black text-slate-900">
+                                    {{ $card['title'] }}
+                                </h3>
+
+                                <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
+                                    {{ $card['desc'] }}
+                                </p>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <span class="rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-slate-500">
+                                        {{ $card['count'] }} Sasaran
+                                    </span>
+
+                                    <span class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-emerald-700">
+                                        {{ $card['check'] }} Pemeriksaan
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                @endforeach
+            </div>
+        </section>
+
+        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+            <div class="mb-5">
+                <h2 class="text-lg font-black text-slate-900">Filter Periode Pemeriksaan</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Periode digunakan untuk menampilkan data pemeriksaan yang sudah berjalan pada rentang tanggal tertentu.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto]">
+                <div>
+                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                        Tanggal Awal
+                    </label>
+                    <input
+                        type="date"
+                        name="tanggal_awal"
+                        id="tanggal_awal"
+                        value="{{ now('Asia/Jakarta')->startOfMonth()->toDateString() }}"
+                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700"
+                    >
                 </div>
 
-                <button type="submit" onclick="tampilkanLoading('{{ $r['title'] }}', '{{ $r['base'] }}')" class="btn-generate bg-slate-50 text-slate-600 group-hover:bg-{{ $r['base'] }}-500 group-hover:text-white group-hover:shadow-[0_10px_20px_rgba(0,0,0,0.15)] mt-2">
-                    <i class="fas fa-file-pdf"></i> Unduh PDF Dokumen
-                </button>
-            </form>
+                <div>
+                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                        Tanggal Akhir
+                    </label>
+                    <input
+                        type="date"
+                        name="tanggal_akhir"
+                        id="tanggal_akhir"
+                        value="{{ now('Asia/Jakarta')->toDateString() }}"
+                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700"
+                    >
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit"
+                            id="previewSubmitBtn"
+                            class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700 lg:w-auto">
+                        <i class="fa-solid fa-eye"></i>
+                        Preview Laporan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-[26px] border border-amber-100 bg-amber-50/70 p-4">
+            <div class="flex items-start gap-3">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-amber-700">
+                    <i class="fa-solid fa-circle-info"></i>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black text-amber-800">Catatan Format</h3>
+                    <p class="mt-1 text-xs font-bold leading-5 text-amber-700">
+                        Laporan ditampilkan sebagai preview PDF terlebih dahulu agar isi dan periode dapat dicek sebelum diunduh. Absensi tidak dibuat sebagai laporan terpisah. Imunisasi masuk ke laporan Balita.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </form>
+
+    {{-- PREVIEW PDF --}}
+    <section id="previewSection" class="glass-panel hidden rounded-[30px] p-4 sm:p-5">
+        <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+                <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    Preview PDF
+                </div>
+
+                <h2 class="text-lg font-black text-slate-900">
+                    Preview Laporan
+                </h2>
+
+                <p id="previewInfoText" class="mt-1 text-xs font-bold text-slate-400">
+                    Periksa isi laporan terlebih dahulu sebelum mengunduh.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
+                <a href="#"
+                   id="openPdfBtn"
+                   target="_blank"
+                   rel="noopener"
+                   class="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-100 bg-sky-50/80 px-5 py-3 text-sm font-black text-sky-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-sky-100/80">
+                    <i class="fa-solid fa-up-right-from-square"></i>
+                    Buka Tab Baru
+                </a>
+
+                <a href="#"
+                   id="downloadPdfBtn"
+                   target="_blank"
+                   rel="noopener"
+                   class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="fa-solid fa-download"></i>
+                    Unduh PDF
+                </a>
+            </div>
         </div>
-        @endforeach
-    </div>
+
+        <div id="previewLoading" class="preview-empty grid place-items-center rounded-[24px] p-8 text-center">
+            <div>
+                <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-emerald-50 text-emerald-700">
+                    <i class="fa-solid fa-file-pdf text-xl"></i>
+                </div>
+
+                <h3 class="text-base font-black text-slate-900">
+                    Preview laporan belum dibuat
+                </h3>
+
+                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
+                    Pilih jenis laporan dan periode, lalu klik Preview Laporan. PDF akan muncul di area ini.
+                </p>
+            </div>
+        </div>
+
+        <div id="previewFrameWrap" class="preview-frame-shell hidden overflow-hidden rounded-[24px]">
+            <iframe
+                id="pdfPreviewFrame"
+                src=""
+                class="pdf-frame"
+                title="Preview PDF Laporan">
+            </iframe>
+        </div>
+    </section>
+
 </div>
+@endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // 1. Pesan Data Kosong (Sangat Membulat)
-    @if(session('error'))
-        Swal.fire({
-            html: `
-                <div class="flex flex-col items-center justify-center text-center p-4">
-                    <div class="w-20 h-20 bg-rose-50 rounded-[24px] flex items-center justify-center mb-6 border border-rose-100 shadow-sm">
-                        <i class="fas fa-folder-open text-rose-500 text-3xl"></i>
-                    </div>
-                    <h2 class="text-2xl font-black text-slate-800 font-poppins tracking-tight mb-3">Data Kosong</h2>
-                    <p class="text-[13px] text-slate-500 font-medium leading-relaxed max-w-xs mx-auto">
-                        {{ session("error") }}
-                    </p>
-                </div>
-            `,
-            showConfirmButton: true,
-            confirmButtonText: 'Kembali',
-            buttonsStyling: false,
-            customClass: { 
-                container: 'nexus-backdrop',
-                popup: 'nexus-popup',
-                confirmButton: 'bg-slate-800 hover:bg-slate-900 text-white font-bold text-[12px] uppercase tracking-widest px-8 py-3.5 rounded-full transition-all mt-4 w-full shadow-md'
-            }
-        });
-    @endif
+document.addEventListener('DOMContentLoaded', function () {
+    var cards = document.querySelectorAll('[data-report-card]');
+    var radios = document.querySelectorAll('.report-radio');
 
-    // 2. Loading State (MUTLAK HALUS, TANPA SPINNER DEFAULT)
-    function tampilkanLoading(judul, warna) {
-        
-        // Peta Warna Tailwind Khusus
-        const colorMap = {
-            'sky': 'border-sky-500 text-sky-500',
-            'pink': 'border-pink-500 text-pink-500',
-            'indigo': 'border-indigo-500 text-indigo-500',
-            'emerald': 'border-emerald-500 text-emerald-500',
-            'violet': 'border-violet-500 text-violet-500',
-            'amber': 'border-amber-500 text-amber-500'
-        };
-        const tc = colorMap[warna] || 'border-indigo-500 text-indigo-500';
-        const borderColor = tc.split(' ')[0];
-        const textColor = tc.split(' ')[1];
+    var form = document.getElementById('laporanForm');
+    var previewSection = document.getElementById('previewSection');
+    var iframe = document.getElementById('pdfPreviewFrame');
+    var downloadBtn = document.getElementById('downloadPdfBtn');
+    var openPdfBtn = document.getElementById('openPdfBtn');
+    var previewLoading = document.getElementById('previewLoading');
+    var previewFrameWrap = document.getElementById('previewFrameWrap');
+    var previewInfoText = document.getElementById('previewInfoText');
+    var submitBtn = document.getElementById('previewSubmitBtn');
 
-        Swal.fire({
-            html: `
-                <div class="flex flex-col items-center justify-center text-center p-4">
-                    
-                    <div class="w-24 h-24 mb-8 relative flex items-center justify-center">
-                        <div class="absolute inset-0 border-[4px] border-slate-100 rounded-full"></div>
-                        <div class="absolute inset-0 border-[4px] ${borderColor} border-t-transparent rounded-full animate-spin"></div>
-                        <i class="fas fa-file-pdf ${textColor} text-3xl animate-pulse"></i>
-                    </div>
+    function getSelectedReportLabel() {
+        var selected = document.querySelector('.report-radio:checked');
 
-                    <h2 class="text-2xl font-black text-slate-800 font-poppins tracking-tight mb-3">Menyusun ${judul}</h2>
-                    <p class="text-[13px] text-slate-500 font-medium leading-relaxed max-w-[280px] mx-auto">
-                        Sistem sedang memproses data rekam medis ke dalam format PDF Kemenkes...
-                    </p>
-                </div>
-            `,
-            allowOutsideClick: false, 
-            showConfirmButton: false,
-            timer: 3500,
-            // HAPUS didOpen: Swal.showLoading() AGAR SPINNER DEFAULT MATI
-            customClass: { 
-                container: 'nexus-backdrop',
-                popup: 'nexus-popup'
-            }
+        if (!selected) {
+            return 'Laporan';
+        }
+
+        var selectedCard = document.querySelector('[data-report-card="' + selected.value + '"]');
+        var title = selectedCard ? selectedCard.querySelector('h3') : null;
+
+        return title ? title.textContent.trim() : 'Laporan';
+    }
+
+    function updateCards() {
+        var selected = document.querySelector('.report-radio:checked');
+        var selectedValue = selected ? selected.value : null;
+
+        cards.forEach(function (card) {
+            card.classList.toggle('active', card.dataset.reportCard === selectedValue);
         });
     }
+
+    function buildUrl(mode) {
+        var formData = new FormData(form);
+        var params = new URLSearchParams(formData);
+
+        params.set('mode', mode);
+
+        return form.action + '?' + params.toString();
+    }
+
+    radios.forEach(function (radio) {
+        radio.addEventListener('change', updateCards);
+    });
+
+    if (form && previewSection && iframe && downloadBtn && openPdfBtn) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var tanggalAwal = document.getElementById('tanggal_awal');
+            var tanggalAkhir = document.getElementById('tanggal_akhir');
+
+            if (tanggalAwal && tanggalAkhir && tanggalAwal.value && tanggalAkhir.value && tanggalAkhir.value < tanggalAwal.value) {
+                alert('Tanggal akhir tidak boleh lebih awal dari tanggal awal.');
+                return;
+            }
+
+            var previewUrl = buildUrl('preview');
+            var downloadUrl = buildUrl('download');
+            var reportLabel = getSelectedReportLabel();
+
+            iframe.src = previewUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+            downloadBtn.href = downloadUrl;
+            openPdfBtn.href = previewUrl;
+
+            previewInfoText.textContent = reportLabel + ' sedang ditampilkan dalam format PDF. Periksa isi laporan sebelum mengunduh.';
+
+            previewSection.classList.remove('hidden');
+            previewSection.classList.add('fade-in');
+
+            previewLoading.classList.add('hidden');
+            previewFrameWrap.classList.remove('hidden');
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Membuat Preview...';
+
+            setTimeout(function () {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                submitBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview Laporan';
+            }, 1200);
+
+            setTimeout(function () {
+                previewSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 150);
+        });
+    }
+
+    updateCards();
+});
 </script>
 @endpush
-@endsection

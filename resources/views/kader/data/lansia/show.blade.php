@@ -1,363 +1,725 @@
 @extends('layouts.kader')
 
-@section('title', 'Detail Lansia')
-@section('page-name', 'Buku Medis Lansia')
+@section('title', 'Detail Data Lansia')
+@section('page-name', 'Detail Data Lansia')
+
+@php
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    Carbon::setLocale('id');
+
+    $routeHas = fn ($name) => Route::has($name);
+
+    $tanggalLahir = $lansia->tanggal_lahir ? Carbon::parse($lansia->tanggal_lahir) : null;
+
+    $usiaText = '-';
+    if ($tanggalLahir) {
+        $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
+        $usiaText = $diff->y . ' tahun ' . $diff->m . ' bulan';
+    }
+
+    $genderLabel = fn ($value) => match($value) {
+        'L' => 'Laki-laki',
+        'P' => 'Perempuan',
+        default => '-',
+    };
+
+    $genderClass = fn ($value) => match($value) {
+        'L' => 'border-sky-100 bg-sky-50/80 text-sky-700',
+        'P' => 'border-pink-100 bg-pink-50/80 text-pink-700',
+        default => 'border-slate-100 bg-slate-50/80 text-slate-600',
+    };
+
+    $kemandirianLabel = fn ($value) => match($value) {
+        'mandiri' => 'Mandiri',
+        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'Membutuhkan Bantuan Sebagian',
+        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'Ketergantungan Penuh',
+        default => 'Belum Diisi',
+    };
+
+    $kemandirianShortLabel = fn ($value) => match($value) {
+        'mandiri' => 'Mandiri',
+        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'Bantuan Sebagian',
+        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'Ketergantungan Penuh',
+        default => 'Belum Diisi',
+    };
+
+    $kemandirianClass = fn ($value) => match($value) {
+        'mandiri' => 'border-emerald-100 bg-emerald-50/80 text-emerald-700',
+        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'border-amber-100 bg-amber-50/80 text-amber-700',
+        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'border-rose-100 bg-rose-50/80 text-rose-700',
+        default => 'border-slate-100 bg-slate-50/80 text-slate-600',
+    };
+
+    $imtClass = function ($value) {
+        if ($value === null || $value === '') {
+            return 'border-slate-100 bg-slate-50/80 text-slate-600';
+        }
+
+        if ((float) $value < 18.5) {
+            return 'border-amber-100 bg-amber-50/80 text-amber-700';
+        }
+
+        if ((float) $value < 25) {
+            return 'border-emerald-100 bg-emerald-50/80 text-emerald-700';
+        }
+
+        return 'border-rose-100 bg-rose-50/80 text-rose-700';
+    };
+
+    $imtLabel = function ($value) {
+        if ($value === null || $value === '') {
+            return 'Belum dihitung';
+        }
+
+        $value = (float) $value;
+
+        if ($value < 18.5) {
+            return 'Kurus';
+        }
+
+        if ($value < 25) {
+            return 'Normal';
+        }
+
+        if ($value < 30) {
+            return 'Berlebih';
+        }
+
+        return 'Obesitas';
+    };
+
+    $formatNumber = function ($value, $suffix = '') {
+        if ($value === null || $value === '') {
+            return '-';
+        }
+
+        $number = number_format((float) $value, 1, ',', '.');
+        $number = rtrim(rtrim($number, '0'), ',');
+
+        return $number . $suffix;
+    };
+
+    $akunTerhubung = $lansia->user ?? null;
+    $pemeriksaanTerakhir = $lansia->pemeriksaan_terakhir ?? null;
+    $kunjungans = $lansia->kunjungans ?? collect();
+
+    $totalLayanan = $kunjungans->count();
+
+    $totalPemeriksaan = $kunjungans->filter(function ($kunjungan) {
+        return filled($kunjungan->pemeriksaan ?? null);
+    })->count();
+
+    $updatedLabel = $lansia->updated_at
+        ? Carbon::parse($lansia->updated_at)->translatedFormat('d F Y')
+        : '-';
+
+    $penyakitBawaan = $lansia->penyakit_bawaan ?: 'Tidak ada riwayat penyakit bawaan';
+    $keluhan = $lansia->keluhan ?: 'Tidak ada keluhan';
+@endphp
 
 @push('styles')
 <style>
-    /* ANIMASI MASUK */
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .animate-slide-up-delay-1 { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* CUSTOM SCROLLBAR SAMARAN */
-    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.5); }
-    
-    /* TABEL PRESISI DENGAN STICKY HEADER */
-    .crm-table th { 
-        background: #f0fdf4; 
-        color: #059669; 
-        font-size: 0.65rem; 
-        font-weight: 900; 
-        text-transform: uppercase; 
-        letter-spacing: 0.05em; 
-        padding: 1.25rem 1.5rem; 
-        border-bottom: 1px solid #dcfce7; 
+    .lansia-show-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
     }
-    .crm-table th:first-child { border-top-left-radius: 24px; }
-    .crm-table th:last-child { border-top-right-radius: 24px; }
-    .crm-table td { padding: 1.25rem 1.5rem; vertical-align: middle; border-bottom: 1px solid #f8fafc; transition: all 0.2s ease; }
 
-    /* IMT Bar Visualizer */
-    .imt-bar-track { height: 8px; border-radius: 9999px; background: linear-gradient(to right, #f59e0b 0%, #10b981 30%, #f59e0b 65%, #f43f5e 100%); position: relative; }
-    .imt-bar-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: white; border: 4px solid #1e293b; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: left 1s cubic-bezier(0.4, 0, 0.2, 1); }
+    .lansia-show-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
+    }
+
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
+
+    .info-card {
+        border: 1px solid rgba(226,232,240,.78);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .info-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 18px 34px rgba(15,23,42,.055);
+    }
+
+    .metric-card {
+        border: 1px solid rgba(226,232,240,.78);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        transition: all .3s ease-in-out;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.24);
+        box-shadow: 0 18px 34px rgba(15,23,42,.055);
+    }
+
+    .mini-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .35rem;
+        border-width: 1px;
+        border-radius: 999px;
+        padding: .34rem .72rem;
+        font-size: 10px;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+
+    .scroll-soft {
+        max-height: 560px;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .scroll-soft::-webkit-scrollbar {
+        width: 7px;
+        height: 7px;
+    }
+
+    .scroll-soft::-webkit-scrollbar-track {
+        background: rgba(241,245,249,.8);
+        border-radius: 999px;
+    }
+
+    .scroll-soft::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #10b981, #f59e0b);
+        border-radius: 999px;
+    }
 </style>
 @endpush
 
 @section('content')
-{{-- PRELOADER --}}
-<div id="smoothLoader" class="fixed inset-0 bg-white/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center transition-all duration-300 opacity-100 pointer-events-auto">
-    <div class="relative w-24 h-24 flex items-center justify-center mb-4">
-        <div class="absolute inset-0 border-4 border-emerald-100 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-emerald-600 rounded-full border-t-transparent animate-spin"></div>
-        <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-folder-open text-emerald-600 text-3xl animate-pulse"></i></div>
-    </div>
-    <p class="text-emerald-900 font-black font-poppins tracking-widest text-[12px] animate-pulse uppercase">MEMBUKA REKAM MEDIS...</p>
-</div>
+<div class="lansia-show-page space-y-5">
 
-<div class="max-w-7xl mx-auto relative pb-12 z-10">
-    
-    {{-- AURA BACKGROUND KONSISTEN --}}
-    <div class="absolute top-0 right-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
-    <div class="absolute bottom-0 left-0 w-80 h-80 bg-teal-400/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
-
-    {{-- HEADER PAGE --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 relative z-10 animate-slide-up">
-        <div class="flex items-center gap-4">
-            <a href="{{ route('kader.data.lansia.index') }}" onclick="window.showLoader()" class="w-14 h-14 bg-white border border-slate-200 text-slate-500 rounded-[16px] flex items-center justify-center hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-600 transition-all shadow-sm group">
-                <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform text-lg"></i>
-            </a>
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-                <div class="inline-flex items-center gap-1.5 text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-100"><i class="fas fa-book-medical"></i> Pemantauan Kesehatan Lansia</div>
-                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-poppins">Profil Peserta Lansia</h1>
-            </div>
-        </div>
-        <a href="{{ route('kader.data.lansia.edit', $lansia->id) }}" onclick="window.showLoader()" class="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-amber-500 text-white font-black text-[12px] rounded-full hover:bg-amber-600 shadow-[0_8px_20px_rgba(245,158,11,0.3)] transition-all hover:-translate-y-1 uppercase tracking-widest w-full md:w-auto">
-            <i class="fas fa-pen-nib"></i> Edit Master Data
-        </a>
-    </div>
-
-    {{-- GRID UTAMA PRESISI (12 KOLOM) --}}
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 relative z-10">
-        
-        {{-- ========================================== --}}
-        {{-- PANEL KIRI: PROFIL IDENTITAS (4 KOLOM)     --}}
-        {{-- ========================================== --}}
-        <div class="xl:col-span-4 animate-slide-up">
-            {{-- FIX: Tanpa class 'sticky' agar terscroll sejajar secara harmonis --}}
-            <div class="bg-white rounded-[32px] overflow-hidden shadow-[0_10px_40px_-10px_rgba(16,185,129,0.08)] border border-emerald-100/50 flex flex-col">
-                
-                {{-- Header Avatar --}}
-                <div class="bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-500 px-6 py-8 text-center relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-1/2 -translate-y-1/2"></div>
-                    <div class="absolute bottom-0 left-0 w-24 h-24 bg-black/20 rounded-full blur-2xl transform -translate-x-1/2 translate-y-1/2"></div>
-
-                    <div class="w-24 h-24 mx-auto bg-white rounded-[24px] shadow-2xl flex items-center justify-center text-emerald-500 text-4xl font-black relative z-10 border-4 border-white/20 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                        {{ strtoupper(substr($lansia->nama_lengkap, 0, 1)) }}
-                    </div>
-                    
-                    <h2 class="text-xl font-black text-white mt-4 relative z-10 font-poppins tracking-tight">{{ $lansia->nama_lengkap }}</h2>
-                    <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-black/20 text-emerald-50 text-[10px] font-black rounded-full mt-2 relative z-10 backdrop-blur-md border border-white/10 tracking-widest uppercase">
-                        <i class="fas fa-fingerprint text-emerald-300"></i> NIK: {{ $lansia->nik ?? 'TIDAK ADA' }}
-                    </div>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-person-cane"></i>
+                    Detail Lansia
                 </div>
 
-                {{-- Informasi Klinis & Pribadi --}}
-                <div class="p-8 bg-white flex-1 flex flex-col">
-                    
-                    @php
-                        $lahir = \Carbon\Carbon::parse($lansia->tanggal_lahir);
-                        $sekarang = \Carbon\Carbon::now();
-                        $umurCetak = $lahir->diff($sekarang)->y . ' Tahun';
-                    @endphp
-                    
-                    <div class="grid grid-cols-2 gap-4 text-center mb-6">
-                        <div class="p-4 bg-slate-50 rounded-[20px] border border-slate-100 shadow-sm">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Usia Saat Ini</p>
-                            <p class="text-sm font-black text-emerald-600 font-poppins">{{ $umurCetak }}</p>
-                        </div>
-                        <div class="p-4 bg-slate-50 rounded-[20px] border border-slate-100 shadow-sm">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Gender</p>
-                            <div class="flex items-center justify-center gap-2">
-                                @if($lansia->jenis_kelamin == 'L') 
-                                    <div class="w-6 h-6 rounded-full bg-sky-100 text-sky-500 flex items-center justify-center text-xs"><i class="fas fa-mars"></i></div>
-                                    <p class="text-xs font-black text-slate-800 uppercase tracking-widest">Pria</p>
-                                @else 
-                                    <div class="w-6 h-6 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center text-xs"><i class="fas fa-venus"></i></div>
-                                    <p class="text-xs font-black text-slate-800 uppercase tracking-widest">Wanita</p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Detail Data Lansia
+                </h1>
 
-                    {{-- IMT VISUALIZER --}}
-                    @if($lansia->imt)
-                        @php
-                            $imt = $lansia->imt;
-                            $pct = min(100, max(0, (($imt - 15) / 20) * 100)); // Rentang IMT 15 - 35
-                            $kat = $imt < 18.5 ? 'Kurus' : ($imt < 25 ? 'Normal' : ($imt < 27 ? 'Gemuk' : 'Obesitas'));
-                            $col = $imt < 18.5 ? 'text-amber-500' : ($imt < 25 ? 'text-emerald-500' : 'text-rose-500');
-                        @endphp
-                        <div class="bg-emerald-50/50 p-5 rounded-[24px] border border-emerald-100 shadow-sm mb-6 text-center">
-                            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Indeks Massa Tubuh (Awal)</p>
-                            <p class="text-3xl font-black {{ $col }} font-poppins">{{ $imt }} <span class="text-[9px] bg-white border border-slate-200 px-2 py-0.5 rounded shadow-sm text-slate-600 align-middle ml-2 uppercase">{{ $kat }}</span></p>
-                            <div class="mt-4 px-2">
-                                <div class="imt-bar-track">
-                                    <div class="imt-bar-thumb" style="left: {{ $pct }}%;"></div>
-                                </div>
-                                <div class="flex justify-between mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span>Kurus</span>
-                                    <span>Ideal</span>
-                                    <span>Gemuk</span>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-
-                    <div class="space-y-4 mb-6">
-                        <div class="flex items-center gap-4 p-5 rounded-[20px] bg-white border border-slate-100 shadow-sm">
-                            <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-500 flex items-center justify-center shrink-0"><i class="fas fa-wheelchair"></i></div>
-                            <div>
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Kemandirian Fisik</span>
-                                <span class="text-[12px] font-bold text-slate-800 uppercase">{{ $lansia->kemandirian ?? 'MANDIRI' }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center gap-4 p-5 rounded-[20px] bg-white border border-slate-100 shadow-sm">
-                            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-400 flex items-center justify-center shrink-0 shadow-sm"><i class="fas fa-notes-medical"></i></div>
-                            <div>
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Penyakit Bawaan</span>
-                                <span class="text-[12px] font-bold text-slate-800 leading-tight block">{{ $lansia->penyakit_bawaan ?? 'Sehat / Tidak ada' }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center gap-4 p-5 rounded-[20px] bg-sky-50 border border-sky-100 shadow-sm">
-                            <div class="w-10 h-10 rounded-xl bg-white text-sky-500 flex items-center justify-center shrink-0 shadow-sm"><i class="fas fa-phone-alt"></i></div>
-                            <div>
-                                <span class="text-[9px] font-black text-sky-400 uppercase tracking-widest block mb-0.5">Kontak Darurat</span>
-                                <span class="text-[12px] font-black text-sky-800 font-mono tracking-wide">{{ $lansia->telepon_keluarga ?? 'Tidak Tersedia' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-auto border-t border-slate-100 pt-6">
-                        @if($lansia->user_id)
-                            <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-[20px] flex items-center gap-4 shadow-sm">
-                                <div class="w-10 h-10 bg-white text-emerald-500 rounded-full flex items-center justify-center shadow-sm shrink-0"><i class="fas fa-check-circle"></i></div>
-                                <div>
-                                    <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Akun Warga Aktif</p>
-                                    <p class="text-[12px] font-bold text-emerald-800">Sinkronisasi Berhasil</p>
-                                </div>
-                            </div>
-                        @else
-                            <div class="p-5 bg-slate-50 border border-slate-100 rounded-[20px] text-center shadow-sm">
-                                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Akun Belum Terhubung</p>
-                                <form action="{{ route('kader.data.lansia.sync', $lansia->id) }}" method="POST" class="m-0">
-                                    @csrf
-                                    <button type="submit" onclick="return confirm('Sistem akan mencari akun Warga yang cocok dengan NIK ini. Lanjutkan?')" class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-slate-200 shadow-sm text-emerald-600 text-[10px] font-black rounded-xl hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all w-full uppercase tracking-widest">
-                                        <i class="fas fa-sync-alt mr-2"></i> Pindai NIK Lansia
-                                    </button>
-                                </form>
-                            </div>
-                        @endif
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-        {{-- ========================================== --}}
-        {{-- PANEL KANAN: REKAM MEDIS & LAYANAN (8 COL) --}}
-        {{-- ========================================== --}}
-        <div class="xl:col-span-8 flex flex-col gap-8 animate-slide-up-delay-1">
-            
-            {{-- WIDGET STATISTIK (SEJAJAR RATA ATAS) --}}
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div class="bg-white border border-slate-100 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.03)] p-6 rounded-[24px] flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-[16px] bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shrink-0"><i class="fas fa-clipboard-list"></i></div>
-                    <div>
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Kunjungan</p>
-                        <p class="text-lg font-black text-slate-800 font-poppins">{{ count($lansia->kunjungans) }} Kali</p>
-                    </div>
-                </div>
-                
-                <div class="bg-white border border-slate-100 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.03)] p-6 rounded-[24px] flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-[16px] bg-teal-50 text-teal-600 flex items-center justify-center text-xl shrink-0"><i class="fas fa-tint"></i></div>
-                    <div>
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Golongan Darah</p>
-                        <p class="text-xl font-black text-slate-800 font-poppins">{{ $lansia->golongan_darah ?? '-' }}</p>
-                    </div>
-                </div>
-                
-                <div class="bg-white border border-slate-100 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.03)] p-6 rounded-[24px] flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-[16px] bg-cyan-50 text-cyan-600 flex items-center justify-center text-xl shrink-0"><i class="fas fa-clock"></i></div>
-                    <div>
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Pembaruan Profil</p>
-                        <p class="text-[12px] font-black text-slate-800 font-poppins mt-0.5">{{ $lansia->updated_at->format('d M Y') }}</p>
-                    </div>
-                </div>
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Menampilkan identitas, tingkat kemandirian, pemeriksaan kesehatan dasar, riwayat penyakit, keluhan, dan riwayat layanan Lansia.
+                </p>
             </div>
 
-            {{-- TABEL RIWAYAT PEMERIKSAAN METABOLIK (DENGAN SCROLL INTERNAL) --}}
-            <div class="bg-white rounded-[32px] overflow-hidden border border-slate-100 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.03)] flex-1 flex flex-col">
-                <div class="p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50/50">
-                    <div class="flex items-center gap-4">
-                        <div class="w-14 h-14 rounded-[20px] bg-white text-emerald-600 flex items-center justify-center text-2xl shadow-sm border border-slate-200"><i class="fas fa-heartbeat"></i></div>
-                        <div>
-                            <h3 class="text-xl font-black text-slate-800 font-poppins">Riwayat Medis Metabolik</h3>
-                            <p class="text-[12px] font-medium text-slate-500 mt-1">Log tensi, gula darah, asam urat, & kolesterol.</p>
-                        </div>
-                    </div>
-                    <a href="{{ route('kader.pemeriksaan.create') }}?kategori=lansia&pasien_id={{ $lansia->id }}" onclick="window.showLoader()" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-600 text-white font-black text-[11px] rounded-full hover:bg-emerald-700 shadow-[0_4px_15px_rgba(16,185,129,0.3)] transition-all shrink-0 uppercase tracking-widest hover:-translate-y-1 w-full sm:w-auto">
-                        <i class="fas fa-plus"></i> Input Cek Medis
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if($routeHas('kader.data.lansia.index'))
+                    <a href="{{ route('kader.data.lansia.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Kembali
                     </a>
+                @endif
+
+                @if($routeHas('kader.data.lansia.edit'))
+                    <a href="{{ route('kader.data.lansia.edit', $lansia->id) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-pen"></i>
+                        Edit Data
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- PROFILE SUMMARY --}}
+    <section class="glass-panel rounded-[30px] p-5 sm:p-6">
+        <div class="grid gap-5 xl:grid-cols-[1.15fr_.85fr] xl:items-center">
+            <div class="flex items-start gap-4">
+                <div class="grid h-20 w-20 shrink-0 place-items-center rounded-[28px] bg-emerald-50/90 text-emerald-700 shadow-[0_14px_28px_rgba(5,150,105,.10)]">
+                    <span class="text-2xl font-black">
+                        {{ strtoupper(substr($lansia->nama_lengkap ?? 'L', 0, 1)) }}
+                    </span>
                 </div>
 
-                {{-- WADAH TABEL YANG DIBATASI TINGGINYA (Scroll Vertical) --}}
-                <div class="p-2 flex-1 bg-white">
-                    <div class="overflow-y-auto overflow-x-auto custom-scrollbar max-h-[450px] px-2 pb-2 rounded-2xl">
-                        <table class="w-full text-left whitespace-nowrap min-w-[850px] crm-table relative">
-                            {{-- Header tabel dibuat menempel (sticky) saat di-scroll --}}
-                            <thead class="sticky top-0 z-20 shadow-sm">
-                                <tr>
-                                    <th class="pl-6 w-40">Waktu Kunjungan</th>
-                                    <th>Fisik (BB/TB)</th>
-                                    <th>Cek Darah & Tensi</th>
-                                    <th class="text-right pr-6">Detail Berkas</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($lansia->kunjungans ?? [] as $kunjungan)
-                                <tr class="hover:bg-emerald-50/40 transition-colors group">
-                                    <td class="pl-6">
-                                        <div class="flex flex-col">
-                                            <span class="font-black text-slate-800 text-[13px] mb-1">{{ \Carbon\Carbon::parse($kunjungan->tanggal_kunjungan)->format('d M Y') }}</span>
-                                            <span class="text-[9px] font-bold text-slate-400 bg-white border border-slate-100 w-max px-2 py-0.5 rounded shadow-sm"><i class="far fa-clock"></i> {{ \Carbon\Carbon::parse($kunjungan->tanggal_kunjungan)->format('H:i') }} WIB</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if($kunjungan->pemeriksaan)
-                                            <div class="flex items-center gap-3">
-                                                <div class="flex flex-col bg-white border border-slate-100 rounded-xl px-3 py-1.5 shadow-sm text-center">
-                                                    <span class="text-[8px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Berat</span>
-                                                    <span class="text-[12px] font-black text-indigo-600">{{ $kunjungan->pemeriksaan->berat_badan ?? '-' }}<span class="text-[9px] text-slate-400">kg</span></span>
-                                                </div>
-                                                <div class="flex flex-col bg-white border border-slate-100 rounded-xl px-3 py-1.5 shadow-sm text-center">
-                                                    <span class="text-[8px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Tinggi</span>
-                                                    <span class="text-[12px] font-black text-emerald-600">{{ $kunjungan->pemeriksaan->tinggi_badan ?? '-' }}<span class="text-[9px] text-slate-400">cm</span></span>
-                                                </div>
-                                            </div>
-                                        @else
-                                            <span class="text-[10px] font-bold text-slate-400 italic">Tidak diukur</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($kunjungan->pemeriksaan)
-                                            <div class="flex flex-wrap gap-2 max-w-[280px]">
-                                                @if($kunjungan->pemeriksaan->tekanan_darah)
-                                                    <span class="text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm" title="Tekanan Darah (Tensi)"><i class="fas fa-heartbeat"></i> Tensi: {{ $kunjungan->pemeriksaan->tekanan_darah }}</span>
-                                                @endif
-                                                @if($kunjungan->pemeriksaan->gula_darah)
-                                                    <span class="text-[9px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm" title="Gula Darah"><i class="fas fa-cubes"></i> Gula: {{ $kunjungan->pemeriksaan->gula_darah }}</span>
-                                                @endif
-                                                @if($kunjungan->pemeriksaan->asam_urat)
-                                                    <span class="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm" title="Asam Urat"><i class="fas fa-bone"></i> A.Urat: {{ $kunjungan->pemeriksaan->asam_urat }}</span>
-                                                @endif
-                                                @if($kunjungan->pemeriksaan->kolesterol)
-                                                    <span class="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm" title="Kolesterol"><i class="fas fa-hamburger"></i> Kol: {{ $kunjungan->pemeriksaan->kolesterol }}</span>
-                                                @endif
-                                                
-                                                @if(!$kunjungan->pemeriksaan->tekanan_darah && !$kunjungan->pemeriksaan->gula_darah && !$kunjungan->pemeriksaan->asam_urat && !$kunjungan->pemeriksaan->kolesterol)
-                                                    <span class="text-[10px] text-slate-400 font-medium">-</span>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <span class="text-[10px] font-bold text-slate-400 italic">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-right pr-6">
-                                        <a href="{{ route('kader.kunjungan.show', $kunjungan->id) }}" onclick="window.showLoader()" class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 transition-all shadow-sm hover:shadow-md hover:scale-105">
-                                            <i class="fas fa-chevron-right text-[10px]"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="4" class="px-8 py-24 text-center border-none">
-                                        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mx-auto mb-4 text-3xl border border-slate-100 shadow-inner"><i class="fas fa-clipboard-list"></i></div>
-                                        <h4 class="font-black text-slate-800 text-lg font-poppins tracking-tight">Belum Ada Riwayat Cek Medis</h4>
-                                        <p class="text-[12px] font-medium text-slate-500 mt-1 max-w-sm mx-auto">Klik tombol 'Input Cek Medis' untuk menambahkan data cek darah dan ukuran fisik lansia.</p>
-                                    </td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                <div class="min-w-0">
+                    <div class="mb-3 flex flex-wrap items-center gap-2">
+                        <span class="mini-badge border-emerald-100 bg-emerald-50/80 text-emerald-700">
+                            <i class="fa-solid fa-person-cane"></i>
+                            Lansia
+                        </span>
+
+                        <span class="mini-badge {{ $genderClass($lansia->jenis_kelamin) }}">
+                            <i class="fa-solid {{ $lansia->jenis_kelamin === 'L' ? 'fa-mars' : 'fa-venus' }}"></i>
+                            {{ $genderLabel($lansia->jenis_kelamin) }}
+                        </span>
+
+                        <span class="mini-badge {{ $kemandirianClass($lansia->tingkat_kemandirian ?? null) }}">
+                            <i class="fa-solid fa-person-walking-with-cane"></i>
+                            {{ $kemandirianShortLabel($lansia->tingkat_kemandirian ?? null) }}
+                        </span>
                     </div>
+
+                    <h2 class="break-words text-2xl font-black tracking-[-.04em] text-slate-900">
+                        {{ $lansia->nama_lengkap }}
+                    </h2>
+
+                    <p class="mt-2 text-sm font-bold leading-6 text-slate-500">
+                        NIK {{ $lansia->nik ?? '-' }}
+                    </p>
                 </div>
             </div>
 
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl bg-emerald-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">Usia</p>
+                    <p class="mt-2 text-lg font-black text-slate-900">{{ $usiaText }}</p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">Berdasarkan tanggal lahir</p>
+                </div>
+
+                <div class="rounded-2xl bg-amber-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-amber-700">Akun Warga</p>
+                    <p class="mt-2 text-lg font-black text-slate-900">
+                        {{ $akunTerhubung ? 'Terhubung' : 'Belum' }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        {{ $akunTerhubung ? 'User tersedia' : 'Perlu sinkron' }}
+                    </p>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
+
+    {{-- STATUS AKUN --}}
+    <section class="rounded-[24px] border {{ $akunTerhubung ? 'border-emerald-100 bg-emerald-50/70 text-emerald-700' : 'border-amber-100 bg-amber-50/70 text-amber-700' }} p-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70">
+                    <i class="fa-solid {{ $akunTerhubung ? 'fa-circle-check' : 'fa-link-slash' }}"></i>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black">
+                        {{ $akunTerhubung ? 'Data Lansia Terhubung dengan Akun Warga' : 'Data Lansia Belum Terhubung dengan Akun Warga' }}
+                    </h3>
+
+                    <p class="mt-1 text-xs font-bold leading-5">
+                        @if($akunTerhubung)
+                            Akun warga yang terhubung: {{ $akunTerhubung->name ?? $akunTerhubung->nama ?? $akunTerhubung->email ?? '-' }}.
+                        @else
+                            Gunakan sinkron akun untuk mencocokkan NIK Lansia dengan akun user/warga yang sudah dibuat oleh Admin.
+                        @endif
+                    </p>
+                </div>
+            </div>
+
+            @if(!$akunTerhubung && $routeHas('kader.data.lansia.sync'))
+                <form method="POST" action="{{ route('kader.data.lansia.sync', $lansia->id) }}">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(245,158,11,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-600">
+                        <i class="fa-solid fa-rotate"></i>
+                        Sinkron Akun
+                    </button>
+                </form>
+            @endif
+        </div>
+    </section>
+
+    {{-- MAIN GRID --}}
+    <section class="grid grid-cols-1 gap-5 xl:grid-cols-12">
+
+        {{-- IDENTITAS --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-5">
+            <div class="mb-4 flex items-start gap-3">
+                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">1. Identitas Lansia</h3>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        Data utama sasaran Lansia.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Nama Lengkap</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $lansia->nama_lengkap ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">NIK</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $lansia->nik ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Jenis Kelamin</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $genderLabel($lansia->jenis_kelamin) }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Usia</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $usiaText }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tempat Lahir</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ $lansia->tempat_lahir ?? '-' }}</p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tanggal Lahir</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">
+                        {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
+                    </p>
+                </div>
+
+                <div class="info-card rounded-2xl p-4 sm:col-span-2">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Alamat</p>
+                    <p class="mt-2 text-sm font-black leading-6 text-slate-900">{{ $lansia->alamat ?? '-' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- PEMERIKSAAN DASAR --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-7">
+            <div class="mb-4 flex items-start gap-3">
+                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">2. Pemeriksaan Kesehatan Dasar</h3>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        Data profil awal kesehatan Lansia.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mb-4 flex flex-wrap gap-2">
+                <span class="mini-badge {{ $kemandirianClass($lansia->tingkat_kemandirian ?? null) }}">
+                    <i class="fa-solid fa-person-walking-with-cane"></i>
+                    {{ $kemandirianLabel($lansia->tingkat_kemandirian ?? null) }}
+                </span>
+
+                <span class="mini-badge border-sky-100 bg-sky-50/80 text-sky-700">
+                    <i class="fa-solid fa-heart-pulse"></i>
+                    Tensi {{ $lansia->tekanan_darah ?: '-' }}
+                </span>
+
+                <span class="mini-badge {{ $imtClass($lansia->imt ?? null) }}">
+                    <i class="fa-solid fa-calculator"></i>
+                    IMT {{ $lansia->imt ?: '-' }} | {{ $imtLabel($lansia->imt ?? null) }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Berat Badan</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $formatNumber($lansia->berat_badan ?? null) }}
+                        <span class="text-sm text-slate-400">kg</span>
+                    </p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tinggi Badan</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $formatNumber($lansia->tinggi_badan ?? null) }}
+                        <span class="text-sm text-slate-400">cm</span>
+                    </p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Lingkar Perut</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $formatNumber($lansia->lingkar_perut ?? null) }}
+                        <span class="text-sm text-slate-400">cm</span>
+                    </p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Gula Darah</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $formatNumber($lansia->gula_darah ?? null) }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">mg/dL</p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Kolesterol</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $formatNumber($lansia->kolesterol ?? null) }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">mg/dL</p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Asam Urat</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $formatNumber($lansia->asam_urat ?? null) }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">mg/dL</p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Tekanan Darah</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $lansia->tekanan_darah ?: '-' }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">mmHg</p>
+                </div>
+
+                <div class="metric-card rounded-2xl p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">IMT</p>
+                    <p class="mt-2 text-2xl font-black text-slate-900">
+                        {{ $lansia->imt ?: '-' }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-slate-400">{{ $imtLabel($lansia->imt ?? null) }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- RIWAYAT DAN KELUHAN --}}
+        <div class="glass-panel rounded-[30px] p-5 xl:col-span-12">
+            <div class="mb-4 flex items-start gap-3">
+                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50/90 text-rose-700">
+                    <i class="fa-solid fa-notes-medical"></i>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">3. Riwayat dan Keluhan</h3>
+                    <p class="mt-1 text-xs font-bold text-slate-400">
+                        Catatan awal untuk membantu pemantauan kondisi Lansia.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div class="info-card rounded-[24px] p-5">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Riwayat Penyakit Bawaan</p>
+                    <p class="mt-3 text-sm font-black leading-7 text-slate-900">
+                        {{ $penyakitBawaan }}
+                    </p>
+                </div>
+
+                <div class="info-card rounded-[24px] p-5">
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Keluhan Saat Ini</p>
+                    <p class="mt-3 text-sm font-black leading-7 text-slate-900">
+                        {{ $keluhan }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- STATS --}}
+    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="glass-panel rounded-[26px] p-5">
+            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
+                <i class="fa-solid fa-notes-medical"></i>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Total Layanan</p>
+            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $totalLayanan }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Riwayat layanan tercatat</p>
+        </div>
+
+        <div class="glass-panel rounded-[26px] p-5">
+            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-amber-50/90 text-amber-700">
+                <i class="fa-solid fa-stethoscope"></i>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Pemeriksaan Berkala</p>
+            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $totalPemeriksaan }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Data pengukuran tercatat</p>
+        </div>
+
+        <div class="glass-panel rounded-[26px] p-5">
+            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Update Profil</p>
+            <h2 class="mt-2 text-lg font-black text-slate-900">{{ $updatedLabel }}</h2>
+            <p class="mt-1 text-xs font-bold text-slate-400">Pembaruan terakhir</p>
+        </div>
+    </section>
+
+    {{-- RIWAYAT LAYANAN --}}
+    <section class="glass-panel rounded-[30px] p-4 sm:p-5">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-lg font-black text-slate-900">Riwayat Layanan dan Pemeriksaan Berkala</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Menampilkan riwayat layanan Lansia yang tercatat di sistem.
+                </p>
+            </div>
+
+            <span class="w-fit rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">
+                {{ $totalLayanan }} Riwayat
+            </span>
+        </div>
+
+        @if($kunjungans->count())
+            <div class="scroll-soft">
+                <div class="space-y-3">
+                    @foreach($kunjungans as $kunjungan)
+                        @php
+                            $tanggalKunjungan = $kunjungan->tanggal_kunjungan
+                                ? Carbon::parse($kunjungan->tanggal_kunjungan)
+                                : null;
+
+                            $pemeriksaan = $kunjungan->pemeriksaan ?? null;
+
+                            $jenis = $kunjungan->jenis_kunjungan ?? 'pemeriksaan';
+
+                            $jenisLabel = match($jenis) {
+                                'absensi' => 'Absensi Posyandu',
+                                'pemeriksaan' => 'Pemeriksaan Fisik',
+                                'imunisasi' => 'Imunisasi',
+                                default => 'Layanan Posyandu',
+                            };
+
+                            $jenisClass = match($jenis) {
+                                'absensi' => 'border-sky-100 bg-sky-50/80 text-sky-700',
+                                'pemeriksaan' => 'border-emerald-100 bg-emerald-50/80 text-emerald-700',
+                                'imunisasi' => 'border-amber-100 bg-amber-50/80 text-amber-700',
+                                default => 'border-slate-100 bg-slate-50/80 text-slate-700',
+                            };
+                        @endphp
+
+                        <article class="rounded-[26px] border border-white/70 bg-white/56 p-4 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:border-emerald-100 hover:shadow-[0_18px_38px_rgba(15,23,42,.06)]">
+                            <div class="grid gap-4 xl:grid-cols-[1fr_1fr_1.4fr_auto] xl:items-center">
+                                <div>
+                                    <span class="mini-badge {{ $jenisClass }}">
+                                        <i class="fa-solid {{ $jenis === 'absensi' ? 'fa-user-check' : 'fa-stethoscope' }}"></i>
+                                        {{ $jenisLabel }}
+                                    </span>
+
+                                    <h3 class="mt-3 text-sm font-black text-slate-900">
+                                        {{ $tanggalKunjungan ? $tanggalKunjungan->translatedFormat('d F Y') : '-' }}
+                                    </h3>
+
+                                    <p class="mt-1 text-xs font-bold text-slate-400">
+                                        {{ $tanggalKunjungan ? $tanggalKunjungan->format('H:i') . ' WIB' : 'Waktu belum tercatat' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Petugas</p>
+                                    <p class="mt-1 text-sm font-black text-slate-900">
+                                        {{ $kunjungan->petugas?->name ?? $kunjungan->petugas?->nama ?? '-' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Ringkasan Pemeriksaan</p>
+
+                                    @if($pemeriksaan)
+                                        <p class="mt-1 text-sm font-black text-slate-900">
+                                            BB {{ $pemeriksaan->berat_badan ?? '-' }} kg,
+                                            TB {{ $pemeriksaan->tinggi_badan ?? '-' }} cm,
+                                            IMT {{ $pemeriksaan->imt ?? '-' }}
+                                        </p>
+
+                                        <p class="mt-1 text-xs font-bold text-slate-400">
+                                            Tensi {{ $pemeriksaan->tekanan_darah ?? '-' }},
+                                            Gula {{ $pemeriksaan->gula_darah ?? '-' }},
+                                            Kolesterol {{ $pemeriksaan->kolesterol ?? '-' }},
+                                            Asam urat {{ $pemeriksaan->asam_urat ?? '-' }}
+                                        </p>
+                                    @else
+                                        <p class="mt-1 text-sm font-black text-slate-900">
+                                            Belum ada data pengukuran
+                                        </p>
+                                    @endif
+                                </div>
+
+                                <div class="flex justify-start xl:justify-end">
+                                    <span class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 text-xs font-black text-slate-600">
+                                        <i class="fa-solid fa-box-archive"></i>
+                                        Arsip
+                                    </span>
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            </div>
+        @else
+            <div class="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
+                <div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/60 text-slate-400 backdrop-blur-md">
+                    <i class="fa-solid fa-folder-open text-xl"></i>
+                </div>
+
+                <h3 class="mt-4 text-lg font-black text-slate-900">Belum Ada Riwayat Layanan</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
+                    Riwayat akan muncul setelah Lansia mengikuti absensi atau pemeriksaan yang tercatat di sistem.
+                </p>
+            </div>
+        @endif
+    </section>
+
+    {{-- ACTION BOTTOM --}}
+    <section class="glass-panel rounded-[26px] p-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-900">Detail data Lansia selesai ditampilkan</h3>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Gunakan tombol edit jika ada identitas atau data kesehatan dasar yang perlu diperbarui.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row">
+                @if($routeHas('kader.data.lansia.index'))
+                    <a href="{{ route('kader.data.lansia.index') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
+                        <i class="fa-solid fa-list"></i>
+                        Daftar Lansia
+                    </a>
+                @endif
+
+                @if($routeHas('kader.data.lansia.edit'))
+                    <a href="{{ route('kader.data.lansia.edit', $lansia->id) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-pen"></i>
+                        Edit Lansia
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
 </div>
-
-@push('scripts')
-<script>
-    window.hideLoader = function() {
-        const l = document.getElementById('smoothLoader');
-        if(l) { 
-            l.classList.remove('opacity-100', 'pointer-events-auto'); 
-            l.classList.add('opacity-0', 'pointer-events-none'); 
-            setTimeout(() => l.style.display = 'none', 300); 
-        }
-    };
-
-    window.showLoader = function() {
-        const l = document.getElementById('smoothLoader');
-        if(l) { 
-            l.style.display = 'flex'; 
-            l.classList.remove('opacity-0', 'pointer-events-none'); 
-            l.classList.add('opacity-100', 'pointer-events-auto'); 
-        }
-    };
-
-    document.addEventListener('DOMContentLoaded', window.hideLoader);
-    window.addEventListener('pageshow', window.hideLoader);
-    
-    // Failsafe darurat
-    setTimeout(window.hideLoader, 2500); 
-</script>
-@endpush
 @endsection

@@ -1,372 +1,693 @@
 @extends('layouts.kader')
 
 @section('title', 'Data Lansia')
-@section('page-name', 'Database Lansia')
+@section('page-name', 'Data Lansia')
+
+@php
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    Carbon::setLocale('id');
+
+    $routeHas = fn ($name) => Route::has($name);
+
+    $search = $search ?? request('search', '');
+    $statusAkun = $statusAkun ?? request('status_akun', 'semua');
+    $jenisKelamin = $jenisKelamin ?? request('jenis_kelamin', 'semua');
+    $kemandirian = $kemandirian ?? request('kemandirian', 'semua');
+
+    $statusOptions = [
+        'semua' => 'Semua Status',
+        'terhubung' => 'Terhubung Akun',
+        'belum' => 'Belum Terhubung',
+    ];
+
+    $genderOptions = [
+        'semua' => 'Semua Gender',
+        'L' => 'Laki-laki',
+        'P' => 'Perempuan',
+    ];
+
+    $kemandirianOptions = [
+        'semua' => 'Semua Kemandirian',
+        'mandiri' => 'Mandiri',
+        'bantuan_sebagian' => 'Bantuan Sebagian',
+        'ketergantungan_penuh' => 'Ketergantungan Penuh',
+    ];
+
+    $genderLabel = fn ($value) => match($value) {
+        'L' => 'Laki-laki',
+        'P' => 'Perempuan',
+        default => '-',
+    };
+
+    $genderClass = fn ($value) => match($value) {
+        'L' => 'border-sky-100 bg-sky-50 text-sky-700',
+        'P' => 'border-pink-100 bg-pink-50 text-pink-700',
+        default => 'border-slate-100 bg-slate-50 text-slate-500',
+    };
+
+    $kemandirianLabel = fn ($value) => match($value) {
+        'mandiri' => 'Mandiri',
+        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'Bantuan Sebagian',
+        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'Ketergantungan Penuh',
+        default => 'Belum Diisi',
+    };
+
+    $kemandirianClass = fn ($value) => match($value) {
+        'mandiri' => 'border-emerald-100 bg-emerald-50 text-emerald-700',
+        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'border-amber-100 bg-amber-50 text-amber-700',
+        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'border-rose-100 bg-rose-50 text-rose-700',
+        default => 'border-slate-100 bg-slate-50 text-slate-500',
+    };
+
+    $imtClass = function ($value) {
+        if ($value === null || $value === '') {
+            return 'border-slate-100 bg-slate-50 text-slate-500';
+        }
+
+        if ((float) $value < 18.5) {
+            return 'border-amber-100 bg-amber-50 text-amber-700';
+        }
+
+        if ((float) $value < 25) {
+            return 'border-emerald-100 bg-emerald-50 text-emerald-700';
+        }
+
+        return 'border-rose-100 bg-rose-50 text-rose-700';
+    };
+
+    $formatNumber = function ($value, $suffix = '') {
+        if ($value === null || $value === '') {
+            return '-';
+        }
+
+        $number = number_format((float) $value, 1, ',', '.');
+        $number = rtrim(rtrim($number, '0'), ',');
+
+        return $number . $suffix;
+    };
+@endphp
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
 <style>
-    /* ANIMASI MASUK HALUS */
-    .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* CHECKBOX CRM STYLE */
-    .crm-checkbox {
-        appearance: none; width: 20px; height: 20px; border: 2px solid #cbd5e1; border-radius: 6px; 
-        background: #ffffff; cursor: pointer; transition: all 0.2s ease; position: relative;
-    }
-    .crm-checkbox:hover { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
-    .crm-checkbox:checked { background: #10b981; border-color: #10b981; }
-    .crm-checkbox:checked::after {
-        content: '\f00c'; font-family: 'Font Awesome 5 Free'; font-weight: 900; position: absolute; 
-        color: white; font-size: 11px; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    .lansia-page {
+        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+        position: relative;
+        isolation: isolate;
     }
 
-    /* INPUT PENCARIAN CRM */
-    .crm-search {
-        width: 100%; background-color: #ffffff; border: 1px solid #e2e8f0; color: #1e293b;
-        font-size: 0.85rem; font-weight: 600; border-radius: 9999px; padding: 0.75rem 1.5rem 0.75rem 3rem;
-        outline: none; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    .lansia-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16,185,129,.12), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245,158,11,.09), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14,165,233,.07), transparent 32%),
+            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
     }
-    .crm-search:focus { border-color: #10b981; box-shadow: 0 4px 20px -3px rgba(16, 185, 129, 0.15); }
 
-    /* TABEL CRM KAPSUL */
-    .crm-card { background: #ffffff; border: 1px solid #f1f5f9; border-radius: 28px; box-shadow: 0 10px 40px -10px rgba(16, 185, 129, 0.05); overflow: hidden; padding: 4px; }
-    .crm-table { width: 100%; border-collapse: collapse; text-align: left; }
-    .crm-table th { background: #f0fdf4; color: #059669; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 1.25rem 1rem; border-bottom: 1px solid #dcfce7; }
-    .crm-table th:first-child { border-top-left-radius: 24px; }
-    .crm-table th:last-child { border-top-right-radius: 24px; }
-    .crm-table td { padding: 1.25rem 1rem; vertical-align: middle; border-bottom: 1px solid #f8fafc; transition: all 0.2s ease; }
-    .crm-table tr:hover td { background-color: #f8fafc; }
-    .crm-table tr:last-child td { border-bottom: none; }
+    .glass-panel {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.64);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
 
-    /* CUSTOM SCROLLBAR HALUS */
-    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(203, 213, 225, 0.4); border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(203, 213, 225, 0.8); }
+    .hero-panel {
+        border: 1px solid rgba(167,243,208,.72);
+        background:
+            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245,158,11,.12), transparent 32%),
+            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    }
 
-    /* ACTION BUTTONS (GAYA NEXUS) */
-    .action-btn { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; border: 1px solid transparent; background: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-    .action-btn.sync:hover { background: #10b981; color: white; border-color: #059669; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transform: translateY(-2px); }
-    .action-btn.view:hover { background: #4f46e5; color: white; border-color: #4338ca; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); transform: translateY(-2px); }
-    .action-btn.edit:hover { background: #f59e0b; color: white; border-color: #d97706; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); transform: translateY(-2px); }
-    .action-btn.delete:hover { background: #f43f5e; color: white; border-color: #e11d48; box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3); transform: translateY(-2px); }
+    .input-premium {
+        border: 1px solid rgba(226,232,240,.92);
+        background: rgba(255,255,255,.74);
+        outline: none;
+        transition: all .3s ease-in-out;
+    }
 
-    /* SWEETALERT CUSTOM */
-    div:where(.swal2-container) { z-index: 10000 !important; backdrop-filter: blur(8px) !important; background: rgba(15, 23, 42, 0.4) !important; }
-    .swal2-popup:not(.swal2-toast) { border-radius: 32px !important; padding: 2.5rem 2rem !important; background: rgba(255, 255, 255, 0.98) !important; border: 1px solid rgba(255,255,255,0.5) !important; width: 28em !important; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.1) !important; }
-    .swal2-popup .swal2-title { font-family: 'Poppins', sans-serif !important; font-weight: 900 !important; font-size: 1.5rem !important; color: #1e293b !important; }
-    .btn-nexus-cancel { background: #f1f5f9 !important; color: #64748b !important; border-radius: 100px !important; padding: 12px 24px !important; font-size: 12px !important; font-weight: 800 !important; text-transform: uppercase !important; transition: all 0.3s ease !important; }
-    .btn-nexus-danger { background: #f43f5e !important; color: #ffffff !important; border-radius: 100px !important; padding: 12px 28px !important; font-size: 12px !important; font-weight: 800 !important; text-transform: uppercase !important; box-shadow: 0 8px 20px rgba(244,63,94,0.3) !important; transition: all 0.3s ease !important; }
+    .input-premium:focus {
+        border-color: rgba(16,185,129,.42);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+        background: rgba(255,255,255,.90);
+    }
+
+    .mini-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .35rem;
+        border-width: 1px;
+        border-radius: 999px;
+        padding: .28rem .58rem;
+        font-size: 10px;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .data-table-wrap {
+        border: 1px solid rgba(226,232,240,.74);
+        background: rgba(255,255,255,.58);
+        backdrop-filter: blur(14px);
+        overflow: hidden;
+    }
+
+    .data-table-scroll {
+        overflow-x: auto;
+    }
+
+    .data-table-scroll::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .data-table-scroll::-webkit-scrollbar-track {
+        background: rgba(241,245,249,.8);
+        border-radius: 999px;
+    }
+
+    .data-table-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(90deg, #10b981, #f59e0b);
+        border-radius: 999px;
+    }
+
+    .data-table-body {
+        max-height: 640px;
+        overflow-y: auto;
+    }
+
+    .data-table-body::-webkit-scrollbar {
+        width: 7px;
+    }
+
+    .data-table-body::-webkit-scrollbar-track {
+        background: rgba(241,245,249,.8);
+        border-radius: 999px;
+    }
+
+    .data-table-body::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #10b981, #f59e0b);
+        border-radius: 999px;
+    }
+
+    .table-row {
+        transition: all .25s ease-in-out;
+    }
+
+    .table-row:hover {
+        background: rgba(236,253,245,.42);
+    }
+
+    .metric-box {
+        border: 1px solid rgba(226,232,240,.68);
+        background: rgba(255,255,255,.68);
+        border-radius: 14px;
+        padding: 8px 10px;
+        min-height: 54px;
+    }
+
+    .clamp-1 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+    }
+
+    .clamp-2 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
 </style>
 @endpush
 
 @section('content')
-{{-- PRELOADER SISTEM --}}
-<div id="smoothLoader" class="fixed inset-0 bg-slate-50/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center transition-all duration-500 opacity-100 pointer-events-auto">
-    <div class="relative w-16 h-16 flex items-center justify-center mb-4">
-        <div class="absolute inset-0 border-4 border-emerald-100 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-emerald-600 rounded-full border-t-transparent animate-spin"></div>
-        <i class="fas fa-user-clock text-emerald-600 text-xl"></i>
-    </div>
-    <p class="text-[11px] font-black tracking-[0.2em] text-slate-500 uppercase">Memuat Pangkalan Data</p>
-</div>
+<div class="lansia-page space-y-5">
 
-<div class="max-w-[1400px] mx-auto fade-in-up pb-12 relative z-10">
-
-    {{-- AURA BACKGROUND (EMERALD/TEAL) --}}
-    <div class="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-[80px] pointer-events-none z-0"></div>
-
-    {{-- 1. HEADER CRM --}}
-    <div class="bg-white/90 backdrop-blur-2xl rounded-[32px] border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 mb-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 z-10">
-        
-        <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl"></div>
-
-        <div class="flex items-center gap-6 relative z-10 w-full md:w-auto">
-            <div class="w-16 h-16 rounded-[20px] bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-3xl shadow-[0_8px_20px_rgba(16,185,129,0.3)] shrink-0 transform -rotate-3 transition-transform hover:rotate-0">
-                <i class="fas fa-user-clock drop-shadow-sm"></i>
-            </div>
+    {{-- HERO --}}
+    <section class="hero-panel rounded-[28px] p-5 sm:p-6">
+        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest border border-emerald-200 bg-emerald-50 px-2.5 py-1 rounded-md">Automasi Sistem Aktif</span>
+                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
+                    <i class="fa-solid fa-person-cane"></i>
+                    Database Lansia
                 </div>
-                <h1 class="text-3xl font-black text-slate-900 tracking-tight font-poppins mb-1">Database Lansia</h1>
-                <p class="text-slate-500 font-medium text-[13px] max-w-md">Kelola master data peserta Posyandu Lansia, riwayat kesehatan, dan kemandirian.</p>
-            </div>
-        </div>
-        
-        <div class="relative z-10 shrink-0 w-full md:w-auto flex flex-col sm:flex-row gap-4">
-            <a href="{{ route('kader.import.index') }}?type=lansia" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-4 bg-white border border-slate-200 text-emerald-600 font-black text-[12px] uppercase tracking-widest rounded-[16px] hover:bg-emerald-50 hover:border-emerald-200 transition-all shadow-sm">
-                <i class="fas fa-file-import text-sm"></i> Import Massal
-            </a>
-            <a href="{{ route('kader.data.lansia.create') }}" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white font-black text-[12px] uppercase tracking-widest rounded-[16px] hover:bg-emerald-700 transition-all shadow-[0_8px_20px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:shadow-[0_12px_25px_rgba(16,185,129,0.4)]">
-                <i class="fas fa-plus text-sm text-emerald-200"></i> Registrasi Baru
-            </a>
-        </div>
-    </div>
 
-    {{-- 2. CRM CONTROL PANEL (NAVIGASI & FILTER) --}}
-    <div class="flex flex-col xl:flex-row items-center justify-between gap-5 mb-6 relative z-20">
-        
-        <div class="flex items-center gap-4 w-full xl:w-auto">
-            {{-- Badge Statistik Minimalis --}}
-            <div class="inline-flex items-center gap-2 bg-white border border-slate-200 px-6 py-3.5 rounded-full shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
-                <i class="fas fa-users text-emerald-500 text-sm"></i>
-                <span class="text-[11px] font-black text-slate-700 uppercase tracking-widest">Total: {{ $stats['total'] ?? 0 }} Lansia</span>
+                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
+                    Data Lansia
+                </h1>
+
+                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                    Kelola data Lansia, tingkat kemandirian, pemeriksaan kesehatan dasar, riwayat penyakit, dan keluhan.
+                </p>
             </div>
 
-            {{-- Tombol Bulk Delete (Muncul Dinamis) --}}
-            <form action="{{ route('kader.data.lansia.bulk-delete') }}" method="POST" id="bulkDeleteForm" class="hidden w-full sm:w-auto">
-                @csrf
-                <div id="bulkDeleteInputs"></div>
-                <button type="button" onclick="confirmBulkDelete()" class="w-full sm:w-auto px-6 py-3.5 bg-rose-50 border border-rose-200 text-rose-600 font-black text-[11px] uppercase tracking-widest rounded-full hover:bg-rose-500 hover:text-white transition-all shadow-sm hover:shadow-[0_8px_20px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2">
-                    <i class="fas fa-trash-alt"></i> Eksekusi Hapus (<span id="bulkCount">0</span>)
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @if($routeHas('kader.import.create'))
+                    <a href="{{ route('kader.import.create', ['type' => 'lansia']) }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-5 py-3 text-sm font-black text-amber-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
+                        <i class="fa-solid fa-file-import"></i>
+                        Import
+                    </a>
+                @endif
+
+                @if($routeHas('kader.data.lansia.create'))
+                    <a href="{{ route('kader.data.lansia.create') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                        <i class="fa-solid fa-plus"></i>
+                        Tambah Lansia
+                    </a>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- STATS --}}
+    <section class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div class="glass-panel rounded-[22px] p-4">
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Total</p>
+            <div class="mt-2 flex items-end justify-between gap-2">
+                <h2 class="text-2xl font-black text-slate-900">{{ $statTotal ?? 0 }}</h2>
+                <i class="fa-solid fa-users text-emerald-600"></i>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-[22px] p-4">
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Laki-laki</p>
+            <div class="mt-2 flex items-end justify-between gap-2">
+                <h2 class="text-2xl font-black text-slate-900">{{ $statLaki ?? 0 }}</h2>
+                <i class="fa-solid fa-mars text-sky-600"></i>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-[22px] p-4">
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Perempuan</p>
+            <div class="mt-2 flex items-end justify-between gap-2">
+                <h2 class="text-2xl font-black text-slate-900">{{ $statPerempuan ?? 0 }}</h2>
+                <i class="fa-solid fa-venus text-pink-600"></i>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-[22px] p-4">
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Mandiri</p>
+            <div class="mt-2 flex items-end justify-between gap-2">
+                <h2 class="text-2xl font-black text-slate-900">{{ $statMandiri ?? 0 }}</h2>
+                <i class="fa-solid fa-person-walking text-emerald-600"></i>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-[22px] p-4">
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Butuh Bantuan</p>
+            <div class="mt-2 flex items-end justify-between gap-2">
+                <h2 class="text-2xl font-black text-slate-900">{{ $statButuhBantuan ?? 0 }}</h2>
+                <i class="fa-solid fa-hand-holding-heart text-amber-600"></i>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-[22px] p-4">
+            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Tensi</p>
+            <div class="mt-2 flex items-end justify-between gap-2">
+                <h2 class="text-2xl font-black text-slate-900">{{ $statTensiTercatat ?? 0 }}</h2>
+                <i class="fa-solid fa-heart-pulse text-rose-600"></i>
+            </div>
+        </div>
+    </section>
+
+    {{-- FILTER --}}
+    <section class="glass-panel rounded-[26px] p-4">
+        <form method="GET" action="{{ route('kader.data.lansia.index') }}" class="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_175px_215px_205px_auto]">
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Cari Lansia</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ $search }}"
+                        class="input-premium h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700"
+                        placeholder="Cari nama, NIK, alamat, penyakit, keluhan, atau tensi..."
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Gender</label>
+                <select name="jenis_kelamin" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    @foreach($genderOptions as $key => $label)
+                        <option value="{{ $key }}" {{ $jenisKelamin === $key ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Kemandirian</label>
+                <select name="kemandirian" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    @foreach($kemandirianOptions as $key => $label)
+                        <option value="{{ $key }}" {{ $kemandirian === $key ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Status Akun</label>
+                <select name="status_akun" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
+                    @foreach($statusOptions as $key => $label)
+                        <option value="{{ $key }}" {{ $statusAkun === $key ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit"
+                        class="h-12 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="fa-solid fa-filter mr-1"></i>
+                    Filter
                 </button>
-            </form>
-        </div>
 
-        <div class="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
-            {{-- Live Search Kapsul --}}
-            <div class="relative w-full sm:w-[400px] group">
-                <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-emerald-500 transition-colors"></i>
-                <input type="text" id="liveSearchInput" placeholder="Ketik Nama, NIK, atau Penyakit..." class="crm-search" autocomplete="off">
+                <a href="{{ route('kader.data.lansia.index') }}"
+                   class="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-white/60 text-slate-500 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-emerald-700">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </a>
             </div>
+        </form>
+    </section>
+
+    {{-- TABLE --}}
+    <section class="glass-panel rounded-[28px] p-4">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-lg font-black text-slate-900">Daftar Lansia</h2>
+                <p class="mt-1 text-xs font-bold text-slate-400">
+                    Data dibuat lebih compact dan sejajar agar mudah dibaca.
+                </p>
+            </div>
+
+            <span class="w-fit rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">
+                {{ $items->total() ?? 0 }} Data
+            </span>
         </div>
-    </div>
 
-    {{-- ======================================================== --}}
-    {{-- TABEL DATABASE LANSIA --}}
-    {{-- ======================================================== --}}
-    <div class="crm-card relative z-10">
-        <div class="overflow-x-auto custom-scrollbar" style="min-h: 300px;">
-            <table class="crm-table min-w-[1200px]">
-                <thead>
-                    <tr>
-                        <th class="w-12 text-center pl-6"><input type="checkbox" class="crm-checkbox select-all-btn" onclick="toggleSelectAll(this)"></th>
-                        <th class="w-56">Identitas Lansia</th>
-                        <th class="w-48">Kesehatan Dasar</th>
-                        <th class="w-48">Keluarga & Kontak</th>
-                        <th class="w-32 text-center">Status Akun</th>
-                        <th class="w-40 text-center pr-6">Tindakan</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($lansias as $item)
-                    @php 
-                        $diff = \Carbon\Carbon::parse($item->tanggal_lahir)->diff(now());
-                        $strUmur = $diff->y . ' Thn';
-                        $avatarColor = $item->jenis_kelamin == 'L' ? 'bg-sky-50 text-sky-500 border-sky-200' : 'bg-rose-50 text-rose-500 border-rose-200';
-                        $jkBadge = $item->jenis_kelamin == 'L' ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-rose-50 text-rose-600 border-rose-200';
-                        
-                        $imtClass = 'bg-slate-100 text-slate-500';
-                        if($item->imt) {
-                            if($item->imt < 18.5) $imtClass = 'bg-amber-50 text-amber-600 border-amber-200';
-                            elseif($item->imt < 25) $imtClass = 'bg-emerald-50 text-emerald-600 border-emerald-200';
-                            else $imtClass = 'bg-rose-50 text-rose-600 border-rose-200';
-                        }
-                    @endphp
-                    <tr class="pasien-row hover:bg-slate-50/50 transition-colors" data-search="{{ strtolower($item->nama_lengkap . ' ' . $item->nik . ' ' . $item->penyakit_bawaan) }}">
-                        
-                        <td class="text-center pl-6"><input type="checkbox" name="ids[]" value="{{ $item->id }}" class="crm-checkbox row-checkbox" onchange="checkBulkStatus()"></td>
-                        
-                        {{-- 1. IDENTITAS --}}
-                        <td>
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 rounded-[12px] flex items-center justify-center font-black text-sm shrink-0 border shadow-sm {{ $avatarColor }}">
-                                    {{ strtoupper(substr($item->nama_lengkap, 0, 1)) }}
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-[13px] font-black text-slate-800 font-poppins truncate max-w-[150px]" title="{{ $item->nama_lengkap }}">{{ $item->nama_lengkap }}</span>
-                                    <div class="flex items-center gap-1 mt-1">
-                                        <span class="text-[10px] font-bold text-slate-400 font-mono">{{ $item->nik ?? '-' }}</span>
-                                        <span class="text-[10px] font-bold text-slate-300">•</span>
-                                        <span class="badge-mini border {{ $jkBadge }}" style="padding: 2px 6px; font-size:8px;">{{ $item->jenis_kelamin == 'L' ? 'PRIA' : 'WANITA' }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
+        @if(isset($items) && $items->count())
+            <form method="POST" action="{{ route('kader.data.lansia.bulk-delete') }}" id="bulkDeleteForm">
+                @csrf
+                @method('DELETE')
 
-                        {{-- 2. KESEHATAN DASAR --}}
-                        <td>
-                            <div class="flex flex-col gap-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-sm">Usia: <span class="text-indigo-600 font-black">{{ $strUmur }}</span></span>
-                                    <span class="text-[9px] font-black uppercase tracking-widest border px-2 py-0.5 rounded {{ $imtClass }}">IMT: {{ $item->imt ?? '-' }}</span>
-                                </div>
-                                <span class="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100 inline-block line-clamp-1 max-w-[180px]" title="{{ $item->penyakit_bawaan ?? 'Sehat' }}">
-                                    <i class="fas fa-notes-medical text-rose-400 mr-1"></i> {{ $item->penyakit_bawaan ?? 'Tidak ada riwayat' }}
-                                </span>
-                            </div>
-                        </td>
+                <div class="mb-4 hidden rounded-[20px] border border-rose-100 bg-rose-50/80 p-4" id="bulkActionBar">
+                    <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                        <div>
+                            <p class="text-sm font-black text-rose-700">Mode hapus massal aktif</p>
+                            <p class="mt-1 text-xs font-bold text-rose-500">
+                                <span id="selectedCount">0</span> data dipilih.
+                            </p>
+                        </div>
 
-                        {{-- 3. DATA KELUARGA & KEMANDIRIAN --}}
-                        <td>
-                            <div class="flex flex-col gap-1.5">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-5 h-5 rounded bg-emerald-50 flex items-center justify-center text-emerald-500 text-[10px] border border-emerald-100"><i class="fas fa-wheelchair"></i></div>
-                                    <p class="text-[11px] font-black text-slate-700 uppercase tracking-widest">{{ $item->kemandirian ?? 'MANDIRI' }}</p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="w-5 h-5 rounded bg-slate-100 flex items-center justify-center text-slate-500 text-[10px] border border-slate-200"><i class="fas fa-phone-alt"></i></div>
-                                    <p class="text-[11px] font-semibold text-slate-500">{{ $item->telepon_keluarga ?? '-' }}</p>
-                                </div>
-                            </div>
-                        </td>
+                        <button type="submit"
+                                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-700"
+                                onclick="return confirm('Hapus data Lansia yang dipilih? Data yang sudah punya riwayat pelayanan tidak dapat dihapus.');">
+                            <i class="fa-solid fa-trash"></i>
+                            Hapus Terpilih
+                        </button>
+                    </div>
+                </div>
 
-                        {{-- 4. STATUS AKUN --}}
-                        <td class="text-center">
-                            @if($item->user_id)
-                                <span class="text-[9px] font-black uppercase tracking-widest text-emerald-500"><i class="fas fa-check-circle"></i> Terhubung Akun</span>
-                            @else
-                                <form action="{{ route('kader.data.lansia.sync', $item->id) }}" method="POST" class="m-0 p-0 inline-block">
-                                    @csrf
-                                    <button type="submit" class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-amber-600 bg-white border border-amber-300 px-2 py-1 rounded hover:bg-amber-50 transition-all shadow-sm">
-                                        <i class="fas fa-satellite-dish animate-pulse"></i> Deteksi Akun
-                                    </button>
-                                </form>
-                            @endif
-                        </td>
+                <div class="data-table-wrap rounded-[24px]">
+                    <div class="data-table-scroll">
+                        <table class="min-w-[1180px] w-full table-fixed">
+                            <thead>
+                                <tr class="border-b border-slate-200/70 bg-slate-50/50">
+                                    <th class="w-[44px] px-4 py-3"></th>
+                                    <th class="w-[230px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Profil</th>
+                                    <th class="w-[220px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Identitas</th>
+                                    <th class="w-[340px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Pemeriksaan Dasar</th>
+                                    <th class="w-[235px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Riwayat dan Keluhan</th>
+                                    <th class="w-[155px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Aksi</th>
+                                </tr>
+                            </thead>
+                        </table>
 
-                        {{-- 5. TINDAKAN --}}
-                        <td class="text-center pr-6">
-                            <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('kader.data.lansia.show', $item->id) }}" class="action-btn view text-emerald-500 border-slate-200" title="Buka Rekam Medis"><i class="fas fa-book-medical text-[12px]"></i></a>
-                                <a href="{{ route('kader.data.lansia.edit', $item->id) }}" class="action-btn edit text-amber-500 border-slate-200" title="Edit Profil"><i class="fas fa-pen text-[12px]"></i></a>
-                                <form action="{{ route('kader.data.lansia.destroy', $item->id) }}" method="POST" id="delete-form-{{ $item->id }}" class="m-0 p-0">
-                                    @csrf @method('DELETE')
-                                    <button type="button" onclick="confirmSingleDelete('{{ $item->id }}', '{{ addslashes($item->nama_lengkap) }}')" class="action-btn delete text-rose-500 border-slate-200" title="Hapus Data"><i class="fas fa-trash-alt text-[12px]"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr class="empty-state-row">
-                        <td colspan="6" class="py-24 text-center border-none">
-                            <div class="flex flex-col items-center justify-center max-w-md mx-auto bg-slate-50/50 border border-dashed border-slate-300 rounded-[32px] p-10">
-                                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-300 mx-auto mb-4 text-3xl shadow-sm border border-slate-100"><i class="fas fa-user-clock"></i></div>
-                                <h4 class="text-lg font-black text-slate-800 uppercase tracking-widest mb-2 font-poppins">Pangkalan Data Kosong</h4>
-                                <p class="text-[13px] text-slate-500 font-medium leading-relaxed">Belum ada data peserta Lansia yang tercatat. Gunakan tombol Registrasi Baru atau Import Excel untuk memulai.</p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        
-        {{-- Custom Pagination --}}
-        @if($lansias->hasPages())
-        <div class="p-4 border-t border-slate-100 bg-white">
-            {{ $lansias->appends(request()->query())->links() }}
-        </div>
+                        <div class="data-table-body">
+                            <table class="min-w-[1180px] w-full table-fixed">
+                                <tbody>
+                                    @foreach($items as $item)
+                                        @php
+                                            $tanggalLahir = $item->tanggal_lahir ? Carbon::parse($item->tanggal_lahir) : null;
+                                            $usiaText = '-';
+
+                                            if ($tanggalLahir) {
+                                                $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
+                                                $usiaText = $diff->y . ' tahun';
+                                            }
+
+                                            $akunTerhubung = filled($item->user_id);
+                                            $pemeriksaan = $item->pemeriksaan_terakhir;
+                                            $imtValue = $item->imt ?? null;
+
+                                            $keluhan = $item->keluhan ?: 'Tidak ada keluhan';
+                                            $penyakit = $item->penyakit_bawaan ?: 'Tidak ada riwayat';
+                                        @endphp
+
+                                        <tr class="table-row border-b border-slate-100 last:border-b-0">
+                                            <td class="w-[44px] px-4 py-4 align-middle">
+                                                <input
+                                                    type="checkbox"
+                                                    name="ids[]"
+                                                    value="{{ $item->id }}"
+                                                    class="bulk-checkbox h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                >
+                                            </td>
+
+                                            <td class="w-[230px] px-3 py-4 align-middle">
+                                                <div class="flex min-w-0 items-center gap-3">
+                                                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
+                                                        <span class="text-sm font-black">
+                                                            {{ strtoupper(substr($item->nama_lengkap ?? 'L', 0, 1)) }}
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="min-w-0">
+                                                        <div class="mb-1 flex flex-wrap gap-1.5">
+                                                            <span class="mini-badge border-emerald-100 bg-emerald-50 text-emerald-700">Lansia</span>
+                                                            <span class="mini-badge {{ $genderClass($item->jenis_kelamin) }}">
+                                                                {{ $genderLabel($item->jenis_kelamin) }}
+                                                            </span>
+                                                        </div>
+
+                                                        <h3 class="clamp-1 text-sm font-black text-slate-900">
+                                                            {{ $item->nama_lengkap }}
+                                                        </h3>
+
+                                                        <p class="mt-1 text-xs font-bold text-slate-400">
+                                                            NIK {{ $item->nik ?? '-' }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="w-[220px] px-3 py-4 align-middle">
+                                                <div class="mb-2 flex flex-wrap gap-1.5">
+                                                    <span class="mini-badge {{ $kemandirianClass($item->tingkat_kemandirian ?? null) }}">
+                                                        {{ $kemandirianLabel($item->tingkat_kemandirian ?? null) }}
+                                                    </span>
+
+                                                    @if($akunTerhubung)
+                                                        <span class="mini-badge border-emerald-100 bg-emerald-50 text-emerald-700">Akun</span>
+                                                    @else
+                                                        <span class="mini-badge border-amber-100 bg-amber-50 text-amber-700">Belum Sinkron</span>
+                                                    @endif
+                                                </div>
+
+                                                <p class="text-sm font-black text-slate-900">{{ $usiaText }}</p>
+
+                                                <p class="mt-1 clamp-1 text-xs font-bold text-slate-400">
+                                                    {{ $item->tempat_lahir ?? '-' }},
+                                                    {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d M Y') : '-' }}
+                                                </p>
+
+                                                <p class="mt-1 clamp-1 text-xs font-bold text-slate-400">
+                                                    {{ $item->alamat ?? '-' }}
+                                                </p>
+                                            </td>
+
+                                            <td class="w-[340px] px-3 py-4 align-middle">
+                                                <div class="mb-2 flex flex-wrap gap-1.5">
+                                                    <span class="mini-badge border-sky-100 bg-sky-50 text-sky-700">
+                                                        Tensi {{ $item->tekanan_darah ?: '-' }}
+                                                    </span>
+
+                                                    <span class="mini-badge {{ $imtClass($imtValue) }}">
+                                                        IMT {{ $imtValue ?: '-' }}
+                                                    </span>
+                                                </div>
+
+                                                <div class="grid grid-cols-4 gap-2">
+                                                    <div class="metric-box">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">BB</p>
+                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->berat_badan ?? null, ' kg') }}</p>
+                                                    </div>
+
+                                                    <div class="metric-box">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">TB</p>
+                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->tinggi_badan ?? null, ' cm') }}</p>
+                                                    </div>
+
+                                                    <div class="metric-box">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">LP</p>
+                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->lingkar_perut ?? null, ' cm') }}</p>
+                                                    </div>
+
+                                                    <div class="metric-box">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">Gula</p>
+                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->gula_darah ?? null) }}</p>
+                                                    </div>
+
+                                                    <div class="metric-box">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">Kol</p>
+                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->kolesterol ?? null) }}</p>
+                                                    </div>
+
+                                                    <div class="metric-box">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">AU</p>
+                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->asam_urat ?? null) }}</p>
+                                                    </div>
+
+                                                    <div class="metric-box col-span-2">
+                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">Berkala</p>
+                                                        <p class="mt-1 text-xs font-black {{ $pemeriksaan ? 'text-emerald-600' : 'text-slate-400' }}">
+                                                            {{ $pemeriksaan ? 'Ada pemeriksaan' : 'Belum ada' }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <td class="w-[235px] px-3 py-4 align-middle">
+                                                <div class="rounded-2xl bg-white/65 p-3">
+                                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Riwayat</p>
+                                                    <p class="mt-1 clamp-2 text-sm font-black leading-5 text-slate-900">
+                                                        {{ $penyakit }}
+                                                    </p>
+                                                </div>
+
+                                                <div class="mt-2 rounded-2xl bg-white/65 p-3">
+                                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Keluhan</p>
+                                                    <p class="mt-1 clamp-2 text-xs font-bold leading-5 text-slate-500">
+                                                        {{ $keluhan }}
+                                                    </p>
+                                                </div>
+                                            </td>
+
+                                            <td class="w-[155px] px-3 py-4 align-middle">
+                                                <div class="flex flex-col gap-2">
+                                                    @if(!$akunTerhubung && $routeHas('kader.data.lansia.sync'))
+                                                        <form method="POST" action="{{ route('kader.data.lansia.sync', $item->id) }}">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                    class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-3 py-2 text-xs font-black text-amber-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
+                                                                <i class="fa-solid fa-rotate"></i>
+                                                                Sinkron
+                                                            </button>
+                                                        </form>
+                                                    @endif
+
+                                                    <div class="grid grid-cols-3 gap-2">
+                                                        @if($routeHas('kader.data.lansia.show'))
+                                                            <a href="{{ route('kader.data.lansia.show', $item->id) }}"
+                                                               class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                                                                <i class="fa-solid fa-eye"></i>
+                                                            </a>
+                                                        @endif
+
+                                                        @if($routeHas('kader.data.lansia.edit'))
+                                                            <a href="{{ route('kader.data.lansia.edit', $item->id) }}"
+                                                               class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-black text-slate-600 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-100">
+                                                                <i class="fa-solid fa-pen"></i>
+                                                            </a>
+                                                        @endif
+
+                                                        @if($routeHas('kader.data.lansia.destroy'))
+                                                            <form method="POST"
+                                                                  action="{{ route('kader.data.lansia.destroy', $item->id) }}"
+                                                                  onsubmit="return confirm('Hapus data Lansia ini? Data yang sudah memiliki riwayat pelayanan tidak dapat dihapus.');">
+                                                                @csrf
+                                                                @method('DELETE')
+
+                                                                <button type="submit"
+                                                                        class="inline-flex w-full items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 px-3 py-2 text-xs font-black text-rose-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-100/80">
+                                                                    <i class="fa-solid fa-trash"></i>
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            @if($items->hasPages())
+                <div class="mt-5">
+                    {{ $items->links() }}
+                </div>
+            @endif
+        @else
+            <div class="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
+                <div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/60 text-slate-400 backdrop-blur-md">
+                    <i class="fa-solid fa-person-cane text-xl"></i>
+                </div>
+
+                <h3 class="mt-4 text-lg font-black text-slate-900">Data Lansia Kosong</h3>
+
+                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
+                    Belum ada data Lansia yang cocok dengan filter saat ini. Tambahkan manual atau gunakan import Excel.
+                </p>
+            </div>
         @endif
-    </div>
-
+    </section>
 </div>
+@endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // 1. Loader Logic
-    window.onload = () => {
-        const l = document.getElementById('smoothLoader');
-        if(l) { l.classList.remove('opacity-100','pointer-events-auto'); l.classList.add('opacity-0','pointer-events-none'); setTimeout(()=> l.style.display = 'none', 500); }
+document.addEventListener('DOMContentLoaded', () => {
+    const checkboxes = document.querySelectorAll('.bulk-checkbox');
+    const bar = document.getElementById('bulkActionBar');
+    const count = document.getElementById('selectedCount');
+
+    const updateBulkBar = () => {
+        const selected = document.querySelectorAll('.bulk-checkbox:checked').length;
+
+        if (!bar || !count) {
+            return;
+        }
+
+        count.textContent = selected;
+        bar.classList.toggle('hidden', selected === 0);
     };
 
-    // 2. LIVE SEARCH FILTER
-    document.addEventListener('DOMContentLoaded', () => {
-        const searchInput = document.getElementById('liveSearchInput');
-        if(searchInput) {
-            searchInput.addEventListener('input', function() {
-                const filter = this.value.toLowerCase();
-                const rows = document.querySelectorAll('.pasien-row');
-                
-                rows.forEach(row => {
-                    const dataSearch = row.getAttribute('data-search');
-                    if (dataSearch.includes(filter)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                        const cb = row.querySelector('.row-checkbox');
-                        if(cb && cb.checked) { cb.checked = false; checkBulkStatus(); }
-                    }
-                });
-            });
-        }
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkBar);
     });
 
-    const Toast = Swal.mixin({
-        toast: true, position: 'top-end', showConfirmButton: false, timer: 4000, timerProgressBar: true
-    });
-
-    @if(session('success')) Toast.fire({ icon: 'success', title: 'Berhasil!', text: "{!! addslashes(session('success')) !!}" }); @endif
-    @if(session('error')) Toast.fire({ icon: 'error', title: 'Gagal', text: "{!! addslashes(session('error')) !!}" }); @endif
-
-    function confirmSingleDelete(id, name) {
-        Swal.fire({
-            title: 'Hapus Data?',
-            html: `Data profil dan catatan rekam medis untuk <b>${name}</b> akan <b style="color:#f43f5e">dihapus permanen</b> dari sistem.`,
-            icon: 'warning', iconColor: '#f43f5e', showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-trash-alt mr-2"></i> Eksekusi Hapus', cancelButtonText: 'Batalkan',
-            reverseButtons: true, buttonsStyling: false, 
-            customClass: { confirmButton: 'btn-nexus-danger', cancelButton: 'btn-nexus-cancel' }
-        }).then((result) => {
-            if (result.isConfirmed) { document.getElementById('delete-form-' + id).submit(); }
-        });
-    }
-
-    function toggleSelectAll(source) {
-        const checkboxes = document.querySelectorAll('.row-checkbox');
-        checkboxes.forEach(cb => {
-            const row = cb.closest('tr');
-            if(row.style.display !== 'none') { cb.checked = source.checked; }
-        });
-        checkBulkStatus();
-    }
-
-    function checkBulkStatus() {
-        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-        const bulkForm = document.getElementById('bulkDeleteForm');
-        const bulkCountSpan = document.getElementById('bulkCount');
-        
-        if (checkedBoxes.length > 0) {
-            bulkForm.classList.remove('hidden');
-            bulkForm.classList.add('fade-in-up');
-            bulkCountSpan.innerText = checkedBoxes.length;
-        } else {
-            bulkForm.classList.add('hidden');
-            bulkForm.classList.remove('fade-in-up');
-        }
-    }
-
-    function confirmBulkDelete() {
-        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-        if(checkedBoxes.length === 0) return;
-
-        Swal.fire({
-            title: `Hapus ${checkedBoxes.length} Data?`,
-            html: `Aksi ini akan <b style="color:#f43f5e">menghapus masal</b> profil peserta Lansia beserta seluruh log pemeriksaannya. Tindakan mutlak.`,
-            icon: 'error', iconColor: '#f43f5e', showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-skull-crossbones mr-2"></i> Ya, Hapus Masal', cancelButtonText: 'Batalkan',
-            reverseButtons: true, buttonsStyling: false,
-            customClass: { confirmButton: 'btn-nexus-danger', cancelButton: 'btn-nexus-cancel' }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const inputContainer = document.getElementById('bulkDeleteInputs');
-                inputContainer.innerHTML = ''; 
-                
-                checkedBoxes.forEach(cb => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden'; input.name = 'ids[]'; input.value = cb.value;
-                    inputContainer.appendChild(input);
-                });
-                
-                document.getElementById('bulkDeleteForm').submit();
-            }
-        });
-    }
+    updateBulkBar();
+});
 </script>
 @endpush
-@endsection

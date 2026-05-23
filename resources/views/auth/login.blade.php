@@ -24,7 +24,7 @@
         NxAlert.fire({
           type:'error',
           title:'Sandi Salah',
-          message:'Password yang Anda masukkan tidak sesuai.<br>Periksa kembali atau gunakan <strong>Lupa password?</strong> di bawah.',
+          message:'Password yang Anda masukkan tidak sesuai.<br>Periksa kembali atau hubungi admin jika Anda lupa sandi.',
           confirmText:'Coba Lagi'
         });
       @elseif($errors->has('inactive'))
