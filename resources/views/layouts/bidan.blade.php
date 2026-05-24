@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Bidan Workspace') | PosyanduCare</title>
 
-    {{-- DETEKSI TRANSISI DARI LOGIN --}}
+    {{-- Deteksi transisi dari login --}}
     <script>
         (function () {
             try {
@@ -29,33 +27,25 @@
         })();
     </script>
 
-    {{-- META --}}
     <meta name="theme-color" content="#f8fffc">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
-    {{-- FAVICON --}}
     <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('img/logo.png') }}">
 
-    {{-- FONTS --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap"
+        rel="stylesheet"
+    >
 
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap"
-          rel="stylesheet">
-
-    {{-- ICONS --}}
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    {{-- ENGINE --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {{-- Aman untuk struktur blade kamu sekarang. Nanti kalau mau lebih kencang lagi, pindahkan Tailwind ke Vite. --}}
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <style type="text/tailwindcss">
         @theme {
@@ -98,13 +88,13 @@
             --slate-50: #f8fafc;
 
             --sidebar-width: 292px;
-
             --ease-premium: cubic-bezier(.16, 1, .3, 1);
             --ease-smooth: cubic-bezier(.22, 1, .36, 1);
-            --ease-gate: cubic-bezier(.76, 0, .24, 1);
         }
 
-        * {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
@@ -116,35 +106,30 @@
             margin: 0;
             padding: 0;
             overflow-x: hidden;
-            overflow-y: auto;
             scroll-behavior: auto !important;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             color: var(--slate-700);
             overscroll-behavior-y: auto;
             background:
-                radial-gradient(circle at 7% 0%, rgba(16,185,129,.10), transparent 28%),
-                radial-gradient(circle at 95% 7%, rgba(245,158,11,.075), transparent 28%),
-                radial-gradient(circle at 85% 92%, rgba(20,184,166,.10), transparent 30%),
-                linear-gradient(135deg, #f8fffc 0%, #f8fafc 46%, #effbf6 100%);
+                radial-gradient(circle at 7% 0%, rgba(16,185,129,.08), transparent 28%),
+                radial-gradient(circle at 95% 7%, rgba(245,158,11,.05), transparent 28%),
+                radial-gradient(circle at 85% 92%, rgba(20,184,166,.07), transparent 30%),
+                linear-gradient(135deg, #f8fffc 0%, #f8fafc 48%, #effbf6 100%);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
         body.pc-scroll-lock {
             overflow: hidden !important;
+            touch-action: none;
         }
 
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6,
+        h1,h2,h3,h4,h5,h6,
         .font-poppins {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Poppins', system-ui, sans-serif;
         }
 
         button,
@@ -154,18 +139,14 @@
             font-family: inherit;
         }
 
-        [x-cloak] {
-            display: none !important;
-        }
-
         ::selection {
             background: rgba(16,185,129,.18);
             color: var(--green-900);
         }
 
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
         }
 
         ::-webkit-scrollbar-track {
@@ -173,12 +154,12 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(148,163,184,.50);
+            background: rgba(148,163,184,.45);
             border-radius: 999px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(100,116,139,.70);
+            background: rgba(100,116,139,.65);
         }
 
         .custom-scrollbar::-webkit-scrollbar {
@@ -191,9 +172,8 @@
         }
 
         /* =========================================================
-           BACKGROUND
+           BACKGROUND RINGAN
         ========================================================= */
-
         .bidan-bg {
             position: fixed;
             inset: 0;
@@ -202,28 +182,30 @@
             overflow: hidden;
         }
 
-        .bidan-bg::before {
-            content: "";
-            position: absolute;
-            width: 580px;
-            height: 580px;
-            left: -250px;
-            top: -240px;
-            border-radius: 999px;
-            background: rgba(16,185,129,.14);
-            filter: blur(90px);
-        }
-
+        .bidan-bg::before,
         .bidan-bg::after {
             content: "";
             position: absolute;
-            width: 540px;
-            height: 540px;
-            right: -240px;
-            bottom: -230px;
             border-radius: 999px;
-            background: rgba(20,184,166,.12);
-            filter: blur(92px);
+            pointer-events: none;
+        }
+
+        .bidan-bg::before {
+            width: 420px;
+            height: 420px;
+            left: -190px;
+            top: -180px;
+            background: rgba(16,185,129,.10);
+            filter: blur(70px);
+        }
+
+        .bidan-bg::after {
+            width: 400px;
+            height: 400px;
+            right: -180px;
+            bottom: -170px;
+            background: rgba(20,184,166,.085);
+            filter: blur(72px);
         }
 
         .bidan-grid-soft {
@@ -231,200 +213,188 @@
             inset: 0;
             z-index: 1;
             pointer-events: none;
-            opacity: .12;
+            opacity: .065;
             background-image:
                 linear-gradient(rgba(15,23,42,.035) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(15,23,42,.035) 1px, transparent 1px);
             background-size: 72px 72px;
-            mask-image: radial-gradient(circle at center, black, transparent 72%);
         }
 
-        .bidan-dot-pattern {
-            position: fixed;
-            right: 42px;
-            top: 118px;
-            width: 98px;
-            height: 98px;
-            z-index: 2;
-            pointer-events: none;
-            opacity: .14;
-            background-image: radial-gradient(rgba(16,185,129,.50) 1.2px, transparent 1.2px);
-            background-size: 10px 10px;
-        }
-
+        .bidan-dot-pattern,
         .bidan-leaf-decor {
-            position: fixed;
-            left: -92px;
-            bottom: -100px;
-            width: 360px;
-            height: 360px;
-            z-index: 1;
-            opacity: .055;
-            transform: rotate(-12deg);
-            pointer-events: none;
-        }
-
-        .bidan-leaf-decor span {
-            position: absolute;
-            border-radius: 100% 0 100% 0;
-            background: linear-gradient(135deg, rgba(4,120,87,.85), rgba(16,185,129,.05));
-        }
-
-        .bidan-leaf-decor .leaf-1 {
-            width: 140px;
-            height: 82px;
-            left: 48px;
-            bottom: 82px;
-            transform: rotate(-24deg);
-        }
-
-        .bidan-leaf-decor .leaf-2 {
-            width: 160px;
-            height: 92px;
-            left: 112px;
-            bottom: 142px;
-            transform: rotate(-5deg);
-        }
-
-        .bidan-leaf-decor .leaf-3 {
-            width: 126px;
-            height: 72px;
-            left: 184px;
-            bottom: 62px;
-            transform: rotate(28deg);
+            display: none;
         }
 
         /* =========================================================
-           ENTRY LOADER SETELAH LOGIN
+           LOGIN-STYLE LOADER
+           Sama gaya seperti login/admin: orbit ring + heart pulse + dots.
         ========================================================= */
-
-        .dashboard-entry-loader {
+        #pcBidanLoader {
             position: fixed;
             inset: 0;
-            z-index: 99980;
+            z-index: 99999;
             display: flex;
             align-items: center;
             justify-content: center;
-            background:
-                radial-gradient(circle at center, rgba(255,255,255,.19), transparent 34%),
-                linear-gradient(135deg, rgba(4,120,87,.80), rgba(5,150,105,.76), rgba(16,185,129,.80));
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            transition: opacity .75s ease, visibility .75s ease;
         }
 
-        html.pc-from-login .dashboard-entry-loader {
-            opacity: 1;
+        #pcBidanLoader.show {
             visibility: visible;
             pointer-events: auto;
         }
 
-        html.pc-loader-out .dashboard-entry-loader {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
-
-        .dashboard-entry-card {
-            width: 238px;
-            min-height: 182px;
-            border-radius: 34px;
-            background: rgba(255,255,255,.16);
-            border: 1px solid rgba(255,255,255,.32);
-            box-shadow:
-                0 32px 90px rgba(0,0,0,.18),
-                inset 0 1px 0 rgba(255,255,255,.26);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            transform: scale(.94) translateY(16px);
-            opacity: 0;
-            animation: dashboardLoaderPop .86s var(--ease-smooth) forwards;
-        }
-
-        @keyframes dashboardLoaderPop {
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .dashboard-entry-icon {
-            width: 76px;
-            height: 76px;
-            border-radius: 26px;
-            background: rgba(255,255,255,.18);
-            border: 1px solid rgba(255,255,255,.30);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow:
-                0 18px 42px rgba(0,0,0,.12),
-                inset 0 1px 0 rgba(255,255,255,.24);
-            margin-bottom: 15px;
-        }
-
-        .dashboard-entry-icon i {
-            font-size: 31px;
-        }
-
-        .dashboard-entry-title {
-            font-size: 13.5px;
-            font-weight: 900;
-            letter-spacing: .02em;
-        }
-
-        .dashboard-entry-line {
-            position: relative;
-            width: 124px;
-            height: 5px;
-            margin-top: 16px;
-            border-radius: 999px;
-            overflow: hidden;
-            background: rgba(255,255,255,.25);
-        }
-
-        .dashboard-entry-line::after {
-            content: "";
+        .ld-veil {
             position: absolute;
-            top: 0;
-            left: -55%;
-            width: 55%;
-            height: 100%;
-            border-radius: inherit;
-            background: white;
-            animation: dashboardEntryLine 1.15s infinite cubic-bezier(.65,0,.35,1);
+            inset: 0;
+            background: rgba(240,255,248,.80);
+            backdrop-filter: blur(10px) saturate(1.14);
+            -webkit-backdrop-filter: blur(10px) saturate(1.14);
+            opacity: 0;
+            transition: opacity .20s ease;
         }
 
-        @keyframes dashboardEntryLine {
-            to {
-                left: 100%;
-            }
+        #pcBidanLoader.show .ld-veil {
+            opacity: 1;
         }
 
-        /* =========================================================
-           ROUTE LOADER
-        ========================================================= */
+        .ld-panel {
+            position: relative;
+            z-index: 2;
+            min-width: 236px;
+            padding: 30px 40px 28px;
+            border-radius: 24px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(16,185,129,.13);
+            box-shadow: 0 22px 54px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(12px) scale(.96);
+            transition: opacity .24s var(--ease-smooth) .04s, transform .24s var(--ease-smooth) .04s;
+            will-change: opacity, transform;
+        }
+
+        #pcBidanLoader.show .ld-panel {
+            opacity: 1;
+            transform: none;
+        }
+
+        .ld-orbit {
+            position: relative;
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ld-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2.25px solid transparent;
+            will-change: transform;
+        }
+
+        .ld-ring:nth-child(1) {
+            border-top-color: var(--green-500);
+            border-right-color: rgba(16,185,129,.25);
+            animation: spinR .78s linear infinite;
+        }
+
+        .ld-ring:nth-child(2) {
+            inset: 8px;
+            border-bottom-color: var(--green-400);
+            border-left-color: rgba(52,211,153,.25);
+            animation: spinR 1.15s linear infinite reverse;
+        }
+
+        .ld-ring:nth-child(3) {
+            inset: 17px;
+            border-top-color: var(--amber-500);
+            border-right-color: rgba(245,158,11,.22);
+            animation: spinR 1.65s linear infinite;
+        }
+
+        @keyframes spinR {
+            to { transform: rotate(360deg); }
+        }
+
+        .ld-heart {
+            position: relative;
+            z-index: 2;
+            font-size: 17px;
+            color: var(--green-600);
+            animation: heartBeat 1.08s ease-in-out infinite;
+            will-change: transform;
+        }
+
+        @keyframes heartBeat {
+            0%,100% { transform: scale(1); opacity: .9; }
+            18%     { transform: scale(1.16); }
+            36%     { transform: scale(1); }
+            52%     { transform: scale(1.07); }
+        }
+
+        .ld-name {
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--slate-900);
+            margin-bottom: 2px;
+        }
+
+        .ld-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 14px;
+        }
+
+        .ld-dots {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ld-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green-400);
+            animation: dotPop .72s ease-in-out infinite both;
+            will-change: transform, opacity;
+        }
+
+        .ld-dot:nth-child(1) { animation-delay: 0s; }
+        .ld-dot:nth-child(2) { animation-delay: .12s; background: var(--green-500); }
+        .ld-dot:nth-child(3) { animation-delay: .24s; background: var(--green-600); }
+        .ld-dot:nth-child(4) { animation-delay: .36s; background: var(--amber-500); }
+
+        @keyframes dotPop {
+            0%,80%,100% { transform: scale(.55); opacity: .35; }
+            40%         { transform: scale(1.12); opacity: 1; }
+        }
 
         .page-loader {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            height: 4px;
-            z-index: 99999;
-            background: rgba(236,253,245,.75);
-            overflow: hidden;
+            z-index: 99998;
+            height: 3px;
             opacity: 0;
-            transform: translateY(-4px);
-            transition: opacity .30s ease, transform .30s ease;
+            overflow: hidden;
+            transform: translateY(-3px);
+            transition: opacity .14s ease, transform .14s ease;
         }
 
         body.is-navigating .page-loader {
@@ -436,134 +406,20 @@
             content: "";
             position: absolute;
             inset: 0 auto 0 0;
-            width: 42%;
+            width: 46%;
             border-radius: 999px;
-            background: linear-gradient(90deg, var(--green-700), var(--green-500), var(--amber-400));
-            box-shadow: 0 0 22px rgba(16,185,129,.34);
-            animation: loadingBar 1.25s infinite var(--ease-gate);
+            background: linear-gradient(90deg, rgba(16,185,129,0), var(--green-500), rgba(52,211,153,.55));
+            animation: loadingBar .72s infinite cubic-bezier(.76, 0, .24, 1);
         }
 
         @keyframes loadingBar {
-            0% {
-                transform: translateX(-115%);
-            }
-
-            100% {
-                transform: translateX(260%);
-            }
-        }
-
-        .route-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 99990;
-            pointer-events: none;
-            opacity: 0;
-            background:
-                radial-gradient(circle at center, rgba(255,255,255,.16), transparent 34%),
-                linear-gradient(135deg, rgba(4,120,87,.72), rgba(5,150,105,.68), rgba(16,185,129,.72));
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: opacity .42s ease;
-        }
-
-        body.is-navigating .route-overlay {
-            opacity: 1;
-        }
-
-        .route-loader-card {
-            position: fixed;
-            inset: 0;
-            z-index: 99991;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            opacity: 0;
-            transform: scale(.96);
-            transition: opacity .42s ease, transform .50s var(--ease-premium);
-        }
-
-        body.is-navigating .route-loader-card {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .loader-glass-card {
-            width: 220px;
-            min-height: 168px;
-            border-radius: 32px;
-            background: rgba(255,255,255,.16);
-            border: 1px solid rgba(255,255,255,.32);
-            backdrop-filter: blur(22px);
-            -webkit-backdrop-filter: blur(22px);
-            box-shadow:
-                0 30px 80px rgba(0,0,0,.16),
-                inset 0 1px 0 rgba(255,255,255,.26);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: white;
-        }
-
-        .loader-icon {
-            width: 72px;
-            height: 72px;
-            border-radius: 25px;
-            background: rgba(255,255,255,.18);
-            border: 1px solid rgba(255,255,255,.30);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 14px;
-            box-shadow:
-                0 18px 42px rgba(0,0,0,.12),
-                inset 0 1px 0 rgba(255,255,255,.24);
-        }
-
-        .loader-icon i {
-            font-size: 30px;
-        }
-
-        .loader-title {
-            font-size: 13px;
-            font-weight: 900;
-            letter-spacing: .02em;
-        }
-
-        .loader-line {
-            position: relative;
-            width: 116px;
-            height: 5px;
-            margin-top: 15px;
-            border-radius: 999px;
-            background: rgba(255,255,255,.24);
-            overflow: hidden;
-        }
-
-        .loader-line::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -55%;
-            width: 55%;
-            height: 100%;
-            border-radius: inherit;
-            background: white;
-            animation: miniLoader 1.05s infinite cubic-bezier(.65,0,.35,1);
-        }
-
-        @keyframes miniLoader {
-            to {
-                left: 100%;
-            }
+            0%   { transform: translateX(-115%); }
+            100% { transform: translateX(265%); }
         }
 
         /* =========================================================
            LAYOUT
         ========================================================= */
-
         .bidan-shell {
             position: relative;
             z-index: 10;
@@ -580,30 +436,24 @@
             display: flex;
             flex-direction: column;
             overflow: visible;
-            background: transparent;
-            transform: translateX(-108%);
-            transition:
-                transform .48s var(--ease-premium),
-                opacity .36s ease,
-                filter .36s ease;
+            background: transparent !important;
+            border-right: none !important;
+            box-shadow: none !important;
+            transform: translate3d(calc(-1 * var(--sidebar-width) - 18px), 0, 0);
+            transition: transform .24s var(--ease-premium);
+            will-change: transform;
         }
 
-        .bidan-sidebar.is-open {
-            transform: translateX(0);
-        }
-
-        @media (min-width: 1024px) {
-            .bidan-sidebar {
-                transform: translateX(0);
-            }
+        body.sidebar-open .bidan-sidebar {
+            transform: translate3d(0, 0, 0);
         }
 
         .sidebar-nav {
             position: relative;
             z-index: 2;
-            padding: 0;
             height: 100%;
-            overflow: visible;
+            padding: 0 !important;
+            overflow: visible !important;
         }
 
         .bidan-content {
@@ -611,31 +461,42 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            transition:
-                margin-left .44s var(--ease-premium),
-                opacity .34s ease,
-                filter .34s ease;
+            transition: margin-left .24s var(--ease-premium);
+            will-change: margin-left;
         }
 
         @media (min-width: 1024px) {
-            .bidan-content {
+            body.sidebar-open .bidan-content {
                 margin-left: var(--sidebar-width);
             }
-        }
-
-        body.is-navigating .bidan-content {
-            opacity: .46;
-            filter: blur(2px);
-            pointer-events: none;
         }
 
         .mobile-overlay {
             position: fixed;
             inset: 0;
             z-index: 60;
-            background: rgba(2,6,23,.36);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            background: rgba(2,6,23,.30);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            border: 0;
+            padding: 0;
+            margin: 0;
+            transition: opacity .18s ease, visibility .18s ease;
+        }
+
+        body.sidebar-open .mobile-overlay {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        @media (min-width: 1024px) {
+            .mobile-overlay {
+                display: none !important;
+            }
         }
 
         .sidebar-close-floating {
@@ -653,13 +514,8 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow:
-                0 10px 24px rgba(15,23,42,.08),
-                inset 0 1px 0 rgba(255,255,255,.85);
-            transition:
-                transform .26s var(--ease-premium),
-                background .26s var(--ease-premium),
-                color .26s var(--ease-premium);
+            box-shadow: 0 8px 20px rgba(15,23,42,.07), inset 0 1px 0 rgba(255,255,255,.85);
+            transition: transform .16s var(--ease-premium), background .16s ease, color .16s ease;
         }
 
         .sidebar-close-floating:hover {
@@ -671,42 +527,42 @@
         /* =========================================================
            SIDEBAR COMPATIBILITY
         ========================================================= */
+        .bidan-sidebar img,
+        .sidebar-nav img,
+        .pc-light-sidebar img {
+            max-width: 168px !important;
+            max-height: 92px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+        }
 
         .pc-light-sidebar {
             position: relative;
             width: 100%;
             height: calc(100dvh - 28px);
-            min-height: calc(100dvh - 28px);
-
-            display: flex;
-            flex-direction: column;
-
             padding: 24px 18px 18px;
             border-radius: 28px;
-
             overflow-x: hidden;
             overflow-y: auto;
             overscroll-behavior: contain;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-
+            scrollbar-width: thin;
             background:
-                radial-gradient(circle at 50% 0%, rgba(236,253,245,.80), transparent 34%),
+                radial-gradient(circle at 50% 0%, rgba(236,253,245,.70), transparent 34%),
                 linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,255,252,.94));
-
-            border: 1px solid rgba(226,232,240,.78);
-
-            box-shadow:
-                0 24px 70px rgba(15,23,42,.09),
-                inset 0 1px 0 rgba(255,255,255,.95);
-
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(226,232,240,.75);
+            box-shadow: 0 18px 52px rgba(15,23,42,.07), inset 0 1px 0 rgba(255,255,255,.95);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
         }
 
         .pc-light-sidebar::-webkit-scrollbar {
-            width: 0;
-            display: none;
+            width: 4px;
+        }
+
+        .pc-light-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(16,185,129,.20);
+            border-radius: 999px;
         }
 
         .pc-sidebar-logo-area {
@@ -725,13 +581,12 @@
         }
 
         .pc-sidebar-logo {
-            width: 154px;
-            height: auto;
-            object-fit: contain;
+            width: 154px !important;
+            max-width: 72% !important;
+            max-height: 86px !important;
+            object-fit: contain !important;
             display: block;
-            filter:
-                drop-shadow(0 12px 22px rgba(15,23,42,.08))
-                drop-shadow(0 2px 4px rgba(16,185,129,.08));
+            filter: drop-shadow(0 8px 16px rgba(15,23,42,.07)) drop-shadow(0 2px 4px rgba(16,185,129,.07));
         }
 
         .pc-user-card {
@@ -743,12 +598,9 @@
             padding: 14px;
             margin-bottom: 24px;
             border-radius: 22px;
-            background:
-                linear-gradient(135deg, rgba(255,255,255,.88), rgba(248,255,252,.78));
-            border: 1px solid rgba(209,250,229,.95);
-            box-shadow:
-                0 16px 34px rgba(15,23,42,.06),
-                inset 0 1px 0 rgba(255,255,255,.95);
+            background: linear-gradient(135deg, rgba(255,255,255,.88), rgba(248,255,252,.78));
+            border: 1px solid rgba(209,250,229,.92);
+            box-shadow: 0 12px 28px rgba(15,23,42,.048), inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         .pc-user-avatar {
@@ -756,17 +608,14 @@
             height: 52px;
             flex-shrink: 0;
             border-radius: 999px;
-            background:
-                linear-gradient(135deg, #10b981 0%, #34d399 45%, #f59e0b 100%);
+            background: linear-gradient(135deg, #10b981 0%, #34d399 45%, #f59e0b 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 900;
             font-size: 18px;
-            box-shadow:
-                0 12px 24px rgba(16,185,129,.18),
-                inset 0 1px 0 rgba(255,255,255,.25);
+            box-shadow: 0 10px 20px rgba(16,185,129,.16), inset 0 1px 0 rgba(255,255,255,.22);
         }
 
         .pc-user-info {
@@ -789,7 +638,7 @@
             margin: 3px 0 6px;
             color: #64748b;
             font-size: 11px;
-            font-weight: 750;
+            font-weight: 700;
         }
 
         .pc-online {
@@ -801,7 +650,7 @@
             background: #ecfdf5;
             color: #059669;
             font-size: 10px;
-            font-weight: 850;
+            font-weight: 800;
         }
 
         .pc-online span {
@@ -809,7 +658,27 @@
             height: 6px;
             border-radius: 999px;
             background: #10b981;
-            box-shadow: 0 0 0 3px rgba(16,185,129,.12);
+            box-shadow: 0 0 0 3px rgba(16,185,129,.11);
+        }
+
+        .pc-user-arrow {
+            width: 30px;
+            height: 30px;
+            flex-shrink: 0;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #059669;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .16s ease, transform .16s ease;
+        }
+
+        .pc-user-arrow:hover {
+            background: #ecfdf5;
+            transform: translateY(-1px);
         }
 
         .pc-menu-group {
@@ -848,29 +717,22 @@
             color: #334155;
             text-decoration: none;
             font-size: 12.5px;
-            font-weight: 780;
+            font-weight: 700;
             cursor: pointer;
-            transition:
-                background .28s var(--ease-premium),
-                color .28s var(--ease-premium),
-                transform .28s var(--ease-premium),
-                box-shadow .28s var(--ease-premium);
+            transition: background .16s ease, color .16s ease, transform .16s ease;
         }
 
         .pc-menu-item:hover {
-            background: rgba(236,253,245,.92);
+            background: rgba(236,253,245,.90);
             color: #047857;
             transform: translateX(3px);
         }
 
         .pc-menu-item.active {
-            background:
-                linear-gradient(90deg, rgba(236,253,245,.98), rgba(255,255,255,.82));
+            background: linear-gradient(90deg, rgba(236,253,245,.98), rgba(255,255,255,.80));
             color: #047857;
             font-weight: 900;
-            box-shadow:
-                0 10px 24px rgba(16,185,129,.08),
-                inset 0 1px 0 rgba(255,255,255,.92);
+            box-shadow: 0 8px 20px rgba(16,185,129,.07), inset 0 1px 0 rgba(255,255,255,.90);
         }
 
         .pc-menu-item.active::before {
@@ -892,7 +754,7 @@
             justify-content: center;
             color: #64748b;
             font-size: 13px;
-            transition: color .28s ease;
+            transition: color .16s ease;
         }
 
         .pc-menu-item:hover .pc-menu-icon,
@@ -928,10 +790,7 @@
             padding: 0;
         }
 
-        .pc-logout {
-            color: #ef4444;
-        }
-
+        .pc-logout,
         .pc-logout .pc-menu-icon {
             color: #ef4444;
         }
@@ -942,10 +801,11 @@
         }
 
         .pc-sidebar-decoration {
-            position: relative;
-            min-height: 96px;
-            height: 96px;
-            margin: 8px -18px -18px;
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 128px;
             pointer-events: none;
             overflow: hidden;
             z-index: 1;
@@ -959,85 +819,83 @@
         }
 
         .pc-wave-1 {
-            bottom: -54px;
-            height: 96px;
-            background: rgba(16,185,129,.14);
+            bottom: -60px;
+            height: 112px;
+            background: rgba(16,185,129,.13);
         }
 
         .pc-wave-2 {
-            bottom: -67px;
-            height: 106px;
-            background: rgba(5,150,105,.13);
+            bottom: -76px;
+            height: 126px;
+            background: rgba(5,150,105,.11);
         }
 
         .pc-wave-3 {
-            bottom: -78px;
-            height: 116px;
-            background: rgba(20,184,166,.10);
+            bottom: -92px;
+            height: 132px;
+            background: rgba(20,184,166,.09);
         }
 
         .pc-plant {
             position: absolute;
-            right: 22px;
-            bottom: 11px;
-            width: 64px;
-            height: 64px;
+            right: 16px;
+            bottom: 22px;
+            width: 76px;
+            height: 76px;
         }
 
         .pc-stem {
             position: absolute;
-            left: 31px;
+            left: 36px;
             bottom: 0;
             width: 3px;
-            height: 46px;
+            height: 58px;
             border-radius: 999px;
-            background: rgba(4,120,87,.35);
+            background: rgba(4,120,87,.32);
             transform: rotate(18deg);
             transform-origin: bottom;
         }
 
         .pc-leaf {
             position: absolute;
-            width: 31px;
-            height: 16px;
+            width: 38px;
+            height: 20px;
             border-radius: 100% 0 100% 0;
-            background:
-                linear-gradient(135deg, rgba(4,120,87,.66), rgba(16,185,129,.24));
+            background: linear-gradient(135deg, rgba(4,120,87,.62), rgba(16,185,129,.20));
             transform-origin: bottom left;
         }
 
-        .pc-leaf-1 {
-            right: 19px;
-            bottom: 23px;
-            transform: rotate(-34deg);
+        .pc-leaf-1 { right:22px; bottom:28px; transform:rotate(-34deg); }
+        .pc-leaf-2 { right:38px; bottom:42px; transform:rotate(-8deg) scale(.9); }
+        .pc-leaf-3 { right:8px;  bottom:44px; transform:rotate(28deg) scale(.86); }
+        .pc-leaf-4 { right:30px; bottom:14px; transform:rotate(46deg) scale(.72); }
+
+        .pc-light-sidebar > * {
+            opacity: 0;
+            transform: translateY(7px);
+            animation: pcSidebarIn .32s var(--ease-smooth) forwards;
         }
 
-        .pc-leaf-2 {
-            right: 32px;
-            bottom: 35px;
-            transform: rotate(-8deg) scale(.9);
-        }
+        .pc-sidebar-logo-area { animation-delay: .02s; }
+        .pc-user-card { animation-delay: .04s; }
+        .pc-menu-group:nth-of-type(1) { animation-delay: .06s; }
+        .pc-menu-group:nth-of-type(2) { animation-delay: .08s; }
+        .pc-sidebar-decoration { animation-delay: .10s; }
 
-        .pc-leaf-3 {
-            right: 7px;
-            bottom: 36px;
-            transform: rotate(28deg) scale(.86);
-        }
-
-        .pc-leaf-4 {
-            right: 25px;
-            bottom: 11px;
-            transform: rotate(46deg) scale(.72);
+        @keyframes pcSidebarIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* =========================================================
            TOPBAR
         ========================================================= */
-
         .bidan-topbar {
             position: relative;
             z-index: 35;
-            min-height: 78px;
+            min-height: 76px;
             margin: 24px 28px 0;
             padding: 14px 18px 14px 22px;
             display: flex;
@@ -1045,14 +903,11 @@
             justify-content: space-between;
             gap: 16px;
             border-radius: 28px;
-            background:
-                linear-gradient(135deg, rgba(255,255,255,.90), rgba(255,255,255,.72));
-            border: 1px solid rgba(226,232,240,.82);
-            backdrop-filter: blur(26px) saturate(1.12);
-            -webkit-backdrop-filter: blur(26px) saturate(1.12);
-            box-shadow:
-                0 22px 55px rgba(15,23,42,.065),
-                inset 0 1px 0 rgba(255,255,255,.90);
+            background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
+            border: 1px solid rgba(226,232,240,.80);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 16px 42px rgba(15,23,42,.05), inset 0 1px 0 rgba(255,255,255,.90);
         }
 
         .bidan-topbar::before {
@@ -1062,8 +917,8 @@
             border-radius: 27px;
             pointer-events: none;
             background:
-                radial-gradient(circle at 4% 0%, rgba(16,185,129,.10), transparent 34%),
-                radial-gradient(circle at 96% 0%, rgba(245,158,11,.08), transparent 34%);
+                radial-gradient(circle at 4% 0%, rgba(16,185,129,.075), transparent 34%),
+                radial-gradient(circle at 96% 0%, rgba(245,158,11,.055), transparent 34%);
         }
 
         .topbar-left,
@@ -1083,29 +938,27 @@
             min-width: 0;
         }
 
-        .mobile-menu-btn {
+        .sidebar-toggle-btn {
             width: 44px;
             height: 44px;
             border: 0;
             border-radius: 16px;
-            background: rgba(255,255,255,.86);
+            background: rgba(255,255,255,.88);
             border: 1px solid rgba(226,232,240,.86);
             color: var(--slate-600);
-            box-shadow:
-                0 12px 26px rgba(15,23,42,.06),
-                inset 0 1px 0 rgba(255,255,255,.80);
-            display: none;
+            box-shadow: 0 8px 20px rgba(15,23,42,.05), inset 0 1px 0 rgba(255,255,255,.78);
+            display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all .32s var(--ease-premium);
+            transition: color .16s ease, border-color .16s ease, transform .16s ease, background .16s ease;
         }
 
-        .mobile-menu-btn:hover {
+        .sidebar-toggle-btn:hover {
             color: var(--green-700);
-            border-color: rgba(16,185,129,.30);
+            border-color: rgba(16,185,129,.28);
+            background: white;
             transform: translateY(-1px);
-            box-shadow: 0 16px 32px rgba(16,185,129,.12);
         }
 
         .breadcrumb-mini {
@@ -1126,7 +979,7 @@
 
         .breadcrumb-mini i {
             font-size: 9px;
-            opacity: .62;
+            opacity: .60;
         }
 
         .page-title-inline {
@@ -1149,9 +1002,8 @@
             height: 46px;
             padding: 0 18px;
             border-radius: 18px;
-            background:
-                linear-gradient(135deg, rgba(236,253,245,.84), rgba(255,255,255,.62));
-            border: 1px solid rgba(16,185,129,.18);
+            background: linear-gradient(135deg, rgba(236,253,245,.82), rgba(255,255,255,.60));
+            border: 1px solid rgba(16,185,129,.16);
             color: var(--green-800);
             display: flex;
             align-items: center;
@@ -1159,9 +1011,7 @@
             font-size: 12px;
             font-weight: 900;
             white-space: nowrap;
-            box-shadow:
-                0 14px 30px rgba(16,185,129,.045),
-                inset 0 1px 0 rgba(255,255,255,.82);
+            box-shadow: 0 10px 24px rgba(16,185,129,.04), inset 0 1px 0 rgba(255,255,255,.80);
         }
 
         .workspace-chip i {
@@ -1171,16 +1021,14 @@
         .notif-button,
         .profile-button {
             height: 50px;
-            border: 1px solid rgba(226,232,240,.82);
+            border: 1px solid rgba(226,232,240,.80);
             border-radius: 999px;
-            background: rgba(255,255,255,.78);
+            background: rgba(255,255,255,.80);
             display: flex;
             align-items: center;
             cursor: pointer;
-            transition: all .32s var(--ease-premium);
-            box-shadow:
-                0 14px 30px rgba(15,23,42,.045),
-                inset 0 1px 0 rgba(255,255,255,.82);
+            transition: background .16s ease, border-color .16s ease, transform .16s ease;
+            box-shadow: 0 10px 24px rgba(15,23,42,.04), inset 0 1px 0 rgba(255,255,255,.80);
         }
 
         .notif-button {
@@ -1193,9 +1041,8 @@
         .notif-button:hover,
         .profile-button:hover {
             background: white;
-            border-color: rgba(16,185,129,.24);
+            border-color: rgba(16,185,129,.22);
             transform: translateY(-1px);
-            box-shadow: 0 18px 34px rgba(15,23,42,.075);
         }
 
         .notif-dot {
@@ -1205,7 +1052,7 @@
             width: 11px;
             height: 11px;
             border-radius: 999px;
-            background: #f43f5e;
+            background: var(--rose-500);
             border: 2px solid white;
             box-shadow: 0 0 0 3px rgba(244,63,94,.10);
         }
@@ -1226,9 +1073,7 @@
             justify-content: center;
             font-size: 13px;
             font-weight: 900;
-            box-shadow:
-                0 12px 24px rgba(16,185,129,.20),
-                inset 0 1px 0 rgba(255,255,255,.22);
+            box-shadow: 0 8px 18px rgba(16,185,129,.18), inset 0 1px 0 rgba(255,255,255,.20);
             overflow: hidden;
         }
 
@@ -1251,22 +1096,40 @@
             letter-spacing: .10em;
         }
 
+        .profile-chevron {
+            transition: transform .16s ease;
+        }
+
+        .floating-box.is-open .profile-chevron {
+            transform: rotate(180deg);
+        }
+
         .floating-menu {
             position: absolute;
             right: 0;
             top: calc(100% + 12px);
             width: 280px;
             border-radius: 24px;
-            background: rgba(255,255,255,.96);
-            border: 1px solid rgba(226,232,240,.9);
-            box-shadow:
-                0 28px 80px rgba(15,23,42,.14),
-                inset 0 1px 0 rgba(255,255,255,.88);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(255,255,255,.97);
+            border: 1px solid rgba(226,232,240,.88);
+            box-shadow: 0 24px 64px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             padding: 10px;
             overflow: hidden;
             z-index: 80;
+            opacity: 0;
+            transform: translateY(7px) scale(.97);
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .16s ease, transform .16s var(--ease-smooth), visibility .16s ease;
+        }
+
+        .floating-box.is-open .floating-menu {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            visibility: visible;
+            pointer-events: auto;
         }
 
         .notif-menu {
@@ -1316,7 +1179,7 @@
             font-weight: 900;
             cursor: pointer;
             text-decoration: none;
-            transition: all .30s ease;
+            transition: background .16s ease, color .16s ease;
         }
 
         .floating-link:hover {
@@ -1341,7 +1204,7 @@
             border-radius: 18px;
             color: var(--slate-700);
             text-decoration: none;
-            transition: all .28s var(--ease-premium);
+            transition: background .16s ease, transform .16s ease;
         }
 
         .notif-item:hover {
@@ -1382,7 +1245,6 @@
         /* =========================================================
            MAIN CONTENT
         ========================================================= */
-
         .bidan-main {
             position: relative;
             z-index: 10;
@@ -1402,46 +1264,37 @@
         .dashboard-card,
         .content-card,
         .table-card,
-        .bidan-card {
+        .bidan-card,
+        .chart-card {
             border-radius: 24px;
-            background: rgba(255,255,255,.82);
-            border: 1px solid rgba(226,232,240,.82);
-            box-shadow:
-                0 20px 50px rgba(15,23,42,.052),
-                inset 0 1px 0 rgba(255,255,255,.82);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
+            background: rgba(255,255,255,.84);
+            border: 1px solid rgba(226,232,240,.80);
+            box-shadow: 0 14px 36px rgba(15,23,42,.04), inset 0 1px 0 rgba(255,255,255,.80);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         /* =========================================================
            MOBILE BOTTOM NAV
         ========================================================= */
-
         .bottom-nav {
             position: fixed;
             left: 12px;
             right: 12px;
             bottom: 10px;
             z-index: 55;
-
             min-height: 68px;
             padding: 8px 10px;
-
             display: none;
             align-items: center;
             justify-content: space-between;
             gap: 6px;
-
             border-radius: 26px;
             background: rgba(255,255,255,.88);
             border: 1px solid rgba(226,232,240,.86);
-
-            backdrop-filter: blur(24px) saturate(1.12);
-            -webkit-backdrop-filter: blur(24px) saturate(1.12);
-
-            box-shadow:
-                0 22px 60px rgba(15,23,42,.14),
-                inset 0 1px 0 rgba(255,255,255,.92);
+            backdrop-filter: blur(16px) saturate(1.10);
+            -webkit-backdrop-filter: blur(16px) saturate(1.10);
+            box-shadow: 0 18px 48px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.92);
         }
 
         .bottom-nav-link {
@@ -1458,7 +1311,7 @@
             text-decoration: none;
             font-size: 9.5px;
             font-weight: 900;
-            transition: all .28s var(--ease-premium);
+            transition: background .16s ease, color .16s ease;
         }
 
         .bottom-nav-link i {
@@ -1491,11 +1344,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow:
-                0 16px 34px rgba(16,185,129,.32),
-                inset 0 1px 0 rgba(255,255,255,.22);
+            box-shadow: 0 16px 34px rgba(16,185,129,.30), inset 0 1px 0 rgba(255,255,255,.22);
             border: 4px solid rgba(255,255,255,.94);
-            transition: all .28s var(--ease-premium);
+            transition: transform .16s ease;
         }
 
         .bottom-nav-action:hover {
@@ -1520,76 +1371,34 @@
         /* =========================================================
            REVEAL CONTENT
         ========================================================= */
-
         .pc-reveal-item {
             opacity: 0;
-            transform: translateY(42px) scale(.982);
-            filter: blur(5px);
-            will-change: opacity, transform, filter;
+            transform: translateY(14px) scale(.995);
+            will-change: opacity, transform;
         }
 
-        html.pc-normal-entry .pc-reveal-ready .pc-reveal-item {
-            animation: dashboardRevealSlow 1.15s var(--ease-smooth) forwards;
-            animation-delay: calc(var(--reveal-index, 0) * 180ms);
+        .pc-reveal-ready .pc-reveal-item {
+            animation: revealItem .34s var(--ease-smooth) forwards;
+            animation-delay: calc(min(var(--reveal-index, 0), 8) * 30ms);
         }
 
-        html.pc-from-login.pc-content-in .pc-reveal-ready .pc-reveal-item {
-            animation: dashboardRevealSlow 1.22s var(--ease-smooth) forwards;
-            animation-delay: calc(var(--reveal-index, 0) * 220ms);
-        }
-
-        @keyframes dashboardRevealSlow {
-            0% {
-                opacity: 0;
-                transform: translateY(42px) scale(.982);
-                filter: blur(5px);
-            }
-
-            70% {
-                opacity: 1;
-                filter: blur(0);
-            }
-
-            100% {
+        @keyframes revealItem {
+            to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
-                filter: blur(0);
             }
-        }
-
-        /* =========================================================
-           ENTRY ANIMATION
-        ========================================================= */
-
-        .sidebar-enter {
-            opacity: 0;
-            animation: sidebarEnter 1.15s var(--ease-smooth) forwards;
         }
 
         .topbar-enter {
             opacity: 0;
-            transform: translateY(-28px) scale(.985);
-            animation: topbarEnter 1.12s var(--ease-smooth) .22s forwards;
+            transform: translateY(-10px) scale(.997);
+            animation: topbarEnter .32s var(--ease-smooth) .03s forwards;
         }
 
         .main-enter {
             opacity: 0;
-            transform: translateY(36px) scale(.988);
-            animation: mainEnter 1.2s var(--ease-smooth) .42s forwards;
-        }
-
-        @keyframes sidebarEnter {
-            from {
-                opacity: 0;
-                transform: translateX(-40px);
-                filter: blur(8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-                filter: blur(0);
-            }
+            transform: translateY(14px) scale(.997);
+            animation: mainEnter .34s var(--ease-smooth) .05s forwards;
         }
 
         @keyframes topbarEnter {
@@ -1606,121 +1415,36 @@
             }
         }
 
-        html.pc-from-login:not(.pc-sidebar-in) .bidan-sidebar {
-            opacity: 0;
-            transform: translateX(-115%);
-            filter: blur(8px);
-        }
-
-        html.pc-from-login.pc-sidebar-in .bidan-sidebar {
-            opacity: 1;
-            transform: translateX(0);
-            filter: blur(0);
-            transition:
-                opacity 1.45s var(--ease-smooth),
-                transform 1.45s var(--ease-smooth),
-                filter 1.25s var(--ease-smooth);
-        }
-
         html.pc-from-login:not(.pc-topbar-in) .bidan-topbar {
             opacity: 0;
-            transform: translateY(-42px) scale(.985);
-            filter: blur(8px);
+            transform: translateY(-14px) scale(.994);
         }
 
         html.pc-from-login.pc-topbar-in .bidan-topbar {
             opacity: 1;
             transform: translateY(0) scale(1);
-            filter: blur(0);
-            transition:
-                opacity 1.25s var(--ease-smooth),
-                transform 1.25s var(--ease-smooth),
-                filter 1.15s var(--ease-smooth);
+            transition: opacity .30s var(--ease-smooth), transform .30s var(--ease-smooth);
         }
 
         html.pc-from-login:not(.pc-content-in) .bidan-main {
             opacity: 0;
-            transform: translateY(58px) scale(.988);
-            filter: blur(8px);
+            transform: translateY(18px) scale(.996);
         }
 
         html.pc-from-login.pc-content-in .bidan-main {
             opacity: 1;
             transform: translateY(0) scale(1);
-            filter: blur(0);
-            transition:
-                opacity 1.35s var(--ease-smooth),
-                transform 1.35s var(--ease-smooth),
-                filter 1.2s var(--ease-smooth);
+            transition: opacity .34s var(--ease-smooth), transform .34s var(--ease-smooth);
         }
 
-        html.pc-from-login .sidebar-enter,
         html.pc-from-login .topbar-enter,
         html.pc-from-login .main-enter {
             animation: none !important;
         }
 
-        html.pc-from-login:not(.pc-content-in) .bidan-main-inner > * {
-            opacity: 0 !important;
-            transform: translateY(42px) scale(.982) !important;
-            animation: none !important;
-        }
-
-        /* =========================================================
-           SWEETALERT
-        ========================================================= */
-
-        .swal2-popup.nexus-swal {
-            border-radius: 32px !important;
-            padding: 2.5rem 2rem !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
-            border: 1px solid rgba(226, 232, 240, 0.8) !important;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15) !important;
-            background: rgba(255, 255, 255, 0.98) !important;
-            backdrop-filter: blur(20px) !important;
-        }
-
-        .swal2-title {
-            font-family: 'Poppins', sans-serif !important;
-            font-weight: 900 !important;
-            color: #1e293b !important;
-            font-size: 1.35rem !important;
-        }
-
-        .swal2-html-container {
-            color: #64748b !important;
-            font-weight: 600 !important;
-            font-size: .95rem !important;
-            line-height: 1.6 !important;
-        }
-
-        .btn-nexus-confirm {
-            background: linear-gradient(135deg, #10b981, #059669) !important;
-            color: white !important;
-            border-radius: 16px !important;
-            font-weight: 900 !important;
-            text-transform: uppercase !important;
-            letter-spacing: .05em !important;
-            padding: 14px 32px !important;
-            box-shadow: 0 10px 20px -5px rgba(16,185,129,.40) !important;
-            border: none !important;
-        }
-
-        .btn-nexus-cancel {
-            background: #f1f5f9 !important;
-            color: #64748b !important;
-            border-radius: 16px !important;
-            font-weight: 900 !important;
-            text-transform: uppercase !important;
-            letter-spacing: .05em !important;
-            padding: 14px 32px !important;
-            border: none !important;
-        }
-
         /* =========================================================
            RESPONSIVE
         ========================================================= */
-
         @media (max-width: 1023px) {
             :root {
                 --sidebar-width: 286px;
@@ -1729,11 +1453,11 @@
             .bidan-sidebar {
                 width: min(286px, calc(100vw - 24px));
                 padding: 10px;
-                transform: translateX(-110%);
+                transform: translate3d(-110%, 0, 0);
             }
 
-            .bidan-sidebar.is-open {
-                transform: translateX(0);
+            body.sidebar-open .bidan-sidebar {
+                transform: translate3d(0, 0, 0);
             }
 
             .sidebar-close-floating {
@@ -1742,17 +1466,14 @@
 
             .pc-light-sidebar {
                 height: calc(100dvh - 20px);
-                min-height: calc(100dvh - 20px);
                 border-radius: 24px;
                 padding: 22px 16px 18px;
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
             }
 
             .pc-sidebar-logo {
-                width: 142px;
-            }
-
-            .mobile-menu-btn {
-                display: flex;
+                width: 142px !important;
             }
 
             .bidan-content {
@@ -1797,15 +1518,9 @@
                 display: flex;
             }
 
-            html.pc-from-login:not(.pc-sidebar-in) .bidan-sidebar,
-            html.pc-from-login.pc-sidebar-in .bidan-sidebar {
-                opacity: 0;
-                transform: translateX(-110%);
-            }
-
-            html.pc-from-login.pc-topbar-in .bidan-topbar,
-            html.pc-from-login.pc-content-in .bidan-main {
-                opacity: 1;
+            .bidan-bg::before,
+            .bidan-bg::after {
+                filter: blur(54px);
             }
         }
 
@@ -1817,7 +1532,7 @@
             }
 
             .page-title-inline {
-                max-width: 170px;
+                max-width: 180px;
                 font-size: 15px;
                 white-space: nowrap;
                 overflow: hidden;
@@ -1837,29 +1552,22 @@
                 right: -74px;
             }
 
-            .loader-glass-card,
-            .dashboard-entry-card {
-                width: 190px;
-                min-height: 154px;
-                border-radius: 30px;
+            .ld-panel {
+                padding: 26px 22px 24px;
+                min-width: unset;
+                width: 86vw;
             }
 
-            .loader-icon,
-            .dashboard-entry-icon {
-                width: 64px;
-                height: 64px;
-                border-radius: 23px;
-            }
-
-            .loader-icon i,
-            .dashboard-entry-icon i {
-                font-size: 26px;
+            .ld-orbit {
+                width: 58px;
+                height: 58px;
+                margin-bottom: 15px;
             }
         }
 
         @media (max-width: 420px) {
             .pc-sidebar-logo {
-                width: 132px;
+                width: 132px !important;
             }
 
             .pc-user-card {
@@ -1898,117 +1606,97 @@
     @stack('styles')
 </head>
 
-<body
-    x-data="{ sidebarOpen: false, notifOpen: false, profileOpen: false }"
-    x-init="
-        $watch('sidebarOpen', value => {
-            if (window.innerWidth < 1024) {
-                document.body.classList.toggle('pc-scroll-lock', value);
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 1024) {
-                sidebarOpen = false;
-                document.body.classList.remove('pc-scroll-lock');
-            }
-        });
-
-        window.addEventListener('keydown', event => {
-            if (event.key === 'Escape') {
-                sidebarOpen = false;
-                document.body.classList.remove('pc-scroll-lock');
-            }
-        });
-    "
-    class="selection:bg-emerald-100 selection:text-emerald-900"
->
+<body class="selection:bg-emerald-100 selection:text-emerald-900">
 
     @php
         use Illuminate\Support\Str;
+        use Illuminate\Support\Facades\Route;
+        use Illuminate\Support\Facades\Schema;
 
         $route = request()->route()?->getName() ?? '';
+        $bidanName = Auth::user()->name ?? 'Bidan';
+        $bidanInitial = strtoupper(substr($bidanName, 0, 1));
+
+        $safeRoute = function ($name, $fallback = '#') {
+            return Route::has($name) ? route($name) : $fallback;
+        };
 
         $notifCount = 0;
         $pendingNotifs = collect();
 
-        if (class_exists('\App\Models\Pemeriksaan')) {
-            $notifCount = \App\Models\Pemeriksaan::where('status_verifikasi', 'pending')->count() ?? 0;
+        try {
+            if (
+                class_exists('\App\Models\Pemeriksaan') &&
+                Schema::hasTable('pemeriksaans') &&
+                Schema::hasColumn('pemeriksaans', 'status_verifikasi')
+            ) {
+                $baseNotifQuery = \App\Models\Pemeriksaan::query()
+                    ->where('status_verifikasi', 'pending');
 
-            $pendingNotifs = \App\Models\Pemeriksaan::with(['kunjungan.pasien'])
-                ->where('status_verifikasi', 'pending')
-                ->latest()
-                ->take(5)
-                ->get();
+                $notifCount = (clone $baseNotifQuery)->count();
+
+                $pendingNotifs = $baseNotifQuery
+                    ->latest()
+                    ->take(5)
+                    ->get();
+            }
+        } catch (\Throwable $e) {
+            $notifCount = 0;
+            $pendingNotifs = collect();
         }
+
+        $dashboardUrl = $safeRoute('bidan.dashboard');
+        $profileUrl = $safeRoute('bidan.profile.index');
+        $rekamUrl = $safeRoute('bidan.rekam-medis.index');
+        $pemeriksaanUrl = $safeRoute('bidan.pemeriksaan.index');
+        $imunisasiUrl = $safeRoute('bidan.imunisasi.index');
+        $jadwalUrl = $safeRoute('bidan.jadwal.index');
     @endphp
 
-    {{-- ENTRY LOADER --}}
-    <div class="dashboard-entry-loader" aria-hidden="true">
-        <div class="dashboard-entry-card">
-            <div class="dashboard-entry-icon">
-                <i class="fa-solid fa-stethoscope"></i>
+    {{-- LOADING SCREEN: sama gaya dengan login/admin --}}
+    <div id="pcBidanLoader" role="status" aria-label="Memuat, harap tunggu..." aria-live="polite">
+        <div class="ld-veil"></div>
+        <div class="ld-panel">
+            <div class="ld-orbit">
+                <div class="ld-ring"></div>
+                <div class="ld-ring"></div>
+                <div class="ld-ring"></div>
+                <i class="fa-solid fa-heart-pulse ld-heart"></i>
             </div>
-
-            <div class="dashboard-entry-title">
-                Menyiapkan Workspace
+            <div class="ld-name">PosyanduCare</div>
+            <div id="pcBidanLoaderLabel" class="ld-label">Memuat Halaman</div>
+            <div class="ld-dots">
+                <span class="ld-dot"></span>
+                <span class="ld-dot"></span>
+                <span class="ld-dot"></span>
+                <span class="ld-dot"></span>
             </div>
-
-            <div class="dashboard-entry-line"></div>
         </div>
     </div>
 
     {{-- BACKGROUND --}}
     <div class="bidan-bg" aria-hidden="true"></div>
     <div class="bidan-grid-soft" aria-hidden="true"></div>
-    <div class="bidan-dot-pattern" aria-hidden="true"></div>
 
-    <div class="bidan-leaf-decor" aria-hidden="true">
-        <span class="leaf-1"></span>
-        <span class="leaf-2"></span>
-        <span class="leaf-3"></span>
-    </div>
-
-    {{-- ROUTE LOADER --}}
+    {{-- PROGRESS BAR --}}
     <div class="page-loader" aria-hidden="true"></div>
 
-    <div class="route-overlay" aria-hidden="true"></div>
-
-    <div class="route-loader-card" aria-hidden="true">
-        <div class="loader-glass-card">
-            <div class="loader-icon">
-                <i class="fa-solid fa-stethoscope"></i>
-            </div>
-
-            <div class="loader-title">
-                Memuat halaman
-            </div>
-
-            <div class="loader-line"></div>
-        </div>
-    </div>
-
-    {{-- MOBILE OVERLAY --}}
-    <div
-        x-show="sidebarOpen"
-        x-transition.opacity.duration.260ms
-        @click="sidebarOpen = false; document.body.classList.remove('pc-scroll-lock')"
-        class="mobile-overlay lg:hidden"
-        style="display: none;"
-        aria-hidden="true"
-    ></div>
+    {{-- MOBILE SIDEBAR OVERLAY --}}
+    <button
+        type="button"
+        id="mobileOverlay"
+        class="mobile-overlay"
+        aria-label="Tutup sidebar"
+    ></button>
 
     <div class="bidan-shell">
 
         {{-- SIDEBAR --}}
-        <aside
-            :class="sidebarOpen ? 'is-open' : ''"
-            class="bidan-sidebar sidebar-enter"
-        >
+        <aside id="bidanSidebar" class="bidan-sidebar" aria-label="Sidebar Bidan">
             <button
                 type="button"
-                class="sidebar-close-floating lg:hidden"
-                @click="sidebarOpen = false; document.body.classList.remove('pc-scroll-lock')"
+                id="closeSidebar"
+                class="sidebar-close-floating"
                 aria-label="Tutup sidebar"
             >
                 <i class="fa-solid fa-xmark"></i>
@@ -2025,45 +1713,47 @@
             {{-- TOPBAR --}}
             <header class="bidan-topbar topbar-enter">
                 <div class="topbar-left">
-
                     <button
                         type="button"
-                        @click="sidebarOpen = true"
-                        class="mobile-menu-btn"
-                        aria-label="Buka sidebar"
+                        id="sidebarToggle"
+                        class="sidebar-toggle-btn"
+                        aria-label="Toggle sidebar"
+                        aria-expanded="false"
                     >
                         <i class="fa-solid fa-bars-staggered"></i>
                     </button>
 
                     <div class="topbar-title-block">
                         <div class="breadcrumb-mini">
-                            <a href="{{ route('bidan.dashboard') }}" class="js-nav-link spa-route smooth-route">
+                            <a href="{{ $dashboardUrl }}" class="js-nav-link spa-route smooth-route" aria-label="Dashboard Bidan">
                                 <i class="fa-solid fa-house"></i>
                             </a>
 
                             <i class="fa-solid fa-chevron-right"></i>
 
-                            <span>
-                                @yield('page-name', 'Workspace')
-                            </span>
+                            <span>@yield('page-name', 'Workspace')</span>
                         </div>
+
+                        <h2 class="page-title-inline">
+                            @yield('page-title', 'Bidan Workspace')
+                        </h2>
                     </div>
                 </div>
 
                 <div class="topbar-right">
-
                     <div class="workspace-chip">
                         <i class="fa-solid fa-user-doctor"></i>
                         Bidan Workspace
                     </div>
 
                     {{-- NOTIFIKASI --}}
-                    <div class="relative">
+                    <div id="notifDropdown" class="relative floating-box">
                         <button
                             type="button"
-                            @click="notifOpen = !notifOpen; profileOpen = false"
+                            id="notifToggle"
                             class="notif-button"
                             aria-label="Buka notifikasi"
+                            aria-expanded="false"
                         >
                             <i class="fa-regular fa-bell text-[18px]"></i>
 
@@ -2072,23 +1762,14 @@
                             @endif
                         </button>
 
-                        <div
-                            x-show="notifOpen"
-                            @click.outside="notifOpen = false"
-                            x-transition.opacity.scale.95.duration.240ms
-                            class="floating-menu notif-menu"
-                            style="display: none;"
-                        >
+                        <div class="floating-menu notif-menu">
                             <div class="floating-menu-head">
                                 <div class="profile-avatar">
                                     <i class="fa-solid fa-notes-medical"></i>
                                 </div>
 
                                 <div class="min-w-0">
-                                    <p class="floating-menu-title">
-                                        Antrian Medis
-                                    </p>
-
+                                    <p class="floating-menu-title">Antrian Medis</p>
                                     <p class="floating-menu-subtitle">
                                         {{ $notifCount }} Pemeriksaan Menunggu
                                     </p>
@@ -2098,11 +1779,11 @@
                             <div class="max-h-[330px] overflow-y-auto custom-scrollbar px-1 pb-1">
                                 @forelse($pendingNotifs as $notif)
                                     @php
-                                        $namaPasien = $notif->nama_pasien ?? 'Pasien Anonim';
+                                        $namaPasien = $notif->nama_pasien ?? ('Pasien #' . ($notif->pasien_id ?? $notif->id));
                                         $kategoriPasien = strtolower($notif->kategori_pasien ?? 'pasien');
                                         $targetUrl = Route::has('bidan.pemeriksaan.show')
                                             ? route('bidan.pemeriksaan.show', $notif->id)
-                                            : '#';
+                                            : $pemeriksaanUrl;
                                     @endphp
 
                                     <a href="{{ $targetUrl }}" class="notif-item js-nav-link spa-route smooth-route">
@@ -2111,20 +1792,12 @@
                                         </div>
 
                                         <div class="min-w-0 flex-1">
-                                            <p class="notif-title truncate">
-                                                {{ $namaPasien }}
-                                            </p>
+                                            <p class="notif-title truncate">{{ $namaPasien }}</p>
 
                                             <div class="notif-meta">
-                                                <span class="uppercase text-emerald-600">
-                                                    {{ $kategoriPasien }}
-                                                </span>
-
+                                                <span class="uppercase text-emerald-600">{{ $kategoriPasien }}</span>
                                                 <span>•</span>
-
-                                                <span>
-                                                    {{ optional($notif->created_at)->diffForHumans() }}
-                                                </span>
+                                                <span>{{ optional($notif->created_at)->diffForHumans() ?? '-' }}</span>
                                             </div>
                                         </div>
 
@@ -2146,61 +1819,41 @@
                     </div>
 
                     {{-- PROFILE --}}
-                    <div class="relative">
+                    <div id="profileDropdown" class="relative floating-box">
                         <button
                             type="button"
-                            @click="profileOpen = !profileOpen; notifOpen = false"
-                            @click.away="profileOpen = false"
+                            id="profileToggle"
                             class="profile-button"
+                            aria-expanded="false"
                         >
-                            <div class="profile-avatar">
-                                {{ strtoupper(substr(Auth::user()->name ?? 'B', 0, 1)) }}
-                            </div>
+                            <div class="profile-avatar">{{ $bidanInitial }}</div>
 
                             <div class="hidden sm:block text-left min-w-0">
-                                <p class="profile-name">
-                                    {{ Auth::user()->name ?? 'Bidan' }}
-                                </p>
-
-                                <p class="profile-role">
-                                    Tenaga Bidan
-                                </p>
+                                <p class="profile-name">{{ $bidanName }}</p>
+                                <p class="profile-role">Tenaga Bidan</p>
                             </div>
 
-                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-300 hidden sm:block"
-                               :class="profileOpen ? 'rotate-180' : ''"></i>
+                            <i class="profile-chevron fa-solid fa-chevron-down text-[10px] text-slate-400 hidden sm:block"></i>
                         </button>
 
-                        <div
-                            x-show="profileOpen"
-                            x-transition.opacity.scale.95.duration.240ms
-                            class="floating-menu"
-                            style="display: none;"
-                        >
+                        <div class="floating-menu">
                             <div class="floating-menu-head">
-                                <div class="profile-avatar">
-                                    {{ strtoupper(substr(Auth::user()->name ?? 'B', 0, 1)) }}
-                                </div>
+                                <div class="profile-avatar">{{ $bidanInitial }}</div>
 
                                 <div class="min-w-0">
-                                    <p class="floating-menu-title truncate">
-                                        {{ Auth::user()->name ?? 'Bidan' }}
-                                    </p>
-
-                                    <p class="floating-menu-subtitle">
-                                        Tenaga Bidan
-                                    </p>
+                                    <p class="floating-menu-title truncate">{{ $bidanName }}</p>
+                                    <p class="floating-menu-subtitle">Tenaga Bidan</p>
                                 </div>
                             </div>
 
                             @if(Route::has('bidan.profile.index'))
-                                <a href="{{ route('bidan.profile.index') }}" class="floating-link js-nav-link spa-route smooth-route">
+                                <a href="{{ $profileUrl }}" class="floating-link js-nav-link spa-route smooth-route">
                                     <i class="fa-regular fa-user"></i>
                                     Profil Akun
                                 </a>
                             @endif
 
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ route('logout') }}" data-confirm-logout="true">
                                 @csrf
 
                                 <button type="submit" class="logout-btn">
@@ -2219,14 +1872,13 @@
                     @yield('content')
                 </div>
             </main>
-
         </div>
     </div>
 
     {{-- MOBILE BOTTOM NAV --}}
     <nav class="bottom-nav lg:hidden">
         <a
-            href="{{ route('bidan.dashboard') }}"
+            href="{{ $dashboardUrl }}"
             class="bottom-nav-link js-nav-link spa-route smooth-route {{ $route === 'bidan.dashboard' ? 'active' : '' }}"
         >
             <i class="fa-solid fa-chart-pie"></i>
@@ -2234,7 +1886,7 @@
         </a>
 
         <a
-            href="{{ route('bidan.rekam-medis.index') }}"
+            href="{{ $rekamUrl }}"
             class="bottom-nav-link js-nav-link spa-route smooth-route {{ Str::startsWith($route, 'bidan.rekam-medis') ? 'active' : '' }}"
         >
             <i class="fa-solid fa-folder-open"></i>
@@ -2243,7 +1895,7 @@
 
         <div class="bottom-nav-center">
             <a
-                href="{{ route('bidan.pemeriksaan.index') }}"
+                href="{{ $pemeriksaanUrl }}"
                 class="bottom-nav-action js-nav-link spa-route smooth-route"
                 aria-label="Pemeriksaan"
             >
@@ -2256,7 +1908,7 @@
         </div>
 
         <a
-            href="{{ route('bidan.imunisasi.index') }}"
+            href="{{ $imunisasiUrl }}"
             class="bottom-nav-link js-nav-link spa-route smooth-route {{ Str::startsWith($route, 'bidan.imunisasi') ? 'active' : '' }}"
         >
             <i class="fa-solid fa-syringe"></i>
@@ -2264,7 +1916,7 @@
         </a>
 
         <a
-            href="{{ route('bidan.jadwal.index') }}"
+            href="{{ $jadwalUrl }}"
             class="bottom-nav-link js-nav-link spa-route smooth-route {{ Str::startsWith($route, 'bidan.jadwal') ? 'active' : '' }}"
         >
             <i class="fa-solid fa-calendar-days"></i>
@@ -2272,11 +1924,26 @@
         </a>
     </nav>
 
-    {{-- SCRIPT --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const body = document.body;
             const html = document.documentElement;
+
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const closeSidebarBtn = document.getElementById('closeSidebar');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+
+            const notifDropdown = document.getElementById('notifDropdown');
+            const notifToggle = document.getElementById('notifToggle');
+
+            const profileDropdown = document.getElementById('profileDropdown');
+            const profileToggle = document.getElementById('profileToggle');
+
+            const content = document.querySelector('.bidan-main-inner');
+            const desktopQuery = window.matchMedia('(min-width: 1024px)');
+
+            const pcBidanLoader = document.getElementById('pcBidanLoader');
+            const pcBidanLoaderLabel = document.getElementById('pcBidanLoaderLabel');
 
             if ('scrollRestoration' in history) {
                 history.scrollRestoration = 'manual';
@@ -2284,26 +1951,171 @@
 
             window.scrollTo(0, 0);
 
-            if (!html.classList.contains('pc-from-login')) {
+            function isDesktop() {
+                return desktopQuery.matches;
+            }
+
+            function showBidanLoader(label) {
+                if (pcBidanLoaderLabel && label) {
+                    pcBidanLoaderLabel.textContent = label;
+                }
+
+                pcBidanLoader?.classList.add('show');
+                body.classList.add('pc-scroll-lock');
+            }
+
+            function hideBidanLoader() {
+                pcBidanLoader?.classList.remove('show');
                 body.classList.remove('pc-scroll-lock');
                 body.style.overflow = '';
             }
 
-            function startNavigation() {
-                body.classList.add('is-navigating');
+            function lockScroll() {
+                if (!isDesktop()) {
+                    body.classList.add('pc-scroll-lock');
+                }
+            }
+
+            function unlockScroll() {
+                body.classList.remove('pc-scroll-lock');
+                body.style.overflow = '';
+            }
+
+            function saveDesktopSidebarState(isOpen) {
+                try {
+                    localStorage.setItem('pc_bidan_sidebar_open', isOpen ? '1' : '0');
+                } catch (e) {}
+            }
+
+            function getDesktopSidebarState() {
+                try {
+                    const saved = localStorage.getItem('pc_bidan_sidebar_open');
+                    if (saved === '0') return false;
+                    if (saved === '1') return true;
+                } catch (e) {}
+                return true;
+            }
+
+            function setSidebar(open, options = {}) {
+                const shouldSave = options.save ?? isDesktop();
+
+                body.classList.toggle('sidebar-open', open);
+
+                if (sidebarToggle) {
+                    sidebarToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                }
+
+                if (open) {
+                    lockScroll();
+                } else {
+                    unlockScroll();
+                }
+
+                if (shouldSave && isDesktop()) {
+                    saveDesktopSidebarState(open);
+                }
+            }
+
+            function initSidebar() {
+                if (isDesktop()) {
+                    setSidebar(getDesktopSidebarState(), { save: false });
+                } else {
+                    setSidebar(false, { save: false });
+                }
+            }
+
+            initSidebar();
+
+            sidebarToggle?.addEventListener('click', function () {
+                setSidebar(!body.classList.contains('sidebar-open'));
+            });
+
+            closeSidebarBtn?.addEventListener('click', function () {
+                setSidebar(false, { save: false });
+            });
+
+            mobileOverlay?.addEventListener('click', function () {
+                setSidebar(false, { save: false });
+            });
+
+            if (desktopQuery.addEventListener) {
+                desktopQuery.addEventListener('change', initSidebar);
+            } else if (desktopQuery.addListener) {
+                desktopQuery.addListener(initSidebar);
+            }
+
+            let resizeTimer = null;
+            window.addEventListener('resize', function () {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(initSidebar, 100);
+            });
+
+            function closeFloatingMenus() {
+                notifDropdown?.classList.remove('is-open');
+                notifToggle?.setAttribute('aria-expanded', 'false');
+
+                profileDropdown?.classList.remove('is-open');
+                profileToggle?.setAttribute('aria-expanded', 'false');
+            }
+
+            function toggleFloating(dropdown, toggle) {
+                const open = !dropdown.classList.contains('is-open');
+
+                closeFloatingMenus();
+
+                dropdown.classList.toggle('is-open', open);
+                toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+
+            notifToggle?.addEventListener('click', function (event) {
+                event.stopPropagation();
+                toggleFloating(notifDropdown, notifToggle);
+            });
+
+            profileToggle?.addEventListener('click', function (event) {
+                event.stopPropagation();
+                toggleFloating(profileDropdown, profileToggle);
+            });
+
+            document.addEventListener('click', function (event) {
+                if (
+                    notifDropdown && !notifDropdown.contains(event.target) &&
+                    profileDropdown && !profileDropdown.contains(event.target)
+                ) {
+                    closeFloatingMenus();
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    setSidebar(false, { save: isDesktop() });
+                    closeFloatingMenus();
+                    stopNavigation();
+                }
+            });
+
+            function startNavigation(label = 'Memuat Halaman') {
+                clearTimeout(window.__pcBidanRouteDelay);
+                clearTimeout(window.__pcBidanRouteFallback);
+
+                window.__pcBidanRouteDelay = setTimeout(function () {
+                    body.classList.add('is-navigating');
+                    showBidanLoader(label);
+                }, 80);
+
+                window.__pcBidanRouteFallback = setTimeout(function () {
+                    stopNavigation();
+                }, 4200);
             }
 
             function stopNavigation() {
+                clearTimeout(window.__pcBidanRouteDelay);
+                clearTimeout(window.__pcBidanRouteFallback);
                 body.classList.remove('is-navigating');
+                hideBidanLoader();
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Auto reveal content
-            |--------------------------------------------------------------------------
-            */
-            const content = document.querySelector('.bidan-main-inner');
-
+            /* Reveal konten dibatasi biar HP tidak dipaksa jadi workstation NASA. */
             if (content) {
                 const revealSelectors = [
                     '.dashboard-hero',
@@ -2316,26 +2128,23 @@
                     '.content-card',
                     '.table-card',
                     '.chart-card',
-                    '.grid > *',
                     'section',
                     'article'
                 ];
 
-                let revealItems = [];
+                const seen = [];
 
                 revealSelectors.forEach(function (selector) {
                     content.querySelectorAll(selector).forEach(function (item) {
-                        if (!revealItems.includes(item)) {
-                            revealItems.push(item);
+                        if (!seen.includes(item)) {
+                            seen.push(item);
                         }
                     });
                 });
 
-                if (revealItems.length === 0) {
-                    revealItems = Array.from(content.children);
-                }
+                const items = seen.length ? seen : Array.from(content.children);
 
-                revealItems.forEach(function (item, index) {
+                items.slice(0, 12).forEach(function (item, index) {
                     item.classList.add('pc-reveal-item');
                     item.style.setProperty('--reveal-index', index);
                 });
@@ -2345,73 +2154,57 @@
                 });
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Animasi dari login
-            |--------------------------------------------------------------------------
-            */
             const fromLogin = html.classList.contains('pc-from-login');
 
             if (fromLogin) {
                 stopNavigation();
-                body.classList.add('pc-scroll-lock');
+                showBidanLoader('Membuka Workspace');
                 window.scrollTo(0, 0);
 
                 setTimeout(function () {
-                    html.classList.add('pc-loader-out');
-                }, 1000);
-
-                setTimeout(function () {
-                    html.classList.add('pc-sidebar-in');
-                }, 1450);
-
-                setTimeout(function () {
                     html.classList.add('pc-topbar-in');
-                }, 2250);
+                }, 380);
 
                 setTimeout(function () {
                     html.classList.add('pc-content-in');
-                }, 3050);
+                }, 520);
 
                 setTimeout(function () {
                     try {
                         sessionStorage.removeItem('pc_from_login');
                     } catch (e) {}
 
-                    html.classList.remove('pc-from-login');
-                    html.classList.remove('pc-loader-out');
-                    html.classList.remove('pc-sidebar-in');
-                    html.classList.remove('pc-topbar-in');
-                    html.classList.remove('pc-content-in');
-                    html.classList.add('pc-normal-entry');
+                    [
+                        'pc-from-login',
+                        'pc-loader-out',
+                        'pc-sidebar-in',
+                        'pc-topbar-in',
+                        'pc-content-in'
+                    ].forEach(function (className) {
+                        html.classList.remove(className);
+                    });
 
-                    body.classList.remove('pc-scroll-lock');
-                    body.style.overflow = '';
+                    html.classList.add('pc-normal-entry');
+                    hideBidanLoader();
                     window.scrollTo(0, 0);
-                }, 7200);
+                }, 950);
+            } else {
+                hideBidanLoader();
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Loader route
-            |--------------------------------------------------------------------------
-            */
             document.querySelectorAll('a[href]').forEach(function (link) {
                 const href = link.getAttribute('href');
 
-                if (!href) {
-                    return;
-                }
+                if (!href) return;
 
-                const ignored =
+                if (
                     link.target === '_blank' ||
                     href.startsWith('#') ||
                     href.startsWith('javascript:') ||
                     href.startsWith('mailto:') ||
                     href.startsWith('tel:') ||
-                    link.hasAttribute('download');
-
-                if (ignored) {
+                    link.hasAttribute('download')
+                ) {
                     return;
                 }
 
@@ -2426,65 +2219,119 @@
                         return;
                     }
 
-                    body.classList.remove('pc-scroll-lock');
-                    startNavigation();
+                    try {
+                        const url = new URL(href, window.location.origin);
+                        if (url.origin !== window.location.origin) return;
+                    } catch (e) {
+                        return;
+                    }
+
+                    if (!isDesktop()) {
+                        setSidebar(false, { save: false });
+                    }
+
+                    closeFloatingMenus();
+                    startNavigation('Memuat Halaman');
                 });
             });
 
-            document.querySelectorAll('form').forEach(function (form) {
+            document.querySelectorAll('form[data-confirm-logout="true"], form[action*="logout"]').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (form.dataset.confirmed === 'true') {
+                        startNavigation('Keluar Sistem');
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const submitLogout = function () {
+                        form.dataset.confirmed = 'true';
+                        unlockScroll();
+                        closeFloatingMenus();
+                        startNavigation('Keluar Sistem');
+                        form.submit();
+                    };
+
+                    if (window.Swal) {
+                        Swal.fire({
+                            title: 'Keluar dari sistem?',
+                            text: 'Sesi bidan akan diakhiri dan kamu akan kembali ke halaman login.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#059669',
+                            cancelButtonColor: '#64748b',
+                            confirmButtonText: 'Ya, Logout',
+                            cancelButtonText: 'Batal',
+                            reverseButtons: true,
+                            background: '#ffffff',
+                            color: '#0f172a',
+                            customClass: {
+                                popup: 'rounded-3xl shadow-xl',
+                                confirmButton: 'rounded-xl',
+                                cancelButton: 'rounded-xl'
+                            }
+                        }).then(function (result) {
+                            if (result.isConfirmed) {
+                                submitLogout();
+                            }
+                        });
+                    } else {
+                        if (confirm('Keluar dari sistem?')) {
+                            submitLogout();
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll('form:not([data-confirm-logout="true"])').forEach(function (form) {
+                const action = form.getAttribute('action') || '';
+
+                if (action.includes('logout')) return;
+
                 form.addEventListener('submit', function () {
-                    body.classList.remove('pc-scroll-lock');
-                    startNavigation();
+                    startNavigation('Memproses Data');
                 });
             });
 
             window.addEventListener('pageshow', function () {
                 stopNavigation();
-                body.classList.remove('pc-scroll-lock');
-                body.style.overflow = '';
+                unlockScroll();
                 window.scrollTo(0, 0);
+                initSidebar();
             });
 
-            /*
-            |--------------------------------------------------------------------------
-            | SweetAlert flash
-            |--------------------------------------------------------------------------
-            */
-            window.nexusAlert = function (title, text, type, confirmText) {
-                Swal.fire({
-                    title: title,
-                    text: text,
-                    icon: type || 'success',
-                    confirmButtonText: confirmText || 'MENGERTI',
-                    customClass: {
-                        popup: 'nexus-swal',
-                        confirmButton: 'btn-nexus-confirm',
-                        cancelButton: 'btn-nexus-cancel'
-                    },
-                    buttonsStyling: false
-                });
-            };
+            setTimeout(function () {
+                stopNavigation();
+            }, 1600);
 
+            /* SweetAlert flash sederhana, kalau session flash dipakai di controller. */
             @if(session('success'))
-                setTimeout(function () {
-                    window.nexusAlert(
-                        'Berhasil!',
-                        "{{ session('success') }}",
-                        'success',
-                        'LANJUTKAN'
-                    );
-                }, 400);
+                if (window.Swal) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: @json(session('success')),
+                        showConfirmButton: false,
+                        timer: 2200,
+                        timerProgressBar: true,
+                        background: '#ffffff',
+                        color: '#0f172a'
+                    });
+                }
             @endif
 
             @if(session('error'))
-                setTimeout(function () {
-                    window.nexusAlert(
-                        'Perhatian!',
-                        "{{ session('error') }}",
-                        'error',
-                        'TUTUP'
-                    );
-                }, 400);
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Terjadi Kesalahan',
+                        text: @json(session('error')),
+                        confirmButtonColor: '#059669',
+                        background: '#ffffff',
+                        color: '#0f172a'
+                    });
+                }
             @endif
         });
     </script>

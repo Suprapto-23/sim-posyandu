@@ -52,6 +52,7 @@
 
     <form action="{{ route('admin.bidans.store') }}" method="POST" id="bidanForm">
         @csrf
+        <input type="hidden" name="status" value="{{ old('status', 'active') }}">
         
         <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
             <div class="bg-slate-50/50 px-8 py-6 border-b border-slate-50 flex items-center justify-center">

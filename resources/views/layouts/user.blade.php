@@ -50,7 +50,7 @@
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     {{-- SWEET ALERT --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <script>
         tailwind.config = {
@@ -119,7 +119,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            scroll-behavior: smooth;
+            scroll-behavior: auto !important;
         }
 
         body {
@@ -209,7 +209,7 @@
             left: -180px;
             border-radius: 999px;
             background: rgba(16,185,129,.16);
-            filter: blur(80px);
+            filter: blur(64px);
         }
 
         .user-bg-layer::after {
@@ -221,7 +221,7 @@
             bottom: -180px;
             border-radius: 999px;
             background: rgba(20,184,166,.15);
-            filter: blur(78px);
+            filter: blur(62px);
         }
 
         .user-dot-pattern {
@@ -239,147 +239,191 @@
 
         /*
         |--------------------------------------------------------------------------
-        | ENTRY LOADER DARI LOGIN
+        | LOADING SCREEN CEPAT, SAMA DENGAN LOGIN/ADMIN/BIDAN/KADER
         |--------------------------------------------------------------------------
         */
 
-        .user-entry-loader {
+        #pcUserLoader {
             position: fixed;
             inset: 0;
-            z-index: 99980;
+            z-index: 99999;
 
             display: flex;
             align-items: center;
             justify-content: center;
 
-            background:
-                radial-gradient(circle at center, rgba(255,255,255,.18), transparent 34%),
-                linear-gradient(135deg, rgba(4,120,87,.80), rgba(5,150,105,.76), rgba(16,185,129,.80));
-
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-
-            opacity: 0;
             visibility: hidden;
             pointer-events: none;
-
-            transition:
-                opacity .65s ease,
-                visibility .65s ease;
         }
 
-        html.pc-from-login .user-entry-loader {
-            opacity: 1;
+        #pcUserLoader.show {
             visibility: visible;
             pointer-events: auto;
         }
 
-        html.pc-loader-out .user-entry-loader {
+        .ld-veil {
+            position: absolute;
+            inset: 0;
+
+            background: rgba(240,255,248,.78);
+            backdrop-filter: blur(9px) saturate(1.12);
+            -webkit-backdrop-filter: blur(9px) saturate(1.12);
+
             opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
+            transition: opacity .18s ease;
         }
 
-        .user-entry-card {
-            width: 216px;
-            min-height: 168px;
+        #pcUserLoader.show .ld-veil {
+            opacity: 1;
+        }
 
-            border-radius: 32px;
-            background: rgba(255,255,255,.16);
-            border: 1px solid rgba(255,255,255,.32);
+        .ld-panel {
+            position: relative;
+            z-index: 2;
+
+            min-width: 236px;
+            padding: 30px 40px 28px;
+            border-radius: 24px;
+
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(16,185,129,.13);
 
             box-shadow:
-                0 32px 90px rgba(0,0,0,.18),
-                inset 0 1px 0 rgba(255,255,255,.26);
-
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-
-            color: white;
+                0 22px 54px rgba(15,23,42,.12),
+                inset 0 1px 0 rgba(255,255,255,.92);
 
             display: flex;
-            align-items: center;
-            justify-content: center;
             flex-direction: column;
-
-            transform: scale(.94) translateY(16px);
-            opacity: 0;
-
-            animation: userLoaderPop .86s var(--ease-smooth) forwards;
-        }
-
-        @keyframes userLoaderPop {
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        .user-entry-icon {
-            width: 72px;
-            height: 72px;
-
-            border-radius: 25px;
-            background: rgba(255,255,255,.18);
-            border: 1px solid rgba(255,255,255,.30);
-
-            display: flex;
             align-items: center;
-            justify-content: center;
+            text-align: center;
 
-            margin-bottom: 14px;
+            opacity: 0;
+            transform: translateY(12px) scale(.96);
 
-            box-shadow:
-                0 18px 42px rgba(0,0,0,.12),
-                inset 0 1px 0 rgba(255,255,255,.24);
+            transition:
+                opacity .24s var(--ease-smooth) .04s,
+                transform .24s var(--ease-smooth) .04s;
+
+            will-change: opacity, transform;
         }
 
-        .user-entry-icon i {
-            font-size: 29px;
+        #pcUserLoader.show .ld-panel {
+            opacity: 1;
+            transform: none;
         }
 
-        .user-entry-title {
-            font-size: 13px;
-            font-weight: 900;
-            letter-spacing: .02em;
-        }
-
-        .user-entry-line {
+        .ld-orbit {
             position: relative;
 
-            width: 116px;
-            height: 5px;
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 17px;
 
-            margin-top: 15px;
-
-            border-radius: 999px;
-            overflow: hidden;
-
-            background: rgba(255,255,255,.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .user-entry-line::after {
-            content: "";
+        .ld-ring {
             position: absolute;
-            inset: 0 auto 0 -55%;
+            inset: 0;
 
-            width: 55%;
+            border-radius: 50%;
+            border: 2.25px solid transparent;
 
-            border-radius: inherit;
-            background: white;
-
-            animation: userEntryLine 1.15s infinite cubic-bezier(.65,0,.35,1);
+            will-change: transform;
         }
 
-        @keyframes userEntryLine {
-            to {
-                left: 100%;
-            }
+        .ld-ring:nth-child(1) {
+            border-top-color: var(--green-500);
+            border-right-color: rgba(16,185,129,.25);
+            animation: spinR .78s linear infinite;
+        }
+
+        .ld-ring:nth-child(2) {
+            inset: 8px;
+            border-bottom-color: var(--green-400);
+            border-left-color: rgba(52,211,153,.25);
+            animation: spinR 1.15s linear infinite reverse;
+        }
+
+        .ld-ring:nth-child(3) {
+            inset: 17px;
+            border-top-color: var(--amber-500);
+            border-right-color: rgba(245,158,11,.22);
+            animation: spinR 1.65s linear infinite;
+        }
+
+        @keyframes spinR {
+            to { transform: rotate(360deg); }
+        }
+
+        .ld-heart {
+            position: relative;
+            z-index: 2;
+
+            font-size: 17px;
+            color: var(--green-600);
+
+            animation: heartBeat 1.08s ease-in-out infinite;
+            will-change: transform;
+        }
+
+        @keyframes heartBeat {
+            0%,100% { transform: scale(1); opacity: .9; }
+            18%     { transform: scale(1.16); }
+            36%     { transform: scale(1); }
+            52%     { transform: scale(1.07); }
+        }
+
+        .ld-name {
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--slate-900);
+            margin-bottom: 2px;
+        }
+
+        .ld-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 14px;
+        }
+
+        .ld-dots {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ld-dot {
+            width: 6px;
+            height: 6px;
+
+            border-radius: 50%;
+            background: var(--green-400);
+
+            animation: dotPop .72s ease-in-out infinite both;
+            will-change: transform, opacity;
+        }
+
+        .ld-dot:nth-child(1) { animation-delay: 0s; }
+        .ld-dot:nth-child(2) { animation-delay: .12s; background: var(--green-500); }
+        .ld-dot:nth-child(3) { animation-delay: .24s; background: var(--green-600); }
+        .ld-dot:nth-child(4) { animation-delay: .36s; background: var(--amber-500); }
+
+        @keyframes dotPop {
+            0%,80%,100% { transform: scale(.55); opacity: .35; }
+            40%         { transform: scale(1.12); opacity: 1; }
         }
 
         /*
         |--------------------------------------------------------------------------
-        | PAGE LOADER
+        | PAGE LOADER BAR
         |--------------------------------------------------------------------------
         */
 
@@ -389,20 +433,17 @@
             left: 0;
             right: 0;
 
-            height: 4px;
+            height: 3px;
+            z-index: 99998;
 
-            z-index: 99999;
-
-            background: rgba(236,253,245,.75);
             overflow: hidden;
-
             opacity: 0;
-            transform: translateY(-4px);
+            transform: translateY(-3px);
             pointer-events: none;
 
             transition:
-                opacity .30s ease,
-                transform .30s ease;
+                opacity .14s ease,
+                transform .14s ease;
         }
 
         body.is-navigating .page-loader {
@@ -415,51 +456,23 @@
             position: absolute;
             inset: 0 auto 0 0;
 
-            width: 42%;
-
+            width: 46%;
             border-radius: 999px;
-            background: linear-gradient(90deg, var(--green-700), var(--green-500), var(--amber-500));
-            box-shadow: 0 0 22px rgba(16,185,129,.34);
+            background: linear-gradient(90deg, rgba(16,185,129,0), var(--green-500), rgba(52,211,153,.55));
 
-            animation: loadingBar 1.15s infinite cubic-bezier(.76, 0, .24, 1);
+            animation: loadingBar .72s infinite cubic-bezier(.76, 0, .24, 1);
         }
 
         @keyframes loadingBar {
-            0% {
-                transform: translateX(-115%);
-            }
-
-            100% {
-                transform: translateX(260%);
-            }
+            0%   { transform: translateX(-115%); }
+            100% { transform: translateX(265%); }
         }
 
         .route-overlay {
-            position: fixed;
-            inset: 0;
-
-            z-index: 99990;
-
-            pointer-events: none;
-
-            opacity: 0;
-            visibility: hidden;
-
-            background:
-                radial-gradient(circle at center, rgba(255,255,255,.14), transparent 34%),
-                linear-gradient(135deg, rgba(4,120,87,.54), rgba(5,150,105,.50), rgba(16,185,129,.54));
-
-            backdrop-filter: blur(9px);
-            -webkit-backdrop-filter: blur(9px);
-
-            transition:
-                opacity .34s ease,
-                visibility .34s ease;
-        }
-
-        body.is-navigating .route-overlay {
-            opacity: 1;
-            visibility: visible;
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
         }
 
         /*
@@ -493,9 +506,9 @@
             overflow: hidden;
 
             opacity: 0;
-            transform: translateY(16px);
+            transform: translateY(10px);
 
-            animation: userAppEnter .85s var(--ease-smooth) forwards;
+            animation: userAppEnter .34s var(--ease-smooth) forwards;
         }
 
         @keyframes userAppEnter {
@@ -507,8 +520,8 @@
 
         html.pc-from-login .user-app {
             opacity: 0;
-            transform: translateY(34px);
-            filter: blur(6px);
+            transform: translateY(16px);
+            filter: none;
             animation: none;
         }
 
@@ -518,9 +531,9 @@
             filter: blur(0);
 
             transition:
-                opacity 1.05s var(--ease-smooth),
-                transform 1.05s var(--ease-smooth),
-                filter 1s var(--ease-smooth);
+                opacity .34s var(--ease-smooth),
+                transform .34s var(--ease-smooth),
+                filter .34s var(--ease-smooth);
         }
 
         /*
@@ -552,8 +565,8 @@
 
             border-bottom: 1px solid rgba(226,232,240,.76);
 
-            backdrop-filter: blur(22px) saturate(1.12);
-            -webkit-backdrop-filter: blur(22px) saturate(1.12);
+            backdrop-filter: blur(14px) saturate(1.08);
+            -webkit-backdrop-filter: blur(14px) saturate(1.08);
 
             box-shadow: 0 12px 30px rgba(15,23,42,.045);
         }
@@ -584,7 +597,7 @@
                 0 10px 22px rgba(15,23,42,.045),
                 inset 0 1px 0 rgba(255,255,255,.88);
 
-            transition: all .28s var(--ease-premium);
+            transition: all .16s var(--ease-premium);
         }
 
         .user-menu-button:active,
@@ -722,8 +735,8 @@
                 0 28px 80px rgba(15,23,42,.16),
                 inset 0 1px 0 rgba(255,255,255,.88);
 
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
 
             overflow: hidden;
 
@@ -734,9 +747,9 @@
             transform: translateY(14px) scale(.98);
 
             transition:
-                opacity .34s var(--ease-premium),
-                transform .34s var(--ease-premium),
-                visibility .34s var(--ease-premium);
+                opacity .18s var(--ease-premium),
+                transform .18s var(--ease-premium),
+                visibility .18s var(--ease-premium);
         }
 
         .notif-dropdown.show {
@@ -836,8 +849,8 @@
             pointer-events: none;
 
             transition:
-                opacity .34s ease,
-                visibility .34s ease;
+                opacity .18s ease,
+                visibility .18s ease;
         }
 
         .user-sidebar-overlay.show {
@@ -856,13 +869,12 @@
 
             transform: translateX(calc(-100% - 18px));
             opacity: .6;
-            filter: blur(4px);
+            filter: none;
             pointer-events: none;
 
             transition:
-                transform .55s var(--ease-premium),
-                opacity .45s ease,
-                filter .45s ease;
+                transform .24s var(--ease-premium),
+                opacity .18s ease;
         }
 
         .user-sidebar-wrap.show {
@@ -898,7 +910,7 @@
                 14px
                 calc(var(--dock-height) + 38px + env(safe-area-inset-bottom));
 
-            scroll-behavior: smooth;
+            scroll-behavior: auto !important;
 
             scrollbar-width: none;
             -ms-overflow-style: none;
@@ -918,10 +930,10 @@
         .user-main-inner > * {
             opacity: 0;
             transform: translateY(18px);
-            filter: blur(4px);
+            filter: none;
 
-            animation: contentUp .82s var(--ease-smooth) forwards;
-            animation-delay: calc(var(--content-index, 0) * 90ms);
+            animation: contentUp .34s var(--ease-smooth) forwards;
+            animation-delay: calc(min(var(--content-index, 0), 8) * 30ms);
         }
 
         @keyframes contentUp {
@@ -943,8 +955,8 @@
             box-shadow:
                 0 18px 44px rgba(15,23,42,.055),
                 inset 0 1px 0 rgba(255,255,255,.84);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         /*
@@ -980,8 +992,8 @@
                 0 6px 18px rgba(16,185,129,.07),
                 inset 0 1px 0 rgba(255,255,255,.95);
 
-            backdrop-filter: blur(24px) saturate(1.14);
-            -webkit-backdrop-filter: blur(24px) saturate(1.14);
+            backdrop-filter: blur(16px) saturate(1.10);
+            -webkit-backdrop-filter: blur(16px) saturate(1.10);
 
             transform: translateZ(0);
             will-change: transform;
@@ -1006,7 +1018,7 @@
             justify-content: center;
             gap: 4px;
 
-            transition: all .28s var(--ease-premium);
+            transition: all .16s var(--ease-premium);
         }
 
         .dock-link i {
@@ -1077,7 +1089,7 @@
                 0 18px 34px rgba(16,185,129,.34),
                 inset 0 1px 0 rgba(255,255,255,.24);
 
-            transition: all .28s var(--ease-premium);
+            transition: all .16s var(--ease-premium);
         }
 
         .dock-action:active {
@@ -1110,22 +1122,22 @@
         .pc-animate-topbar {
             opacity: 0;
             transform: translateY(-22px);
-            animation: topbarIn .85s var(--ease-smooth) forwards;
-            animation-delay: .08s;
+            animation: topbarIn .32s var(--ease-smooth) forwards;
+            animation-delay: .03s;
         }
 
         .pc-animate-main {
             opacity: 0;
             transform: translateY(24px);
-            animation: mainIn .95s var(--ease-smooth) forwards;
-            animation-delay: .18s;
+            animation: mainIn .34s var(--ease-smooth) forwards;
+            animation-delay: .05s;
         }
 
         .pc-animate-dock {
             opacity: 0;
             transform: translateY(24px) translateZ(0);
-            animation: dockIn .95s var(--ease-smooth) forwards;
-            animation-delay: .30s;
+            animation: dockIn .34s var(--ease-smooth) forwards;
+            animation-delay: .07s;
         }
 
         @keyframes topbarIn {
@@ -1195,7 +1207,7 @@
                 filter: blur(0);
                 pointer-events: auto;
 
-                animation: desktopSidebarIn 1s var(--ease-smooth) both;
+                animation: desktopSidebarIn .32s var(--ease-smooth) both;
             }
 
             @keyframes desktopSidebarIn {
@@ -1325,6 +1337,20 @@
             }
         }
 
+        @media (max-width: 390px) {
+            .ld-panel {
+                min-width: unset;
+                width: 86vw;
+                padding: 26px 22px 24px;
+            }
+
+            .ld-orbit {
+                width: 58px;
+                height: 58px;
+                margin-bottom: 15px;
+            }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *,
             *::before,
@@ -1347,18 +1373,26 @@
     $initial = strtoupper(substr($userName, 0, 1));
 @endphp
 
-{{-- ENTRY LOADER --}}
-<div class="user-entry-loader" aria-hidden="true">
-    <div class="user-entry-card">
-        <div class="user-entry-icon">
-            <i class="fa-solid fa-heart-pulse"></i>
+{{-- LOADING SCREEN: sama gaya dengan Login/Admin/Bidan/Kader --}}
+<div id="pcUserLoader" role="status" aria-label="Memuat, harap tunggu..." aria-live="polite">
+    <div class="ld-veil"></div>
+    <div class="ld-panel">
+        <div class="ld-orbit">
+            <div class="ld-ring"></div>
+            <div class="ld-ring"></div>
+            <div class="ld-ring"></div>
+            <i class="fa-solid fa-heart-pulse ld-heart"></i>
         </div>
 
-        <div class="user-entry-title">
-            Menyiapkan Portal
-        </div>
+        <div class="ld-name">PosyanduCare</div>
+        <div id="pcUserLoaderLabel" class="ld-label">Memuat Halaman</div>
 
-        <div class="user-entry-line"></div>
+        <div class="ld-dots">
+            <span class="ld-dot"></span>
+            <span class="ld-dot"></span>
+            <span class="ld-dot"></span>
+            <span class="ld-dot"></span>
+        </div>
     </div>
 </div>
 
@@ -1609,12 +1643,55 @@
         dropdown.classList.remove('show');
     }
 
-    function startNavigation() {
-        document.body.classList.add('is-navigating');
+    let __pcUserRouteDelay = null;
+    let __pcUserRouteFallback = null;
+
+    function showUserLoader(label = 'Memuat Halaman') {
+        const loader = document.getElementById('pcUserLoader');
+        const labelEl = document.getElementById('pcUserLoaderLabel');
+
+        if (labelEl) {
+            labelEl.textContent = label;
+        }
+
+        document.body.classList.add('user-lock');
+
+        if (loader) {
+            loader.classList.add('show');
+        }
+    }
+
+    function hideUserLoader() {
+        const loader = document.getElementById('pcUserLoader');
+
+        if (loader) {
+            loader.classList.remove('show');
+        }
+
+        document.body.classList.remove('user-lock');
+    }
+
+    function startNavigation(label = 'Memuat Halaman') {
+        clearTimeout(__pcUserRouteDelay);
+        clearTimeout(__pcUserRouteFallback);
+
+        __pcUserRouteDelay = setTimeout(function () {
+            document.body.classList.add('is-navigating');
+            showUserLoader(label);
+        }, 70);
+
+        __pcUserRouteFallback = setTimeout(function () {
+            stopNavigation();
+        }, 4200);
     }
 
     function stopNavigation() {
+        clearTimeout(__pcUserRouteDelay);
+        clearTimeout(__pcUserRouteFallback);
+
         document.body.classList.remove('is-navigating');
+        hideUserLoader();
+        hideUserLoader();
     }
 
     function clearStuckState() {
@@ -1783,17 +1860,12 @@
         */
 
         if (html.classList.contains('pc-from-login')) {
-            body.classList.add('user-lock');
-
-            setTimeout(function () {
-                html.classList.add('pc-loader-out');
-            }, 850);
+            showUserLoader('Membuka Portal');
+            window.scrollTo(0, 0);
 
             setTimeout(function () {
                 html.classList.add('pc-content-in');
-                body.classList.remove('user-lock');
-                applyResponsiveScrollMode();
-            }, 1450);
+            }, 420);
 
             setTimeout(function () {
                 try {
@@ -1805,18 +1877,17 @@
                 html.classList.remove('pc-content-in');
                 html.classList.add('pc-normal-entry');
 
-                body.classList.remove('user-lock');
                 stopNavigation();
-
                 applyResponsiveScrollMode();
-            }, 2600);
+            }, 950);
+        } else {
+            stopNavigation();
         }
 
         setTimeout(function () {
-            body.classList.remove('user-lock');
             stopNavigation();
             applyResponsiveScrollMode();
-        }, 3200);
+        }, 1600);
 
         /*
         |--------------------------------------------------------------------------
@@ -1865,7 +1936,7 @@
 
                 closeUserSidebar();
                 closeNotif();
-                startNavigation();
+                startNavigation('Memuat Halaman');
             });
         });
 
@@ -1873,7 +1944,7 @@
             form.addEventListener('submit', function () {
                 closeUserSidebar();
                 closeNotif();
-                startNavigation();
+                startNavigation('Memproses Data');
             });
         });
 

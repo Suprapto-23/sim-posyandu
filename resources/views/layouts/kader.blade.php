@@ -1,10 +1,29 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Kader Workspace') | PosyanduCare</title>
+
+    {{-- Deteksi transisi dari login supaya loader masuknya sinkron seperti Admin/Bidan --}}
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem('pc_from_login') === '1') {
+                    document.documentElement.classList.add('pc-from-login');
+                } else {
+                    document.documentElement.classList.add('pc-normal-entry');
+                }
+            } catch (e) {
+                document.documentElement.classList.add('pc-normal-entry');
+            }
+
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+        })();
+    </script>
 
     <meta name="theme-color" content="#f8fffc">
     <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}">
@@ -15,7 +34,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <style>
         :root {
@@ -37,7 +56,7 @@
             -webkit-font-smoothing:antialiased;
         }
 
-        body.locked { overflow:hidden; }
+        body.locked, body.pc-scroll-lock { overflow:hidden !important; touch-action:none; }
         [x-cloak] { display:none!important; }
         button,input,select,textarea { font-family:inherit; outline:none; }
         ::selection { background:rgba(16,185,129,.18); color:var(--g900); }
@@ -47,7 +66,7 @@
         .bgfx,.gridfx { position:fixed; inset:0; pointer-events:none; }
         .bgfx { z-index:0; overflow:hidden; }
         .bgfx:before,.bgfx:after {
-            content:""; position:absolute; width:440px; height:440px; border-radius:999px; filter:blur(86px);
+            content:""; position:absolute; width:440px; height:440px; border-radius:999px; filter:blur(68px);
         }
         .bgfx:before { left:-220px; top:-220px; background:rgba(16,185,129,.12); }
         .bgfx:after { right:-220px; bottom:-220px; background:rgba(20,184,166,.08); }
@@ -79,7 +98,7 @@
             color:var(--g800); background:rgba(255,255,255,.9); border:1px solid rgba(226,232,240,.86);
             box-shadow:0 18px 44px rgba(15,23,42,.10);
             opacity:0; pointer-events:none; transform:translate(-50%,-10px) scale(.96);
-            transition:.18s var(--ease);
+            transition:.16s var(--ease);
         }
         body.loading .loader-toast { opacity:1; transform:translate(-50%,0) scale(1); }
         .loader-spin {
@@ -89,18 +108,177 @@
         }
         @keyframes spin { to{transform:rotate(360deg)} }
 
+
+        /* =========================================================
+           LOADING SCREEN, disamakan dengan Admin/Login: orbit + heart pulse + dots.
+           Tetap cepat, karena HP bukan mesin render trailer film.
+        ========================================================= */
+        .loader-toast { display:none !important; }
+
+        #pcKaderLoader {
+            position:fixed;
+            inset:0;
+            z-index:99999;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            visibility:hidden;
+            pointer-events:none;
+        }
+
+        #pcKaderLoader.show {
+            visibility:visible;
+            pointer-events:auto;
+        }
+
+        .ld-veil {
+            position:absolute;
+            inset:0;
+            background:rgba(240,255,248,.78);
+            backdrop-filter:blur(9px) saturate(1.12);
+            -webkit-backdrop-filter:blur(9px) saturate(1.12);
+            opacity:0;
+            transition:opacity .18s ease;
+        }
+
+        #pcKaderLoader.show .ld-veil {
+            opacity:1;
+        }
+
+        .ld-panel {
+            position:relative;
+            z-index:2;
+            min-width:236px;
+            padding:30px 40px 28px;
+            border-radius:24px;
+            background:rgba(255,255,255,.96);
+            border:1px solid rgba(16,185,129,.13);
+            box-shadow:0 22px 54px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.92);
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            text-align:center;
+            opacity:0;
+            transform:translateY(12px) scale(.96);
+            transition:opacity .24s var(--ease) .04s, transform .24s var(--ease) .04s;
+            will-change:opacity, transform;
+        }
+
+        #pcKaderLoader.show .ld-panel {
+            opacity:1;
+            transform:none;
+        }
+
+        .ld-orbit {
+            position:relative;
+            width:62px;
+            height:62px;
+            margin:0 auto 17px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .ld-ring {
+            position:absolute;
+            inset:0;
+            border-radius:50%;
+            border:2.25px solid transparent;
+            will-change:transform;
+        }
+
+        .ld-ring:nth-child(1) {
+            border-top-color:var(--g500);
+            border-right-color:rgba(16,185,129,.25);
+            animation:spinR .78s linear infinite;
+        }
+
+        .ld-ring:nth-child(2) {
+            inset:8px;
+            border-bottom-color:var(--g400);
+            border-left-color:rgba(52,211,153,.25);
+            animation:spinR 1.15s linear infinite reverse;
+        }
+
+        .ld-ring:nth-child(3) {
+            inset:17px;
+            border-top-color:var(--a500);
+            border-right-color:rgba(245,158,11,.22);
+            animation:spinR 1.65s linear infinite;
+        }
+
+        @keyframes spinR { to { transform:rotate(360deg); } }
+
+        .ld-heart {
+            position:relative;
+            z-index:2;
+            font-size:17px;
+            color:var(--g600);
+            animation:heartBeat 1.08s ease-in-out infinite;
+            will-change:transform;
+        }
+
+        @keyframes heartBeat {
+            0%,100% { transform:scale(1); opacity:.9; }
+            18%     { transform:scale(1.16); }
+            36%     { transform:scale(1); }
+            52%     { transform:scale(1.07); }
+        }
+
+        .ld-name {
+            font-size:15px;
+            font-weight:900;
+            color:var(--s900);
+            margin-bottom:2px;
+        }
+
+        .ld-label {
+            font-size:10.5px;
+            font-weight:800;
+            color:var(--s500);
+            text-transform:uppercase;
+            letter-spacing:.6px;
+            margin-bottom:14px;
+        }
+
+        .ld-dots {
+            display:flex;
+            gap:5px;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .ld-dot {
+            width:6px;
+            height:6px;
+            border-radius:50%;
+            background:var(--g400);
+            animation:dotPop .72s ease-in-out infinite both;
+            will-change:transform, opacity;
+        }
+
+        .ld-dot:nth-child(1) { animation-delay:0s; }
+        .ld-dot:nth-child(2) { animation-delay:.12s; background:var(--g500); }
+        .ld-dot:nth-child(3) { animation-delay:.24s; background:var(--g600); }
+        .ld-dot:nth-child(4) { animation-delay:.36s; background:var(--a500); }
+
+        @keyframes dotPop {
+            0%,80%,100% { transform:scale(.55); opacity:.35; }
+            40%         { transform:scale(1.12); opacity:1; }
+        }
+
         .shell { position:relative; z-index:5; min-height:100vh; }
         .sidebar {
             position:fixed; inset:0 auto 0 0; z-index:90;
             width:var(--open); height:100dvh; padding:12px;
             transform:translateX(-105%);
-            transition:width .32s var(--ease), transform .28s var(--ease);
+            transition:width .24s var(--ease), transform .22s var(--ease);
             will-change:width,transform;
         }
         .sidebar.open { transform:translateX(0); }
         .content {
             min-height:100vh; display:flex; flex-direction:column;
-            transition:margin-left .32s var(--ease), opacity .16s ease;
+            transition:margin-left .24s var(--ease), opacity .14s ease;
         }
         body.loading .content { opacity:.94; }
         .backdrop {
@@ -116,11 +294,11 @@
             border:1px solid rgba(226,232,240,.82);
             box-shadow:0 22px 55px rgba(15,23,42,.13), inset 0 1px 0 rgba(255,255,255,.95);
             backdrop-filter:none; -webkit-backdrop-filter:none;
-            transition:.28s var(--ease);
+            transition:.20s var(--ease);
         }
         .side-card,.side-card * { filter:none; text-shadow:none; }
         .side-head { min-height:82px; padding:18px; display:grid; place-items:center; flex-shrink:0; }
-        .side-logo img { width:142px; max-height:54px; object-fit:contain; transition:.28s var(--ease); filter:none; }
+        .side-logo img { width:142px; max-height:54px; object-fit:contain; transition:.20s var(--ease); filter:none; }
         .side-close {
             position:absolute; top:18px; right:18px; width:36px; height:36px;
             display:none; place-items:center; border:0; border-radius:14px;
@@ -133,7 +311,7 @@
             display:flex; align-items:center; gap:11px; flex-shrink:0;
             border-radius:18px; background:rgba(255,255,255,.78);
             border:1px solid rgba(16,185,129,.16);
-            transition:.28s var(--ease);
+            transition:.20s var(--ease);
         }
         .avatar {
             width:42px; height:42px; display:grid; place-items:center; flex-shrink:0; overflow:hidden;
@@ -148,7 +326,7 @@
         .side-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:0 12px 14px; scrollbar-width:none; }
         .side-scroll::-webkit-scrollbar { display:none; }
         .side-user-info,.menu-title,.menu-text,.caret,.submenu {
-            transition:opacity .2s ease,width .28s var(--ease),max-width .28s var(--ease);
+            transition:opacity .16s ease,width .22s var(--ease),max-width .22s var(--ease);
             overflow:hidden;
         }
 
@@ -160,12 +338,12 @@
             display:flex; align-items:center; gap:12px; border:1px solid transparent;
             border-radius:15px; color:var(--s600); background:transparent;
             text-decoration:none; font-size:13px; font-weight:800; cursor:pointer;
-            transition:.18s var(--ease);
+            transition:.16s var(--ease);
         }
         .menu-item:hover { color:var(--g700); background:rgba(236,253,245,.86); transform:translateX(2px); }
         .menu-item.active { color:var(--g800); background:#fff; border-color:rgba(209,250,229,.86); box-shadow:0 9px 18px rgba(16,185,129,.07); }
         .menu-item.active:before { content:""; position:absolute; left:0; top:11px; bottom:11px; width:4px; border-radius:0 999px 999px 0; background:var(--g500); }
-        .menu-icon { width:22px; display:grid; place-items:center; flex-shrink:0; color:var(--s400); transition:.18s var(--ease); }
+        .menu-icon { width:22px; display:grid; place-items:center; flex-shrink:0; color:var(--s400); transition:.16s var(--ease); }
         .menu-item:hover .menu-icon,.menu-item.active .menu-icon { color:var(--g600); }
         .menu-text { flex:1; min-width:0; text-align:left; white-space:nowrap; text-overflow:ellipsis; }
         .caret { color:var(--s400); font-size:11px; }
@@ -234,7 +412,7 @@
         .drop-logout:hover { color:#be123c; background:#fff1f2; }
 
         .main { width:100%; max-width:1480px; margin:0 auto; padding:24px 24px 42px; flex:1; }
-        .main-inner { animation:contentIn .24s var(--ease) both; }
+        .main-inner { animation:contentIn .20s var(--ease) both; }
         @keyframes contentIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         .admin-card,.stat-card,.dashboard-card,.content-card,.table-card,.kader-card {
             border-radius:24px; background:rgba(255,255,255,.84);
@@ -328,6 +506,11 @@
             .dropdown { width:min(270px, calc(100vw - 24px)); }
         }
 
+        @media (max-width:390px) {
+            .ld-panel { padding:26px 22px 24px; min-width:unset; width:86vw; }
+            .ld-orbit { width:58px; height:58px; margin-bottom:15px; }
+        }
+
         @media (prefers-reduced-motion:reduce) {
             *,*:before,*:after { animation-duration:1ms!important; transition-duration:1ms!important; }
         }
@@ -353,13 +536,38 @@
     <div class="bgfx"></div>
     <div class="gridfx"></div>
     <div class="loader-bar"></div>
-    <div class="loader-toast">
-        <span class="loader-spin"></span>
-        <span class="text-[12px] font-black tracking-[.03em]">Memuat...</span>
+
+    {{-- Loading screen, disamakan dengan Admin/Login --}}
+    <div id="pcKaderLoader" role="status" aria-label="Memuat, harap tunggu..." aria-live="polite">
+        <div class="ld-veil"></div>
+        <div class="ld-panel">
+            <div class="ld-orbit">
+                <div class="ld-ring"></div>
+                <div class="ld-ring"></div>
+                <div class="ld-ring"></div>
+                <i class="fa-solid fa-heart-pulse ld-heart"></i>
+            </div>
+            <div class="ld-name">PosyanduCare</div>
+            <div id="pcKaderLoaderLabel" class="ld-label">Memuat Halaman</div>
+            <div class="ld-dots">
+                <span class="ld-dot"></span>
+                <span class="ld-dot"></span>
+                <span class="ld-dot"></span>
+                <span class="ld-dot"></span>
+            </div>
+        </div>
     </div>
 
-    
     <div class="shell">
+        <div
+            x-cloak
+            x-show="sideOpen"
+            x-transition.opacity.duration.160ms
+            @click="closeSide()"
+            class="backdrop mobile-overlay lg:hidden"
+            aria-hidden="true"
+        ></div>
+
         <aside class="sidebar" :class="{ 'open': sideOpen, 'collapsed': sideMini }">
             @include('partials.sidebar.kader')
         </aside>
@@ -536,22 +744,56 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const body = document.body;
-            let loaderTimer = null;
+            const html = document.documentElement;
+            const pcKaderLoader = document.getElementById('pcKaderLoader');
+            const pcKaderLoaderLabel = document.getElementById('pcKaderLoaderLabel');
 
-            const showLoader = () => {
+            let loaderTimer = null;
+            let loaderDelay = null;
+
+            const showLoader = (label = 'Memuat Halaman') => {
                 clearTimeout(loaderTimer);
-                body.classList.add('loading');
+                clearTimeout(loaderDelay);
+
+                loaderDelay = setTimeout(() => {
+                    if (pcKaderLoaderLabel) pcKaderLoaderLabel.textContent = label;
+
+                    body.classList.add('loading');
+                    body.classList.add('locked');
+                    pcKaderLoader?.classList.add('show');
+                }, 70);
 
                 loaderTimer = setTimeout(() => {
-                    body.classList.remove('loading');
-                }, 1200);
+                    hideLoader();
+                }, 4200);
             };
 
             const hideLoader = () => {
                 clearTimeout(loaderTimer);
+                clearTimeout(loaderDelay);
                 body.classList.remove('loading');
                 body.classList.remove('locked');
+                body.classList.remove('pc-scroll-lock');
+                pcKaderLoader?.classList.remove('show');
+                body.style.overflow = '';
             };
+
+            if (html.classList.contains('pc-from-login')) {
+                showLoader('Membuka Workspace');
+
+                setTimeout(() => {
+                    try {
+                        sessionStorage.removeItem('pc_from_login');
+                    } catch (e) {}
+
+                    html.classList.remove('pc-from-login');
+                    html.classList.add('pc-normal-entry');
+                    hideLoader();
+                    window.scrollTo(0, 0);
+                }, 950);
+            } else {
+                hideLoader();
+            }
 
             window.nexusAlert = function (title, text, type = 'success') {
                 Swal.fire({
@@ -624,7 +866,7 @@
                     return;
                 }
 
-                if (realNavigation(link)) showLoader();
+                if (realNavigation(link)) showLoader('Memuat Halaman');
             });
 
             document.querySelectorAll('.js-logout-form').forEach(form => {
@@ -642,7 +884,7 @@
                     }).then(result => {
                         if (result.isConfirmed) {
                             form.dataset.confirmed = '1';
-                            showLoader();
+                            showLoader('Keluar Sistem');
                             form.submit();
                         }
                     });
@@ -650,18 +892,18 @@
             });
 
             document.addEventListener('submit', event => {
-                if (!event.target.classList.contains('js-logout-form')) showLoader();
+                if (!event.target.classList.contains('js-logout-form')) showLoader('Memproses Data');
             });
 
             window.addEventListener('pageshow', hideLoader);
             window.addEventListener('load', hideLoader);
 
             @if(session('success'))
-                setTimeout(() => nexusAlert('Berhasil!', "{{ session('success') }}", 'success'), 180);
+                setTimeout(() => nexusAlert('Berhasil!', "{{ session('success') }}", 'success'), 120);
             @endif
 
             @if(session('error'))
-                setTimeout(() => nexusAlert('Perhatian!', "{{ session('error') }}", 'error'), 180);
+                setTimeout(() => nexusAlert('Perhatian!', "{{ session('error') }}", 'error'), 120);
             @endif
         });
     </script>

@@ -11,9 +11,10 @@ class Bidan extends Model
 
     protected $fillable = [
         'user_id',
-        'sip',
-        'spesialisasi',
-        'rumah_sakit',
+        'jabatan',
+        'no_str',
+        'no_sip',
+        'lokasi_praktik',
     ];
 
     public function user()
@@ -21,10 +22,8 @@ class Bidan extends Model
         return $this->belongsTo(User::class);
     }
 
-   
-
     public function pemeriksaans()
     {
-        return $this->hasMany(Pemeriksaan::class, 'bidan_id');
+        return $this->hasMany(Pemeriksaan::class, 'pemeriksa_id');
     }
 }
