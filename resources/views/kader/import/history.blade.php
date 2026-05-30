@@ -268,7 +268,7 @@
                     @foreach($imports as $import)
                         @php
                         $totalTerbaca = $import->total_data ?? null;
-$dataBaru = $import->data_berhasil ?? $import->data_tersimpan ?? 0;
+$dataBaru = $import->data_berhasil ?? 0;
 $dataTidakMasuk = $import->data_gagal ?? (
     $totalTerbaca !== null ? max(0, $totalTerbaca - $dataBaru) : null
 );

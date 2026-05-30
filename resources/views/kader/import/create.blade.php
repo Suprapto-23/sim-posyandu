@@ -26,10 +26,10 @@
             'icon' => 'fa-user-graduate',
         ],
         'lansia' => [
-            'label' => 'Lansia',
-            'desc' => 'Template berisi NIK, nama lengkap, tanggal lahir, riwayat penyakit, dan alamat.',
-            'icon' => 'fa-person-cane',
-        ],
+    'label' => 'Lansia',
+    'desc' => 'Template berisi NIK, identitas, alamat, berat badan, tinggi badan, lingkar perut, tekanan darah, gula darah, kolesterol, asam urat, tingkat kemandirian, riwayat penyakit, dan keluhan.',
+    'icon' => 'fa-person-cane',
+],
     ];
 
     $templateBaseUrl = url('/kader/import/template');

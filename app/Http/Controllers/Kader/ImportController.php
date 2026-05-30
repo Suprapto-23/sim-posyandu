@@ -125,16 +125,17 @@ class ImportController extends Controller
             $jumlahSesudah = $this->countDataByType($jenisData);
 
             $dataBerhasil = max(0, $jumlahSesudah - $jumlahSebelum);
-            $dataGagal = max(0, $jumlahBaris - $dataBerhasil);
-            $modeText = $isSmartImport ? '[Mode Smart Mapping Aktif]' : '[Mode Standar]';
+$dataGagal = max(0, $jumlahBaris - $dataBerhasil);
+$modeText = $isSmartImport ? '[Mode Smart Mapping Aktif]' : '[Mode Standar]';
+$jenisDataLabel = $this->types[$jenisData]['label'] ?? ucfirst($jenisData);
 
-            $riwayat->update([
-                'status' => 'completed',
-                'total_data' => $jumlahBaris,
-                'data_berhasil' => $dataBerhasil,
-                'data_gagal' => $dataGagal,
-                'catatan' => "{$modeText} Import " . ucfirst($jenisData) . " selesai. Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBerhasil}. Data tidak masuk atau dilewati: {$dataGagal}. Data dengan NIK yang sudah ada dilewati agar tidak terjadi duplikasi.",
-            ]);
+$riwayat->update([
+    'status' => 'completed',
+    'total_data' => $jumlahBaris,
+    'data_berhasil' => $dataBerhasil,
+    'data_gagal' => $dataGagal,
+    'catatan' => "{$modeText} Import {$jenisDataLabel} selesai. Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBerhasil}. Data tidak masuk atau dilewati: {$dataGagal}. Data dengan NIK yang sudah ada dilewati agar tidak terjadi duplikasi.",
+]);
 
             return redirect()
                 ->route('kader.import.history')

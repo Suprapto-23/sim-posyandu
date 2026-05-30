@@ -222,8 +222,8 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="rounded-2xl bg-emerald-50/80 p-4">
-                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">Data Tersimpan</p>
-                    <p class="mt-2 text-3xl font-black text-slate-900">{{ $import->data_tersimpan ?? 0 }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">Data Berhasil</p>
+                    <p class="mt-2 text-3xl font-black text-slate-900">{{ number_format($import->data_berhasil ?? 0) }}</p>
                     <p class="mt-1 text-xs font-bold text-slate-400">Baris</p>
                 </div>
 
