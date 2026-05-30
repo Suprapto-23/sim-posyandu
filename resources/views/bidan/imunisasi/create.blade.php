@@ -141,7 +141,7 @@
                             <i class="fas fa-baby"></i>
                         </div>
                         <div class="text-left flex-1">
-                            <span class="cat-text font-black text-slate-800 text-[17px] transition-colors duration-300 block font-poppins tracking-tight">Bayi & Balita</span>
+                            <span class="cat-text font-black text-slate-800 text-[17px] transition-colors duration-300 block font-poppins tracking-tight">Balita</span>
                             <span class="text-[10.5px] text-slate-400 font-bold uppercase tracking-widest mt-1 block">Imunisasi Dasar / Lanjutan</span>
                         </div>
                     </div>

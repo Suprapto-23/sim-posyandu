@@ -12,7 +12,7 @@ use App\Models\Pemeriksaan;
 class PasienController extends Controller
 {
     // ========================================================================
-    // 1. DATABASE BAYI & BALITA
+    // 1. DATABASE BALITA
     // ========================================================================
     public function balita(Request $request)
     {

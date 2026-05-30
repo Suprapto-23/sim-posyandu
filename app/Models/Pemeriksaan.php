@@ -2,61 +2,45 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
-/**
- * =========================================================================
- * PEMERIKSAAN MODEL (NEXUS ULTIMATE EDITION)
- * =========================================================================
- * Menghubungkan log kunjungan, petugas, bidan, dan data antropometri fisik.
- * Dilengkapi dengan sistem "Backward Compatibility" anti-crash.
- */
 class Pemeriksaan extends Model
 {
     use HasFactory;
 
     protected $table = 'pemeriksaans';
+
     protected $guarded = ['id'];
 
-    // Atribut virtual ini akan selalu dikirim bersama response JSON/View
     protected $appends = [
         'nama_pasien',
         'nik_pasien',
         'status_verifikasi_text',
-        'status_verifikasi_badge'
+        'status_verifikasi_badge',
     ];
 
     protected $casts = [
         'tanggal_periksa' => 'date',
-        'verified_at'     => 'datetime',
-        'berat_badan'     => 'float',
-        'tinggi_badan'    => 'float',
-        'suhu_tubuh'      => 'float',
-        'lingkar_kepala'  => 'float',
-        'lingkar_lengan'  => 'float',
-        'lingkar_perut'   => 'float',
-        'imt'             => 'float',
-        'gula_darah'      => 'float',
-        'kolesterol'      => 'integer',
-        'asam_urat'       => 'float',
-        'usia_kehamilan'  => 'integer',
+        'verified_at' => 'datetime',
+        'berat_badan' => 'float',
+        'tinggi_badan' => 'float',
+        'suhu_tubuh' => 'float',
+        'lingkar_kepala' => 'float',
+        'lingkar_lengan' => 'float',
+        'lingkar_perut' => 'float',
+        'imt' => 'float',
+        'gula_darah' => 'float',
+        'kolesterol' => 'float',
+        'asam_urat' => 'float',
     ];
 
-    /**
-     * =================================================================
-     * 1. RELASI ARSITEKTUR BARU (NEXUS ENGINE)
-     * =================================================================
-     */
-    
-    // Pintu gerbang utama ke data Pasien (Polymorphic)
     public function kunjungan()
     {
         return $this->belongsTo(Kunjungan::class, 'kunjungan_id');
     }
 
-    // Menggunakan nama 'pemeriksa' agar 100% kompatibel dengan kode lama kader
     public function pemeriksa()
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -67,96 +51,113 @@ class Pemeriksaan extends Model
         return $this->belongsTo(User::class, 'verified_by');
     }
 
-    /**
-     * =================================================================
-     * 2. RELASI ANTI-CRASH (BACKWARD COMPATIBILITY)
-     * =================================================================
-     * Mencegah Error 500 "Call to undefined relationship [balita]" 
-     * jika ada modul/view lama yang belum sempat di-update.
-     */
-    public function balita()   { return $this->belongsTo(Balita::class, 'balita_id'); }
-    public function remaja()   { return $this->belongsTo(Remaja::class, 'remaja_id'); }
-    public function lansia()   { return $this->belongsTo(Lansia::class, 'lansia_id'); }
-
-
-    /**
-     * =================================================================
-     * 3. ACCESSORS (VIRTUAL COLUMNS CERDAS)
-     * =================================================================
-     */
-
-    /**
-     * Mengambil Nama Pasien secara aman.
-     * Cek dari arsitektur baru, jika gagal, cek dari arsitektur lama.
-     */
-    public function getNamaPasienAttribute(): string
+    public function verifikatorLegacy()
     {
-        // Prioritas 1: Ekosistem Baru (Melalui tabel kunjungan)
-        if ($this->kunjungan && $this->kunjungan->pasien) {
-            return $this->kunjungan->pasien->nama_lengkap ?? 'Pasien Tidak Diketahui';
-        }
-
-        // Prioritas 2: Ekosistem Lama (Langsung dari tabel terkait)
-        if ($this->balita) return $this->balita->nama_lengkap;
-        if ($this->remaja) return $this->remaja->nama_lengkap;
-        if ($this->lansia) return $this->lansia->nama_lengkap;
-        if ($this->ibuHamil) return $this->ibuHamil->nama_lengkap;
-
-        return 'Warga Tidak Diketahui (Data Terhapus)';
+        return $this->belongsTo(User::class, 'user_id_verifikator');
     }
 
-    /**
-     * Mengambil NIK Pasien secara aman.
-     */
-    public function getNikPasienAttribute(): string
+    public function balita()
     {
-        if ($this->kunjungan && $this->kunjungan->pasien) {
-            return $this->kunjungan->pasien->nik ?? '-';
+        return $this->belongsTo(Balita::class, 'balita_id');
+    }
+
+    public function remaja()
+    {
+        return $this->belongsTo(Remaja::class, 'remaja_id');
+    }
+
+    public function lansia()
+    {
+        return $this->belongsTo(Lansia::class, 'lansia_id');
+    }
+
+    public function getNamaPasienAttribute(): string
+    {
+        $pasienPolymorphic = $this->kunjungan?->pasien;
+
+        if ($pasienPolymorphic) {
+            return $pasienPolymorphic->nama_lengkap ?? 'Pasien Tidak Diketahui';
         }
 
-        if ($this->balita) return $this->balita->nik ?? '-';
-        if ($this->remaja) return $this->remaja->nik ?? '-';
-        if ($this->lansia) return $this->lansia->nik ?? '-';
-        if ($this->ibuHamil) return $this->ibuHamil->nik ?? '-';
+        if ($this->balita) {
+            return $this->balita->nama_lengkap ?? 'Balita Tidak Diketahui';
+        }
+
+        if ($this->remaja) {
+            return $this->remaja->nama_lengkap ?? 'Remaja Tidak Diketahui';
+        }
+
+        if ($this->lansia) {
+            return $this->lansia->nama_lengkap ?? 'Lansia Tidak Diketahui';
+        }
+
+        return 'Warga Tidak Diketahui';
+    }
+
+    public function getNikPasienAttribute(): string
+    {
+        $pasienPolymorphic = $this->kunjungan?->pasien;
+
+        if ($pasienPolymorphic) {
+            return $pasienPolymorphic->nik ?? '-';
+        }
+
+        if ($this->balita) {
+            return $this->balita->nik ?? '-';
+        }
+
+        if ($this->remaja) {
+            return $this->remaja->nik ?? '-';
+        }
+
+        if ($this->lansia) {
+            return $this->lansia->nik ?? '-';
+        }
 
         return '-';
     }
 
     public function getStatusVerifikasiTextAttribute(): string
     {
-        return match($this->status_verifikasi) {
+        return match ($this->status_verifikasi) {
             'tervalidasi', 'verified', 'approved' => 'Tervalidasi Bidan',
-            'ditolak', 'rejected'                 => 'Revisi / Ditolak',
-            default                               => 'Menunggu Validasi',
+            'ditolak', 'rejected' => 'Revisi / Ditolak',
+            default => 'Menunggu Validasi',
         };
     }
 
     public function getStatusVerifikasiBadgeAttribute(): string
     {
-        return match($this->status_verifikasi) {
+        return match ($this->status_verifikasi) {
             'tervalidasi', 'verified', 'approved' => 'emerald',
-            'ditolak', 'rejected'                 => 'rose',   
-            default                               => 'amber',  
+            'ditolak', 'rejected' => 'rose',
+            default => 'amber',
         };
     }
 
-    /**
-     * =================================================================
-     * 4. SCOPES (MACRO QUERY UNTUK CONTROLLER)
-     * =================================================================
-     */
-
     public function scopePending($query)
     {
-        return $query->where(function($q) {
+        return $query->where(function ($q) {
             $q->where('status_verifikasi', 'pending')
-              ->orWhereNull('status_verifikasi'); 
+                ->orWhereNull('status_verifikasi');
         });
     }
 
     public function scopeVerified($query)
     {
-        return $query->whereIn('status_verifikasi', ['tervalidasi', 'verified', 'approved']);
+        return $query->whereIn('status_verifikasi', [
+            'tervalidasi',
+            'verified',
+            'approved',
+        ]);
+    }
+
+    public function scopeDitolak($query)
+    {
+        return $query->whereIn('status_verifikasi', [
+            'ditolak',
+            'rejected',
+        ]);
     }
 
     public function scopeKategori($query, $kategori)
@@ -167,6 +168,6 @@ class Pemeriksaan extends Model
     public function scopeBulanIni($query)
     {
         return $query->whereMonth('tanggal_periksa', Carbon::now()->month)
-                     ->whereYear('tanggal_periksa', Carbon::now()->year);
+            ->whereYear('tanggal_periksa', Carbon::now()->year);
     }
 }

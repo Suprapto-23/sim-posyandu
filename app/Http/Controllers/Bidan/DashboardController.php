@@ -5,15 +5,16 @@ namespace App\Http\Controllers\Bidan;
 use App\Http\Controllers\Controller;
 use App\Models\Balita;
 use App\Models\Lansia;
-use App\Models\Pemeriksaan;
 use App\Models\Remaja;
-use Illuminate\Support\Carbon;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         $stats = [
             'balita' => $this->safeModelCount(Balita::class),
@@ -24,12 +25,14 @@ class DashboardController extends Controller
                 'pending',
                 'menunggu',
                 'menunggu_review',
+                null,
             ]),
 
             'sudah_ditinjau' => $this->countPemeriksaanStatus([
                 'verified',
                 'valid',
                 'terverifikasi',
+                'approved',
                 'sudah_ditinjau',
                 'ditinjau',
             ]),
@@ -96,9 +99,30 @@ class DashboardController extends Controller
                 return 0;
             }
 
-            return DB::table('pemeriksaans')
-                ->whereIn($statusColumn, $values)
-                ->count();
+            $query = DB::table('pemeriksaans');
+
+            $normalValues = collect($values)
+                ->filter(fn ($value) => $value !== null)
+                ->values()
+                ->all();
+
+            $hasNull = collect($values)->contains(null);
+
+            $query->where(function ($q) use ($statusColumn, $normalValues, $hasNull) {
+                if (!empty($normalValues)) {
+                    $q->whereIn($statusColumn, $normalValues);
+                }
+
+                if ($hasNull) {
+                    if (!empty($normalValues)) {
+                        $q->orWhereNull($statusColumn);
+                    } else {
+                        $q->whereNull($statusColumn);
+                    }
+                }
+            });
+
+            return $query->count();
         } catch (\Throwable) {
             return 0;
         }
@@ -186,13 +210,12 @@ class DashboardController extends Controller
             return $items->map(function ($item) use ($dateColumn, $statusColumn) {
                 $kategori = $this->kategoriFromPemeriksaan($item);
                 $patientId = $this->patientId($item, $kategori);
-                $patient = $this->findPatient($kategori, $patientId);
-
+                $patient = $this->findPatient($kategori, $patientId, $item);
                 $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
 
                 return [
                     'id' => $item->id ?? null,
-                    'nama' => $patient['nama'] ?? $item->nama_pasien ?? '-',
+                    'nama' => $patient['nama'] ?? '-',
                     'nik' => $patient['nik'] ?? '-',
                     'kategori' => $this->kategoriLabel($kategori),
                     'kategori_raw' => $kategori,
@@ -223,8 +246,8 @@ class DashboardController extends Controller
     {
         try {
             $table = $this->firstExistingTable([
-                'jadwal_posyandu',
                 'jadwal_posyandus',
+                'jadwal_posyandu',
                 'jadwals',
             ]);
 
@@ -253,6 +276,21 @@ class DashboardController extends Controller
             return $items->map(function ($item) use ($dateColumn) {
                 $date = $this->dateValue($item->{$dateColumn} ?? null);
 
+                $waktuMulai = $this->firstFilled([
+                    $item->waktu_mulai ?? null,
+                    $item->jam_mulai ?? null,
+                    $item->jam ?? null,
+                    $item->waktu ?? null,
+                ]);
+
+                $waktuSelesai = $this->firstFilled([
+                    $item->waktu_selesai ?? null,
+                    $item->jam_selesai ?? null,
+                    null,
+                ]);
+
+                $waktu = $this->formatRangeJam($waktuMulai, $waktuSelesai);
+
                 return [
                     'judul' => $this->firstFilled([
                         $item->judul ?? null,
@@ -262,12 +300,7 @@ class DashboardController extends Controller
                         'Jadwal Posyandu',
                     ]),
                     'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
-                    'waktu' => $this->firstFilled([
-                        $item->jam ?? null,
-                        $item->waktu ?? null,
-                        $date ? $date->format('H:i') . ' WIB' : null,
-                        '-',
-                    ]),
+                    'waktu' => $waktu,
                     'lokasi' => $this->firstFilled([
                         $item->lokasi ?? null,
                         $item->tempat ?? null,
@@ -293,10 +326,13 @@ class DashboardController extends Controller
                 return [];
             }
 
-            $items = DB::table($table)
-                ->orderByDesc('created_at')
-                ->limit($limit)
-                ->get();
+            $query = DB::table($table)->orderByDesc('created_at')->limit($limit);
+
+            if (Schema::hasColumn($table, 'user_id')) {
+                $query->where('user_id', Auth::id());
+            }
+
+            $items = $query->get();
 
             return $items->map(function ($item) {
                 $date = $this->dateValue($item->created_at ?? null);
@@ -361,6 +397,7 @@ class DashboardController extends Controller
 
             return $days->map(function ($item) use ($rows) {
                 $item['count'] = (int) ($rows[$item['date']] ?? 0);
+
                 return $item;
             })->toArray();
         } catch (\Throwable) {
@@ -414,8 +451,14 @@ class DashboardController extends Controller
             ?? null;
     }
 
-    private function findPatient(string $kategori, $id): ?array
+    private function findPatient(string $kategori, $id, $pemeriksaan = null): ?array
     {
+        $fromKunjungan = $this->patientFromKunjungan($pemeriksaan);
+
+        if ($fromKunjungan) {
+            return $fromKunjungan;
+        }
+
         if (!$id) {
             return null;
         }
@@ -440,6 +483,58 @@ class DashboardController extends Controller
         return [
             'nama' => $item->nama_lengkap ?? $item->nama ?? '-',
             'nik' => $item->nik ?? '-',
+        ];
+    }
+
+    private function patientFromKunjungan($pemeriksaan): ?array
+    {
+        if (!$pemeriksaan || empty($pemeriksaan->kunjungan_id)) {
+            return null;
+        }
+
+        if (!Schema::hasTable('kunjungans')) {
+            return null;
+        }
+
+        $kunjungan = DB::table('kunjungans')
+            ->where('id', $pemeriksaan->kunjungan_id)
+            ->first();
+
+        if (!$kunjungan || empty($kunjungan->pasien_id)) {
+            return null;
+        }
+
+        $pasienType = strtolower((string) ($kunjungan->pasien_type ?? ''));
+
+        $table = null;
+
+        if (str_contains($pasienType, 'balita')) {
+            $table = 'balitas';
+        }
+
+        if (str_contains($pasienType, 'remaja')) {
+            $table = 'remajas';
+        }
+
+        if (str_contains($pasienType, 'lansia')) {
+            $table = 'lansias';
+        }
+
+        if (!$table || !Schema::hasTable($table)) {
+            return null;
+        }
+
+        $pasien = DB::table($table)
+            ->where('id', $kunjungan->pasien_id)
+            ->first();
+
+        if (!$pasien) {
+            return null;
+        }
+
+        return [
+            'nama' => $pasien->nama_lengkap ?? $pasien->nama ?? '-',
+            'nik' => $pasien->nik ?? '-',
         ];
     }
 
@@ -472,7 +567,7 @@ class DashboardController extends Controller
     private function statusLabel($status): string
     {
         return match (strtolower((string) $status)) {
-            'verified', 'valid', 'terverifikasi', 'sudah_ditinjau', 'ditinjau' => 'Sudah Ditinjau',
+            'verified', 'valid', 'terverifikasi', 'approved', 'sudah_ditinjau', 'ditinjau' => 'Sudah Ditinjau',
             'rejected', 'ditolak', 'revisi', 'perlu_perbaikan' => 'Perlu Perbaikan',
             default => 'Menunggu Review',
         };
@@ -521,6 +616,35 @@ class DashboardController extends Controller
             return Carbon::parse($value, 'Asia/Jakarta');
         } catch (\Throwable) {
             return null;
+        }
+    }
+
+    private function formatRangeJam($start, $end = null): string
+    {
+        $startText = $this->formatJam($start);
+        $endText = $this->formatJam($end);
+
+        if ($startText !== '-' && $endText !== '-') {
+            return "{$startText} - {$endText} WIB";
+        }
+
+        if ($startText !== '-') {
+            return "{$startText} WIB";
+        }
+
+        return '-';
+    }
+
+    private function formatJam($value): string
+    {
+        if (!$value || $value === '-') {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($value)->format('H:i');
+        } catch (\Throwable) {
+            return (string) $value;
         }
     }
 }

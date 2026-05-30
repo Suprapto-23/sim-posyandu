@@ -191,7 +191,7 @@
                             <div class="input-wrapper">
                                 <select name="target_peserta" required class="med-input select-custom @error('target_peserta') is-invalid @enderror">
                                     <option value="semua" {{ old('target_peserta', $jadwal->target_peserta) == 'semua' ? 'selected' : '' }}>Semua Warga Terdaftar (Umum)</option>
-                                    <option value="balita" {{ old('target_peserta', $jadwal->target_peserta) == 'balita' ? 'selected' : '' }}>Khusus Ibu & Balita / Bayi</option>
+                                    <option value="balita" {{ old('target_peserta', $jadwal->target_peserta) == 'balita' ? 'selected' : '' }}>Khusus Balita</option>
                                     <option value="remaja" {{ old('target_peserta', $jadwal->target_peserta) == 'remaja' ? 'selected' : '' }}>Khusus Remaja (Posyandu Remaja)</option>
                                     <option value="lansia" {{ old('target_peserta', $jadwal->target_peserta) == 'lansia' ? 'selected' : '' }}>Khusus Lansia (Geriatri / PTM)</option>
                                 </select>

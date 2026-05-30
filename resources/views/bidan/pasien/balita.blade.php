@@ -1,7 +1,7 @@
 @extends('layouts.bidan')
 
 @section('title', 'Buku Induk Balita')
-@section('page-name', 'Direktori Bayi & Balita')
+@section('page-name', 'Direktori Balita')
 
 @push('styles')
 <style>

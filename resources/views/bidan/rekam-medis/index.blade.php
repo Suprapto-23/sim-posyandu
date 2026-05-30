@@ -77,14 +77,14 @@
          ================================================================= --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
         
-        {{-- KARTU 1: BAYI & BALITA --}}
+        {{-- KARTU 1: Balita --}}
         <a href="{{ route('bidan.pasien.balita') }}" class="smooth-route block group">
             <div class="dir-card p-6 flex items-center gap-5">
                 <div class="icon-box w-14 h-14 rounded-[16px] bg-sky-50 text-sky-500 border border-sky-100 flex items-center justify-center text-xl shrink-0">
                     <i class="fas fa-baby"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate mb-1">Bayi & Balita</h3>
+                    <h3 class="text-[16px] font-black text-slate-800 font-poppins truncate mb-1">Balita</h3>
                     <p class="text-[12px] font-medium text-slate-500 truncate">Pertumbuhan, Stunting & Imunisasi</p>
                 </div>
                 <div class="nav-btn w-10 h-10 rounded-[14px] bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center shrink-0">

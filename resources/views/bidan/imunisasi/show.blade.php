@@ -45,7 +45,7 @@
     // Konfigurasi Kategori Warga Berdasarkan Relasi Polimorfik
     $kategoriRaw = strtolower(class_basename($kunjungan->pasien_type ?? ''));
     $kategoriConfig = match($kategoriRaw) {
-        'balita', 'bayi'                 => ['label' => 'Bayi & Balita', 'icon' => 'fa-baby', 'theme' => 'bg-cyan-100 text-cyan-600 border-cyan-200'],
+        'balita' => ['label' => 'Balita', 'icon' => 'fa-baby', 'theme' => 'bg-cyan-100 text-cyan-600 border-cyan-200'],
         default                          => ['label' => 'Umum', 'icon' => 'fa-user', 'theme' => 'bg-slate-100 text-slate-600 border-slate-200']
     };
 @endphp
