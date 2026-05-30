@@ -8,939 +8,1152 @@
 
     $routeHas = fn ($name) => Route::has($name);
 
-    $kemandirianOptions = [
-        'mandiri' => 'Mandiri',
-        'bantuan_sebagian' => 'Membutuhkan Bantuan Sebagian',
-        'ketergantungan_penuh' => 'Ketergantungan Penuh',
-    ];
+    $sessionType = session('success') ? 'success' : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
+    $sessionMessage = session('success') ?? session('warning') ?? session('error');
+
+    $jenisKelamin = old('jenis_kelamin', '');
+    $tingkatKemandirian = old('tingkat_kemandirian', '');
 @endphp
 
-@push('styles')
-<style>
-    .lansia-create-page {
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        position: relative;
-        isolation: isolate;
-    }
-
-    .lansia-create-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
-            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
-    }
-
-    .glass-panel {
-        border: 1px solid rgba(255,255,255,.78);
-        background: rgba(255,255,255,.64);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .hero-panel {
-        border: 1px solid rgba(167,243,208,.72);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
-            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .input-premium {
-        border: 1px solid rgba(226,232,240,.9);
-        background: rgba(255,255,255,.72);
-        outline: none;
-        transition: all .3s ease-in-out;
-    }
-
-    .input-premium:focus {
-        border-color: rgba(16,185,129,.42);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-        background: rgba(255,255,255,.86);
-    }
-
-    .input-error {
-        border-color: rgba(244,63,94,.45) !important;
-        box-shadow: 0 0 0 4px rgba(244,63,94,.08) !important;
-    }
-
-    .choice-card {
-        border: 1px solid rgba(226,232,240,.82);
-        background: rgba(255,255,255,.58);
-        backdrop-filter: blur(14px);
-        transition: all .3s ease-in-out;
-    }
-
-    .choice-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(16,185,129,.28);
-        box-shadow: 0 18px 38px rgba(15,23,42,.06);
-    }
-
-    .choice-card.active {
-        border-color: rgba(16,185,129,.42);
-        background: rgba(236,253,245,.86);
-        box-shadow: 0 14px 32px rgba(5,150,105,.08);
-    }
-
-    .imt-preview {
-        border: 1px solid rgba(226,232,240,.82);
-        background: rgba(255,255,255,.58);
-        backdrop-filter: blur(14px);
-        transition: all .3s ease-in-out;
-    }
-
-    .toast-custom {
-        position: fixed;
-        right: 24px;
-        top: 96px;
-        z-index: 90;
-        width: min(420px, calc(100vw - 32px));
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(-10px);
-        transition: all .3s ease-in-out;
-    }
-
-    .toast-custom.show {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateY(0);
-    }
-
-    @media (max-width: 640px) {
-        .toast-custom {
-            left: 16px;
-            right: 16px;
-            top: 82px;
-        }
-    }
-</style>
-@endpush
-
 @section('content')
-<div class="lansia-create-page space-y-5">
+    <style>
+        .nexus-toast-show {
+            animation: nexusToastShow .22s ease-out both;
+        }
 
-    <div id="customToast" class="toast-custom">
-        <div class="rounded-[24px] border border-rose-100 bg-white/80 p-4 shadow-[0_22px_60px_rgba(15,23,42,.22)] backdrop-blur-xl">
-            <div class="flex gap-3">
-                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
-                    <i class="fa-solid fa-circle-exclamation"></i>
+        .nexus-toast-hide {
+            animation: nexusToastHide .18s ease-in both;
+        }
+
+        @keyframes nexusToastShow {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(.985);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes nexusToastHide {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(.985);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .nexus-toast-show,
+            .nexus-toast-hide {
+                animation: none !important;
+            }
+        }
+    </style>
+
+    <div class="w-full space-y-5">
+
+        {{-- SESSION TOAST --}}
+        @if($sessionType && $sessionMessage)
+            <div
+                id="nexusSessionToast"
+                class="fixed right-4 top-4 z-[100000] w-[calc(100%-2rem)] max-w-md nexus-toast-show"
+            >
+                <div
+                    class="overflow-hidden rounded-3xl border bg-white shadow-2xl shadow-slate-900/10
+                    {{ $sessionType === 'success' ? 'border-emerald-100' : ($sessionType === 'warning' ? 'border-amber-100' : 'border-rose-100') }}"
+                >
+                    <div class="flex items-start gap-3 p-4">
+                        <div
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border
+                            {{ $sessionType === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : ($sessionType === 'warning' ? 'border-amber-100 bg-amber-50 text-amber-700' : 'border-rose-100 bg-rose-50 text-rose-700') }}"
+                        >
+                            <i class="ph-fill {{ $sessionType === 'success' ? 'ph-check-circle' : ($sessionType === 'warning' ? 'ph-warning-circle' : 'ph-x-circle') }} text-2xl"></i>
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p
+                                class="text-sm font-black
+                                {{ $sessionType === 'success' ? 'text-emerald-800' : ($sessionType === 'warning' ? 'text-amber-800' : 'text-rose-800') }}"
+                            >
+                                {{ $sessionType === 'success' ? 'Berhasil Diproses' : ($sessionType === 'warning' ? 'Perhatian Sistem' : 'Aksi Gagal') }}
+                            </p>
+
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                {{ $sessionMessage }}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="nexus-toast-close flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            aria-label="Tutup notifikasi"
+                        >
+                            <i class="ph-bold ph-x text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div
+                        class="h-1 w-full
+                        {{ $sessionType === 'success' ? 'bg-emerald-500' : ($sessionType === 'warning' ? 'bg-amber-500' : 'bg-rose-500') }}"
+                    ></div>
                 </div>
-                <div>
-                    <p class="text-sm font-black text-slate-900">Form belum lengkap</p>
-                    <p id="customToastText" class="mt-1 text-xs font-bold leading-5 text-slate-500">
-                        Lengkapi data wajib terlebih dahulu.
-                    </p>
+            </div>
+        @endif
+
+        {{-- CLIENT TOAST --}}
+        <div id="clientToast" class="fixed right-4 top-4 z-[100000] hidden w-[calc(100%-2rem)] max-w-md">
+            <div class="rounded-3xl border border-amber-100 bg-white p-4 shadow-2xl shadow-slate-900/10">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700">
+                        <i class="ph-fill ph-warning-circle text-2xl"></i>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-black text-amber-800">
+                            Form belum lengkap
+                        </p>
+                        <p id="clientToastMessage" class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                            Lengkapi data wajib terlebih dahulu.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="clientToastClose"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    >
+                        <i class="ph-bold ph-x text-lg"></i>
+                    </button>
                 </div>
             </div>
         </div>
+
+        {{-- HERO --}}
+        <section class="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 p-5 shadow-sm sm:p-6">
+            <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-emerald-200/20 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-amber-200/20 blur-3xl"></div>
+
+            <div class="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-white/70 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                        <i class="ph-fill ph-plus-circle text-base"></i>
+                        Input Data Baru
+                    </div>
+
+                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                        Tambah Data Lansia
+                    </h1>
+
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-600">
+                        Tambahkan data sasaran Lansia beserta pemeriksaan kesehatan dasar seperti tensi, gula darah, kolesterol, asam urat, lingkar perut, dan tingkat kemandirian.
+                    </p>
+
+                    <div class="mt-3 max-w-2xl rounded-2xl border border-emerald-100 bg-white/60 px-4 py-3 text-xs font-bold leading-6 text-slate-600">
+                        <i class="ph-fill ph-info mr-1 text-emerald-600"></i>
+                        Gunakan <span class="font-black text-emerald-700">NIK Lansia</span> sebagai identitas utama. Sistem akan mencocokkan NIK ini dengan akun warga jika sudah dibuat Admin.
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row lg:items-center">
+                    @if($routeHas('kader.data.lansia.index'))
+                        <a
+                            href="{{ route('kader.data.lansia.index') }}"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 shadow-sm transition-all duration-150 ease-out hover:bg-slate-50"
+                        >
+                            <i class="ph-bold ph-arrow-left text-lg"></i>
+                            Kembali
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </section>
+
+        {{-- SERVER ERROR --}}
+        @if($errors->any() || session('error'))
+            <section class="rounded-[1.75rem] border border-rose-100 bg-rose-50 p-4 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-rose-700">
+                        <i class="ph-fill ph-x-circle text-2xl"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <p class="text-sm font-black text-rose-800">
+                            Data belum bisa disimpan
+                        </p>
+
+                        @if(session('error'))
+                            <p class="mt-1 text-sm font-semibold leading-6 text-rose-700">
+                                {{ session('error') }}
+                            </p>
+                        @endif
+
+                        @if($errors->any())
+                            <ul class="mt-2 space-y-1 text-sm font-semibold leading-6 text-rose-700">
+                                @foreach($errors->all() as $error)
+                                    <li class="flex gap-2">
+                                        <span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500"></span>
+                                        <span>{{ $error }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        <form
+            id="createLansiaForm"
+            action="{{ route('kader.data.lansia.store') }}"
+            method="POST"
+            class="grid gap-5 xl:grid-cols-[1fr_360px]"
+            novalidate
+        >
+            @csrf
+
+            <div class="space-y-5">
+
+                {{-- IDENTITAS --}}
+                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
+                    <div class="mb-5">
+                        <div class="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                            <i class="ph-fill ph-identification-card"></i>
+                            Identitas
+                        </div>
+
+                        <h2 class="mt-3 text-2xl font-black text-slate-900">
+                            1. Identitas Lansia
+                        </h2>
+
+                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                            Isi data identitas dasar Lansia sesuai dokumen keluarga atau data layanan Posyandu.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="md:col-span-2">
+                            <label for="nama_lengkap" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Nama Lengkap <span class="text-rose-500">*</span>
+                            </label>
+
+                            <input
+                                id="nama_lengkap"
+                                name="nama_lengkap"
+                                type="text"
+                                value="{{ old('nama_lengkap') }}"
+                                placeholder="Contoh: Siti Aminah"
+                                class="form-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('nama_lengkap') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                data-required="true"
+                                data-label="Nama lengkap"
+                            >
+
+                            @error('nama_lengkap')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="nik" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                NIK Lansia <span class="text-rose-500">*</span>
+                            </label>
+
+                            <input
+                                id="nik"
+                                name="nik"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="16"
+                                value="{{ old('nik') }}"
+                                placeholder="16 digit NIK Lansia"
+                                class="form-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('nik') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                data-required="true"
+                                data-label="NIK Lansia"
+                                data-nik="true"
+                            >
+
+                            <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                                NIK digunakan untuk sinkronisasi akun warga.
+                            </p>
+
+                            @error('nik')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="tempat_lahir" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Tempat Lahir <span class="text-rose-500">*</span>
+                            </label>
+
+                            <input
+                                id="tempat_lahir"
+                                name="tempat_lahir"
+                                type="text"
+                                value="{{ old('tempat_lahir') }}"
+                                placeholder="Contoh: Pekalongan"
+                                class="form-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('tempat_lahir') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                data-required="true"
+                                data-label="Tempat lahir"
+                            >
+
+                            @error('tempat_lahir')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="tanggal_lahir" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Tanggal Lahir <span class="text-rose-500">*</span>
+                            </label>
+
+                            <input
+                                id="tanggal_lahir"
+                                name="tanggal_lahir"
+                                type="date"
+                                value="{{ old('tanggal_lahir') }}"
+                                max="{{ now()->subYears(45)->format('Y-m-d') }}"
+                                class="form-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('tanggal_lahir') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                data-required="true"
+                                data-label="Tanggal lahir"
+                            >
+
+                            <p id="usiaPreview" class="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                                Lansia/Pra-Lansia minimal berusia 45 tahun.
+                            </p>
+
+                            @error('tanggal_lahir')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <p class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Jenis Kelamin <span class="text-rose-500">*</span>
+                            </p>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/80 p-3 transition-all duration-150 ease-out hover:bg-white">
+                                    <input
+                                        type="radio"
+                                        name="jenis_kelamin"
+                                        value="L"
+                                        class="peer sr-only"
+                                        {{ $jenisKelamin === 'L' ? 'checked' : '' }}
+                                    >
+
+                                    <div class="rounded-xl border border-transparent p-2 peer-checked:border-sky-200 peer-checked:bg-sky-50">
+                                        <p class="text-sm font-black text-slate-800">Laki-laki</p>
+                                        <p class="text-xs font-semibold text-slate-500">Kode: L</p>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/80 p-3 transition-all duration-150 ease-out hover:bg-white">
+                                    <input
+                                        type="radio"
+                                        name="jenis_kelamin"
+                                        value="P"
+                                        class="peer sr-only"
+                                        {{ $jenisKelamin === 'P' ? 'checked' : '' }}
+                                    >
+
+                                    <div class="rounded-xl border border-transparent p-2 peer-checked:border-pink-200 peer-checked:bg-pink-50">
+                                        <p class="text-sm font-black text-slate-800">Perempuan</p>
+                                        <p class="text-xs font-semibold text-slate-500">Kode: P</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            @error('jenis_kelamin')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="alamat" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Alamat Tinggal <span class="text-rose-500">*</span>
+                            </label>
+
+                            <textarea
+                                id="alamat"
+                                name="alamat"
+                                rows="4"
+                                placeholder="Alamat lengkap Lansia"
+                                class="form-control w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-bold leading-7 text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('alamat') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                data-required="true"
+                                data-label="Alamat tinggal"
+                            >{{ old('alamat') }}</textarea>
+
+                            @error('alamat')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </section>
+
+                {{-- PENGUKURAN FISIK --}}
+                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
+                    <div class="mb-5">
+                        <div class="inline-flex items-center gap-2 rounded-2xl bg-sky-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-sky-700">
+                            <i class="ph-fill ph-ruler"></i>
+                            Pengukuran Fisik
+                        </div>
+
+                        <h2 class="mt-3 text-2xl font-black text-slate-900">
+                            2. Pengukuran Dasar
+                        </h2>
+
+                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                            Data berat dan tinggi badan digunakan untuk menghitung IMT otomatis.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-3">
+                        <div>
+                            <label for="berat_badan" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Berat Badan
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    id="berat_badan"
+                                    name="berat_badan"
+                                    type="number"
+                                    step="0.1"
+                                    min="1"
+                                    max="300"
+                                    value="{{ old('berat_badan') }}"
+                                    placeholder="Contoh: 60"
+                                    class="form-control numeric-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pr-12 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('berat_badan') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                >
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
+                            </div>
+
+                            @error('berat_badan')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="tinggi_badan" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Tinggi Badan
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    id="tinggi_badan"
+                                    name="tinggi_badan"
+                                    type="number"
+                                    step="0.1"
+                                    min="50"
+                                    max="250"
+                                    value="{{ old('tinggi_badan') }}"
+                                    placeholder="Contoh: 160"
+                                    class="form-control numeric-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pr-12 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('tinggi_badan') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                >
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
+                            </div>
+
+                            @error('tinggi_badan')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="lingkar_perut" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Lingkar Perut
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    id="lingkar_perut"
+                                    name="lingkar_perut"
+                                    type="number"
+                                    step="0.1"
+                                    min="20"
+                                    max="200"
+                                    value="{{ old('lingkar_perut') }}"
+                                    placeholder="Contoh: 82"
+                                    class="form-control numeric-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pr-12 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('lingkar_perut') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                >
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
+                            </div>
+
+                            @error('lingkar_perut')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div id="imtPreviewBox" class="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <p class="text-sm font-black text-slate-800">
+                            Preview IMT:
+                            <span id="imtPreview" class="text-emerald-700">Belum dihitung</span>
+                        </p>
+
+                        <p id="imtCategory" class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                            Isi berat dan tinggi badan untuk menghitung IMT otomatis.
+                        </p>
+                    </div>
+                </section>
+
+                {{-- PEMERIKSAAN KESEHATAN --}}
+                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
+                    <div class="mb-5">
+                        <div class="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
+                            <i class="ph-fill ph-heartbeat"></i>
+                            Pemeriksaan Kesehatan
+                        </div>
+
+                        <h2 class="mt-3 text-2xl font-black text-slate-900">
+                            3. Pemeriksaan Dasar Lansia
+                        </h2>
+
+                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                            Catat indikator kesehatan dasar untuk pemantauan rutin Lansia.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                            <label for="tekanan_darah" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Tekanan Darah
+                            </label>
+
+                            <input
+                                id="tekanan_darah"
+                                name="tekanan_darah"
+                                type="text"
+                                inputmode="numeric"
+                                value="{{ old('tekanan_darah') }}"
+                                placeholder="120/80"
+                                class="form-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('tekanan_darah') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                data-tensi="true"
+                            >
+
+                            <p class="mt-2 text-xs font-semibold text-slate-500">
+                                Format: 120/80
+                            </p>
+
+                            @error('tekanan_darah')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="gula_darah" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Gula Darah
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    id="gula_darah"
+                                    name="gula_darah"
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="999"
+                                    value="{{ old('gula_darah') }}"
+                                    placeholder="Contoh: 120"
+                                    class="form-control numeric-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pr-16 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('gula_darah') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                >
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">mg/dL</span>
+                            </div>
+
+                            @error('gula_darah')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="kolesterol" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Kolesterol
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    id="kolesterol"
+                                    name="kolesterol"
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="999"
+                                    value="{{ old('kolesterol') }}"
+                                    placeholder="Contoh: 180"
+                                    class="form-control numeric-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pr-16 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('kolesterol') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                >
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">mg/dL</span>
+                            </div>
+
+                            @error('kolesterol')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="asam_urat" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Asam Urat
+                            </label>
+
+                            <div class="relative">
+                                <input
+                                    id="asam_urat"
+                                    name="asam_urat"
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="99"
+                                    value="{{ old('asam_urat') }}"
+                                    placeholder="Contoh: 6.5"
+                                    class="form-control numeric-control h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 pr-16 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('asam_urat') border-rose-300 ring-4 ring-rose-100 @enderror"
+                                >
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">mg/dL</span>
+                            </div>
+
+                            @error('asam_urat')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </section>
+
+                {{-- KEMANDIRIAN DAN RIWAYAT --}}
+                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
+                    <div class="mb-5">
+                        <div class="inline-flex items-center gap-2 rounded-2xl bg-teal-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-teal-700">
+                            <i class="ph-fill ph-hand-heart"></i>
+                            Kondisi Lansia
+                        </div>
+
+                        <h2 class="mt-3 text-2xl font-black text-slate-900">
+                            4. Kemandirian, Riwayat Penyakit, dan Keluhan
+                        </h2>
+
+                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
+                            Catat kondisi fungsional dan riwayat kesehatan Lansia secara ringkas.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <p class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Tingkat Kemandirian
+                            </p>
+
+                            <div class="grid gap-3 md:grid-cols-3">
+                                <label class="cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/80 p-3 transition-all duration-150 ease-out hover:bg-white">
+                                    <input
+                                        type="radio"
+                                        name="tingkat_kemandirian"
+                                        value="mandiri"
+                                        class="peer sr-only"
+                                        {{ $tingkatKemandirian === 'mandiri' ? 'checked' : '' }}
+                                    >
+
+                                    <div class="rounded-xl border border-transparent p-3 peer-checked:border-emerald-200 peer-checked:bg-emerald-50">
+                                        <p class="text-sm font-black text-slate-800">Mandiri</p>
+                                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                            Masih mampu melakukan aktivitas harian utama.
+                                        </p>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/80 p-3 transition-all duration-150 ease-out hover:bg-white">
+                                    <input
+                                        type="radio"
+                                        name="tingkat_kemandirian"
+                                        value="bantuan_sebagian"
+                                        class="peer sr-only"
+                                        {{ $tingkatKemandirian === 'bantuan_sebagian' ? 'checked' : '' }}
+                                    >
+
+                                    <div class="rounded-xl border border-transparent p-3 peer-checked:border-amber-200 peer-checked:bg-amber-50">
+                                        <p class="text-sm font-black text-slate-800">Bantuan Sebagian</p>
+                                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                            Membutuhkan bantuan pada beberapa aktivitas.
+                                        </p>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer rounded-2xl border border-slate-200 bg-slate-50/80 p-3 transition-all duration-150 ease-out hover:bg-white">
+                                    <input
+                                        type="radio"
+                                        name="tingkat_kemandirian"
+                                        value="ketergantungan_penuh"
+                                        class="peer sr-only"
+                                        {{ $tingkatKemandirian === 'ketergantungan_penuh' ? 'checked' : '' }}
+                                    >
+
+                                    <div class="rounded-xl border border-transparent p-3 peer-checked:border-rose-200 peer-checked:bg-rose-50">
+                                        <p class="text-sm font-black text-slate-800">Ketergantungan Penuh</p>
+                                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                            Membutuhkan bantuan penuh dalam aktivitas harian.
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            @error('tingkat_kemandirian')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="penyakit_bawaan" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Riwayat Penyakit Bawaan
+                            </label>
+
+                            <textarea
+                                id="penyakit_bawaan"
+                                name="penyakit_bawaan"
+                                rows="3"
+                                placeholder="Contoh: Hipertensi, diabetes, asam urat, jantung..."
+                                class="form-control w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-bold leading-7 text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('penyakit_bawaan') border-rose-300 ring-4 ring-rose-100 @enderror"
+                            >{{ old('penyakit_bawaan') }}</textarea>
+
+                            @error('penyakit_bawaan')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="keluhan" class="mb-2 block text-xs font-black uppercase tracking-[0.15em] text-slate-400">
+                                Keluhan Saat Ini
+                            </label>
+
+                            <textarea
+                                id="keluhan"
+                                name="keluhan"
+                                rows="3"
+                                placeholder="Contoh: Pusing, pegal, sulit tidur, nyeri sendi..."
+                                class="form-control w-full resize-none rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-bold leading-7 text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100 @error('keluhan') border-rose-300 ring-4 ring-rose-100 @enderror"
+                            >{{ old('keluhan') }}</textarea>
+
+                            @error('keluhan')
+                                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {{-- RIGHT PANEL --}}
+            <aside class="space-y-5">
+                <section class="sticky top-5 rounded-[1.75rem] border border-slate-100 bg-white/90 p-5 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+                            <i class="ph-fill ph-person-simple-walk text-2xl"></i>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900">
+                                Ringkasan Input
+                            </h3>
+                            <p class="text-sm font-semibold text-slate-500">
+                                Data Lansia baru.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                        <p class="text-sm font-black text-emerald-800">
+                            Alur Sinkron Akun
+                        </p>
+
+                        <p class="mt-1 text-xs font-semibold leading-5 text-emerald-700">
+                            Setelah data disimpan, sistem mencocokkan NIK Lansia dengan akun warga yang dibuat Admin.
+                        </p>
+                    </div>
+
+                    <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                        <h4 class="text-sm font-black text-slate-800">
+                            Validasi Utama
+                        </h4>
+
+                        <ul class="mt-3 space-y-2 text-xs font-semibold leading-5 text-slate-600">
+                            <li class="flex gap-2">
+                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
+                                <span>NIK Lansia wajib 16 digit dan tidak boleh duplikat.</span>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
+                                <span>Lansia/Pra-Lansia minimal berusia 45 tahun.</span>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
+                                <span>Format tensi harus seperti 120/80.</span>
+                            </li>
+                            <li class="flex gap-2">
+                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
+                                <span>IMT dihitung otomatis dari berat dan tinggi badan.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div id="healthSummaryBox" class="mt-5 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
+                        <h4 class="text-sm font-black text-amber-800">
+                            Ringkasan Kesehatan
+                        </h4>
+
+                        <p id="healthSummaryText" class="mt-2 text-xs font-semibold leading-5 text-amber-700">
+                            Isi pemeriksaan dasar untuk melihat ringkasan cepat.
+                        </p>
+                    </div>
+
+                    <div class="mt-5">
+                        <h4 class="text-sm font-black text-slate-900">
+                            Simpan Data Lansia
+                        </h4>
+
+                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                            Data akan masuk ke database sasaran Lansia dan siap digunakan untuk layanan Posyandu.
+                        </p>
+
+                        <button
+                            id="submitButton"
+                            type="submit"
+                            class="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800 active:scale-[.99]"
+                        >
+                            <i class="ph-fill ph-floppy-disk text-lg"></i>
+                            Simpan Data Lansia
+                        </button>
+
+                        @if($routeHas('kader.data.lansia.index'))
+                            <a
+                                href="{{ route('kader.data.lansia.index') }}"
+                                class="mt-2 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
+                            >
+                                <i class="ph-bold ph-x text-lg"></i>
+                                Batal
+                            </a>
+                        @endif
+                    </div>
+                </section>
+            </aside>
+        </form>
     </div>
 
-    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
-        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-person-cane"></i>
-                    Input Data Lansia
-                </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('createLansiaForm');
+            const submitButton = document.getElementById('submitButton');
 
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Tambah Data Lansia
-                </h1>
+            const nikInput = document.getElementById('nik');
+            const tanggalLahirInput = document.getElementById('tanggal_lahir');
+            const usiaPreview = document.getElementById('usiaPreview');
 
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Masukkan data Lansia sebagai sasaran layanan Posyandu. Data ini digunakan untuk absensi, pengukuran fisik, pemantauan kesehatan, rekam medis, dan laporan.
-                </p>
-            </div>
+            const beratInput = document.getElementById('berat_badan');
+            const tinggiInput = document.getElementById('tinggi_badan');
+            const imtPreview = document.getElementById('imtPreview');
+            const imtCategory = document.getElementById('imtCategory');
 
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                @if($routeHas('kader.data.lansia.index'))
-                    <a href="{{ route('kader.data.lansia.index') }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Kembali
-                    </a>
-                @endif
+            const tensiInput = document.getElementById('tekanan_darah');
+            const gulaInput = document.getElementById('gula_darah');
+            const kolesterolInput = document.getElementById('kolesterol');
+            const asamUratInput = document.getElementById('asam_urat');
+            const lingkarPerutInput = document.getElementById('lingkar_perut');
+            const healthSummaryText = document.getElementById('healthSummaryText');
 
-                @if($routeHas('kader.import.create'))
-                    <a href="{{ route('kader.import.create', ['type' => 'lansia']) }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(15,23,42,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-800">
-                        <i class="fa-solid fa-file-import"></i>
-                        Import Excel
-                    </a>
-                @endif
-            </div>
-        </div>
-    </section>
+            const clientToast = document.getElementById('clientToast');
+            const clientToastMessage = document.getElementById('clientToastMessage');
+            const clientToastClose = document.getElementById('clientToastClose');
+            const sessionToast = document.getElementById('nexusSessionToast');
 
-    @if($errors->any() || session('error'))
-        <section class="rounded-[24px] border border-rose-100 bg-rose-50/80 p-4 text-sm font-bold text-rose-700">
-            <div class="mb-2 flex items-center gap-2 font-black">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Data belum bisa disimpan
-            </div>
+            let toastTimer = null;
 
-            @if(session('error'))
-                <p class="leading-6">{{ session('error') }}</p>
-            @endif
+            function showToast(message) {
+                if (!clientToast || !clientToastMessage) {
+                    return;
+                }
 
-            @if($errors->any())
-                <ul class="ml-5 list-disc space-y-1">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </section>
-    @endif
+                clientToastMessage.textContent = message;
+                clientToast.classList.remove('hidden', 'nexus-toast-hide');
+                clientToast.classList.add('nexus-toast-show');
 
-    <form id="lansiaForm" method="POST" action="{{ route('kader.data.lansia.store') }}" class="space-y-5" novalidate>
-        @csrf
+                clearTimeout(toastTimer);
 
-        {{-- 1. IDENTITAS LANSIA --}}
-        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-            <div class="mb-5 flex items-start gap-3">
-                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
-                    <i class="fa-solid fa-id-card"></i>
-                </div>
+                toastTimer = setTimeout(function () {
+                    hideToast();
+                }, 3000);
+            }
 
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">1. Identitas Lansia</h2>
-                    <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
-                        Data utama Lansia untuk pendataan sasaran dan sinkronisasi akun warga.
-                    </p>
-                </div>
-            </div>
+            function hideToast() {
+                if (!clientToast) {
+                    return;
+                }
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        NIK Lansia
-                    </label>
-                    <input
-                        type="text"
-                        name="nik"
-                        id="nik"
-                        value="{{ old('nik') }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nik') input-error @enderror"
-                        placeholder="16 digit NIK, boleh dikosongkan"
-                        inputmode="numeric"
-                        maxlength="16"
-                        autocomplete="off"
-                    >
-                    @error('nik')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                    <p class="mt-2 text-xs font-bold text-slate-400">
-                        NIK digunakan untuk sinkron akun warga jika tersedia.
-                    </p>
-                </div>
+                clientToast.classList.remove('nexus-toast-show');
+                clientToast.classList.add('nexus-toast-hide');
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Nama Lengkap <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="nama_lengkap"
-                        id="nama_lengkap"
-                        value="{{ old('nama_lengkap') }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('nama_lengkap') input-error @enderror"
-                        placeholder="Contoh: Siti Aminah"
-                        autocomplete="off"
-                        required
-                    >
-                    @error('nama_lengkap')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                setTimeout(function () {
+                    clientToast.classList.add('hidden');
+                }, 220);
+            }
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tempat Lahir <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="tempat_lahir"
-                        id="tempat_lahir"
-                        value="{{ old('tempat_lahir') }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tempat_lahir') input-error @enderror"
-                        placeholder="Contoh: Pekalongan"
-                        autocomplete="off"
-                        required
-                    >
-                    @error('tempat_lahir')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+            function closeSessionToast() {
+                if (!sessionToast) {
+                    return;
+                }
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tanggal Lahir <span class="text-rose-500">*</span>
-                    </label>
-                    <input
-                        type="date"
-                        name="tanggal_lahir"
-                        id="tanggal_lahir"
-                        value="{{ old('tanggal_lahir') }}"
-                        max="{{ now('Asia/Jakarta')->subYears(45)->toDateString() }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tanggal_lahir') input-error @enderror"
-                        required
-                    >
-                    @error('tanggal_lahir')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                    <p id="usiaPreview" class="mt-2 text-xs font-bold text-slate-400">
-                        Usia akan dihitung otomatis setelah tanggal lahir dipilih.
-                    </p>
-                </div>
-            </div>
+                sessionToast.classList.remove('nexus-toast-show');
+                sessionToast.classList.add('nexus-toast-hide');
 
-            <div class="mt-5">
-                <label class="mb-3 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                    Jenis Kelamin <span class="text-rose-500">*</span>
-                </label>
+                setTimeout(function () {
+                    sessionToast.remove();
+                }, 240);
+            }
 
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <label class="choice-card {{ old('jenis_kelamin') === 'L' ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-gender-card="L">
-                        <input type="radio" name="jenis_kelamin" value="L" class="sr-only gender-radio" {{ old('jenis_kelamin') === 'L' ? 'checked' : '' }}>
+            if (clientToastClose) {
+                clientToastClose.addEventListener('click', hideToast);
+            }
 
-                        <div class="flex items-center gap-3">
-                            <div class="grid h-11 w-11 place-items-center rounded-2xl bg-sky-50 text-sky-700">
-                                <i class="fa-solid fa-mars"></i>
-                            </div>
+            if (sessionToast) {
+                setTimeout(closeSessionToast, 3800);
 
-                            <div>
-                                <p class="text-sm font-black text-slate-900">Laki-laki</p>
-                                <p class="mt-1 text-xs font-bold text-slate-400">Kode: L</p>
-                            </div>
-                        </div>
-                    </label>
+                const closeButton = sessionToast.querySelector('.nexus-toast-close');
 
-                    <label class="choice-card {{ old('jenis_kelamin') === 'P' ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-gender-card="P">
-                        <input type="radio" name="jenis_kelamin" value="P" class="sr-only gender-radio" {{ old('jenis_kelamin') === 'P' ? 'checked' : '' }}>
+                if (closeButton) {
+                    closeButton.addEventListener('click', closeSessionToast);
+                }
+            }
 
-                        <div class="flex items-center gap-3">
-                            <div class="grid h-11 w-11 place-items-center rounded-2xl bg-pink-50 text-pink-700">
-                                <i class="fa-solid fa-venus"></i>
-                            </div>
+            if (nikInput) {
+                nikInput.addEventListener('input', function () {
+                    nikInput.value = nikInput.value.replace(/\D/g, '').slice(0, 16);
+                });
+            }
 
-                            <div>
-                                <p class="text-sm font-black text-slate-900">Perempuan</p>
-                                <p class="mt-1 text-xs font-bold text-slate-400">Kode: P</p>
-                            </div>
-                        </div>
-                    </label>
-                </div>
+            if (tensiInput) {
+                tensiInput.addEventListener('input', function () {
+                    let value = tensiInput.value.replace(/[^\d/]/g, '');
 
-                @error('jenis_kelamin')
-                    <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                @enderror
-            </div>
+                    const parts = value.split('/');
 
-            <div class="mt-5">
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                    Alamat Tinggal <span class="text-rose-500">*</span>
-                </label>
-                <textarea
-                    name="alamat"
-                    id="alamat"
-                    rows="4"
-                    class="input-premium w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 @error('alamat') input-error @enderror"
-                    placeholder="Contoh: Dusun Krajan RT 01 RW 02"
-                    required
-                >{{ old('alamat') }}</textarea>
-                @error('alamat')
-                    <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                @enderror
-            </div>
-        </section>
+                    if (parts.length > 2) {
+                        value = parts[0] + '/' + parts[1];
+                    }
 
-        {{-- 2. PEMERIKSAAN KESEHATAN DASAR --}}
-        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-            <div class="mb-5 flex items-start gap-3">
-                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
-                    <i class="fa-solid fa-heart-pulse"></i>
-                </div>
+                    tensiInput.value = value.slice(0, 7);
+                    updateHealthSummary();
+                });
+            }
 
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">2. Pemeriksaan Kesehatan Dasar</h2>
-                    <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
-                        Data awal kesehatan Lansia. Pemeriksaan berkala tetap dicatat melalui fitur Pengukuran Fisik.
-                    </p>
-                </div>
-            </div>
+            function calculateAgeYears(dateValue) {
+                if (!dateValue) {
+                    return null;
+                }
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tingkat Kemandirian
-                    </label>
-                    <select
-                        name="tingkat_kemandirian"
-                        id="tingkat_kemandirian"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tingkat_kemandirian') input-error @enderror"
-                    >
-                        <option value="">Pilih tingkat kemandirian</option>
-                        @foreach($kemandirianOptions as $value => $label)
-                            <option value="{{ $value }}" {{ old('tingkat_kemandirian') === $value ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('tingkat_kemandirian')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                const birthDate = new Date(dateValue);
+                const today = new Date();
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Berat Badan
-                    </label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            name="berat_badan"
-                            id="berat_badan"
-                            value="{{ old('berat_badan') }}"
-                            class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('berat_badan') input-error @enderror"
-                            placeholder="Contoh: 58"
-                            min="1"
-                            max="300"
-                            step="0.1"
-                        >
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
-                    </div>
-                    @error('berat_badan')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tinggi Badan
-                    </label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            name="tinggi_badan"
-                            id="tinggi_badan"
-                            value="{{ old('tinggi_badan') }}"
-                            class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('tinggi_badan') input-error @enderror"
-                            placeholder="Contoh: 158"
-                            min="50"
-                            max="250"
-                            step="0.1"
-                        >
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                    </div>
-                    @error('tinggi_badan')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age -= 1;
+                }
 
-                <div class="lg:col-span-3">
-                    <div id="imtPreview" class="imt-preview rounded-[24px] p-4">
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex items-start gap-3">
-                                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
-                                    <i class="fa-solid fa-calculator"></i>
-                                </div>
+                return age;
+            }
 
-                                <div>
-                                    <p class="text-sm font-black text-slate-900">Preview IMT Otomatis</p>
-                                    <p id="imtText" class="mt-1 text-xs font-bold leading-5 text-slate-400">
-                                        Isi berat dan tinggi badan untuk melihat estimasi IMT.
-                                    </p>
-                                </div>
-                            </div>
+            function updateUsiaPreview() {
+                if (!tanggalLahirInput || !usiaPreview || !tanggalLahirInput.value) {
+                    return;
+                }
 
-                            <div id="imtBadge" class="hidden rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3 text-center">
-                                <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">IMT</p>
-                                <p id="imtValue" class="mt-1 text-xl font-black text-slate-900">-</p>
-                            </div>
-                        </div>
-                    </div>
+                const age = calculateAgeYears(tanggalLahirInput.value);
 
-                    <p class="mt-2 text-xs font-bold text-slate-400">
-                        Nilai IMT final tetap dihitung ulang oleh server saat data disimpan.
-                    </p>
-                </div>
+                if (age === null || age < 0) {
+                    usiaPreview.textContent = 'Tanggal lahir tidak valid.';
+                    usiaPreview.className = 'mt-2 text-xs font-bold leading-5 text-rose-600';
+                    return;
+                }
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tekanan Darah / Tensi
-                    </label>
-                    <input
-                        type="text"
-                        name="tekanan_darah"
-                        id="tekanan_darah"
-                        value="{{ old('tekanan_darah') }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700 @error('tekanan_darah') input-error @enderror"
-                        placeholder="Contoh: 120/80"
-                        maxlength="7"
-                        autocomplete="off"
-                    >
-                    @error('tekanan_darah')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                usiaPreview.textContent = 'Usia terdeteksi ' + age + ' tahun.';
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Lingkar Perut
-                    </label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            name="lingkar_perut"
-                            id="lingkar_perut"
-                            value="{{ old('lingkar_perut') }}"
-                            class="input-premium h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700 @error('lingkar_perut') input-error @enderror"
-                            placeholder="Contoh: 85"
-                            min="20"
-                            max="200"
-                            step="0.1"
-                        >
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                    </div>
-                    @error('lingkar_perut')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                if (age < 45) {
+                    usiaPreview.className = 'mt-2 text-xs font-bold leading-5 text-rose-600';
+                    usiaPreview.textContent += ' Minimal kategori Lansia/Pra-Lansia adalah 45 tahun.';
+                    return;
+                }
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Gula Darah
-                    </label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            name="gula_darah"
-                            id="gula_darah"
-                            value="{{ old('gula_darah') }}"
-                            class="input-premium h-12 w-full rounded-2xl px-4 pr-16 text-sm font-bold text-slate-700 @error('gula_darah') input-error @enderror"
-                            placeholder="Contoh: 120"
-                            min="0"
-                            max="999"
-                            step="0.1"
-                        >
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">mg/dL</span>
-                    </div>
-                    @error('gula_darah')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                usiaPreview.className = 'mt-2 text-xs font-semibold leading-5 text-emerald-700';
+            }
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Kolesterol
-                    </label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            name="kolesterol"
-                            id="kolesterol"
-                            value="{{ old('kolesterol') }}"
-                            class="input-premium h-12 w-full rounded-2xl px-4 pr-16 text-sm font-bold text-slate-700 @error('kolesterol') input-error @enderror"
-                            placeholder="Contoh: 180"
-                            min="0"
-                            max="999"
-                            step="0.1"
-                        >
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">mg/dL</span>
-                    </div>
-                    @error('kolesterol')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+            function calculateImt() {
+                if (!beratInput || !tinggiInput || !imtPreview || !imtCategory) {
+                    return;
+                }
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Asam Urat
-                    </label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            name="asam_urat"
-                            id="asam_urat"
-                            value="{{ old('asam_urat') }}"
-                            class="input-premium h-12 w-full rounded-2xl px-4 pr-16 text-sm font-bold text-slate-700 @error('asam_urat') input-error @enderror"
-                            placeholder="Contoh: 6.5"
-                            min="0"
-                            max="99"
-                            step="0.1"
-                        >
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">mg/dL</span>
-                    </div>
-                    @error('asam_urat')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </section>
+                const berat = parseFloat(beratInput.value);
+                const tinggiCm = parseFloat(tinggiInput.value);
 
-        {{-- 3. RIWAYAT DAN KELUHAN --}}
-        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-            <div class="mb-5 flex items-start gap-3">
-                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-50/90 text-rose-700">
-                    <i class="fa-solid fa-notes-medical"></i>
-                </div>
+                if (!berat || !tinggiCm || tinggiCm <= 0) {
+                    imtPreview.textContent = 'Belum dihitung';
+                    imtCategory.textContent = 'Isi berat dan tinggi badan untuk menghitung IMT otomatis.';
+                    imtCategory.className = 'mt-1 text-xs font-semibold leading-5 text-slate-500';
+                    return;
+                }
 
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">3. Riwayat dan Keluhan</h2>
-                    <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
-                        Catatan awal untuk membantu pemantauan kondisi Lansia.
-                    </p>
-                </div>
-            </div>
+                const tinggiM = tinggiCm / 100;
+                const imt = berat / (tinggiM * tinggiM);
+                const rounded = Math.round(imt * 100) / 100;
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Riwayat Penyakit Bawaan
-                    </label>
-                    <textarea
-                        name="penyakit_bawaan"
-                        id="penyakit_bawaan"
-                        rows="4"
-                        class="input-premium w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 @error('penyakit_bawaan') input-error @enderror"
-                        placeholder="Contoh: Hipertensi, diabetes, asam urat. Kosongkan jika tidak ada."
-                    >{{ old('penyakit_bawaan') }}</textarea>
-                    @error('penyakit_bawaan')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                let category = 'Normal';
+                let className = 'mt-1 text-xs font-semibold leading-5 text-emerald-700';
 
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Keluhan Saat Ini
-                    </label>
-                    <textarea
-                        name="keluhan"
-                        id="keluhan"
-                        rows="4"
-                        class="input-premium w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 @error('keluhan') input-error @enderror"
-                        placeholder="Contoh: Sering pusing, nyeri lutut, mudah lelah. Kosongkan jika tidak ada."
-                    >{{ old('keluhan') }}</textarea>
-                    @error('keluhan')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </section>
+                if (rounded < 18.5) {
+                    category = 'Berat badan kurang';
+                    className = 'mt-1 text-xs font-bold leading-5 text-amber-700';
+                } else if (rounded >= 25 && rounded < 30) {
+                    category = 'Berat badan berlebih';
+                    className = 'mt-1 text-xs font-bold leading-5 text-amber-700';
+                } else if (rounded >= 30) {
+                    category = 'Obesitas';
+                    className = 'mt-1 text-xs font-bold leading-5 text-rose-700';
+                }
 
-        <section class="glass-panel rounded-[26px] p-4">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h3 class="text-sm font-black text-slate-900">Simpan Data Lansia</h3>
-                    <p class="mt-1 text-xs font-bold text-slate-400">
-                        Setelah disimpan, data masuk ke database Lansia dan dapat digunakan pada fitur layanan Posyandu.
-                    </p>
-                </div>
+                imtPreview.textContent = rounded;
+                imtCategory.textContent = 'Kategori IMT: ' + category + '.';
+                imtCategory.className = className;
+            }
 
-                <button type="submit"
-                        id="submitBtn"
-                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    Simpan Lansia
-                </button>
-            </div>
-        </section>
-    </form>
-</div>
+            function updateHealthSummary() {
+                if (!healthSummaryText) {
+                    return;
+                }
+
+                const notes = [];
+
+                const tensi = tensiInput ? tensiInput.value.trim() : '';
+                const gula = gulaInput && gulaInput.value ? parseFloat(gulaInput.value) : null;
+                const kolesterol = kolesterolInput && kolesterolInput.value ? parseFloat(kolesterolInput.value) : null;
+                const asamUrat = asamUratInput && asamUratInput.value ? parseFloat(asamUratInput.value) : null;
+                const lingkarPerut = lingkarPerutInput && lingkarPerutInput.value ? parseFloat(lingkarPerutInput.value) : null;
+
+                if (tensi !== '') {
+                    const validTensi = /^\d{2,3}\/\d{2,3}$/.test(tensi);
+                    notes.push(validTensi ? 'Tensi tercatat.' : 'Format tensi belum sesuai.');
+                }
+
+                if (gula !== null) {
+                    notes.push(gula >= 200 ? 'Gula darah perlu perhatian.' : 'Gula darah tercatat.');
+                }
+
+                if (kolesterol !== null) {
+                    notes.push(kolesterol >= 240 ? 'Kolesterol perlu perhatian.' : 'Kolesterol tercatat.');
+                }
+
+                if (asamUrat !== null) {
+                    notes.push(asamUrat >= 8 ? 'Asam urat perlu perhatian.' : 'Asam urat tercatat.');
+                }
+
+                if (lingkarPerut !== null) {
+                    notes.push('Lingkar perut tercatat.');
+                }
+
+                healthSummaryText.textContent = notes.length
+                    ? notes.join(' ')
+                    : 'Isi pemeriksaan dasar untuk melihat ringkasan cepat.';
+            }
+
+            function markInvalid(input) {
+                input.classList.add('border-rose-300', 'ring-4', 'ring-rose-100');
+            }
+
+            function clearInvalid(input) {
+                input.classList.remove('border-rose-300', 'ring-4', 'ring-rose-100');
+            }
+
+            [tanggalLahirInput, beratInput, tinggiInput, gulaInput, kolesterolInput, asamUratInput, lingkarPerutInput].forEach(function (input) {
+                if (!input) {
+                    return;
+                }
+
+                input.addEventListener('input', function () {
+                    calculateImt();
+                    updateHealthSummary();
+                });
+
+                input.addEventListener('change', function () {
+                    updateUsiaPreview();
+                    calculateImt();
+                    updateHealthSummary();
+                });
+            });
+
+            updateUsiaPreview();
+            calculateImt();
+            updateHealthSummary();
+
+            if (form) {
+                form.addEventListener('submit', function (event) {
+                    const requiredInputs = Array.from(form.querySelectorAll('[data-required="true"]'));
+
+                    for (const input of requiredInputs) {
+                        clearInvalid(input);
+
+                        if (!input.value || input.value.trim() === '') {
+                            event.preventDefault();
+                            markInvalid(input);
+                            input.focus();
+                            showToast(input.dataset.label + ' wajib diisi.');
+                            return;
+                        }
+                    }
+
+                    if (nikInput && nikInput.value.length !== 16) {
+                        event.preventDefault();
+                        markInvalid(nikInput);
+                        nikInput.focus();
+                        showToast('NIK Lansia harus berisi tepat 16 digit angka.');
+                        return;
+                    }
+
+                    const selectedGender = form.querySelector('input[name="jenis_kelamin"]:checked');
+
+                    if (!selectedGender) {
+                        event.preventDefault();
+                        showToast('Jenis kelamin wajib dipilih.');
+                        return;
+                    }
+
+                    const age = tanggalLahirInput ? calculateAgeYears(tanggalLahirInput.value) : null;
+
+                    if (age !== null && age < 45) {
+                        event.preventDefault();
+                        tanggalLahirInput.focus();
+                        showToast('Kategori Lansia/Pra-Lansia minimal harus berusia 45 tahun.');
+                        return;
+                    }
+
+                    if (tensiInput && tensiInput.value.trim() !== '' && !/^\d{2,3}\/\d{2,3}$/.test(tensiInput.value.trim())) {
+                        event.preventDefault();
+                        markInvalid(tensiInput);
+                        tensiInput.focus();
+                        showToast('Format tekanan darah harus seperti 120/80.');
+                        return;
+                    }
+
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.classList.add('opacity-70', 'cursor-wait');
+                        submitButton.innerHTML = '<i class="ph-fill ph-spinner-gap animate-spin text-lg"></i> Menyimpan...';
+                    }
+                });
+
+                form.querySelectorAll('.form-control').forEach(function (input) {
+                    input.addEventListener('input', function () {
+                        clearInvalid(input);
+                    });
+                });
+            }
+        });
+    </script>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('lansiaForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const toast = document.getElementById('customToast');
-    const toastText = document.getElementById('customToastText');
-
-    const genderCards = document.querySelectorAll('[data-gender-card]');
-    const genderRadios = document.querySelectorAll('.gender-radio');
-
-    const tanggalLahir = document.getElementById('tanggal_lahir');
-    const usiaPreview = document.getElementById('usiaPreview');
-
-    const nikInput = document.getElementById('nik');
-    const beratInput = document.getElementById('berat_badan');
-    const tinggiInput = document.getElementById('tinggi_badan');
-    const tekananDarahInput = document.getElementById('tekanan_darah');
-
-    const lingkarPerutInput = document.getElementById('lingkar_perut');
-    const gulaDarahInput = document.getElementById('gula_darah');
-    const kolesterolInput = document.getElementById('kolesterol');
-    const asamUratInput = document.getElementById('asam_urat');
-
-    const imtText = document.getElementById('imtText');
-    const imtBadge = document.getElementById('imtBadge');
-    const imtValue = document.getElementById('imtValue');
-
-    let toastTimer = null;
-
-    const showToast = (message) => {
-        toastText.textContent = message;
-        toast.classList.add('show');
-
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3600);
-    };
-
-    const setError = (el) => {
-        if (el) el.classList.add('input-error');
-    };
-
-    const clearError = (el) => {
-        if (el) el.classList.remove('input-error');
-    };
-
-    const updateGenderUI = () => {
-        const selected = document.querySelector('.gender-radio:checked')?.value;
-
-        genderCards.forEach(card => {
-            card.classList.toggle('active', card.dataset.genderCard === selected);
-        });
-    };
-
-    genderRadios.forEach(radio => {
-        radio.addEventListener('change', updateGenderUI);
-    });
-
-    nikInput?.addEventListener('input', () => {
-        nikInput.value = nikInput.value.replace(/\D/g, '').slice(0, 16);
-        clearError(nikInput);
-    });
-
-    tekananDarahInput?.addEventListener('input', () => {
-        tekananDarahInput.value = tekananDarahInput.value.replace(/[^\d/]/g, '').slice(0, 7);
-        clearError(tekananDarahInput);
-    });
-
-    const sanitizeDecimal = (input, maxLength = 6) => {
-        input?.addEventListener('input', () => {
-            input.value = input.value
-                .replace(/,/g, '.')
-                .replace(/[^\d.]/g, '')
-                .replace(/(\..*)\./g, '$1')
-                .slice(0, maxLength);
-
-            clearError(input);
-        });
-    };
-
-    sanitizeDecimal(beratInput, 6);
-    sanitizeDecimal(tinggiInput, 6);
-    sanitizeDecimal(lingkarPerutInput, 6);
-    sanitizeDecimal(gulaDarahInput, 6);
-    sanitizeDecimal(kolesterolInput, 6);
-    sanitizeDecimal(asamUratInput, 5);
-
-    const calculateAge = (dateValue) => {
-        if (!dateValue) return null;
-
-        const birthDate = new Date(dateValue + 'T00:00:00');
-        const today = new Date();
-
-        if (birthDate > today) return 'future';
-
-        let years = today.getFullYear() - birthDate.getFullYear();
-        let months = today.getMonth() - birthDate.getMonth();
-
-        if (today.getDate() < birthDate.getDate()) {
-            years -= 1;
-            months += 12;
-        }
-
-        return { years, months };
-    };
-
-    const updateAgePreview = () => {
-        const result = calculateAge(tanggalLahir.value);
-
-        clearError(tanggalLahir);
-
-        if (result === null) {
-            usiaPreview.textContent = 'Usia akan dihitung otomatis setelah tanggal lahir dipilih.';
-            usiaPreview.className = 'mt-2 text-xs font-bold text-slate-400';
-            return;
-        }
-
-        if (result === 'future') {
-            usiaPreview.textContent = 'Tanggal lahir tidak boleh melebihi hari ini.';
-            usiaPreview.className = 'mt-2 text-xs font-bold text-rose-600';
-            setError(tanggalLahir);
-            return;
-        }
-
-        if (result.years < 45) {
-            usiaPreview.textContent = `Usia terdeteksi ${result.years} tahun ${result.months} bulan. Lansia minimal 45 tahun.`;
-            usiaPreview.className = 'mt-2 text-xs font-bold text-rose-600';
-            setError(tanggalLahir);
-            return;
-        }
-
-        usiaPreview.textContent = `Perkiraan usia: ${result.years} tahun ${result.months} bulan.`;
-        usiaPreview.className = 'mt-2 text-xs font-bold text-emerald-600';
-    };
-
-    const updateImtPreview = () => {
-        const berat = parseFloat(beratInput.value);
-        const tinggi = parseFloat(tinggiInput.value);
-
-        clearError(beratInput);
-        clearError(tinggiInput);
-
-        if (!berat || !tinggi) {
-            imtBadge.classList.add('hidden');
-            imtText.textContent = 'Isi berat dan tinggi badan untuk melihat estimasi IMT.';
-            imtText.className = 'mt-1 text-xs font-bold leading-5 text-slate-400';
-            return;
-        }
-
-        if (berat < 1 || berat > 300) {
-            setError(beratInput);
-            imtBadge.classList.add('hidden');
-            imtText.textContent = 'Berat badan harus berada pada rentang 1 sampai 300 kg.';
-            imtText.className = 'mt-1 text-xs font-bold leading-5 text-rose-600';
-            return;
-        }
-
-        if (tinggi < 50 || tinggi > 250) {
-            setError(tinggiInput);
-            imtBadge.classList.add('hidden');
-            imtText.textContent = 'Tinggi badan harus berada pada rentang 50 sampai 250 cm.';
-            imtText.className = 'mt-1 text-xs font-bold leading-5 text-rose-600';
-            return;
-        }
-
-        const meter = tinggi / 100;
-        const imt = berat / (meter * meter);
-        const rounded = imt.toFixed(2);
-
-        let label = 'Normal';
-        let labelClass = 'text-emerald-600';
-
-        if (imt < 18.5) {
-            label = 'Kurus';
-            labelClass = 'text-amber-600';
-        } else if (imt >= 25 && imt < 30) {
-            label = 'Berlebih';
-            labelClass = 'text-amber-600';
-        } else if (imt >= 30) {
-            label = 'Obesitas';
-            labelClass = 'text-rose-600';
-        }
-
-        imtBadge.classList.remove('hidden');
-        imtValue.textContent = rounded;
-        imtText.textContent = `Estimasi kategori IMT: ${label}.`;
-        imtText.className = `mt-1 text-xs font-bold leading-5 ${labelClass}`;
-    };
-
-    tanggalLahir?.addEventListener('change', updateAgePreview);
-    beratInput?.addEventListener('input', updateImtPreview);
-    tinggiInput?.addEventListener('input', updateImtPreview);
-
-    form?.addEventListener('submit', (event) => {
-        const requiredFields = [
-            { id: 'nama_lengkap', label: 'Nama lengkap Lansia wajib diisi.' },
-            { id: 'tempat_lahir', label: 'Tempat lahir wajib diisi.' },
-            { id: 'tanggal_lahir', label: 'Tanggal lahir wajib diisi.' },
-            { id: 'alamat', label: 'Alamat tinggal wajib diisi.' },
-        ];
-
-        document.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
-
-        for (const field of requiredFields) {
-            const el = document.getElementById(field.id);
-
-            if (!el || !String(el.value).trim()) {
-                event.preventDefault();
-                setError(el);
-                showToast(field.label);
-                el?.focus();
-                return;
-            }
-        }
-
-        if (nikInput.value.trim() !== '' && !/^\d{16}$/.test(nikInput.value.trim())) {
-            event.preventDefault();
-            setError(nikInput);
-            showToast('Jika NIK Lansia diisi, NIK harus berisi tepat 16 digit angka.');
-            nikInput.focus();
-            return;
-        }
-
-        if (!document.querySelector('.gender-radio:checked')) {
-            event.preventDefault();
-            showToast('Pilih jenis kelamin Lansia terlebih dahulu.');
-            return;
-        }
-
-        const ageCheck = calculateAge(tanggalLahir.value);
-
-        if (ageCheck === 'future' || !ageCheck || ageCheck.years < 45) {
-            event.preventDefault();
-            setError(tanggalLahir);
-            showToast('Tanggal lahir harus menunjukkan usia minimal 45 tahun.');
-            tanggalLahir.focus();
-            return;
-        }
-
-        if (tekananDarahInput.value.trim() !== '' && !/^\d{2,3}\/\d{2,3}$/.test(tekananDarahInput.value.trim())) {
-            event.preventDefault();
-            setError(tekananDarahInput);
-            showToast('Format tekanan darah harus seperti 120/80.');
-            tekananDarahInput.focus();
-            return;
-        }
-
-        const numericChecks = [
-            { el: beratInput, min: 1, max: 300, label: 'Berat badan harus berada pada rentang 1 sampai 300 kg.' },
-            { el: tinggiInput, min: 50, max: 250, label: 'Tinggi badan harus berada pada rentang 50 sampai 250 cm.' },
-            { el: lingkarPerutInput, min: 20, max: 200, label: 'Lingkar perut harus berada pada rentang 20 sampai 200 cm.' },
-            { el: gulaDarahInput, min: 0, max: 999, label: 'Gula darah harus berada pada rentang 0 sampai 999 mg/dL.' },
-            { el: kolesterolInput, min: 0, max: 999, label: 'Kolesterol harus berada pada rentang 0 sampai 999 mg/dL.' },
-            { el: asamUratInput, min: 0, max: 99, label: 'Asam urat harus berada pada rentang 0 sampai 99 mg/dL.' },
-        ];
-
-        for (const item of numericChecks) {
-            if (!item.el || item.el.value.trim() === '') {
-                continue;
-            }
-
-            const value = parseFloat(item.el.value);
-
-            if (Number.isNaN(value) || value < item.min || value > item.max) {
-                event.preventDefault();
-                setError(item.el);
-                showToast(item.label);
-                item.el.focus();
-                return;
-            }
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan Data...';
-    });
-
-    updateGenderUI();
-    updateAgePreview();
-    updateImtPreview();
-});
-</script>
-@endpush

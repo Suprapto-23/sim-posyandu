@@ -6,688 +6,1142 @@
 @php
     use Illuminate\Support\Carbon;
     use Illuminate\Support\Facades\Route;
+    use Illuminate\Support\Str;
 
     Carbon::setLocale('id');
 
     $routeHas = fn ($name) => Route::has($name);
 
+    $items = $items ?? ($lansias ?? collect());
     $search = $search ?? request('search', '');
     $statusAkun = $statusAkun ?? request('status_akun', 'semua');
     $jenisKelamin = $jenisKelamin ?? request('jenis_kelamin', 'semua');
     $kemandirian = $kemandirian ?? request('kemandirian', 'semua');
 
-    $statusOptions = [
-        'semua' => 'Semua Status',
-        'terhubung' => 'Terhubung Akun',
-        'belum' => 'Belum Terhubung',
-    ];
+    $statTotal = $statTotal ?? 0;
+    $statLaki = $statLaki ?? 0;
+    $statPerempuan = $statPerempuan ?? 0;
+    $statTerhubung = $statTerhubung ?? 0;
+    $statBelumTerhubung = $statBelumTerhubung ?? 0;
+    $statMandiri = $statMandiri ?? 0;
+    $statButuhBantuan = $statButuhBantuan ?? 0;
+    $statTensiTercatat = $statTensiTercatat ?? 0;
 
-    $genderOptions = [
-        'semua' => 'Semua Gender',
-        'L' => 'Laki-laki',
-        'P' => 'Perempuan',
-    ];
+    $sessionType = session('success') ? 'success' : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
+    $sessionMessage = session('success') ?? session('warning') ?? session('error');
 
-    $kemandirianOptions = [
-        'semua' => 'Semua Kemandirian',
-        'mandiri' => 'Mandiri',
-        'bantuan_sebagian' => 'Bantuan Sebagian',
-        'ketergantungan_penuh' => 'Ketergantungan Penuh',
-    ];
-
-    $genderLabel = fn ($value) => match($value) {
-        'L' => 'Laki-laki',
-        'P' => 'Perempuan',
-        default => '-',
+    $genderLabel = function ($jk) {
+        return match ($jk) {
+            'L' => 'Laki-laki',
+            'P' => 'Perempuan',
+            default => '-',
+        };
     };
 
-    $genderClass = fn ($value) => match($value) {
-        'L' => 'border-sky-100 bg-sky-50 text-sky-700',
-        'P' => 'border-pink-100 bg-pink-50 text-pink-700',
-        default => 'border-slate-100 bg-slate-50 text-slate-500',
+    $genderBadgeClass = function ($jk) {
+        return match ($jk) {
+            'L' => 'border-sky-100 bg-sky-50 text-sky-700',
+            'P' => 'border-pink-100 bg-pink-50 text-pink-700',
+            default => 'border-slate-100 bg-slate-50 text-slate-600',
+        };
     };
 
-    $kemandirianLabel = fn ($value) => match($value) {
-        'mandiri' => 'Mandiri',
-        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'Bantuan Sebagian',
-        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'Ketergantungan Penuh',
-        default => 'Belum Diisi',
+    $kemandirianLabel = function ($value) {
+        return match ($value) {
+            'mandiri' => 'Mandiri',
+            'bantuan_sebagian' => 'Bantuan Sebagian',
+            'ketergantungan_penuh' => 'Ketergantungan Penuh',
+            default => 'Belum Diisi',
+        };
     };
 
-    $kemandirianClass = fn ($value) => match($value) {
-        'mandiri' => 'border-emerald-100 bg-emerald-50 text-emerald-700',
-        'bantuan_sebagian', 'bantuan_ringan', 'bantuan_sedang' => 'border-amber-100 bg-amber-50 text-amber-700',
-        'ketergantungan_penuh', 'ketergantungan_tinggi' => 'border-rose-100 bg-rose-50 text-rose-700',
-        default => 'border-slate-100 bg-slate-50 text-slate-500',
-    };
-
-    $imtClass = function ($value) {
-        if ($value === null || $value === '') {
-            return 'border-slate-100 bg-slate-50 text-slate-500';
-        }
-
-        if ((float) $value < 18.5) {
-            return 'border-amber-100 bg-amber-50 text-amber-700';
-        }
-
-        if ((float) $value < 25) {
-            return 'border-emerald-100 bg-emerald-50 text-emerald-700';
-        }
-
-        return 'border-rose-100 bg-rose-50 text-rose-700';
-    };
-
-    $formatNumber = function ($value, $suffix = '') {
-        if ($value === null || $value === '') {
-            return '-';
-        }
-
-        $number = number_format((float) $value, 1, ',', '.');
-        $number = rtrim(rtrim($number, '0'), ',');
-
-        return $number . $suffix;
+    $kemandirianBadgeClass = function ($value) {
+        return match ($value) {
+            'mandiri' => 'border-emerald-100 bg-emerald-50 text-emerald-700',
+            'bantuan_sebagian' => 'border-amber-100 bg-amber-50 text-amber-700',
+            'ketergantungan_penuh' => 'border-rose-100 bg-rose-50 text-rose-700',
+            default => 'border-slate-100 bg-slate-50 text-slate-600',
+        };
     };
 @endphp
 
-@push('styles')
-<style>
-    .lansia-page {
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        position: relative;
-        isolation: isolate;
-    }
-
-    .lansia-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.12), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245,158,11,.09), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(14,165,233,.07), transparent 32%),
-            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
-    }
-
-    .glass-panel {
-        border: 1px solid rgba(255,255,255,.78);
-        background: rgba(255,255,255,.64);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .hero-panel {
-        border: 1px solid rgba(167,243,208,.72);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
-            radial-gradient(circle at 88% 16%, rgba(245,158,11,.12), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .input-premium {
-        border: 1px solid rgba(226,232,240,.92);
-        background: rgba(255,255,255,.74);
-        outline: none;
-        transition: all .3s ease-in-out;
-    }
-
-    .input-premium:focus {
-        border-color: rgba(16,185,129,.42);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-        background: rgba(255,255,255,.90);
-    }
-
-    .mini-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: .35rem;
-        border-width: 1px;
-        border-radius: 999px;
-        padding: .28rem .58rem;
-        font-size: 10px;
-        font-weight: 900;
-        line-height: 1;
-        white-space: nowrap;
-    }
-
-    .data-table-wrap {
-        border: 1px solid rgba(226,232,240,.74);
-        background: rgba(255,255,255,.58);
-        backdrop-filter: blur(14px);
-        overflow: hidden;
-    }
-
-    .data-table-scroll {
-        overflow-x: auto;
-    }
-
-    .data-table-scroll::-webkit-scrollbar {
-        height: 8px;
-    }
-
-    .data-table-scroll::-webkit-scrollbar-track {
-        background: rgba(241,245,249,.8);
-        border-radius: 999px;
-    }
-
-    .data-table-scroll::-webkit-scrollbar-thumb {
-        background: linear-gradient(90deg, #10b981, #f59e0b);
-        border-radius: 999px;
-    }
-
-    .data-table-body {
-        max-height: 640px;
-        overflow-y: auto;
-    }
-
-    .data-table-body::-webkit-scrollbar {
-        width: 7px;
-    }
-
-    .data-table-body::-webkit-scrollbar-track {
-        background: rgba(241,245,249,.8);
-        border-radius: 999px;
-    }
-
-    .data-table-body::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #10b981, #f59e0b);
-        border-radius: 999px;
-    }
-
-    .table-row {
-        transition: all .25s ease-in-out;
-    }
-
-    .table-row:hover {
-        background: rgba(236,253,245,.42);
-    }
-
-    .metric-box {
-        border: 1px solid rgba(226,232,240,.68);
-        background: rgba(255,255,255,.68);
-        border-radius: 14px;
-        padding: 8px 10px;
-        min-height: 54px;
-    }
-
-    .clamp-1 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 1;
-        -webkit-box-orient: vertical;
-    }
-
-    .clamp-2 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-    }
-</style>
-@endpush
-
 @section('content')
-<div class="lansia-page space-y-5">
+    <style>
+        .nexus-toast-show {
+            animation: nexusToastShow .2s ease-out both;
+        }
 
-    {{-- HERO --}}
-    <section class="hero-panel rounded-[28px] p-5 sm:p-6">
-        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-person-cane"></i>
-                    Database Lansia
-                </div>
+        .nexus-toast-hide {
+            animation: nexusToastHide .16s ease-in both;
+        }
 
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Data Lansia
-                </h1>
+        .nexus-modal-show {
+            animation: nexusModalShow .16s ease-out both;
+        }
 
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Kelola data Lansia, tingkat kemandirian, pemeriksaan kesehatan dasar, riwayat penyakit, dan keluhan.
-                </p>
-            </div>
+        @keyframes nexusToastShow {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(.985);
+            }
 
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                @if($routeHas('kader.import.create'))
-                    <a href="{{ route('kader.import.create', ['type' => 'lansia']) }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-5 py-3 text-sm font-black text-amber-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
-                        <i class="fa-solid fa-file-import"></i>
-                        Import
-                    </a>
-                @endif
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-                @if($routeHas('kader.data.lansia.create'))
-                    <a href="{{ route('kader.data.lansia.create') }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                        <i class="fa-solid fa-plus"></i>
-                        Tambah Lansia
-                    </a>
-                @endif
-            </div>
-        </div>
-    </section>
+        @keyframes nexusToastHide {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
 
-    {{-- STATS --}}
-    <section class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <div class="glass-panel rounded-[22px] p-4">
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Total</p>
-            <div class="mt-2 flex items-end justify-between gap-2">
-                <h2 class="text-2xl font-black text-slate-900">{{ $statTotal ?? 0 }}</h2>
-                <i class="fa-solid fa-users text-emerald-600"></i>
-            </div>
-        </div>
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(.985);
+            }
+        }
 
-        <div class="glass-panel rounded-[22px] p-4">
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Laki-laki</p>
-            <div class="mt-2 flex items-end justify-between gap-2">
-                <h2 class="text-2xl font-black text-slate-900">{{ $statLaki ?? 0 }}</h2>
-                <i class="fa-solid fa-mars text-sky-600"></i>
-            </div>
-        </div>
+        @keyframes nexusModalShow {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(.985);
+            }
 
-        <div class="glass-panel rounded-[22px] p-4">
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Perempuan</p>
-            <div class="mt-2 flex items-end justify-between gap-2">
-                <h2 class="text-2xl font-black text-slate-900">{{ $statPerempuan ?? 0 }}</h2>
-                <i class="fa-solid fa-venus text-pink-600"></i>
-            </div>
-        </div>
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-        <div class="glass-panel rounded-[22px] p-4">
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Mandiri</p>
-            <div class="mt-2 flex items-end justify-between gap-2">
-                <h2 class="text-2xl font-black text-slate-900">{{ $statMandiri ?? 0 }}</h2>
-                <i class="fa-solid fa-person-walking text-emerald-600"></i>
-            </div>
-        </div>
+        body.nexus-modal-lock {
+            overflow: hidden !important;
+        }
 
-        <div class="glass-panel rounded-[22px] p-4">
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Butuh Bantuan</p>
-            <div class="mt-2 flex items-end justify-between gap-2">
-                <h2 class="text-2xl font-black text-slate-900">{{ $statButuhBantuan ?? 0 }}</h2>
-                <i class="fa-solid fa-hand-holding-heart text-amber-600"></i>
-            </div>
-        </div>
+        #nexusConfirmOverlay {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 999999 !important;
+            display: none;
+            place-items: center;
+            min-height: 100dvh;
+            padding: 18px;
+            background: rgba(15, 23, 42, .48);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
 
-        <div class="glass-panel rounded-[22px] p-4">
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Tensi</p>
-            <div class="mt-2 flex items-end justify-between gap-2">
-                <h2 class="text-2xl font-black text-slate-900">{{ $statTensiTercatat ?? 0 }}</h2>
-                <i class="fa-solid fa-heart-pulse text-rose-600"></i>
-            </div>
-        </div>
-    </section>
+        #nexusConfirmOverlay.is-open {
+            display: grid !important;
+        }
 
-    {{-- FILTER --}}
-    <section class="glass-panel rounded-[26px] p-4">
-        <form method="GET" action="{{ route('kader.data.lansia.index') }}" class="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_175px_215px_205px_auto]">
-            <div>
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Cari Lansia</label>
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ $search }}"
-                        class="input-premium h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700"
-                        placeholder="Cari nama, NIK, alamat, penyakit, keluhan, atau tensi..."
-                    >
-                </div>
-            </div>
+        #nexusConfirmBox {
+            width: min(100%, 440px);
+            max-height: calc(100dvh - 36px);
+            overflow-y: auto;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, .8);
+            background: rgba(255, 255, 255, .98);
+            box-shadow: 0 26px 80px rgba(15, 23, 42, .22);
+        }
 
-            <div>
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Gender</label>
-                <select name="jenis_kelamin" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                    @foreach($genderOptions as $key => $label)
-                        <option value="{{ $key }}" {{ $jenisKelamin === $key ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+        #nexusMiniToast {
+            position: fixed !important;
+            top: 16px !important;
+            right: 16px !important;
+            z-index: 1000000 !important;
+            width: min(calc(100% - 32px), 390px);
+        }
 
-            <div>
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Kemandirian</label>
-                <select name="kemandirian" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                    @foreach($kemandirianOptions as $key => $label)
-                        <option value="{{ $key }}" {{ $kemandirian === $key ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+        @media (max-width: 640px) {
+            #nexusConfirmOverlay {
+                padding: 14px;
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+            }
 
-            <div>
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Status Akun</label>
-                <select name="status_akun" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" {{ $statusAkun === $key ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            #nexusConfirmBox {
+                border-radius: 24px;
+            }
 
-            <div class="flex items-end gap-2">
-                <button type="submit"
-                        class="h-12 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                    <i class="fa-solid fa-filter mr-1"></i>
-                    Filter
-                </button>
+            #nexusMiniToast {
+                top: 12px !important;
+                right: 12px !important;
+                width: calc(100% - 24px);
+            }
+        }
 
-                <a href="{{ route('kader.data.lansia.index') }}"
-                   class="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-white/60 text-slate-500 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-emerald-700">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </a>
-            </div>
-        </form>
-    </section>
+        @media (prefers-reduced-motion: reduce) {
+            .nexus-toast-show,
+            .nexus-toast-hide,
+            .nexus-modal-show {
+                animation: none !important;
+            }
+        }
+    </style>
 
-    {{-- TABLE --}}
-    <section class="glass-panel rounded-[28px] p-4">
-        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-lg font-black text-slate-900">Daftar Lansia</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Data dibuat lebih compact dan sejajar agar mudah dibaca.
-                </p>
-            </div>
+    <div class="w-full space-y-5">
 
-            <span class="w-fit rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">
-                {{ $items->total() ?? 0 }} Data
-            </span>
-        </div>
+        {{-- SESSION TOAST --}}
+        @if($sessionType && $sessionMessage)
+            <div id="nexusSessionToast" class="fixed right-4 top-4 z-[100000] w-[calc(100%-2rem)] max-w-md nexus-toast-show">
+                <div
+                    class="overflow-hidden rounded-3xl border bg-white shadow-2xl shadow-slate-900/10
+                    {{ $sessionType === 'success' ? 'border-emerald-100' : ($sessionType === 'warning' ? 'border-amber-100' : 'border-rose-100') }}"
+                >
+                    <div class="flex items-start gap-3 p-4">
+                        <div
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border
+                            {{ $sessionType === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : ($sessionType === 'warning' ? 'border-amber-100 bg-amber-50 text-amber-700' : 'border-rose-100 bg-rose-50 text-rose-700') }}"
+                        >
+                            <i class="ph-fill {{ $sessionType === 'success' ? 'ph-check-circle' : ($sessionType === 'warning' ? 'ph-warning-circle' : 'ph-x-circle') }} text-2xl"></i>
+                        </div>
 
-        @if(isset($items) && $items->count())
-            <form method="POST" action="{{ route('kader.data.lansia.bulk-delete') }}" id="bulkDeleteForm">
-                @csrf
-                @method('DELETE')
+                        <div class="min-w-0 flex-1">
+                            <p
+                                class="text-sm font-black
+                                {{ $sessionType === 'success' ? 'text-emerald-800' : ($sessionType === 'warning' ? 'text-amber-800' : 'text-rose-800') }}"
+                            >
+                                {{ $sessionType === 'success' ? 'Berhasil Diproses' : ($sessionType === 'warning' ? 'Perhatian Sistem' : 'Aksi Gagal') }}
+                            </p>
 
-                <div class="mb-4 hidden rounded-[20px] border border-rose-100 bg-rose-50/80 p-4" id="bulkActionBar">
-                    <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                        <div>
-                            <p class="text-sm font-black text-rose-700">Mode hapus massal aktif</p>
-                            <p class="mt-1 text-xs font-bold text-rose-500">
-                                <span id="selectedCount">0</span> data dipilih.
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                {{ $sessionMessage }}
                             </p>
                         </div>
 
-                        <button type="submit"
-                                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-700"
-                                onclick="return confirm('Hapus data Lansia yang dipilih? Data yang sudah punya riwayat pelayanan tidak dapat dihapus.');">
-                            <i class="fa-solid fa-trash"></i>
-                            Hapus Terpilih
+                        <button
+                            type="button"
+                            class="nexus-toast-close flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            aria-label="Tutup notifikasi"
+                        >
+                            <i class="ph-bold ph-x text-lg"></i>
                         </button>
                     </div>
+
+                    <div
+                        class="h-1 w-full
+                        {{ $sessionType === 'success' ? 'bg-emerald-500' : ($sessionType === 'warning' ? 'bg-amber-500' : 'bg-rose-500') }}"
+                    ></div>
                 </div>
-
-                <div class="data-table-wrap rounded-[24px]">
-                    <div class="data-table-scroll">
-                        <table class="min-w-[1180px] w-full table-fixed">
-                            <thead>
-                                <tr class="border-b border-slate-200/70 bg-slate-50/50">
-                                    <th class="w-[44px] px-4 py-3"></th>
-                                    <th class="w-[230px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Profil</th>
-                                    <th class="w-[220px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Identitas</th>
-                                    <th class="w-[340px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Pemeriksaan Dasar</th>
-                                    <th class="w-[235px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Riwayat dan Keluhan</th>
-                                    <th class="w-[155px] px-3 py-3 text-left text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Aksi</th>
-                                </tr>
-                            </thead>
-                        </table>
-
-                        <div class="data-table-body">
-                            <table class="min-w-[1180px] w-full table-fixed">
-                                <tbody>
-                                    @foreach($items as $item)
-                                        @php
-                                            $tanggalLahir = $item->tanggal_lahir ? Carbon::parse($item->tanggal_lahir) : null;
-                                            $usiaText = '-';
-
-                                            if ($tanggalLahir) {
-                                                $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
-                                                $usiaText = $diff->y . ' tahun';
-                                            }
-
-                                            $akunTerhubung = filled($item->user_id);
-                                            $pemeriksaan = $item->pemeriksaan_terakhir;
-                                            $imtValue = $item->imt ?? null;
-
-                                            $keluhan = $item->keluhan ?: 'Tidak ada keluhan';
-                                            $penyakit = $item->penyakit_bawaan ?: 'Tidak ada riwayat';
-                                        @endphp
-
-                                        <tr class="table-row border-b border-slate-100 last:border-b-0">
-                                            <td class="w-[44px] px-4 py-4 align-middle">
-                                                <input
-                                                    type="checkbox"
-                                                    name="ids[]"
-                                                    value="{{ $item->id }}"
-                                                    class="bulk-checkbox h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                                                >
-                                            </td>
-
-                                            <td class="w-[230px] px-3 py-4 align-middle">
-                                                <div class="flex min-w-0 items-center gap-3">
-                                                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
-                                                        <span class="text-sm font-black">
-                                                            {{ strtoupper(substr($item->nama_lengkap ?? 'L', 0, 1)) }}
-                                                        </span>
-                                                    </div>
-
-                                                    <div class="min-w-0">
-                                                        <div class="mb-1 flex flex-wrap gap-1.5">
-                                                            <span class="mini-badge border-emerald-100 bg-emerald-50 text-emerald-700">Lansia</span>
-                                                            <span class="mini-badge {{ $genderClass($item->jenis_kelamin) }}">
-                                                                {{ $genderLabel($item->jenis_kelamin) }}
-                                                            </span>
-                                                        </div>
-
-                                                        <h3 class="clamp-1 text-sm font-black text-slate-900">
-                                                            {{ $item->nama_lengkap }}
-                                                        </h3>
-
-                                                        <p class="mt-1 text-xs font-bold text-slate-400">
-                                                            NIK {{ $item->nik ?? '-' }}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td class="w-[220px] px-3 py-4 align-middle">
-                                                <div class="mb-2 flex flex-wrap gap-1.5">
-                                                    <span class="mini-badge {{ $kemandirianClass($item->tingkat_kemandirian ?? null) }}">
-                                                        {{ $kemandirianLabel($item->tingkat_kemandirian ?? null) }}
-                                                    </span>
-
-                                                    @if($akunTerhubung)
-                                                        <span class="mini-badge border-emerald-100 bg-emerald-50 text-emerald-700">Akun</span>
-                                                    @else
-                                                        <span class="mini-badge border-amber-100 bg-amber-50 text-amber-700">Belum Sinkron</span>
-                                                    @endif
-                                                </div>
-
-                                                <p class="text-sm font-black text-slate-900">{{ $usiaText }}</p>
-
-                                                <p class="mt-1 clamp-1 text-xs font-bold text-slate-400">
-                                                    {{ $item->tempat_lahir ?? '-' }},
-                                                    {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d M Y') : '-' }}
-                                                </p>
-
-                                                <p class="mt-1 clamp-1 text-xs font-bold text-slate-400">
-                                                    {{ $item->alamat ?? '-' }}
-                                                </p>
-                                            </td>
-
-                                            <td class="w-[340px] px-3 py-4 align-middle">
-                                                <div class="mb-2 flex flex-wrap gap-1.5">
-                                                    <span class="mini-badge border-sky-100 bg-sky-50 text-sky-700">
-                                                        Tensi {{ $item->tekanan_darah ?: '-' }}
-                                                    </span>
-
-                                                    <span class="mini-badge {{ $imtClass($imtValue) }}">
-                                                        IMT {{ $imtValue ?: '-' }}
-                                                    </span>
-                                                </div>
-
-                                                <div class="grid grid-cols-4 gap-2">
-                                                    <div class="metric-box">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">BB</p>
-                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->berat_badan ?? null, ' kg') }}</p>
-                                                    </div>
-
-                                                    <div class="metric-box">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">TB</p>
-                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->tinggi_badan ?? null, ' cm') }}</p>
-                                                    </div>
-
-                                                    <div class="metric-box">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">LP</p>
-                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->lingkar_perut ?? null, ' cm') }}</p>
-                                                    </div>
-
-                                                    <div class="metric-box">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">Gula</p>
-                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->gula_darah ?? null) }}</p>
-                                                    </div>
-
-                                                    <div class="metric-box">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">Kol</p>
-                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->kolesterol ?? null) }}</p>
-                                                    </div>
-
-                                                    <div class="metric-box">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">AU</p>
-                                                        <p class="mt-1 text-xs font-black text-slate-900">{{ $formatNumber($item->asam_urat ?? null) }}</p>
-                                                    </div>
-
-                                                    <div class="metric-box col-span-2">
-                                                        <p class="text-[9px] font-black uppercase tracking-[.08em] text-slate-400">Berkala</p>
-                                                        <p class="mt-1 text-xs font-black {{ $pemeriksaan ? 'text-emerald-600' : 'text-slate-400' }}">
-                                                            {{ $pemeriksaan ? 'Ada pemeriksaan' : 'Belum ada' }}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td class="w-[235px] px-3 py-4 align-middle">
-                                                <div class="rounded-2xl bg-white/65 p-3">
-                                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Riwayat</p>
-                                                    <p class="mt-1 clamp-2 text-sm font-black leading-5 text-slate-900">
-                                                        {{ $penyakit }}
-                                                    </p>
-                                                </div>
-
-                                                <div class="mt-2 rounded-2xl bg-white/65 p-3">
-                                                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Keluhan</p>
-                                                    <p class="mt-1 clamp-2 text-xs font-bold leading-5 text-slate-500">
-                                                        {{ $keluhan }}
-                                                    </p>
-                                                </div>
-                                            </td>
-
-                                            <td class="w-[155px] px-3 py-4 align-middle">
-                                                <div class="flex flex-col gap-2">
-                                                    @if(!$akunTerhubung && $routeHas('kader.data.lansia.sync'))
-                                                        <form method="POST" action="{{ route('kader.data.lansia.sync', $item->id) }}">
-                                                            @csrf
-                                                            <button type="submit"
-                                                                    class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-3 py-2 text-xs font-black text-amber-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
-                                                                <i class="fa-solid fa-rotate"></i>
-                                                                Sinkron
-                                                            </button>
-                                                        </form>
-                                                    @endif
-
-                                                    <div class="grid grid-cols-3 gap-2">
-                                                        @if($routeHas('kader.data.lansia.show'))
-                                                            <a href="{{ route('kader.data.lansia.show', $item->id) }}"
-                                                               class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                                                                <i class="fa-solid fa-eye"></i>
-                                                            </a>
-                                                        @endif
-
-                                                        @if($routeHas('kader.data.lansia.edit'))
-                                                            <a href="{{ route('kader.data.lansia.edit', $item->id) }}"
-                                                               class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs font-black text-slate-600 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-100">
-                                                                <i class="fa-solid fa-pen"></i>
-                                                            </a>
-                                                        @endif
-
-                                                        @if($routeHas('kader.data.lansia.destroy'))
-                                                            <form method="POST"
-                                                                  action="{{ route('kader.data.lansia.destroy', $item->id) }}"
-                                                                  onsubmit="return confirm('Hapus data Lansia ini? Data yang sudah memiliki riwayat pelayanan tidak dapat dihapus.');">
-                                                                @csrf
-                                                                @method('DELETE')
-
-                                                                <button type="submit"
-                                                                        class="inline-flex w-full items-center justify-center rounded-2xl border border-rose-100 bg-rose-50/80 px-3 py-2 text-xs font-black text-rose-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-100/80">
-                                                                    <i class="fa-solid fa-trash"></i>
-                                                                </button>
-                                                            </form>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
-            @if($items->hasPages())
-                <div class="mt-5">
-                    {{ $items->links() }}
-                </div>
-            @endif
-        @else
-            <div class="rounded-[26px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
-                <div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/60 text-slate-400 backdrop-blur-md">
-                    <i class="fa-solid fa-person-cane text-xl"></i>
-                </div>
-
-                <h3 class="mt-4 text-lg font-black text-slate-900">Data Lansia Kosong</h3>
-
-                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
-                    Belum ada data Lansia yang cocok dengan filter saat ini. Tambahkan manual atau gunakan import Excel.
-                </p>
             </div>
         @endif
-    </section>
-</div>
+
+        {{-- HERO --}}
+        <section class="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 p-5 shadow-sm sm:p-6">
+            <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-emerald-200/20 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-amber-200/20 blur-3xl"></div>
+
+            <div class="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-white/70 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                        <i class="ph-fill ph-person-simple-walk text-base"></i>
+                        Database Lansia
+                    </div>
+
+                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                        Data Lansia
+                    </h1>
+
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-600">
+                        Kelola data sasaran Lansia untuk pemantauan kesehatan dasar, tingkat kemandirian, pemeriksaan fisik, dan laporan Posyandu.
+                    </p>
+
+                    <div class="mt-3 max-w-2xl rounded-2xl border border-emerald-100 bg-white/60 px-4 py-3 text-xs font-bold leading-6 text-slate-600">
+                        <i class="ph-fill ph-info mr-1 text-emerald-600"></i>
+                        Akun warga Lansia memakai <span class="font-black text-emerald-700">NIK Lansia</span>. Data kesehatan seperti tensi, gula darah, kolesterol, asam urat, dan kemandirian wajib dijaga konsisten.
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 sm:flex-row lg:items-center">
+                    @if($routeHas('kader.import.create'))
+                        <a
+                            href="{{ route('kader.import.create') }}"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-black text-amber-700 shadow-sm transition-all duration-150 ease-out hover:bg-amber-100"
+                        >
+                            <i class="ph-fill ph-file-arrow-up text-lg"></i>
+                            Import
+                        </a>
+                    @endif
+
+                    @if($routeHas('kader.data.lansia.create'))
+                        <a
+                            href="{{ route('kader.data.lansia.create') }}"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
+                        >
+                            <i class="ph-bold ph-plus text-lg"></i>
+                            Tambah Lansia
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </section>
+
+        {{-- STATS --}}
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                        <i class="ph-fill ph-users-three text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-500">Total</span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Total Lansia</p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statTotal }}</h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">Seluruh sasaran lansia</p>
+            </div>
+
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                        <i class="ph-fill ph-person-simple-walk text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-teal-50 px-3 py-1 text-[11px] font-black text-teal-700">Mandiri</span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Mandiri</p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statMandiri }}</h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">Tingkat kemandirian mandiri</p>
+            </div>
+
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                        <i class="ph-fill ph-hand-heart text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700">Bantuan</span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Butuh Bantuan</p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statButuhBantuan }}</h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">Sebagian atau penuh</p>
+            </div>
+
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                        <i class="ph-fill ph-heartbeat text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-black text-sky-700">Tensi</span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Tensi Tercatat</p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statTensiTercatat }}</h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">{{ $statTerhubung }} akun terhubung</p>
+            </div>
+        </section>
+
+        {{-- FILTER --}}
+        <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-4 shadow-sm">
+            <form id="filterForm" action="{{ route('kader.data.lansia.index') }}" method="GET" class="grid gap-3 2xl:grid-cols-[1fr_190px_210px_240px_auto_auto] 2xl:items-end">
+                <div>
+                    <label for="searchInput" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        Cari Lansia
+                    </label>
+
+                    <div class="relative">
+                        <i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input
+                            id="searchInput"
+                            type="text"
+                            name="search"
+                            value="{{ $search }}"
+                            autocomplete="off"
+                            placeholder="Ketik nama, NIK, alamat, tensi, penyakit, atau keluhan..."
+                            class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-2.5 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                        >
+                    </div>
+
+                    <p class="mt-2 text-xs font-semibold text-slate-400">
+                        Live search aktif. Ketik minimal 2 huruf, sistem akan mencari otomatis.
+                    </p>
+                </div>
+
+                <div>
+                    <label for="jenisKelaminFilter" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        Jenis Kelamin
+                    </label>
+
+                    <select
+                        id="jenisKelaminFilter"
+                        name="jenis_kelamin"
+                        class="live-filter h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                    >
+                        <option value="semua" @selected($jenisKelamin === 'semua')>Semua</option>
+                        <option value="L" @selected($jenisKelamin === 'L')>Laki-laki</option>
+                        <option value="P" @selected($jenisKelamin === 'P')>Perempuan</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="statusAkunFilter" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        Status Akun
+                    </label>
+
+                    <select
+                        id="statusAkunFilter"
+                        name="status_akun"
+                        class="live-filter h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                    >
+                        <option value="semua" @selected($statusAkun === 'semua')>Semua Status</option>
+                        <option value="terhubung" @selected($statusAkun === 'terhubung')>Terhubung Akun</option>
+                        <option value="belum" @selected($statusAkun === 'belum')>Belum Terhubung</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="kemandirianFilter" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        Kemandirian
+                    </label>
+
+                    <select
+                        id="kemandirianFilter"
+                        name="kemandirian"
+                        class="live-filter h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                    >
+                        <option value="semua" @selected($kemandirian === 'semua')>Semua</option>
+                        <option value="mandiri" @selected($kemandirian === 'mandiri')>Mandiri</option>
+                        <option value="bantuan_sebagian" @selected($kemandirian === 'bantuan_sebagian')>Bantuan Sebagian</option>
+                        <option value="ketergantungan_penuh" @selected($kemandirian === 'ketergantungan_penuh')>Ketergantungan Penuh</option>
+                    </select>
+                </div>
+
+                <button
+                    type="submit"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
+                >
+                    <i class="ph-fill ph-funnel text-lg"></i>
+                    Filter
+                </button>
+
+                <a
+                    href="{{ route('kader.data.lansia.index') }}"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-100"
+                >
+                    <i class="ph-bold ph-arrow-counter-clockwise text-lg"></i>
+                    Reset
+                </a>
+            </form>
+        </section>
+
+        @if($routeHas('kader.data.lansia.bulk-delete'))
+            <form
+                id="bulkDeleteForm"
+                action="{{ route('kader.data.lansia.bulk-delete') }}"
+                method="POST"
+                class="hidden"
+                data-confirm="true"
+                data-confirm-variant="danger"
+                data-confirm-title="Hapus Data Terpilih?"
+                data-confirm-message="Data Lansia yang dipilih akan dihapus. Data yang sudah memiliki riwayat pemeriksaan tetap akan ditolak sistem."
+                data-confirm-button="Ya, Hapus"
+            >
+                @csrf
+                @method('DELETE')
+            </form>
+        @endif
+
+        {{-- LIST --}}
+        <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-4 shadow-sm">
+            <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">
+                        Daftar Lansia
+                    </h2>
+                    <p class="mt-1 text-sm font-semibold text-slate-500">
+                        Menampilkan data Lansia berdasarkan filter aktif.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <span id="visibleCountBadge" class="inline-flex h-9 items-center rounded-full bg-emerald-50 px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-700">
+                        {{ method_exists($items, 'total') ? $items->total() : $items->count() }} Data
+                    </span>
+
+                    @if($routeHas('kader.data.lansia.bulk-delete') && $items->count())
+                        <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-xs font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-100">
+                            <input
+                                id="checkAllLansia"
+                                type="checkbox"
+                                class="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                            >
+                            Pilih Semua
+                        </label>
+
+                        <button
+                            id="bulkDeleteButton"
+                            type="submit"
+                            form="bulkDeleteForm"
+                            disabled
+                            class="inline-flex h-9 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 text-xs font-black text-white opacity-45 shadow-sm transition-all duration-150 ease-out hover:bg-rose-700 disabled:cursor-not-allowed"
+                        >
+                            <i class="ph-fill ph-trash text-base"></i>
+                            Hapus Terpilih
+                        </button>
+                    @endif
+                </div>
+            </div>
+
+            @if($items->count())
+                <div id="bulkDeleteInfo" class="mb-4 hidden rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700">
+                    <i class="ph-fill ph-warning-circle mr-1"></i>
+                    <span id="selectedCountText">0 data dipilih.</span>
+                </div>
+
+                <div id="lansiaList" class="grid gap-3">
+                    @foreach($items as $item)
+                        @php
+                            $tanggalLahir = filled($item->tanggal_lahir ?? null) ? Carbon::parse($item->tanggal_lahir) : null;
+
+                            $usiaText = '-';
+                            if ($tanggalLahir) {
+                                $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
+                                $usiaText = $diff->y . ' tahun ' . $diff->m . ' bulan';
+                            }
+
+                            $akunTerhubung = filled(data_get($item, 'user_id'));
+                            $pemeriksaan = data_get($item, 'pemeriksaan_terakhir');
+                            $initial = strtoupper(substr($item->nama_lengkap ?? 'L', 0, 1));
+                            $imt = $item->imt ?? null;
+
+                            $searchText = Str::lower(collect([
+                                $item->nama_lengkap ?? '',
+                                $item->nik ?? '',
+                                $item->kode_lansia ?? '',
+                                $item->tempat_lahir ?? '',
+                                $item->alamat ?? '',
+                                $item->penyakit_bawaan ?? '',
+                                $item->tingkat_kemandirian ?? '',
+                                $item->tekanan_darah ?? '',
+                                $item->gula_darah ?? '',
+                                $item->kolesterol ?? '',
+                                $item->asam_urat ?? '',
+                                $item->lingkar_perut ?? '',
+                                $item->keluhan ?? '',
+                                $genderLabel($item->jenis_kelamin),
+                                $kemandirianLabel($item->tingkat_kemandirian ?? null),
+                                $akunTerhubung ? 'terhubung akun siap' : 'belum terhubung sinkron',
+                            ])->join(' '));
+                        @endphp
+
+                        <article
+                            class="lansia-card rounded-[1.5rem] border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-4 shadow-sm transition-all duration-150 ease-out hover:border-emerald-100 hover:shadow-md"
+                            data-search-text="{{ $searchText }}"
+                        >
+                            <div class="grid gap-4 xl:grid-cols-[1fr_170px] xl:items-start">
+
+                                {{-- INFO --}}
+                                <div class="flex min-w-0 gap-3">
+                                    @if($routeHas('kader.data.lansia.bulk-delete'))
+                                        <div class="pt-1.5">
+                                            <input
+                                                type="checkbox"
+                                                name="ids[]"
+                                                value="{{ $item->id }}"
+                                                form="bulkDeleteForm"
+                                                class="bulk-check h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                                                aria-label="Pilih {{ $item->nama_lengkap }}"
+                                            >
+                                        </div>
+                                    @endif
+
+                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-lg font-black text-white shadow-sm">
+                                        {{ $initial }}
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-emerald-700">
+                                                Lansia
+                                            </span>
+
+                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] {{ $genderBadgeClass($item->jenis_kelamin) }}">
+                                                {{ $genderLabel($item->jenis_kelamin) }}
+                                            </span>
+
+                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] {{ $kemandirianBadgeClass($item->tingkat_kemandirian ?? null) }}">
+                                                {{ $kemandirianLabel($item->tingkat_kemandirian ?? null) }}
+                                            </span>
+
+                                            @if($akunTerhubung)
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-teal-700">
+                                                    <i class="ph-fill ph-link-simple"></i>
+                                                    Akun Terhubung
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-amber-700">
+                                                    <i class="ph-fill ph-warning-circle"></i>
+                                                    Belum Terhubung
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        <h3 class="mt-2 truncate text-lg font-black text-slate-900">
+                                            {{ $item->nama_lengkap }}
+                                        </h3>
+
+                                        <p class="mt-0.5 text-sm font-bold text-slate-500">
+                                            NIK Lansia:
+                                            <span class="font-black text-slate-700">{{ $item->nik ?? '-' }}</span>
+                                        </p>
+
+                                        <div class="mt-3 grid gap-2 md:grid-cols-4">
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">Usia</p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $usiaText }}</p>
+                                                <p class="text-xs font-semibold text-slate-500">
+                                                    {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
+                                                </p>
+                                            </div>
+
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">Tensi</p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    {{ $item->tekanan_darah ?? '-' }}
+                                                </p>
+                                                <p class="truncate text-xs font-semibold text-slate-500">mmHg</p>
+                                            </div>
+
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">Gula/Kolesterol</p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    GD {{ $item->gula_darah ?? '-' }}
+                                                </p>
+                                                <p class="truncate text-xs font-semibold text-slate-500">
+                                                    Kol {{ $item->kolesterol ?? '-' }}
+                                                </p>
+                                            </div>
+
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">IMT/Lingkar</p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    IMT {{ $imt ?? '-' }}
+                                                </p>
+                                                <p class="truncate text-xs font-semibold text-slate-500">
+                                                    LP {{ $item->lingkar_perut ?? '-' }} cm
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-2 grid gap-2 md:grid-cols-2">
+                                            <div class="rounded-2xl border border-slate-100 bg-white/70 px-3 py-2.5 text-sm font-semibold text-slate-500">
+                                                <i class="ph-fill ph-map-pin mr-1 text-emerald-600"></i>
+                                                {{ $item->alamat ?? 'Alamat belum diisi' }}
+                                            </div>
+
+                                            <div class="rounded-2xl border border-slate-100 bg-white/70 px-3 py-2.5 text-sm font-semibold text-slate-500">
+                                                <i class="ph-fill ph-note-pencil mr-1 text-amber-600"></i>
+                                                {{ $item->keluhan ?? 'Keluhan belum diisi' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- AKSI --}}
+                                <div class="grid gap-1.5 xl:w-[170px]">
+                                    @if($pemeriksaan)
+                                        <div class="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 px-2.5 text-[11px] font-black text-emerald-700">
+                                            <i class="ph-fill ph-check-circle mr-1 text-sm"></i>
+                                            Pemeriksaan Ada
+                                        </div>
+                                    @else
+                                        <div class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 px-2.5 text-[11px] font-black text-slate-500">
+                                            <i class="ph-fill ph-clock mr-1 text-sm"></i>
+                                            Belum Pemeriksaan
+                                        </div>
+                                    @endif
+
+                                    @if(!$akunTerhubung && $routeHas('kader.data.lansia.sync'))
+                                        <form
+                                            action="{{ route('kader.data.lansia.sync', $item->id) }}"
+                                            method="POST"
+                                            data-confirm="true"
+                                            data-confirm-variant="warning"
+                                            data-confirm-title="Sinkronkan Akun?"
+                                            data-confirm-message="Pastikan akun warga sudah dibuat Admin memakai NIK Lansia yang sama."
+                                            data-confirm-button="Ya, Sinkronkan"
+                                        >
+                                            @csrf
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-black text-amber-700 transition-all duration-150 ease-out hover:bg-amber-100"
+                                            >
+                                                <i class="ph-bold ph-link-simple text-sm"></i>
+                                                Sinkron
+                                            </button>
+                                        </form>
+                                    @else
+                                        <div class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-teal-100 bg-teal-50 px-2.5 text-[11px] font-black text-teal-700">
+                                            <i class="ph-fill ph-check-circle text-sm"></i>
+                                            Akun Siap
+                                        </div>
+                                    @endif
+
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        @if($routeHas('kader.data.lansia.show'))
+                                            <a
+                                                href="{{ route('kader.data.lansia.show', $item->id) }}"
+                                                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-[11px] font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
+                                            >
+                                                <i class="ph-fill ph-eye text-sm"></i>
+                                                Detail
+                                            </a>
+                                        @endif
+
+                                        @if($routeHas('kader.data.lansia.edit'))
+                                            <a
+                                                href="{{ route('kader.data.lansia.edit', $item->id) }}"
+                                                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-2 text-[11px] font-black text-sky-700 transition-all duration-150 ease-out hover:bg-sky-100"
+                                            >
+                                                <i class="ph-fill ph-pencil-simple text-sm"></i>
+                                                Edit
+                                            </a>
+                                        @endif
+                                    </div>
+
+                                    @if($routeHas('kader.data.lansia.destroy'))
+                                        <form
+                                            action="{{ route('kader.data.lansia.destroy', $item->id) }}"
+                                            method="POST"
+                                            data-confirm="true"
+                                            data-confirm-variant="danger"
+                                            data-confirm-title="Hapus Data Lansia?"
+                                            data-confirm-message="Data Lansia {{ $item->nama_lengkap }} akan dihapus. Jika sudah punya riwayat pemeriksaan, sistem akan menolak penghapusan."
+                                            data-confirm-button="Ya, Hapus"
+                                        >
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-black text-rose-700 transition-all duration-150 ease-out hover:bg-rose-100"
+                                            >
+                                                <i class="ph-fill ph-trash text-sm"></i>
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+
+                <div id="noLiveResult" class="hidden rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-12 text-center">
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
+                        <i class="ph-fill ph-magnifying-glass text-3xl"></i>
+                    </div>
+
+                    <h3 class="mt-5 text-xl font-black text-slate-900">
+                        Data Tidak Ditemukan
+                    </h3>
+
+                    <p class="mx-auto mt-2 max-w-lg text-sm font-semibold leading-7 text-slate-500">
+                        Tidak ada data Lansia yang cocok dengan kata kunci pencarian saat ini.
+                    </p>
+                </div>
+
+                @if(method_exists($items, 'hasPages') && $items->hasPages())
+                    <div id="paginationWrap" class="mt-5">
+                        {{ $items->links() }}
+                    </div>
+                @endif
+            @else
+                <div class="rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-12 text-center">
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
+                        <i class="ph-fill ph-person-simple-walk text-3xl"></i>
+                    </div>
+
+                    <h3 class="mt-5 text-xl font-black text-slate-900">
+                        Data Lansia Kosong
+                    </h3>
+
+                    <p class="mx-auto mt-2 max-w-lg text-sm font-semibold leading-7 text-slate-500">
+                        Belum ada data Lansia yang cocok dengan filter saat ini.
+                    </p>
+                </div>
+            @endif
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const filterForm = document.getElementById('filterForm');
+            const searchInput = document.getElementById('searchInput');
+            const liveFilters = Array.from(document.querySelectorAll('.live-filter'));
+
+            const checkAll = document.getElementById('checkAllLansia');
+            const bulkChecks = Array.from(document.querySelectorAll('.bulk-check'));
+            const bulkDeleteButton = document.getElementById('bulkDeleteButton');
+            const bulkDeleteInfo = document.getElementById('bulkDeleteInfo');
+            const selectedCountText = document.getElementById('selectedCountText');
+            const visibleCountBadge = document.getElementById('visibleCountBadge');
+            const noLiveResult = document.getElementById('noLiveResult');
+            const paginationWrap = document.getElementById('paginationWrap');
+            const cards = Array.from(document.querySelectorAll('.lansia-card'));
+
+            const sessionToast = document.getElementById('nexusSessionToast');
+
+            let pendingForm = null;
+            let isSubmitting = false;
+            let toastTimer = null;
+            let searchTimer = null;
+            const initialSearch = searchInput ? searchInput.value.trim() : '';
+
+            function normalizeText(value) {
+                return (value || '').toString().toLowerCase().trim();
+            }
+
+            function filterCardsLocal() {
+                if (!searchInput || cards.length === 0) {
+                    return;
+                }
+
+                const keyword = normalizeText(searchInput.value);
+                let visibleCount = 0;
+
+                cards.forEach(function (card) {
+                    const text = normalizeText(card.dataset.searchText);
+                    const matched = keyword === '' || text.includes(keyword);
+
+                    card.classList.toggle('hidden', !matched);
+
+                    if (matched) {
+                        visibleCount += 1;
+                    }
+
+                    const checkbox = card.querySelector('.bulk-check');
+
+                    if (!matched && checkbox) {
+                        checkbox.checked = false;
+                    }
+                });
+
+                if (visibleCountBadge) {
+                    visibleCountBadge.textContent = visibleCount + ' Data';
+                }
+
+                if (noLiveResult) {
+                    noLiveResult.classList.toggle('hidden', visibleCount > 0);
+                }
+
+                if (paginationWrap) {
+                    paginationWrap.classList.toggle('hidden', keyword.length > 0);
+                }
+
+                updateBulkState();
+            }
+
+            function scheduleServerSearch() {
+                if (!filterForm || !searchInput) {
+                    return;
+                }
+
+                const keyword = searchInput.value.trim();
+
+                clearTimeout(searchTimer);
+
+                searchTimer = setTimeout(function () {
+                    if (keyword === initialSearch) {
+                        return;
+                    }
+
+                    if (keyword.length === 0 || keyword.length >= 2) {
+                        filterForm.submit();
+                    }
+                }, 650);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    filterCardsLocal();
+                    scheduleServerSearch();
+                });
+            }
+
+            liveFilters.forEach(function (select) {
+                select.addEventListener('change', function () {
+                    if (filterForm) {
+                        filterForm.submit();
+                    }
+                });
+            });
+
+            function createFloatingLayer() {
+                document.getElementById('nexusConfirmOverlay')?.remove();
+                document.getElementById('nexusMiniToast')?.remove();
+
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div id="nexusConfirmOverlay" aria-hidden="true">
+                        <div id="nexusConfirmBox" class="nexus-modal-show p-5" role="dialog" aria-modal="true" aria-labelledby="nexusConfirmTitle">
+                            <div class="flex items-start gap-3.5">
+                                <div id="nexusConfirmIconWrap" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+                                    <i id="nexusConfirmIcon" class="ph-fill ph-check-circle text-2xl"></i>
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <h3 id="nexusConfirmTitle" class="text-lg font-black leading-6 text-slate-900">
+                                        Konfirmasi Aksi
+                                    </h3>
+
+                                    <p id="nexusConfirmMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                                        Pastikan data sudah benar sebelum diproses.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 grid grid-cols-2 gap-2">
+                                <button
+                                    id="nexusConfirmCancel"
+                                    type="button"
+                                    class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
+                                >
+                                    Batal
+                                </button>
+
+                                <button
+                                    id="nexusConfirmSubmit"
+                                    type="button"
+                                    class="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
+                                >
+                                    Ya, Lanjutkan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="nexusMiniToast" class="hidden">
+                        <div class="nexus-toast-show rounded-3xl border border-amber-100 bg-white p-4 shadow-2xl shadow-slate-900/10">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700">
+                                    <i class="ph-fill ph-warning-circle text-xl"></i>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p class="text-sm font-black text-amber-800">Perhatian</p>
+                                    <p id="nexusMiniToastMessage" class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                        Aksi belum bisa diproses.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+
+            createFloatingLayer();
+
+            const confirmOverlay = document.getElementById('nexusConfirmOverlay');
+            const confirmTitle = document.getElementById('nexusConfirmTitle');
+            const confirmMessage = document.getElementById('nexusConfirmMessage');
+            const confirmSubmit = document.getElementById('nexusConfirmSubmit');
+            const confirmCancel = document.getElementById('nexusConfirmCancel');
+            const confirmIconWrap = document.getElementById('nexusConfirmIconWrap');
+            const confirmIcon = document.getElementById('nexusConfirmIcon');
+
+            const miniToast = document.getElementById('nexusMiniToast');
+            const miniToastMessage = document.getElementById('nexusMiniToastMessage');
+
+            function showMiniToast(message) {
+                if (!miniToast || !miniToastMessage) {
+                    return;
+                }
+
+                miniToastMessage.textContent = message;
+                miniToast.classList.remove('hidden', 'nexus-toast-hide');
+                miniToast.classList.add('nexus-toast-show');
+
+                clearTimeout(toastTimer);
+
+                toastTimer = setTimeout(function () {
+                    miniToast.classList.remove('nexus-toast-show');
+                    miniToast.classList.add('nexus-toast-hide');
+
+                    setTimeout(function () {
+                        miniToast.classList.add('hidden');
+                    }, 220);
+                }, 2400);
+            }
+
+            function closeSessionToast() {
+                if (!sessionToast) {
+                    return;
+                }
+
+                sessionToast.classList.remove('nexus-toast-show');
+                sessionToast.classList.add('nexus-toast-hide');
+
+                setTimeout(function () {
+                    sessionToast.remove();
+                }, 240);
+            }
+
+            if (sessionToast) {
+                setTimeout(closeSessionToast, 3800);
+
+                const closeButton = sessionToast.querySelector('.nexus-toast-close');
+
+                if (closeButton) {
+                    closeButton.addEventListener('click', closeSessionToast);
+                }
+            }
+
+            function updateBulkState() {
+                const selectedCount = bulkChecks.filter(function (checkbox) {
+                    return checkbox.checked;
+                }).length;
+
+                if (bulkDeleteButton) {
+                    bulkDeleteButton.disabled = selectedCount === 0;
+                    bulkDeleteButton.classList.toggle('opacity-45', selectedCount === 0);
+                    bulkDeleteButton.classList.toggle('opacity-100', selectedCount > 0);
+                }
+
+                if (bulkDeleteInfo) {
+                    bulkDeleteInfo.classList.toggle('hidden', selectedCount === 0);
+                }
+
+                if (selectedCountText) {
+                    selectedCountText.textContent = selectedCount + ' data dipilih.';
+                }
+
+                if (checkAll) {
+                    checkAll.checked = bulkChecks.length > 0 && selectedCount === bulkChecks.length;
+                    checkAll.indeterminate = selectedCount > 0 && selectedCount < bulkChecks.length;
+                }
+            }
+
+            function setConfirmVariant(variant) {
+                const variants = {
+                    danger: {
+                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-700',
+                        icon: 'ph-fill ph-trash text-2xl',
+                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-rose-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-rose-700',
+                    },
+                    warning: {
+                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700',
+                        icon: 'ph-fill ph-warning-circle text-2xl',
+                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-amber-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-amber-700',
+                    },
+                    success: {
+                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700',
+                        icon: 'ph-fill ph-check-circle text-2xl',
+                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800',
+                    },
+                };
+
+                const selected = variants[variant] || variants.success;
+
+                confirmIconWrap.className = selected.wrap;
+                confirmIcon.className = selected.icon;
+                confirmSubmit.className = selected.button;
+            }
+
+            function openConfirm(form) {
+                pendingForm = form;
+
+                confirmTitle.textContent = form.getAttribute('data-confirm-title') || 'Konfirmasi Aksi';
+                confirmMessage.textContent = form.getAttribute('data-confirm-message') || 'Pastikan data sudah benar sebelum diproses.';
+                confirmSubmit.textContent = form.getAttribute('data-confirm-button') || 'Ya, Lanjutkan';
+
+                setConfirmVariant(form.getAttribute('data-confirm-variant') || 'success');
+
+                confirmOverlay.classList.add('is-open');
+                confirmOverlay.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('nexus-modal-lock');
+            }
+
+            function closeConfirm() {
+                pendingForm = null;
+                confirmOverlay.classList.remove('is-open');
+                confirmOverlay.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('nexus-modal-lock');
+            }
+
+            if (checkAll) {
+                checkAll.addEventListener('change', function () {
+                    bulkChecks.forEach(function (checkbox) {
+                        if (!checkbox.closest('.lansia-card')?.classList.contains('hidden')) {
+                            checkbox.checked = checkAll.checked;
+                        }
+                    });
+
+                    updateBulkState();
+                });
+            }
+
+            bulkChecks.forEach(function (checkbox) {
+                checkbox.addEventListener('change', updateBulkState);
+            });
+
+            document.querySelectorAll('form[data-confirm="true"]').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    if (form.id === 'bulkDeleteForm') {
+                        const selectedCount = bulkChecks.filter(function (checkbox) {
+                            return checkbox.checked;
+                        }).length;
+
+                        if (selectedCount === 0) {
+                            event.preventDefault();
+                            showMiniToast('Pilih minimal satu data Lansia dulu sebelum menghapus.');
+                            return;
+                        }
+
+                        form.setAttribute(
+                            'data-confirm-message',
+                            'Hapus ' + selectedCount + ' data Lansia yang dipilih? Data yang sudah punya riwayat pemeriksaan tetap akan ditolak oleh sistem.'
+                        );
+                    }
+
+                    if (!form.dataset.confirmed) {
+                        event.preventDefault();
+                        openConfirm(form);
+                    }
+                });
+            });
+
+            if (confirmCancel) {
+                confirmCancel.addEventListener('click', closeConfirm);
+            }
+
+            if (confirmOverlay) {
+                confirmOverlay.addEventListener('click', function (event) {
+                    if (event.target === confirmOverlay) {
+                        closeConfirm();
+                    }
+                });
+            }
+
+            if (confirmSubmit) {
+                confirmSubmit.addEventListener('click', function () {
+                    if (!pendingForm || isSubmitting) {
+                        return;
+                    }
+
+                    isSubmitting = true;
+                    pendingForm.dataset.confirmed = 'true';
+                    confirmSubmit.disabled = true;
+                    confirmSubmit.classList.add('opacity-70', 'cursor-wait');
+                    confirmSubmit.textContent = 'Memproses...';
+
+                    if (pendingForm.requestSubmit) {
+                        pendingForm.requestSubmit();
+                    } else {
+                        pendingForm.submit();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && confirmOverlay && confirmOverlay.classList.contains('is-open')) {
+                    closeConfirm();
+                }
+            });
+
+            filterCardsLocal();
+            updateBulkState();
+        });
+    </script>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const checkboxes = document.querySelectorAll('.bulk-checkbox');
-    const bar = document.getElementById('bulkActionBar');
-    const count = document.getElementById('selectedCount');
-
-    const updateBulkBar = () => {
-        const selected = document.querySelectorAll('.bulk-checkbox:checked').length;
-
-        if (!bar || !count) {
-            return;
-        }
-
-        count.textContent = selected;
-        bar.classList.toggle('hidden', selected === 0);
-    };
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBulkBar);
-    });
-
-    updateBulkBar();
-});
-</script>
-@endpush

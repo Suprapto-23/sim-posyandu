@@ -11,485 +11,1046 @@
 
     $routeHas = fn ($name) => Route::has($name);
 
+    $items = $items ?? ($balitas ?? collect());
     $search = $search ?? request('search', '');
     $statusAkun = $statusAkun ?? request('status_akun', 'semua');
 
-    $statusOptions = [
-        'semua' => 'Semua Status',
-        'terhubung' => 'Terhubung Akun',
-        'belum' => 'Belum Terhubung',
-    ];
+    $statTotal = $statTotal ?? 0;
+    $statTerhubung = $statTerhubung ?? 0;
+    $statBelumTerhubung = $statBelumTerhubung ?? 0;
+    $statBulanIni = $statBulanIni ?? 0;
 
-    $genderLabel = fn ($jk) => $jk === 'L' ? 'Laki-laki' : ($jk === 'P' ? 'Perempuan' : '-');
+    $sessionType = session('success') ? 'success' : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
+    $sessionMessage = session('success') ?? session('warning') ?? session('error');
+
+    $genderLabel = function ($jk) {
+        return match ($jk) {
+            'L' => 'Laki-laki',
+            'P' => 'Perempuan',
+            default => '-',
+        };
+    };
+
+    $genderBadgeClass = function ($jk) {
+        return match ($jk) {
+            'L' => 'border-sky-100 bg-sky-50 text-sky-700',
+            'P' => 'border-pink-100 bg-pink-50 text-pink-700',
+            default => 'border-slate-100 bg-slate-50 text-slate-600',
+        };
+    };
 @endphp
 
-@push('styles')
-<style>
-    .balita-page {
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        position: relative;
-        isolation: isolate;
-    }
-
-    .balita-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
-            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
-    }
-
-    .glass-panel {
-        border: 1px solid rgba(255,255,255,.78);
-        background: rgba(255,255,255,.64);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .hero-panel {
-        border: 1px solid rgba(167,243,208,.72);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
-            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .input-premium {
-        border: 1px solid rgba(226,232,240,.9);
-        background: rgba(255,255,255,.72);
-        outline: none;
-        transition: all .3s ease-in-out;
-    }
-
-    .input-premium:focus {
-        border-color: rgba(16,185,129,.42);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-        background: rgba(255,255,255,.86);
-    }
-
-    .card-hover {
-        transition: all .3s ease-in-out;
-    }
-
-    .card-hover:hover {
-        transform: translateY(-2px);
-        border-color: rgba(16,185,129,.24);
-        box-shadow: 0 20px 46px rgba(15,23,42,.075);
-    }
-
-    .scroll-soft {
-        max-height: 660px;
-        overflow: auto;
-        overscroll-behavior: contain;
-    }
-
-    .scroll-soft::-webkit-scrollbar {
-        width: 7px;
-        height: 7px;
-    }
-
-    .scroll-soft::-webkit-scrollbar-track {
-        background: rgba(241,245,249,.8);
-        border-radius: 999px;
-    }
-
-    .scroll-soft::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #10b981, #f59e0b);
-        border-radius: 999px;
-    }
-</style>
-@endpush
-
 @section('content')
-<div class="balita-page space-y-5">
+    <style>
+        .nexus-soft-show {
+            animation: nexusSoftShow .18s ease-out both;
+        }
 
-    {{-- HERO --}}
-    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
-        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-child-reaching"></i>
-                    Database Balita
-                </div>
+        .nexus-soft-hide {
+            animation: nexusSoftHide .14s ease-in both;
+        }
 
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Data Balita
-                </h1>
+        .nexus-toast-show {
+            animation: nexusToastShow .22s ease-out both;
+        }
 
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Kelola data sasaran Balita untuk kebutuhan absensi, pengukuran fisik, imunisasi, rekam kesehatan, dan laporan Posyandu.
-                </p>
-            </div>
+        .nexus-toast-hide {
+            animation: nexusToastHide .18s ease-in both;
+        }
 
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                @if($routeHas('kader.import.create'))
-                    <a href="{{ route('kader.import.create', ['type' => 'balita']) }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-5 py-3 text-sm font-black text-amber-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
-                        <i class="fa-solid fa-file-import"></i>
-                        Import
-                    </a>
-                @endif
+        @keyframes nexusSoftShow {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(.985);
+            }
 
-                @if($routeHas('kader.data.balita.create'))
-                    <a href="{{ route('kader.data.balita.create') }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                        <i class="fa-solid fa-plus"></i>
-                        Tambah Balita
-                    </a>
-                @endif
-            </div>
-        </div>
-    </section>
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-    {{-- STATS --}}
-    <section class="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <div class="glass-panel card-hover rounded-[26px] p-5">
-            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
-                <i class="fa-solid fa-users"></i>
-            </div>
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Total Balita</p>
-            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $statTotal ?? 0 }}</h2>
-            <p class="mt-1 text-xs font-bold text-slate-400">Seluruh data sasaran</p>
-        </div>
+        @keyframes nexusSoftHide {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
 
-        <div class="glass-panel card-hover rounded-[26px] p-5">
-            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
-                <i class="fa-solid fa-link"></i>
-            </div>
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Terhubung Akun</p>
-            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $statTerhubung ?? 0 }}</h2>
-            <p class="mt-1 text-xs font-bold text-slate-400">Akun warga tersedia</p>
-        </div>
+            to {
+                opacity: 0;
+                transform: translateY(8px) scale(.985);
+            }
+        }
 
-        <div class="glass-panel card-hover rounded-[26px] p-5">
-            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-amber-50/90 text-amber-700">
-                <i class="fa-solid fa-unlink"></i>
-            </div>
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Belum Terhubung</p>
-            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $statBelumTerhubung ?? 0 }}</h2>
-            <p class="mt-1 text-xs font-bold text-slate-400">Perlu sinkron akun</p>
-        </div>
+        @keyframes nexusToastShow {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(.985);
+            }
 
-        <div class="glass-panel card-hover rounded-[26px] p-5">
-            <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
-                <i class="fa-solid fa-calendar-plus"></i>
-            </div>
-            <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Bulan Ini</p>
-            <h2 class="mt-2 text-3xl font-black text-slate-900">{{ $statBulanIni ?? 0 }}</h2>
-            <p class="mt-1 text-xs font-bold text-slate-400">Data baru tercatat</p>
-        </div>
-    </section>
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-    {{-- FILTER --}}
-    <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-        <form method="GET" action="{{ route('kader.data.balita.index') }}" class="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_220px_auto]">
-            <div>
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Cari Balita</label>
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ $search }}"
-                        class="input-premium h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700"
-                        placeholder="Cari nama, NIK, nama orang tua, atau alamat..."
-                    >
-                </div>
-            </div>
+        @keyframes nexusToastHide {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
 
-            <div>
-                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Status Akun</label>
-                <select name="status_akun" class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                    @foreach($statusOptions as $key => $label)
-                        <option value="{{ $key }}" {{ $statusAkun === $key ? 'selected' : '' }}>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            to {
+                opacity: 0;
+                transform: translateY(-10px) scale(.985);
+            }
+        }
 
-            <div class="flex items-end gap-2">
-                <button type="submit"
-                        class="h-12 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-[0_12px_24px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                    <i class="fa-solid fa-filter mr-1"></i>
-                    Filter
-                </button>
+        #nexusConfirmOverlay {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 99999 !important;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at 50% 35%, rgba(16, 185, 129, .10), transparent 34%),
+                rgba(15, 23, 42, .50);
+            backdrop-filter: blur(7px) saturate(1.08);
+            -webkit-backdrop-filter: blur(7px) saturate(1.08);
+            transform: none !important;
+            will-change: opacity, backdrop-filter;
+        }
 
-                <a href="{{ route('kader.data.balita.index') }}"
-                   class="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-white/60 text-slate-500 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-emerald-700">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </a>
-            </div>
-        </form>
-    </section>
+        #nexusConfirmOverlay.is-open {
+            display: flex !important;
+        }
 
-    {{-- LIST --}}
-    <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-lg font-black text-slate-900">Daftar Balita</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Menampilkan data Balita berdasarkan filter aktif.
-                </p>
-            </div>
+        #nexusConfirmBox {
+            width: min(100%, 440px);
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, .82);
+            background: rgba(255, 255, 255, .97);
+            box-shadow:
+                0 28px 90px rgba(15, 23, 42, .22),
+                inset 0 1px 0 rgba(255, 255, 255, .75);
+        }
 
-            <span class="w-fit rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">
-                {{ $items->total() ?? 0 }} Data
-            </span>
-        </div>
+        #nexusMiniToast {
+            position: fixed !important;
+            top: 16px !important;
+            right: 16px !important;
+            z-index: 100000 !important;
+            width: min(calc(100% - 32px), 390px);
+        }
 
-        @if(isset($items) && $items->count())
-            <form method="POST" action="{{ route('kader.data.balita.bulk-delete') }}" id="bulkDeleteForm">
-                @csrf
-                @method('DELETE')
+        body.nexus-modal-lock {
+            overflow: hidden !important;
+            touch-action: none;
+        }
 
-                <div class="mb-4 hidden rounded-[24px] border border-rose-100 bg-rose-50/80 p-4" id="bulkActionBar">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm font-black text-rose-700">Mode hapus massal aktif</p>
-                            <p class="mt-1 text-xs font-bold text-rose-500">
-                                <span id="selectedCount">0</span> data dipilih.
+        @media (max-width: 640px) {
+            #nexusConfirmOverlay {
+                align-items: flex-end !important;
+                padding: 14px !important;
+                background: rgba(15, 23, 42, .56);
+                backdrop-filter: blur(4px) saturate(1.04);
+                -webkit-backdrop-filter: blur(4px) saturate(1.04);
+            }
+
+            #nexusConfirmBox {
+                width: 100%;
+                border-radius: 24px;
+                padding: 18px !important;
+            }
+
+            #nexusMiniToast {
+                top: 12px !important;
+                right: 12px !important;
+                width: calc(100% - 24px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .nexus-soft-show,
+            .nexus-soft-hide,
+            .nexus-toast-show,
+            .nexus-toast-hide {
+                animation: none !important;
+            }
+        }
+    </style>
+
+    <div class="w-full space-y-5">
+
+        @if($sessionType && $sessionMessage)
+            <div
+                id="nexusSessionToast"
+                class="fixed right-4 top-4 z-[100000] w-[calc(100%-2rem)] max-w-md nexus-toast-show"
+            >
+                <div
+                    class="overflow-hidden rounded-3xl border bg-white shadow-2xl shadow-slate-900/10
+                    {{ $sessionType === 'success' ? 'border-emerald-100' : ($sessionType === 'warning' ? 'border-amber-100' : 'border-rose-100') }}"
+                >
+                    <div class="flex items-start gap-3 p-4">
+                        <div
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border
+                            {{ $sessionType === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : ($sessionType === 'warning' ? 'border-amber-100 bg-amber-50 text-amber-700' : 'border-rose-100 bg-rose-50 text-rose-700') }}"
+                        >
+                            <i class="ph-fill {{ $sessionType === 'success' ? 'ph-check-circle' : ($sessionType === 'warning' ? 'ph-warning-circle' : 'ph-x-circle') }} text-2xl"></i>
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p
+                                class="text-sm font-black
+                                {{ $sessionType === 'success' ? 'text-emerald-800' : ($sessionType === 'warning' ? 'text-amber-800' : 'text-rose-800') }}"
+                            >
+                                {{ $sessionType === 'success' ? 'Berhasil Diproses' : ($sessionType === 'warning' ? 'Perhatian Sistem' : 'Aksi Gagal') }}
+                            </p>
+
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                {{ $sessionMessage }}
                             </p>
                         </div>
 
-                        <button type="submit"
-                                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-700"
-                                onclick="return confirm('Hapus data Balita yang dipilih? Data yang sudah punya riwayat pelayanan tidak dapat dihapus.');">
-                            <i class="fa-solid fa-trash"></i>
-                            Hapus Terpilih
+                        <button
+                            type="button"
+                            class="nexus-toast-close flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            aria-label="Tutup notifikasi"
+                        >
+                            <i class="ph-bold ph-x text-lg"></i>
                         </button>
+                    </div>
+
+                    <div
+                        class="h-1 w-full
+                        {{ $sessionType === 'success' ? 'bg-emerald-500' : ($sessionType === 'warning' ? 'bg-amber-500' : 'bg-rose-500') }}"
+                    ></div>
+                </div>
+            </div>
+        @endif
+
+        {{-- HERO --}}
+        <section class="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 p-5 shadow-sm sm:p-6">
+            <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-emerald-200/20 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-amber-200/20 blur-3xl"></div>
+
+            <div class="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="max-w-3xl">
+                    <div class="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-white/70 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                        <i class="ph-fill ph-baby text-base"></i>
+                        Database Balita
+                    </div>
+
+                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                        Data Balita
+                    </h1>
+
+                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-600">
+                        Kelola data sasaran Balita untuk absensi, pengukuran fisik, imunisasi, rekam kesehatan, dan laporan Posyandu.
+                    </p>
+
+                    <div class="mt-3 max-w-2xl rounded-2xl border border-emerald-100 bg-white/60 px-4 py-3 text-xs font-bold leading-6 text-slate-600">
+                        <i class="ph-fill ph-info mr-1 text-emerald-600"></i>
+                        Akun warga memakai <span class="font-black text-emerald-700">NIK Balita</span>. Orang tua atau wali memakai akun tersebut untuk melihat data kesehatan Balita.
                     </div>
                 </div>
 
-                <div class="scroll-soft">
-                    <div class="space-y-3">
-                        @foreach($items as $item)
-                            @php
-                                $tanggalLahir = $item->tanggal_lahir ? Carbon::parse($item->tanggal_lahir) : null;
-                                $usiaText = '-';
+                <div class="flex flex-col gap-2 sm:flex-row lg:items-center">
+                    @if($routeHas('kader.import.create'))
+                        <a
+                            href="{{ route('kader.import.create') }}"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-black text-amber-700 shadow-sm transition-all duration-150 ease-out hover:bg-amber-100"
+                        >
+                            <i class="ph-fill ph-file-arrow-up text-lg"></i>
+                            Import
+                        </a>
+                    @endif
 
-                                if ($tanggalLahir) {
-                                    $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
-                                    $usiaText = $diff->y > 0
-                                        ? $diff->y . ' tahun ' . $diff->m . ' bulan'
-                                        : $diff->m . ' bulan ' . $diff->d . ' hari';
-                                }
+                    @if($routeHas('kader.data.balita.create'))
+                        <a
+                            href="{{ route('kader.data.balita.create') }}"
+                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
+                        >
+                            <i class="ph-bold ph-plus text-lg"></i>
+                            Tambah Balita
+                        </a>
+                    @endif
+                </div>
+            </div>
+        </section>
 
-                                $jkClass = $item->jenis_kelamin === 'L'
-                                    ? 'border-sky-100 bg-sky-50/80 text-sky-700'
-                                    : 'border-pink-100 bg-pink-50/80 text-pink-700';
+        {{-- STATISTIK --}}
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                        <i class="ph-fill ph-users-three text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-500">
+                        Total
+                    </span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Total Balita
+                </p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">
+                    {{ $statTotal }}
+                </h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                    Seluruh data sasaran
+                </p>
+            </div>
 
-                                $akunTerhubung = filled($item->user_id);
-                                $pemeriksaan = $item->pemeriksaan_terakhir;
-                            @endphp
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                        <i class="ph-fill ph-link-simple text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-teal-50 px-3 py-1 text-[11px] font-black text-teal-700">
+                        Akun
+                    </span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Terhubung
+                </p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">
+                    {{ $statTerhubung }}
+                </h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                    Akun warga tersedia
+                </p>
+            </div>
 
-                            <article class="card-hover rounded-[26px] border border-white/70 bg-white/56 p-4 backdrop-blur-md">
-                                <div class="grid gap-4 xl:grid-cols-[36px_1.2fr_1fr_1fr_1fr_auto] xl:items-center">
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                        <i class="ph-fill ph-warning-circle text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700">
+                        Belum
+                    </span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Belum Terhubung
+                </p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">
+                    {{ $statBelumTerhubung }}
+                </h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                    Perlu sinkron akun
+                </p>
+            </div>
 
-                                    <div class="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            name="ids[]"
-                                            value="{{ $item->id }}"
-                                            class="bulk-checkbox h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                                        >
+            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                        <i class="ph-fill ph-calendar-plus text-xl"></i>
+                    </div>
+                    <span class="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-black text-sky-700">
+                        Baru
+                    </span>
+                </div>
+                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    Bulan Ini
+                </p>
+                <h2 class="mt-1 text-3xl font-black text-slate-900">
+                    {{ $statBulanIni }}
+                </h2>
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                    Data baru tercatat
+                </p>
+            </div>
+        </section>
+
+        {{-- FILTER --}}
+        <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-4 shadow-sm">
+            <form action="{{ route('kader.data.balita.index') }}" method="GET" class="grid gap-3 lg:grid-cols-[1fr_220px_auto_auto] lg:items-end">
+                <div>
+                    <label for="search" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        Cari Balita
+                    </label>
+
+                    <div class="relative">
+                        <i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input
+                            id="search"
+                            type="text"
+                            name="search"
+                            value="{{ $search }}"
+                            placeholder="Cari nama, NIK, orang tua, atau alamat..."
+                            class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-2.5 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label for="status_akun" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                        Status Akun
+                    </label>
+
+                    <select
+                        id="status_akun"
+                        name="status_akun"
+                        class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                    >
+                        <option value="semua" @selected($statusAkun === 'semua')>Semua Status</option>
+                        <option value="terhubung" @selected($statusAkun === 'terhubung')>Terhubung Akun</option>
+                        <option value="belum" @selected($statusAkun === 'belum')>Belum Terhubung</option>
+                    </select>
+                </div>
+
+                <button
+                    type="submit"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
+                >
+                    <i class="ph-fill ph-funnel text-lg"></i>
+                    Filter
+                </button>
+
+                <a
+                    href="{{ route('kader.data.balita.index') }}"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-100"
+                >
+                    <i class="ph-bold ph-arrow-counter-clockwise text-lg"></i>
+                    Reset
+                </a>
+            </form>
+        </section>
+
+        @if($routeHas('kader.data.balita.bulk-delete'))
+            <form
+                id="bulkDeleteForm"
+                action="{{ route('kader.data.balita.bulk-delete') }}"
+                method="POST"
+                class="hidden"
+                data-confirm="true"
+                data-confirm-variant="danger"
+                data-confirm-title="Hapus Data Terpilih?"
+                data-confirm-message="Data Balita yang dipilih akan dihapus. Data yang sudah punya riwayat pemeriksaan tetap akan ditolak oleh sistem."
+                data-confirm-button="Ya, Hapus"
+            >
+                @csrf
+                @method('DELETE')
+            </form>
+        @endif
+
+        {{-- DAFTAR DATA --}}
+        <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-4 shadow-sm">
+            <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">
+                        Daftar Balita
+                    </h2>
+                    <p class="mt-1 text-sm font-semibold text-slate-500">
+                        Menampilkan data Balita berdasarkan filter aktif.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex h-9 items-center rounded-full bg-emerald-50 px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-700">
+                        {{ method_exists($items, 'total') ? $items->total() : $items->count() }} Data
+                    </span>
+
+                    @if($routeHas('kader.data.balita.bulk-delete') && $items->count())
+                        <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-xs font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-100">
+                            <input
+                                id="checkAllBalita"
+                                type="checkbox"
+                                class="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                            >
+                            Pilih Semua
+                        </label>
+
+                        <button
+                            id="bulkDeleteButton"
+                            type="submit"
+                            form="bulkDeleteForm"
+                            disabled
+                            class="inline-flex h-9 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 text-xs font-black text-white opacity-45 shadow-sm transition-all duration-150 ease-out hover:bg-rose-700 disabled:cursor-not-allowed"
+                        >
+                            <i class="ph-fill ph-trash text-base"></i>
+                            Hapus Terpilih
+                        </button>
+                    @endif
+                </div>
+            </div>
+
+            @if($items->count())
+                <div id="bulkDeleteInfo" class="mb-4 hidden rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700">
+                    <i class="ph-fill ph-warning-circle mr-1"></i>
+                    <span id="selectedCountText">0 data dipilih.</span>
+                </div>
+
+                <div class="grid gap-3">
+                    @foreach($items as $item)
+                        @php
+                            $tanggalLahir = $item->tanggal_lahir ? Carbon::parse($item->tanggal_lahir) : null;
+
+                            $usiaText = '-';
+                            if ($tanggalLahir) {
+                                $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
+                                $usiaText = $diff->y > 0
+                                    ? $diff->y . ' tahun ' . $diff->m . ' bulan'
+                                    : $diff->m . ' bulan ' . $diff->d . ' hari';
+                            }
+
+                            $akunTerhubung = filled(data_get($item, 'user_id'));
+                            $pemeriksaan = data_get($item, 'pemeriksaan_terakhir');
+                            $initial = strtoupper(substr($item->nama_lengkap ?? 'B', 0, 1));
+                        @endphp
+
+                        <article class="rounded-[1.5rem] border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-4 shadow-sm transition-all duration-150 ease-out hover:border-emerald-100 hover:shadow-md">
+                            <div class="grid gap-4 xl:grid-cols-[1fr_170px] xl:items-start">
+
+                                <div class="flex min-w-0 gap-3">
+                                    @if($routeHas('kader.data.balita.bulk-delete'))
+                                        <div class="pt-1.5">
+                                            <input
+                                                type="checkbox"
+                                                name="ids[]"
+                                                value="{{ $item->id }}"
+                                                form="bulkDeleteForm"
+                                                class="bulk-check h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
+                                                aria-label="Pilih {{ $item->nama_lengkap }}"
+                                            >
+                                        </div>
+                                    @endif
+
+                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-lg font-black text-white shadow-sm">
+                                        {{ $initial }}
                                     </div>
 
-                                    <div class="flex min-w-0 items-center gap-3">
-                                        <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
-                                            <span class="text-sm font-black">
-                                                {{ strtoupper(substr($item->nama_lengkap ?? 'B', 0, 1)) }}
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-emerald-700">
+                                                Balita
                                             </span>
+
+                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] {{ $genderBadgeClass($item->jenis_kelamin) }}">
+                                                {{ $genderLabel($item->jenis_kelamin) }}
+                                            </span>
+
+                                            @if($akunTerhubung)
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-teal-700">
+                                                    <i class="ph-fill ph-link-simple"></i>
+                                                    Akun Terhubung
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-amber-700">
+                                                    <i class="ph-fill ph-warning-circle"></i>
+                                                    Belum Terhubung
+                                                </span>
+                                            @endif
                                         </div>
 
-                                        <div class="min-w-0">
-                                            <div class="mb-1 flex flex-wrap items-center gap-2">
-                                                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-emerald-700">
-                                                    <i class="fa-solid fa-child-reaching"></i>
-                                                    Balita
-                                                </span>
+                                        <h3 class="mt-2 truncate text-lg font-black text-slate-900">
+                                            {{ $item->nama_lengkap }}
+                                        </h3>
 
-                                                <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $jkClass }}">
-                                                    <i class="fa-solid {{ $item->jenis_kelamin === 'L' ? 'fa-mars' : 'fa-venus' }}"></i>
-                                                    {{ $genderLabel($item->jenis_kelamin) }}
-                                                </span>
+                                        <p class="mt-0.5 text-sm font-bold text-slate-500">
+                                            NIK Balita:
+                                            <span class="font-black text-slate-700">{{ $item->nik ?? '-' }}</span>
+                                        </p>
+
+                                        <div class="mt-3 grid gap-2 md:grid-cols-4">
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                                    Lahir
+                                                </p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    {{ $item->tempat_lahir ?? '-' }}
+                                                </p>
+                                                <p class="text-xs font-semibold text-slate-500">
+                                                    {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
+                                                </p>
                                             </div>
 
-                                            <h3 class="truncate text-base font-black text-slate-900">
-                                                {{ $item->nama_lengkap }}
-                                            </h3>
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                                    Usia
+                                                </p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    {{ $usiaText }}
+                                                </p>
+                                                <p class="text-xs font-semibold text-slate-500">
+                                                    Maks. 59 bulan
+                                                </p>
+                                            </div>
 
-                                            <p class="mt-1 text-xs font-bold text-slate-400">
-                                                NIK {{ $item->nik ?? '-' }}
-                                            </p>
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                                    Orang Tua
+                                                </p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    {{ $item->nama_ibu ?? '-' }}
+                                                </p>
+                                                <p class="truncate text-xs font-semibold text-slate-500">
+                                                    {{ $item->nama_ayah ? 'Ayah: ' . $item->nama_ayah : 'Ayah belum diisi' }}
+                                                </p>
+                                            </div>
+
+                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
+                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                                    Ringkasan
+                                                </p>
+                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                                    BB {{ $item->berat_lahir ?? '-' }} kg
+                                                </p>
+                                                <p class="truncate text-xs font-semibold text-slate-500">
+                                                    PB {{ $item->panjang_lahir ?? '-' }} cm
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-2 rounded-2xl border border-slate-100 bg-white/70 px-3 py-2.5 text-sm font-semibold text-slate-500">
+                                            <i class="ph-fill ph-map-pin mr-1 text-emerald-600"></i>
+                                            {{ $item->alamat ?? 'Alamat belum diisi' }}
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Lahir</p>
-                                        <p class="mt-1 text-sm font-black text-slate-900">
-                                            {{ $item->tempat_lahir ?? '-' }}
-                                        </p>
-                                        <p class="mt-1 text-xs font-bold text-slate-400">
-                                            {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
-                                        </p>
-                                    </div>
+                                {{-- AKSI --}}
+                                <div class="grid gap-1.5 xl:w-[170px]">
+                                    @if($pemeriksaan)
+                                        <div class="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 px-2.5 text-[11px] font-black text-emerald-700">
+                                            <i class="ph-fill ph-check-circle mr-1 text-sm"></i>
+                                            Pemeriksaan Ada
+                                        </div>
+                                    @else
+                                        <div class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 px-2.5 text-[11px] font-black text-slate-500">
+                                            <i class="ph-fill ph-clock mr-1 text-sm"></i>
+                                            Belum Pemeriksaan
+                                        </div>
+                                    @endif
 
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Orang Tua</p>
-                                        <p class="mt-1 text-sm font-black text-slate-900">
-                                            {{ $item->nama_ibu ?? '-' }}
-                                        </p>
-                                        <p class="mt-1 text-xs font-bold text-slate-400">
-                                            {{ $item->nama_ayah ? 'Ayah: ' . $item->nama_ayah : 'Ayah belum diisi' }}
-                                        </p>
-                                    </div>
+                                    @if(!$akunTerhubung && $routeHas('kader.data.balita.sync'))
+                                        <form
+                                            action="{{ route('kader.data.balita.sync', $item->id) }}"
+                                            method="POST"
+                                            data-confirm="true"
+                                            data-confirm-variant="warning"
+                                            data-confirm-title="Sinkronkan Akun?"
+                                            data-confirm-message="Pastikan akun warga sudah dibuat Admin memakai NIK Balita yang sama. Jika belum, sistem akan menolak sinkronisasi."
+                                            data-confirm-button="Ya, Sinkronkan"
+                                        >
+                                            @csrf
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-black text-amber-700 transition-all duration-150 ease-out hover:bg-amber-100"
+                                            >
+                                                <i class="ph-bold ph-link-simple text-sm"></i>
+                                                Sinkron
+                                            </button>
+                                        </form>
+                                    @else
+                                        <div class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-teal-100 bg-teal-50 px-2.5 text-[11px] font-black text-teal-700">
+                                            <i class="ph-fill ph-check-circle text-sm"></i>
+                                            Akun Siap
+                                        </div>
+                                    @endif
 
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Ringkasan</p>
-                                        <p class="mt-1 text-sm font-black text-slate-900">
-                                            {{ $usiaText }}
-                                        </p>
-                                        <p class="mt-1 text-xs font-bold text-slate-400">
-                                            BB lahir {{ $item->berat_lahir ?? '-' }} kg, PB {{ $item->panjang_lahir ?? '-' }} cm
-                                        </p>
-
-                                        @if($pemeriksaan)
-                                            <p class="mt-1 text-xs font-bold text-emerald-600">
-                                                Pemeriksaan terakhir tersedia
-                                            </p>
-                                        @else
-                                            <p class="mt-1 text-xs font-bold text-slate-400">
-                                                Belum ada pemeriksaan
-                                            </p>
-                                        @endif
-                                    </div>
-
-                                    <div class="flex flex-wrap justify-start gap-2 xl:justify-end">
-                                        @if($akunTerhubung)
-                                            <span class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-xs font-black text-emerald-700">
-                                                <i class="fa-solid fa-link"></i>
-                                                Akun
-                                            </span>
-                                        @else
-                                            @if($routeHas('kader.data.balita.sync'))
-                                                <form method="POST" action="{{ route('kader.data.balita.sync', $item->id) }}">
-                                                    @csrf
-                                                    <button type="submit"
-                                                            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-4 py-2 text-xs font-black text-amber-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
-                                                        <i class="fa-solid fa-rotate"></i>
-                                                        Sinkron Akun
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        @endif
-
+                                    <div class="grid grid-cols-2 gap-1.5">
                                         @if($routeHas('kader.data.balita.show'))
-                                            <a href="{{ route('kader.data.balita.show', $item->id) }}"
-                                               class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                                                <i class="fa-solid fa-eye"></i>
+                                            <a
+                                                href="{{ route('kader.data.balita.show', $item->id) }}"
+                                                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-[11px] font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
+                                            >
+                                                <i class="ph-fill ph-eye text-sm"></i>
                                                 Detail
                                             </a>
                                         @endif
 
                                         @if($routeHas('kader.data.balita.edit'))
-                                            <a href="{{ route('kader.data.balita.edit', $item->id) }}"
-                                               class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2 text-xs font-black text-slate-600 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-100">
-                                                <i class="fa-solid fa-pen"></i>
+                                            <a
+                                                href="{{ route('kader.data.balita.edit', $item->id) }}"
+                                                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-2 text-[11px] font-black text-sky-700 transition-all duration-150 ease-out hover:bg-sky-100"
+                                            >
+                                                <i class="ph-fill ph-pencil-simple text-sm"></i>
                                                 Edit
                                             </a>
                                         @endif
-
-                                        @if($routeHas('kader.data.balita.destroy'))
-                                            <form method="POST"
-                                                  action="{{ route('kader.data.balita.destroy', $item->id) }}"
-                                                  onsubmit="return confirm('Hapus data Balita ini? Data yang sudah memiliki riwayat pelayanan tidak dapat dihapus.');">
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button type="submit"
-                                                        class="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50/80 px-4 py-2 text-xs font-black text-rose-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-rose-100/80">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        @endif
                                     </div>
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                </div>
-            </form>
 
-            @if($items->hasPages())
-                <div class="mt-5">
-                    {{ $items->links() }}
+                                    @if($routeHas('kader.data.balita.destroy'))
+                                        <form
+                                            action="{{ route('kader.data.balita.destroy', $item->id) }}"
+                                            method="POST"
+                                            data-confirm="true"
+                                            data-confirm-variant="danger"
+                                            data-confirm-title="Hapus Data Balita?"
+                                            data-confirm-message="Data Balita {{ $item->nama_lengkap }} akan dihapus. Jika sudah punya riwayat pemeriksaan, sistem akan menolak penghapusan."
+                                            data-confirm-button="Ya, Hapus"
+                                        >
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button
+                                                type="submit"
+                                                class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-black text-rose-700 transition-all duration-150 ease-out hover:bg-rose-100"
+                                            >
+                                                <i class="ph-fill ph-trash text-sm"></i>
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+
+                @if(method_exists($items, 'hasPages') && $items->hasPages())
+                    <div class="mt-5">
+                        {{ $items->links() }}
+                    </div>
+                @endif
+            @else
+                <div class="rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-12 text-center">
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
+                        <i class="ph-fill ph-baby text-3xl"></i>
+                    </div>
+
+                    <h3 class="mt-5 text-xl font-black text-slate-900">
+                        Data Balita Kosong
+                    </h3>
+
+                    <p class="mx-auto mt-2 max-w-lg text-sm font-semibold leading-7 text-slate-500">
+                        Belum ada data Balita yang cocok dengan filter saat ini. Tambahkan manual atau gunakan import Excel.
+                    </p>
                 </div>
             @endif
-        @else
-            <div class="rounded-[28px] border border-dashed border-slate-200 bg-slate-50/70 p-10 text-center">
-                <div class="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-white/60 text-slate-400 backdrop-blur-md">
-                    <i class="fa-solid fa-child-reaching text-xl"></i>
-                </div>
+        </section>
+    </div>
 
-                <h3 class="mt-4 text-lg font-black text-slate-900">Data Balita Kosong</h3>
-                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
-                    Belum ada data Balita yang cocok dengan filter saat ini. Tambahkan manual atau gunakan import Excel.
-                </p>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkAll = document.getElementById('checkAllBalita');
+            const bulkChecks = Array.from(document.querySelectorAll('.bulk-check'));
+            const bulkDeleteButton = document.getElementById('bulkDeleteButton');
+            const bulkDeleteForm = document.getElementById('bulkDeleteForm');
+            const bulkDeleteInfo = document.getElementById('bulkDeleteInfo');
+            const selectedCountText = document.getElementById('selectedCountText');
+            const sessionToast = document.getElementById('nexusSessionToast');
 
-                <div class="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
-                    @if($routeHas('kader.data.balita.create'))
-                        <a href="{{ route('kader.data.balita.create') }}"
-                           class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                            <i class="fa-solid fa-plus"></i>
-                            Tambah Balita
-                        </a>
-                    @endif
+            let pendingForm = null;
+            let toastTimer = null;
+            let isSubmitting = false;
 
-                    @if($routeHas('kader.import.create'))
-                        <a href="{{ route('kader.import.create', ['type' => 'balita']) }}"
-                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-50/80 px-5 py-3 text-sm font-black text-amber-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-100/80">
-                            <i class="fa-solid fa-file-import"></i>
-                            Import Excel
-                        </a>
-                    @endif
-                </div>
-            </div>
-        @endif
-    </section>
-</div>
+            function createFloatingLayer() {
+                const oldOverlay = document.getElementById('nexusConfirmOverlay');
+                const oldToast = document.getElementById('nexusMiniToast');
+
+                if (oldOverlay) {
+                    oldOverlay.remove();
+                }
+
+                if (oldToast) {
+                    oldToast.remove();
+                }
+
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div id="nexusConfirmOverlay" aria-hidden="true">
+                        <div id="nexusConfirmBox" class="nexus-soft-show p-5" role="dialog" aria-modal="true" aria-labelledby="nexusConfirmTitle">
+                            <div class="flex items-start gap-3.5">
+                                <div id="nexusConfirmIconWrap" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+                                    <i id="nexusConfirmIcon" class="ph-fill ph-check-circle text-2xl"></i>
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <h3 id="nexusConfirmTitle" class="text-lg font-black leading-6 text-slate-900">
+                                        Konfirmasi Aksi
+                                    </h3>
+
+                                    <p id="nexusConfirmMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                                        Pastikan data sudah benar sebelum diproses.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 grid grid-cols-2 gap-2">
+                                <button
+                                    id="nexusConfirmCancel"
+                                    type="button"
+                                    class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50 active:scale-[.98]"
+                                >
+                                    Batal
+                                </button>
+
+                                <button
+                                    id="nexusConfirmSubmit"
+                                    type="button"
+                                    class="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800 active:scale-[.98]"
+                                >
+                                    Ya, Lanjutkan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="nexusMiniToast" class="hidden">
+                        <div class="nexus-toast-show rounded-3xl border border-amber-100 bg-white p-4 shadow-2xl shadow-slate-900/10">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700">
+                                    <i class="ph-fill ph-warning-circle text-xl"></i>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p class="text-sm font-black text-amber-800">Perhatian</p>
+                                    <p id="nexusMiniToastMessage" class="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                        Aksi belum bisa diproses.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+
+            createFloatingLayer();
+
+            const confirmOverlay = document.getElementById('nexusConfirmOverlay');
+            const confirmBox = document.getElementById('nexusConfirmBox');
+            const confirmTitle = document.getElementById('nexusConfirmTitle');
+            const confirmMessage = document.getElementById('nexusConfirmMessage');
+            const confirmSubmit = document.getElementById('nexusConfirmSubmit');
+            const confirmCancel = document.getElementById('nexusConfirmCancel');
+            const confirmIconWrap = document.getElementById('nexusConfirmIconWrap');
+            const confirmIcon = document.getElementById('nexusConfirmIcon');
+            const miniToast = document.getElementById('nexusMiniToast');
+            const miniToastMessage = document.getElementById('nexusMiniToastMessage');
+
+            if (sessionToast && sessionToast.parentElement !== document.body) {
+                document.body.appendChild(sessionToast);
+            }
+
+            function showMiniToast(message) {
+                if (!miniToast || !miniToastMessage) {
+                    return;
+                }
+
+                miniToastMessage.textContent = message;
+                miniToast.classList.remove('hidden', 'nexus-toast-hide');
+                miniToast.classList.add('nexus-toast-show');
+
+                clearTimeout(toastTimer);
+
+                toastTimer = setTimeout(function () {
+                    miniToast.classList.remove('nexus-toast-show');
+                    miniToast.classList.add('nexus-toast-hide');
+
+                    setTimeout(function () {
+                        miniToast.classList.add('hidden');
+                    }, 220);
+                }, 2400);
+            }
+
+            function closeSessionToast() {
+                if (!sessionToast) {
+                    return;
+                }
+
+                sessionToast.classList.remove('nexus-toast-show');
+                sessionToast.classList.add('nexus-toast-hide');
+
+                setTimeout(function () {
+                    sessionToast.remove();
+                }, 240);
+            }
+
+            if (sessionToast) {
+                setTimeout(closeSessionToast, 3800);
+
+                const closeButton = sessionToast.querySelector('.nexus-toast-close');
+
+                if (closeButton) {
+                    closeButton.addEventListener('click', closeSessionToast);
+                }
+            }
+
+            function updateBulkState() {
+                const selectedCount = bulkChecks.filter(function (checkbox) {
+                    return checkbox.checked;
+                }).length;
+
+                if (bulkDeleteButton) {
+                    bulkDeleteButton.disabled = selectedCount === 0;
+                    bulkDeleteButton.classList.toggle('opacity-45', selectedCount === 0);
+                    bulkDeleteButton.classList.toggle('opacity-100', selectedCount > 0);
+                }
+
+                if (bulkDeleteInfo) {
+                    bulkDeleteInfo.classList.toggle('hidden', selectedCount === 0);
+                }
+
+                if (selectedCountText) {
+                    selectedCountText.textContent = selectedCount + ' data dipilih.';
+                }
+
+                if (checkAll) {
+                    checkAll.checked = bulkChecks.length > 0 && selectedCount === bulkChecks.length;
+                    checkAll.indeterminate = selectedCount > 0 && selectedCount < bulkChecks.length;
+                }
+            }
+
+            function setConfirmVariant(variant) {
+                const variants = {
+                    danger: {
+                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-700',
+                        icon: 'ph-fill ph-trash text-2xl',
+                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-rose-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-rose-700 active:scale-[.98]',
+                    },
+                    warning: {
+                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700',
+                        icon: 'ph-fill ph-warning-circle text-2xl',
+                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-amber-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-amber-700 active:scale-[.98]',
+                    },
+                    success: {
+                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700',
+                        icon: 'ph-fill ph-check-circle text-2xl',
+                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800 active:scale-[.98]',
+                    },
+                };
+
+                const selected = variants[variant] || variants.success;
+
+                confirmIconWrap.className = selected.wrap;
+                confirmIcon.className = selected.icon;
+                confirmSubmit.className = selected.button;
+            }
+
+            function openConfirm(form) {
+                if (!confirmOverlay || !confirmBox) {
+                    return;
+                }
+
+                pendingForm = form;
+
+                const title = form.getAttribute('data-confirm-title') || 'Konfirmasi Aksi';
+                const message = form.getAttribute('data-confirm-message') || 'Pastikan data sudah benar sebelum diproses.';
+                const button = form.getAttribute('data-confirm-button') || 'Ya, Lanjutkan';
+                const variant = form.getAttribute('data-confirm-variant') || 'success';
+
+                confirmTitle.textContent = title;
+                confirmMessage.textContent = message;
+                confirmSubmit.textContent = button;
+
+                setConfirmVariant(variant);
+
+                confirmOverlay.classList.add('is-open');
+                confirmOverlay.setAttribute('aria-hidden', 'false');
+
+                confirmBox.classList.remove('nexus-soft-hide', 'nexus-soft-show');
+                void confirmBox.offsetWidth;
+                confirmBox.classList.add('nexus-soft-show');
+
+                document.body.classList.add('nexus-modal-lock');
+
+                setTimeout(function () {
+                    confirmCancel.focus();
+                }, 60);
+            }
+
+            function closeConfirm() {
+                if (!confirmOverlay || !confirmBox) {
+                    return;
+                }
+
+                confirmBox.classList.remove('nexus-soft-show');
+                confirmBox.classList.add('nexus-soft-hide');
+
+                setTimeout(function () {
+                    pendingForm = null;
+                    confirmOverlay.classList.remove('is-open');
+                    confirmOverlay.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('nexus-modal-lock');
+                }, 130);
+            }
+
+            if (checkAll) {
+                checkAll.addEventListener('change', function () {
+                    bulkChecks.forEach(function (checkbox) {
+                        checkbox.checked = checkAll.checked;
+                    });
+
+                    updateBulkState();
+                });
+            }
+
+            bulkChecks.forEach(function (checkbox) {
+                checkbox.addEventListener('change', updateBulkState);
+            });
+
+            document.querySelectorAll('form[data-confirm="true"]').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (isSubmitting) {
+                        return;
+                    }
+
+                    if (form.id === 'bulkDeleteForm') {
+                        const selectedCount = bulkChecks.filter(function (checkbox) {
+                            return checkbox.checked;
+                        }).length;
+
+                        if (selectedCount === 0) {
+                            event.preventDefault();
+                            showMiniToast('Pilih minimal satu data Balita dulu sebelum menghapus.');
+                            return;
+                        }
+
+                        form.setAttribute(
+                            'data-confirm-message',
+                            'Hapus ' + selectedCount + ' data Balita yang dipilih? Data yang sudah punya riwayat pemeriksaan tetap akan ditolak oleh sistem.'
+                        );
+                    }
+
+                    if (!form.dataset.confirmed) {
+                        event.preventDefault();
+                        openConfirm(form);
+                    }
+                });
+            });
+
+            if (confirmCancel) {
+                confirmCancel.addEventListener('click', closeConfirm);
+            }
+
+            if (confirmOverlay) {
+                confirmOverlay.addEventListener('click', function (event) {
+                    if (event.target === confirmOverlay) {
+                        closeConfirm();
+                    }
+                });
+            }
+
+            if (confirmSubmit) {
+                confirmSubmit.addEventListener('click', function () {
+                    if (!pendingForm || isSubmitting) {
+                        return;
+                    }
+
+                    isSubmitting = true;
+                    pendingForm.dataset.confirmed = 'true';
+                    confirmSubmit.disabled = true;
+                    confirmSubmit.classList.add('opacity-70', 'cursor-wait');
+                    confirmSubmit.textContent = 'Memproses...';
+
+                    if (pendingForm.requestSubmit) {
+                        pendingForm.requestSubmit();
+                    } else {
+                        pendingForm.submit();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && confirmOverlay && confirmOverlay.classList.contains('is-open')) {
+                    closeConfirm();
+                }
+            });
+
+            updateBulkState();
+        });
+    </script>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const checkboxes = document.querySelectorAll('.bulk-checkbox');
-    const bar = document.getElementById('bulkActionBar');
-    const count = document.getElementById('selectedCount');
-
-    const updateBulkBar = () => {
-        const selected = document.querySelectorAll('.bulk-checkbox:checked').length;
-
-        if (!bar || !count) {
-            return;
-        }
-
-        count.textContent = selected;
-        bar.classList.toggle('hidden', selected === 0);
-    };
-
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBulkBar);
-    });
-
-    updateBulkBar();
-});
-</script>
-@endpush
