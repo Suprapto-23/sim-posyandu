@@ -1,69 +1,49 @@
 <?php
 
 namespace App\Http\Controllers\Kader;
-use App\Models\Balita;
-use App\Models\Remaja;
-use App\Models\Lansia;
-use Illuminate\Support\Facades\Schema;
+
 use App\Exports\TemplateExport;
 use App\Http\Controllers\Controller;
 use App\Imports\BalitaImport;
 use App\Imports\LansiaImport;
 use App\Imports\RemajaImport;
+use App\Models\Balita;
 use App\Models\DataImport;
+use App\Models\Lansia;
+use App\Models\Remaja;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Validators\ValidationException;
-
-
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ImportController extends Controller
 {
-    private function countDataByType(string $type): int
-{
-    return match ($type) {
-        'balita' => Balita::count(),
-        'remaja' => Remaja::count(),
-        'lansia' => Lansia::count(),
-        default => 0,
-    };
-}
-
-private function safeUpdateImportLog(DataImport $riwayat, array $data): void
-{
-    $allowed = [];
-
-    foreach ($data as $column => $value) {
-        if (Schema::hasColumn('data_imports', $column)) {
-            $allowed[$column] = $value;
-        }
-    }
-
-    if (!empty($allowed)) {
-        $riwayat->update($allowed);
-    }
-}
     private array $types = [
         'balita' => [
             'label' => 'Balita / Anak',
             'import' => BalitaImport::class,
+            'model' => Balita::class,
             'template' => 'Formulir_Massal_KaderCare_BALITA.xlsx',
         ],
         'remaja' => [
             'label' => 'Remaja',
             'import' => RemajaImport::class,
+            'model' => Remaja::class,
             'template' => 'Formulir_Massal_KaderCare_REMAJA.xlsx',
         ],
         'lansia' => [
             'label' => 'Lansia',
             'import' => LansiaImport::class,
+            'model' => Lansia::class,
             'template' => 'Formulir_Massal_KaderCare_LANSIA.xlsx',
         ],
     ];
 
-    public function index()
+    public function index(): View
     {
         $statTotal = DataImport::count();
         $statBerhasil = DataImport::where('status', 'completed')->count();
@@ -88,7 +68,7 @@ private function safeUpdateImportLog(DataImport $riwayat, array $data): void
         ));
     }
 
-    public function create(Request $request)
+    public function create(Request $request): View
     {
         $type = $this->normalizeType($request->get('type'));
         $types = $this->types;
@@ -96,11 +76,11 @@ private function safeUpdateImportLog(DataImport $riwayat, array $data): void
         return view('kader.import.create', compact('type', 'types'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'jenis_data' => 'required|in:balita,remaja,lansia',
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'jenis_data' => ['required', 'in:balita,remaja,lansia'],
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
         ], [
             'jenis_data.required' => 'Jenis data wajib dipilih.',
             'jenis_data.in' => 'Jenis data tidak valid.',
@@ -122,7 +102,9 @@ private function safeUpdateImportLog(DataImport $riwayat, array $data): void
             'jenis_data' => $jenisData,
             'file_path' => $path,
             'status' => 'processing',
-            'data_tersimpan' => 0,
+            'total_data' => 0,
+            'data_berhasil' => 0,
+            'data_gagal' => 0,
             'catatan' => 'File diterima dan sedang diproses oleh sistem.',
             'created_by' => auth()->id(),
         ]);
@@ -138,82 +120,55 @@ private function safeUpdateImportLog(DataImport $riwayat, array $data): void
 
             $jumlahSebelum = $this->countDataByType($jenisData);
 
-Excel::import($importClass, $file);
+            Excel::import($importClass, $file);
 
-$jumlahSesudah = $this->countDataByType($jenisData);
+            $jumlahSesudah = $this->countDataByType($jenisData);
 
-$dataBaruTersimpan = max(0, $jumlahSesudah - $jumlahSebelum);
-$dataTidakMasuk = max(0, $jumlahBaris - $dataBaruTersimpan);
-
+            $dataBerhasil = max(0, $jumlahSesudah - $jumlahSebelum);
+            $dataGagal = max(0, $jumlahBaris - $dataBerhasil);
             $modeText = $isSmartImport ? '[Mode Smart Mapping Aktif]' : '[Mode Standar]';
-
-$this->safeUpdateImportLog($riwayat, [
-    'status' => 'completed',
-    'total_data' => $jumlahBaris,
-    'data_berhasil' => $dataBaruTersimpan,
-    'data_gagal' => $dataTidakMasuk,
-
-    // Aman kalau kolom ini masih ada di database lokalmu.
-    'data_tersimpan' => $dataBaruTersimpan,
-
-    'catatan' => "{$modeText} Import {ucfirst($jenisData)} selesai. Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBaruTersimpan}. Data tidak masuk atau dilewati: {$dataTidakMasuk}. Data dengan NIK yang sudah ada dilewati agar tidak terjadi duplikasi.",
-]);
 
             $riwayat->update([
                 'status' => 'completed',
-                'data_tersimpan' => $dataBaruTersimpan,
-'catatan' => "{$modeText} Import {ucfirst($jenisData)} selesai. Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBaruTersimpan}. Data dengan NIK yang sudah ada dilewati agar tidak terjadi duplikasi.",
+                'total_data' => $jumlahBaris,
+                'data_berhasil' => $dataBerhasil,
+                'data_gagal' => $dataGagal,
+                'catatan' => "{$modeText} Import " . ucfirst($jenisData) . " selesai. Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBerhasil}. Data tidak masuk atau dilewati: {$dataGagal}. Data dengan NIK yang sudah ada dilewati agar tidak terjadi duplikasi.",
             ]);
 
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => 'success',
-                    'message' => "Import berhasil. {$jumlahBaris} baris data berhasil diproses.",
-                    'redirect' => route('kader.import.history'),
-                ]);
-            }
-
             return redirect()
-    ->route('kader.import.history')
-    ->with('success', "Import berhasil diproses. Data baru tersimpan: {$dataBaruTersimpan} dari {$jumlahBaris} baris terbaca.");
+                ->route('kader.import.history')
+                ->with('success', "Import berhasil diproses. Data baru tersimpan: {$dataBerhasil} dari {$jumlahBaris} baris terbaca.");
         } catch (ValidationException $e) {
-            $failures = $e->failures();
-            $firstFailure = $failures[0] ?? null;
-
-            $errorMsg = $firstFailure
-                ? 'Gagal di baris ke-' . $firstFailure->row() . ': ' . ($firstFailure->errors()[0] ?? 'Format data tidak valid.')
-                : 'Validasi Excel gagal. Periksa kembali format file.';
+            $errorMsg = $this->formatValidationError($e);
 
             $riwayat->update([
                 'status' => 'failed',
+                'total_data' => $riwayat->total_data ?: 0,
+                'data_berhasil' => 0,
+                'data_gagal' => $riwayat->total_data ?: 0,
                 'catatan' => "[VALIDATION ERROR]\n{$errorMsg}",
             ]);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $errorMsg,
-                ], 422);
-            }
 
             return redirect()
                 ->route('kader.import.create', ['type' => $jenisData])
                 ->withInput()
                 ->with('error', $errorMsg);
         } catch (\Throwable $e) {
-            Log::error('KADER_IMPORT_STORE_ERROR: ' . $e->getMessage());
+            Log::error('KADER_IMPORT_STORE_ERROR', [
+                'message' => $e->getMessage(),
+                'jenis_data' => $jenisData,
+                'file' => $originalName,
+                'user_id' => auth()->id(),
+                'line' => $e->getLine(),
+                'path' => $e->getFile(),
+            ]);
 
             $riwayat->update([
                 'status' => 'failed',
+                'data_gagal' => $riwayat->total_data ?: 0,
                 'catatan' => "[SERVER ERROR]\n" . $e->getMessage(),
             ]);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $e->getMessage(),
-                ], 500);
-            }
 
             return redirect()
                 ->route('kader.import.create', ['type' => $jenisData])
@@ -222,7 +177,7 @@ $this->safeUpdateImportLog($riwayat, [
         }
     }
 
-    public function history(Request $request)
+    public function history(Request $request): View
     {
         $tanggal = $request->get('tanggal');
         $jenisData = $request->get('jenis_data', 'semua');
@@ -241,7 +196,7 @@ $this->safeUpdateImportLog($riwayat, [
             $query->where('jenis_data', $jenisData);
         }
 
-        if (in_array($status, ['processing', 'completed', 'failed'], true)) {
+        if (in_array($status, ['pending', 'processing', 'completed', 'failed'], true)) {
             $query->where('status', $status);
         }
 
@@ -266,7 +221,7 @@ $this->safeUpdateImportLog($riwayat, [
         ));
     }
 
-    public function show($id)
+    public function show($id): View
     {
         $import = DataImport::query()
             ->with('creator')
@@ -275,7 +230,7 @@ $this->safeUpdateImportLog($riwayat, [
         return view('kader.import.show', compact('import'));
     }
 
-    public function destroy($id)
+    public function destroy($id): RedirectResponse
     {
         try {
             $import = DataImport::findOrFail($id);
@@ -290,22 +245,21 @@ $this->safeUpdateImportLog($riwayat, [
                 ->route('kader.import.history')
                 ->with('success', 'Riwayat import dan arsip file berhasil dihapus.');
         } catch (\Throwable $e) {
-            Log::error('KADER_IMPORT_DESTROY_ERROR: ' . $e->getMessage());
+            Log::error('KADER_IMPORT_DESTROY_ERROR', [
+                'message' => $e->getMessage(),
+                'import_id' => $id,
+            ]);
 
             return back()->with('error', 'Gagal menghapus riwayat import.');
         }
     }
 
-    public function downloadTemplate(string $type)
+    public function downloadTemplate(string $type): BinaryFileResponse|RedirectResponse
     {
         $type = $this->normalizeType($type);
 
         if (!$type) {
             abort(404, 'Kategori template tidak ditemukan.');
-        }
-
-        if (!class_exists(TemplateExport::class)) {
-            return back()->with('error', 'File TemplateExport belum tersedia. Pastikan app/Exports/TemplateExport.php sudah dibuat dan composer dump-autoload sudah dijalankan.');
         }
 
         return Excel::download(
@@ -319,6 +273,8 @@ $this->safeUpdateImportLog($riwayat, [
         if (!$type) {
             return null;
         }
+
+        $type = strtolower(trim($type));
 
         return array_key_exists($type, $this->types) ? $type : null;
     }
@@ -342,7 +298,7 @@ $this->safeUpdateImportLog($riwayat, [
         return collect($rows)
             ->filter(function ($row) {
                 if (!is_array($row)) {
-                    return filled($row);
+                    return trim((string) $row) !== '';
                 }
 
                 return collect($row)
@@ -350,5 +306,28 @@ $this->safeUpdateImportLog($riwayat, [
                     ->isNotEmpty();
             })
             ->count();
+    }
+
+    private function countDataByType(string $type): int
+    {
+        $model = $this->types[$type]['model'] ?? null;
+
+        if (!$model || !class_exists($model)) {
+            return 0;
+        }
+
+        return $model::count();
+    }
+
+    private function formatValidationError(ValidationException $e): string
+    {
+        $failures = $e->failures();
+        $firstFailure = $failures[0] ?? null;
+
+        if (!$firstFailure) {
+            return 'Validasi Excel gagal. Periksa kembali format file.';
+        }
+
+        return 'Gagal di baris ke-' . $firstFailure->row() . ': ' . ($firstFailure->errors()[0] ?? 'Format data tidak valid.');
     }
 }

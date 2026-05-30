@@ -4,56 +4,58 @@ namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Cell\Cell;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class TemplateExport extends DefaultValueBinder implements FromArray, ShouldAutoSize, WithEvents, WithColumnFormatting, WithCustomValueBinder
+class TemplateExport implements FromArray, WithTitle, ShouldAutoSize, WithStyles, WithEvents
 {
     private string $type;
 
-    private array $config = [
+    private array $configs = [
         'balita' => [
-            'title' => 'TEMPLATE IMPORT DATA BALITA / ANAK',
-            'note' => 'Isi data mulai baris ke-4. Jangan mengubah nama kolom pada baris ke-3.',
+            'label' => 'Balita',
+            'title' => 'TEMPLATE IMPORT DATA BALITA',
             'headers' => [
-                'nama_lengkap',
                 'nik_balita',
+                'nama_lengkap',
                 'jenis_kelamin',
                 'tempat_lahir',
                 'tanggal_lahir',
                 'nama_ibu',
                 'nik_ibu',
+                'nama_ayah',
                 'berat_lahir_kg',
                 'panjang_lahir_cm',
                 'alamat_lengkap',
             ],
-            'sample' => [
-                'Ahmad Fauzan',
-                '3326123456789001',
-                'L',
-                'Pekalongan',
-                '2021-05-17',
-                'Siti Aminah',
-                '3326123456789002',
-                '3.2',
-                '49',
-                'Dusun Krajan RT 01 RW 02',
+            'examples' => [
+                [
+                    '332609010120230001',
+                    'Alya Putri',
+                    'P',
+                    'Pekalongan',
+                    '2023-01-01',
+                    'Siti Aminah',
+                    '3326094101900001',
+                    'Ahmad Fauzi',
+                    '3.2',
+                    '49',
+                    'Dukuh Bantarkulon RT 01 RW 02',
+                ],
             ],
-            'text_columns' => ['B', 'G'],
         ],
 
         'remaja' => [
+            'label' => 'Remaja',
             'title' => 'TEMPLATE IMPORT DATA REMAJA',
-            'note' => 'Isi data mulai baris ke-4. Jangan mengubah nama kolom pada baris ke-3.',
             'headers' => [
                 'nik',
                 'nama_lengkap',
@@ -66,86 +68,137 @@ class TemplateExport extends DefaultValueBinder implements FromArray, ShouldAuto
                 'no_hp_ortu',
                 'alamat_lengkap',
             ],
-            'sample' => [
-                '3326123456789011',
-                'Nadia Putri',
-                'P',
-                'Pekalongan',
-                '2010-08-20',
-                'SMP Negeri 1',
-                'VIII',
-                'Budi Santoso',
-                '081234567890',
-                'Dusun Krajan RT 03 RW 01',
+            'examples' => [
+                [
+                    '3326091208100001',
+                    'Rafi Maulana',
+                    'L',
+                    'Pekalongan',
+                    '2010-08-12',
+                    'SMP Negeri 1 Lebakbarang',
+                    '8A',
+                    'Budi Santoso',
+                    '081234567890',
+                    'Dukuh Bantarkulon RT 02 RW 01',
+                ],
             ],
-            'text_columns' => ['A', 'I'],
         ],
 
         'lansia' => [
+            'label' => 'Lansia',
             'title' => 'TEMPLATE IMPORT DATA LANSIA',
-            'note' => 'Isi data mulai baris ke-4. Jangan mengubah nama kolom pada baris ke-3.',
             'headers' => [
                 'nik',
                 'nama_lengkap',
                 'jenis_kelamin',
                 'tempat_lahir',
                 'tanggal_lahir',
-                'riwayat_penyakit',
                 'alamat_lengkap',
+                'berat_badan',
+                'tinggi_badan',
+                'lingkar_perut',
+                'tekanan_darah',
+                'gula_darah',
+                'kolesterol',
+                'asam_urat',
+                'tingkat_kemandirian',
+                'riwayat_penyakit',
+                'keluhan',
+                'telepon_keluarga',
+                'golongan_darah',
             ],
-            'sample' => [
-                '3326123456789021',
-                'Slamet Riyadi',
-                'L',
-                'Pekalongan',
-                '1958-03-12',
-                'Hipertensi',
-                'Dusun Krajan RT 04 RW 02',
+            'examples' => [
+                [
+                    '3326091503600001',
+                    'Slamet Riyadi',
+                    'L',
+                    'Pekalongan',
+                    '1960-03-15',
+                    'Dukuh Bantarkulon RT 03 RW 02',
+                    '62',
+                    '160',
+                    '84',
+                    '130/85',
+                    '125',
+                    '190',
+                    '6.4',
+                    'mandiri',
+                    'Hipertensi ringan',
+                    'Kadang pusing saat pagi',
+                    '081234567891',
+                    'O',
+                ],
             ],
-            'text_columns' => ['A'],
         ],
     ];
 
-    public function __construct(string $type)
+    public function __construct(?string $type = 'balita')
     {
-        $this->type = array_key_exists($type, $this->config) ? $type : 'balita';
-    }
+        $type = strtolower(trim((string) $type));
 
-    /**
-     * Paksa semua string ditulis sebagai teks.
-     * Ini mencegah NIK berubah jadi 3.32612E+15, karena Excel sok jenius.
-     */
-    public function bindValue(Cell $cell, $value): bool
-    {
-        if (is_string($value)) {
-            $cell->setValueExplicit($value, DataType::TYPE_STRING);
-            return true;
-        }
-
-        return parent::bindValue($cell, $value);
+        $this->type = array_key_exists($type, $this->configs)
+            ? $type
+            : 'balita';
     }
 
     public function array(): array
     {
-        $data = $this->config[$this->type];
+        $config = $this->configs[$this->type];
+        $headers = $config['headers'];
+        $columnCount = count($headers);
 
-        return [
-            [$data['title']],
-            [$data['note']],
-            $data['headers'],
-            $data['sample'],
+        $rows = [
+            $this->padRow([$config['title']], $columnCount),
+            $this->padRow([
+                'Jangan mengubah nama kolom pada baris 3. Isi data mulai baris 4. Format tanggal disarankan YYYY-MM-DD.',
+            ], $columnCount),
+            $headers,
         ];
-    }
 
-    public function columnFormats(): array
-    {
-        $formats = [];
-
-        foreach ($this->config[$this->type]['text_columns'] as $column) {
-            $formats[$column] = NumberFormat::FORMAT_TEXT;
+        foreach ($config['examples'] as $example) {
+            $rows[] = $this->padRow($example, $columnCount);
         }
 
-        return $formats;
+        return $rows;
+    }
+
+    public function title(): string
+    {
+        return $this->configs[$this->type]['label'];
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => [
+                'font' => [
+                    'bold' => true,
+                    'size' => 16,
+                    'color' => ['rgb' => '047857'],
+                ],
+            ],
+            2 => [
+                'font' => [
+                    'bold' => true,
+                    'size' => 10,
+                    'color' => ['rgb' => '64748B'],
+                ],
+            ],
+            3 => [
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => 'FFFFFF'],
+                ],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '047857'],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+            ],
+        ];
     }
 
     public function registerEvents(): array
@@ -153,119 +206,74 @@ class TemplateExport extends DefaultValueBinder implements FromArray, ShouldAuto
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $data = $this->config[$this->type];
 
-                $columnCount = count($data['headers']);
-                $lastColumn = $this->columnLetter($columnCount);
+                $headers = $this->configs[$this->type]['headers'];
+                $lastColumn = Coordinate::stringFromColumnIndex(count($headers));
 
                 $sheet->mergeCells("A1:{$lastColumn}1");
                 $sheet->mergeCells("A2:{$lastColumn}2");
 
-                $sheet->getStyle("A1:{$lastColumn}1")->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 14,
-                        'color' => ['rgb' => '064E3B'],
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'D1FAE5'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
-
-                $sheet->getStyle("A2:{$lastColumn}2")->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 10,
-                        'color' => ['rgb' => '92400E'],
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'FEF3C7'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                ]);
-
-                $sheet->getStyle("A3:{$lastColumn}3")->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'color' => ['rgb' => 'FFFFFF'],
-                    ],
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => '059669'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        'vertical' => Alignment::VERTICAL_CENTER,
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => 'A7F3D0'],
-                        ],
-                    ],
-                ]);
-
-                $sheet->getStyle("A4:{$lastColumn}4")->applyFromArray([
-                    'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'F8FAFC'],
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => 'E2E8F0'],
-                        ],
-                    ],
-                ]);
-
-                foreach ($data['text_columns'] as $column) {
-                    $sheet->getStyle("{$column}4:{$column}1000")
-                        ->getNumberFormat()
-                        ->setFormatCode(NumberFormat::FORMAT_TEXT);
-
-                    $sheet->getStyle("{$column}4:{$column}1000")
-                        ->getAlignment()
-                        ->setHorizontal(Alignment::HORIZONTAL_LEFT);
-                }
-
-                $sheet->getStyle("A1:{$lastColumn}1000")
-                    ->getAlignment()
-                    ->setWrapText(true)
-                    ->setVertical(Alignment::VERTICAL_CENTER);
-
                 $sheet->getRowDimension(1)->setRowHeight(28);
                 $sheet->getRowDimension(2)->setRowHeight(24);
                 $sheet->getRowDimension(3)->setRowHeight(26);
-                $sheet->getRowDimension(4)->setRowHeight(24);
 
                 $sheet->freezePane('A4');
 
-                foreach (range('A', $lastColumn) as $column) {
-                    $sheet->getColumnDimension($column)->setAutoSize(true);
+                $sheet->getStyle("A1:{$lastColumn}2")->getAlignment()
+                    ->setVertical(Alignment::VERTICAL_CENTER);
+
+                $sheet->getStyle("A3:{$lastColumn}4")->getBorders()->getAllBorders()
+                    ->setBorderStyle(Border::BORDER_THIN)
+                    ->getColor()->setRGB('D1FAE5');
+
+                $sheet->getStyle("A4:{$lastColumn}4")->getFill()
+                    ->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('F8FAFC');
+
+                $sheet->getStyle("A4:{$lastColumn}4")->getFont()
+                    ->getColor()->setRGB('334155');
+
+                $this->applyDropdown($sheet, $headers, 'jenis_kelamin', '"L,P"');
+
+                if ($this->type === 'lansia') {
+                    $this->applyDropdown(
+                        $sheet,
+                        $headers,
+                        'tingkat_kemandirian',
+                        '"mandiri,bantuan_sebagian,ketergantungan_penuh"'
+                    );
+
+                    $this->applyDropdown($sheet, $headers, 'golongan_darah', '"A,B,AB,O"');
                 }
             },
         ];
     }
 
-    private function columnLetter(int $columnNumber): string
+    private function applyDropdown(Worksheet $sheet, array $headers, string $headerName, string $formula): void
     {
-        $letter = '';
+        $index = array_search($headerName, $headers, true);
 
-        while ($columnNumber > 0) {
-            $modulo = ($columnNumber - 1) % 26;
-            $letter = chr(65 + $modulo) . $letter;
-            $columnNumber = intdiv($columnNumber - $modulo, 26);
+        if ($index === false) {
+            return;
         }
 
-        return $letter;
+        $column = Coordinate::stringFromColumnIndex($index + 1);
+
+        for ($row = 4; $row <= 1000; $row++) {
+            $validation = $sheet->getCell("{$column}{$row}")->getDataValidation();
+            $validation->setType(DataValidation::TYPE_LIST);
+            $validation->setErrorStyle(DataValidation::STYLE_STOP);
+            $validation->setAllowBlank(true);
+            $validation->setShowDropDown(true);
+            $validation->setShowErrorMessage(true);
+            $validation->setErrorTitle('Input tidak valid');
+            $validation->setError('Pilih nilai sesuai daftar yang tersedia.');
+            $validation->setFormula1($formula);
+        }
+    }
+
+    private function padRow(array $row, int $columnCount): array
+    {
+        return array_pad($row, $columnCount, '');
     }
 }

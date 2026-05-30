@@ -4,7 +4,7 @@ namespace App\Imports;
 
 use App\Models\Lansia;
 use App\Models\User;
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\RemembersRowNumber;
@@ -15,7 +15,7 @@ use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 
-class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatchInserts, WithChunkReading
+class LansiaImport implements ToModel, WithHeadingRow, WithBatchInserts, WithChunkReading, SkipsEmptyRows
 {
     use RemembersRowNumber;
 
@@ -36,19 +36,45 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
 
         $jenisKelamin = $this->normalizeGender($row['jenis_kelamin'] ?? null, $rowNumber);
         $tanggalLahir = $this->parseDate($row['tanggal_lahir'] ?? null, $rowNumber);
+
+        $beratBadan = $this->cleanDecimal($row['berat_badan'] ?? null);
+        $tinggiBadan = $this->cleanDecimal($row['tinggi_badan'] ?? null);
+        $imt = $this->calculateImt($beratBadan, $tinggiBadan);
+
         $linkedUser = $this->findLinkedUser($nik, $namaLengkap);
 
+        $riwayatPenyakit = $this->firstFilled([
+            $row['riwayat_penyakit'] ?? null,
+            $row['penyakit_bawaan'] ?? null,
+        ]);
+
         $data = [
-            'kode_lansia' => $this->generateKodeLansia(),
             'nik' => $nik,
             'nama_lengkap' => $namaLengkap,
             'jenis_kelamin' => $jenisKelamin,
             'tempat_lahir' => $this->cleanText($row['tempat_lahir'] ?? null) ?: '-',
             'tanggal_lahir' => $tanggalLahir,
-            'alamat' => $this->cleanText($row['alamat_lengkap'] ?? null) ?: '-',
-            'penyakit_bawaan' => $this->cleanText($row['riwayat_penyakit'] ?? null) ?: null,
+            'alamat' => $this->firstFilled([
+                $row['alamat_lengkap'] ?? null,
+                $row['alamat'] ?? null,
+            ]) ?: '-',
+            'berat_badan' => $beratBadan,
+            'tinggi_badan' => $tinggiBadan,
+            'imt' => $imt,
+            'lingkar_perut' => $this->cleanDecimal($row['lingkar_perut'] ?? null),
+            'tekanan_darah' => $this->cleanTensi($row['tekanan_darah'] ?? null, $rowNumber),
+            'gula_darah' => $this->cleanDecimal($row['gula_darah'] ?? null),
+            'kolesterol' => $this->cleanDecimal($row['kolesterol'] ?? null),
+            'asam_urat' => $this->cleanDecimal($row['asam_urat'] ?? null),
+            'tingkat_kemandirian' => $this->normalizeKemandirian($row['tingkat_kemandirian'] ?? null),
+            'penyakit_bawaan' => $riwayatPenyakit,
+            'keluhan' => $this->cleanText($row['keluhan'] ?? null) ?: null,
             'created_by' => auth()->id(),
         ];
+
+        if (Schema::hasColumn('lansias', 'kode_lansia')) {
+            $data['kode_lansia'] = $this->generateKodeLansia();
+        }
 
         if (Schema::hasColumn('lansias', 'user_id')) {
             $data['user_id'] = $linkedUser?->id;
@@ -56,10 +82,7 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
 
         if (Schema::hasColumn('lansias', 'telepon_keluarga')) {
             $data['telepon_keluarga'] = $this->cleanPhone(
-                $row['telepon_keluarga']
-                ?? $row['no_hp_keluarga']
-                ?? $row['no_hp']
-                ?? null
+                $row['telepon_keluarga'] ?? $row['no_hp_keluarga'] ?? $row['no_hp'] ?? null
             );
         }
 
@@ -67,7 +90,15 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
             $data['golongan_darah'] = $this->cleanBloodType($row['golongan_darah'] ?? null);
         }
 
-        return new Lansia($data);
+        $lansia = new Lansia();
+
+        foreach ($data as $column => $value) {
+            if (Schema::hasColumn('lansias', $column)) {
+                $lansia->{$column} = $value;
+            }
+        }
+
+        return $lansia;
     }
 
     public function headingRow(): int
@@ -88,6 +119,19 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
     private function cleanText($value): string
     {
         return trim((string) $value);
+    }
+
+    private function firstFilled(array $values): ?string
+    {
+        foreach ($values as $value) {
+            $text = $this->cleanText($value);
+
+            if ($text !== '') {
+                return $text;
+            }
+        }
+
+        return null;
     }
 
     private function cleanNik($value, int $rowNumber): string
@@ -141,6 +185,44 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
         return in_array($value, ['A', 'B', 'AB', 'O'], true) ? $value : null;
     }
 
+    private function cleanDecimal($value): ?float
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return null;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return round((float) $value, 2);
+        }
+
+        $value = trim((string) $value);
+        $value = str_replace(',', '.', $value);
+        $value = preg_replace('/[^0-9.\-]/', '', $value);
+
+        if ($value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        return round((float) $value, 2);
+    }
+
+    private function cleanTensi($value, int $rowNumber): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $value = str_replace([' ', '\\'], ['', '/'], $value);
+
+        if (!preg_match('/^\d{2,3}\/\d{2,3}$/', $value)) {
+            throw new \RuntimeException("Baris {$rowNumber}: tekanan_darah harus memakai format 120/80.");
+        }
+
+        return $value;
+    }
+
     private function normalizeGender($value, int $rowNumber): string
     {
         $value = strtolower(trim((string) $value));
@@ -149,6 +231,23 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
             'l', 'laki-laki', 'laki laki', 'laki', 'pria', 'cowok' => 'L',
             'p', 'perempuan', 'wanita', 'cewek' => 'P',
             default => throw new \RuntimeException("Baris {$rowNumber}: jenis_kelamin wajib L atau P."),
+        };
+    }
+
+    private function normalizeKemandirian($value): ?string
+    {
+        $value = strtolower(trim((string) $value));
+        $value = str_replace(['-', ' '], '_', $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return match ($value) {
+            'mandiri', 'm' => 'mandiri',
+            'bantuan_sebagian', 'bantuan', 'sebagian' => 'bantuan_sebagian',
+            'ketergantungan_penuh', 'penuh', 'tergantung_penuh', 'ketergantungan' => 'ketergantungan_penuh',
+            default => null,
         };
     }
 
@@ -179,10 +278,29 @@ class LansiaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
                 throw new \RuntimeException('Tanggal lahir tidak boleh melebihi hari ini.');
             }
 
+            if ($carbon->greaterThan(now('Asia/Jakarta')->subYears(45))) {
+                throw new \RuntimeException('Usia Lansia/Pra-Lansia minimal 45 tahun.');
+            }
+
             return $carbon->format('Y-m-d');
         } catch (\Throwable $e) {
             throw new \RuntimeException("Baris {$rowNumber}: tanggal_lahir tidak valid. Gunakan format YYYY-MM-DD, contoh 1958-03-12.");
         }
+    }
+
+    private function calculateImt(?float $beratBadan, ?float $tinggiBadan): ?float
+    {
+        if (!$beratBadan || !$tinggiBadan || $tinggiBadan <= 0) {
+            return null;
+        }
+
+        $tinggiMeter = $tinggiBadan / 100;
+
+        if ($tinggiMeter <= 0) {
+            return null;
+        }
+
+        return round($beratBadan / ($tinggiMeter * $tinggiMeter), 2);
     }
 
     private function generateKodeLansia(): string

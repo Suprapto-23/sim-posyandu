@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DataImport extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'nama_file',
         'jenis_data',
@@ -18,39 +16,51 @@ class DataImport extends Model
         'data_berhasil',
         'data_gagal',
         'catatan',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
+        'total_data' => 'integer',
+        'data_berhasil' => 'integer',
+        'data_gagal' => 'integer',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
     ];
 
-    public function creator()
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function getStatusBadgeAttribute()
+    public function getStatusBadgeAttribute(): string
     {
-        $badges = [
+        return match ($this->status) {
             'pending' => 'info',
             'processing' => 'warning',
             'completed' => 'success',
-            'failed' => 'danger'
-        ];
-
-        return $badges[$this->status] ?? 'secondary';
+            'failed' => 'danger',
+            default => 'secondary',
+        };
     }
 
-    public function getJenisDataLabelAttribute()
+    public function getJenisDataLabelAttribute(): string
     {
-        $labels = [
+        return match ($this->jenis_data) {
             'balita' => 'Balita',
             'remaja' => 'Remaja',
-            'lansia' => 'Lansia'
-        ];
+            'lansia' => 'Lansia',
+            default => ucfirst((string) $this->jenis_data),
+        };
+    }
 
-        return $labels[$this->jenis_data] ?? $this->jenis_data;
+    public function getPersentaseBerhasilAttribute(): int
+    {
+        $total = (int) $this->total_data;
+
+        if ($total <= 0) {
+            return 0;
+        }
+
+        return (int) round(((int) $this->data_berhasil / $total) * 100);
     }
 }
