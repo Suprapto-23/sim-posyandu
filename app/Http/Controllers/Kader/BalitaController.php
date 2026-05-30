@@ -5,339 +5,540 @@ namespace App\Http\Controllers\Kader;
 use App\Http\Controllers\Controller;
 use App\Models\Balita;
 use App\Models\User;
-use App\Traits\SyncsUserAccount;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Carbon\Carbon;
+use Illuminate\View\View;
 
 class BalitaController extends Controller
 {
-    use SyncsUserAccount;
     /**
      * =========================================================================
-     * 1. MENAMPILKAN DATABASE (INDEX) DENGAN FILTER UMUR CERDAS
+     * 1. HALAMAN DAFTAR DATA BALITA
      * =========================================================================
+     * Dibuat lebih ringan:
+     * - Ambil kolom seperlunya saja.
+     * - Statistik dibuat aman.
+     * - Relasi user dan pemeriksaan terakhir tetap ada kalau kolom mendukung.
      */
-    public function index(Request $request)
-{
-    $search = trim((string) $request->get('search', ''));
-    $statusAkun = $request->get('status_akun', 'semua');
+    public function index(Request $request): View
+    {
+        $search = trim((string) $request->get('search', ''));
+        $statusAkun = $request->get('status_akun', 'semua');
 
-    if (!in_array($statusAkun, ['semua', 'terhubung', 'belum'], true)) {
-        $statusAkun = 'semua';
+        if (!in_array($statusAkun, ['semua', 'terhubung', 'belum'], true)) {
+            $statusAkun = 'semua';
+        }
+
+        $hasUserId = $this->balitaHasUserIdColumn();
+
+        /*
+         * Kalau kolom user_id belum ada, jangan paksa filter akun.
+         * Kalau dipaksa, MySQL bakal ngamuk: unknown column user_id.
+         */
+        if (!$hasUserId) {
+            $statusAkun = 'semua';
+        }
+
+        $baseQuery = Balita::query();
+
+        $statTotal = (clone $baseQuery)->count();
+
+        $statTerhubung = $hasUserId
+            ? (clone $baseQuery)->whereNotNull('user_id')->count()
+            : 0;
+
+        $statBelumTerhubung = $hasUserId
+            ? (clone $baseQuery)->whereNull('user_id')->count()
+            : $statTotal;
+
+        $statBulanIni = (clone $baseQuery)
+            ->whereMonth('created_at', now('Asia/Jakarta')->month)
+            ->whereYear('created_at', now('Asia/Jakarta')->year)
+            ->count();
+
+        $selectColumns = [
+            'id',
+            'kode_balita',
+            'nik',
+            'nama_lengkap',
+            'jenis_kelamin',
+            'tempat_lahir',
+            'tanggal_lahir',
+            'nama_ibu',
+            'nama_ayah',
+            'alamat',
+            'berat_lahir',
+            'panjang_lahir',
+            'created_by',
+            'created_at',
+            'updated_at',
+        ];
+
+        if ($hasUserId) {
+            $selectColumns[] = 'user_id';
+        }
+
+        $query = Balita::query()
+            ->select($selectColumns)
+            ->when($hasUserId, function ($q) {
+                $q->with([
+                    'user:id,name,nik,email,role,status',
+                    'pemeriksaan_terakhir',
+                ]);
+            })
+            ->when(!$hasUserId, function ($q) {
+                $q->with([
+                    'pemeriksaan_terakhir',
+                ]);
+            })
+            ->latest('id');
+
+        if ($hasUserId && $statusAkun === 'terhubung') {
+            $query->whereNotNull('user_id');
+        }
+
+        if ($hasUserId && $statusAkun === 'belum') {
+            $query->whereNull('user_id');
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_lengkap', 'like', "%{$search}%")
+                    ->orWhere('nik', 'like', "%{$search}%")
+                    ->orWhere('nama_ibu', 'like', "%{$search}%")
+                    ->orWhere('nama_ayah', 'like', "%{$search}%")
+                    ->orWhere('alamat', 'like', "%{$search}%");
+            });
+        }
+
+        $items = $query->paginate(10)->withQueryString();
+
+        return view('kader.data.balita.index', compact(
+            'items',
+            'search',
+            'statusAkun',
+            'statTotal',
+            'statTerhubung',
+            'statBelumTerhubung',
+            'statBulanIni'
+        ));
     }
-
-    $baseQuery = Balita::query()
-        ->with(['pemeriksaan_terakhir', 'user']);
-
-    $statTotal = (clone $baseQuery)->count();
-
-    $statTerhubung = (clone $baseQuery)
-        ->whereNotNull('user_id')
-        ->count();
-
-    $statBelumTerhubung = (clone $baseQuery)
-        ->whereNull('user_id')
-        ->count();
-
-    $statBulanIni = (clone $baseQuery)
-        ->whereMonth('created_at', now('Asia/Jakarta')->month)
-        ->whereYear('created_at', now('Asia/Jakarta')->year)
-        ->count();
-
-    $query = Balita::query()
-        ->with(['pemeriksaan_terakhir', 'user'])
-        ->latest('created_at');
-
-    if ($statusAkun === 'terhubung') {
-        $query->whereNotNull('user_id');
-    }
-
-    if ($statusAkun === 'belum') {
-        $query->whereNull('user_id');
-    }
-
-    if ($search !== '') {
-        $query->where(function ($q) use ($search) {
-            $q->where('nama_lengkap', 'like', "%{$search}%")
-                ->orWhere('nik', 'like', "%{$search}%")
-                ->orWhere('nama_ibu', 'like', "%{$search}%")
-                ->orWhere('nama_ayah', 'like', "%{$search}%")
-                ->orWhere('alamat', 'like', "%{$search}%");
-        });
-    }
-
-    $items = $query->paginate(10)->withQueryString();
-
-    return view('kader.data.balita.index', compact(
-        'items',
-        'search',
-        'statusAkun',
-        'statTotal',
-        'statTerhubung',
-        'statBelumTerhubung',
-        'statBulanIni'
-    ));
-}
 
     /**
      * =========================================================================
-     * 2. HALAMAN FORM REGISTRASI
+     * 2. HALAMAN TAMBAH DATA BALITA
      * =========================================================================
      */
-    public function create()
+    public function create(): View
     {
         return view('kader.data.balita.create');
     }
 
     /**
      * =========================================================================
-     * 3. SIMPAN DATA REGISTRASI (DENGAN PROTEKSI UMUR & 1:1 NIK)
+     * 3. SIMPAN DATA BALITA
      * =========================================================================
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        // Validasi Aturan Form (NIK Ibu & Ayah dihapus dari kewajiban)
         $request->validate([
-            'nama_lengkap'  => 'required|string|max:255',
-            'nik'           => 'required|numeric|digits:16|unique:balitas,nik', // NIK Anak Wajib & Unik
+            'nama_lengkap' => 'required|string|max:255',
+            'nik' => 'required|numeric|digits:16|unique:balitas,nik',
             'jenis_kelamin' => 'required|in:L,P',
-            'tempat_lahir'  => 'required|string|max:100',
+            'tempat_lahir' => 'required|string|max:100',
             'tanggal_lahir' => 'required|date|before_or_equal:today',
-            'nama_ibu'      => 'required|string|max:255',
-            'nama_ayah'     => 'nullable|string|max:255',
-            'alamat'        => 'required|string',
-            'berat_lahir'   => 'nullable|numeric|min:0',
+            'nama_ibu' => 'required|string|max:255',
+            'nama_ayah' => 'nullable|string|max:255',
+            'alamat' => 'required|string',
+            'berat_lahir' => 'nullable|numeric|min:0',
             'panjang_lahir' => 'nullable|numeric|min:0',
         ], [
-            'nik.required'        => 'NIK Anak wajib diisi sebagai kunci sistem.',
-            'nik.digits'          => 'NIK Anak harus berisi tepat 16 digit angka.',
-            'nik.unique'          => 'Sistem mendeteksi NIK anak ini sudah terdaftar sebelumnya.',
-            'tanggal_lahir.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini (masa depan).',
+            'nama_lengkap.required' => 'Nama lengkap Balita wajib diisi.',
+            'nik.required' => 'NIK Balita wajib diisi sebagai kunci data.',
+            'nik.numeric' => 'NIK hanya boleh berisi angka.',
+            'nik.digits' => 'NIK harus berisi tepat 16 digit angka.',
+            'nik.unique' => 'NIK Balita ini sudah terdaftar.',
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
+            'tanggal_lahir.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini.',
+            'nama_ibu.required' => 'Nama ibu wajib diisi.',
+            'alamat.required' => 'Alamat wajib diisi.',
         ]);
 
-        // 🔥 VALIDASI BACKEND STRICT: Blokir Anak Usia >= 60 Bulan
         $tanggalLahir = Carbon::parse($request->tanggal_lahir);
         $usiaBulan = $tanggalLahir->diffInMonths(now());
-        
+
         if ($usiaBulan >= 60) {
             $tahun = floor($usiaBulan / 12);
             $bulan = $usiaBulan % 12;
             $teksUsia = $bulan > 0 ? "{$tahun} Tahun {$bulan} Bulan" : "{$tahun} Tahun";
-            
-            return back()->withInput()->with('error', "Registrasi Ditolak! Usia anak terdeteksi {$teksUsia}. Sistem membatasi pendaftaran modul ini maksimal 59 Bulan.");
+
+            return back()
+                ->withInput()
+                ->with('error', "Registrasi ditolak. Usia anak terdeteksi {$teksUsia}. Modul Balita hanya menerima usia maksimal 59 bulan.");
         }
 
         DB::beginTransaction();
+
         try {
-            // Generate Kode Unik
-            $kode = 'BLT-' . date('ym') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $kode = $this->generateKodeBalita();
 
             $balita = Balita::create([
-                'kode_balita'   => $kode,
-                'nik'           => $request->nik,
-                'nama_lengkap'  => $request->nama_lengkap,
-                'tempat_lahir'  => $request->tempat_lahir,
+                'kode_balita' => $kode,
+                'nik' => $request->nik,
+                'nama_lengkap' => $request->nama_lengkap,
+                'tempat_lahir' => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
                 'jenis_kelamin' => $request->jenis_kelamin,
-                'nik_ibu'       => null, // Sengaja di-null-kan karena sudah pakai sistem 1:1
-                'nama_ibu'      => $request->nama_ibu,
-                'nik_ayah'      => null, 
-                'nama_ayah'     => $request->nama_ayah,
-                'alamat'        => $request->alamat,
-                'berat_lahir'   => $request->berat_lahir,
+                'nama_ibu' => $request->nama_ibu,
+                'nama_ayah' => $request->nama_ayah,
+                'alamat' => $request->alamat,
+                'berat_lahir' => $request->berat_lahir,
                 'panjang_lahir' => $request->panjang_lahir,
-                'created_by'    => Auth::id(),
+                'created_by' => Auth::id(),
             ]);
 
-            // Deteksi Akun Warga Otomatis (MENGGUNAKAN NIK BALITA SECARA LANGSUNG)
-            $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
-            if ($linkedUser) {
+            $linkedUser = $this->findLinkedUser($request->nik);
+
+            if ($linkedUser && $this->balitaHasUserIdColumn()) {
                 $balita->user_id = $linkedUser->id;
-                $balita->save(); 
+                $balita->save();
             }
 
             DB::commit();
-            
-            if ($linkedUser) {
-                return redirect()->route('kader.data.balita.index')
-                    ->with('success', 'Registrasi Sukses! Data anak tersimpan dan otomatis terhubung dengan akun Login.');
-            } else {
-                return redirect()->route('kader.data.balita.index')
-                    ->with('warning', "Registrasi Tersimpan! Namun belum ada akun pengguna dengan NIK {$request->nik} di sistem. Integrasi tertunda sampai akun dibuat oleh Admin.");
+
+            if ($linkedUser && $this->balitaHasUserIdColumn()) {
+                return redirect()
+                    ->route('kader.data.balita.index')
+                    ->with('success', 'Data Balita berhasil disimpan dan otomatis terhubung dengan akun warga.');
             }
 
-        } catch (\Exception $e) {
+            if ($linkedUser && !$this->balitaHasUserIdColumn()) {
+                return redirect()
+                    ->route('kader.data.balita.index')
+                    ->with('warning', 'Data Balita berhasil disimpan. Akun warga ditemukan, tetapi kolom user_id belum tersedia pada tabel balitas.');
+            }
+
+            return redirect()
+                ->route('kader.data.balita.index')
+                ->with('warning', "Data Balita berhasil disimpan, tetapi belum ada akun warga dengan NIK {$request->nik}.");
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Fatal Error Create Balita: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Kegagalan Server: Gagal menyimpan ke pangkalan data.');
+
+            Log::error('Gagal menyimpan data Balita', [
+                'message' => $e->getMessage(),
+                'nik' => $request->nik,
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal menyimpan data Balita. Periksa kembali data atau struktur database.');
         }
     }
 
     /**
      * =========================================================================
-     * 4. BUKA BUKU KIA (DETAIL)
+     * 4. DETAIL DATA BALITA
      * =========================================================================
      */
-    public function show($id) 
+    public function show($id): View
     {
-        $balita = Balita::with(['kunjungans' => function($q) {
-                $q->with(['petugas', 'pemeriksaan'])->latest()->take(10);
-            }, 'user'])->findOrFail($id);
-        
-        $tgl_lahir = Carbon::parse($balita->tanggal_lahir);
-        $diff = $tgl_lahir->diff(now());
-        
-        $userTerhubung = $balita->user;
+        $query = Balita::query()
+            ->with([
+                'kunjungans' => function ($q) {
+                    $q->with(['petugas', 'pemeriksaan'])
+                        ->latest()
+                        ->take(10);
+                },
+            ]);
+
+        if ($this->balitaHasUserIdColumn()) {
+            $query->with('user:id,name,nik,email,role,status');
+        }
+
+        $balita = $query->findOrFail($id);
+
+        $tglLahir = Carbon::parse($balita->tanggal_lahir);
+        $diff = $tglLahir->diff(now());
+
+        $userTerhubung = null;
+
+        if ($this->balitaHasUserIdColumn()) {
+            $userTerhubung = $balita->user;
+        }
+
         if (!$userTerhubung) {
-            // Lacak via NIK Balita
-            $userTerhubung = $this->findLinkedUser($balita->nik, $balita->nama_lengkap);
+            $userTerhubung = $this->findLinkedUser($balita->nik);
         }
 
         return view('kader.data.balita.show', [
-            'balita'        => $balita,
-            'usia_tahun'    => $diff->y,
-            'usia_bulan'    => $diff->m,
-            'usia_hari'     => $diff->d,
-            'sisa_bulan'    => $diff->m,
-            'userTerhubung' => $userTerhubung
+            'balita' => $balita,
+            'usia_tahun' => $diff->y,
+            'usia_bulan' => $diff->m,
+            'usia_hari' => $diff->d,
+            'sisa_bulan' => $diff->m,
+            'userTerhubung' => $userTerhubung,
         ]);
     }
 
     /**
      * =========================================================================
-     * 5. HALAMAN EDIT DATA
+     * 5. HALAMAN EDIT DATA BALITA
      * =========================================================================
      */
-    public function edit($id)
+    public function edit($id): View
     {
         $balita = Balita::findOrFail($id);
+
         return view('kader.data.balita.edit', compact('balita'));
     }
 
     /**
      * =========================================================================
-     * 6. PROSES SIMPAN PERUBAHAN DATA
+     * 6. UPDATE DATA BALITA
      * =========================================================================
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): RedirectResponse
     {
         $balita = Balita::findOrFail($id);
-            
+
         $request->validate([
-            'nama_lengkap'  => 'required|string|max:255',
-            'nik'           => 'required|numeric|digits:16|unique:balitas,nik,' . $id,
+            'nama_lengkap' => 'required|string|max:255',
+            'nik' => 'required|numeric|digits:16|unique:balitas,nik,' . $id,
             'jenis_kelamin' => 'required|in:L,P',
-            'tempat_lahir'  => 'required|string|max:100',
+            'tempat_lahir' => 'required|string|max:100',
             'tanggal_lahir' => 'required|date|before_or_equal:today',
-            'nama_ibu'      => 'required|string|max:255',
-            'nama_ayah'     => 'nullable|string|max:255',
-            'alamat'        => 'required|string',
-            'berat_lahir'   => 'nullable|numeric|min:0',
+            'nama_ibu' => 'required|string|max:255',
+            'nama_ayah' => 'nullable|string|max:255',
+            'alamat' => 'required|string',
+            'berat_lahir' => 'nullable|numeric|min:0',
             'panjang_lahir' => 'nullable|numeric|min:0',
+        ], [
+            'nama_lengkap.required' => 'Nama lengkap Balita wajib diisi.',
+            'nik.required' => 'NIK Balita wajib diisi.',
+            'nik.numeric' => 'NIK hanya boleh berisi angka.',
+            'nik.digits' => 'NIK harus berisi tepat 16 digit angka.',
+            'nik.unique' => 'NIK Balita ini sudah digunakan data lain.',
+            'tanggal_lahir.before_or_equal' => 'Tanggal lahir tidak boleh melebihi hari ini.',
         ]);
 
         $tanggalLahir = Carbon::parse($request->tanggal_lahir);
         $usiaBulan = $tanggalLahir->diffInMonths(now());
-        
+
         if ($usiaBulan >= 60) {
             return back()
-    ->withInput()
-    ->with('error', 'Pembaruan ditolak. Tanggal lahir membuat usia Balita melewati batas layanan yang digunakan pada modul ini.');
+                ->withInput()
+                ->with('error', 'Pembaruan ditolak. Usia Balita melewati batas layanan modul ini, yaitu maksimal 59 bulan.');
         }
 
         DB::beginTransaction();
+
         try {
-            $updateData = $request->except(['_token', '_method', 'user_id', 'nik_ibu', 'nik_ayah']);
-            $balita->update($updateData);
+            $balita->update([
+                'nik' => $request->nik,
+                'nama_lengkap' => $request->nama_lengkap,
+                'tempat_lahir' => $request->tempat_lahir,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'jenis_kelamin' => $request->jenis_kelamin,
+                'nama_ibu' => $request->nama_ibu,
+                'nama_ayah' => $request->nama_ayah,
+                'alamat' => $request->alamat,
+                'berat_lahir' => $request->berat_lahir,
+                'panjang_lahir' => $request->panjang_lahir,
+            ]);
 
-            // Cek ulang sinkronisasi akun dengan NIK Balita yang baru diedit
-            $linkedUser = $this->findLinkedUser($request->nik, $request->nama_lengkap);
-            $balita->user_id = $linkedUser ? $linkedUser->id : null;
-            $balita->save();
+            $linkedUser = $this->findLinkedUser($request->nik);
 
-            DB::commit();
-
-            if ($linkedUser) {
-                return redirect()->route('kader.data.balita.index')->with('success', 'Pembaruan Berhasil! Data terkoreksi dan afirmasi akses login warga terhubung.');
-            } else {
-                return redirect()->route('kader.data.balita.index')->with('warning', 'Pembaruan Berhasil! Namun sinkronisasi akun Login terputus (NIK tidak ditemukan di sistem).');
+            if ($this->balitaHasUserIdColumn()) {
+                $balita->user_id = $linkedUser ? $linkedUser->id : null;
+                $balita->save();
             }
-                
-        } catch (\Exception $e) {
+
+            DB::commit();
+
+            if ($linkedUser && $this->balitaHasUserIdColumn()) {
+                return redirect()
+                    ->route('kader.data.balita.index')
+                    ->with('success', 'Data Balita berhasil diperbarui dan akun warga berhasil disinkronkan.');
+            }
+
+            if ($linkedUser && !$this->balitaHasUserIdColumn()) {
+                return redirect()
+                    ->route('kader.data.balita.index')
+                    ->with('warning', 'Data Balita berhasil diperbarui. Akun warga ditemukan, tetapi kolom user_id belum tersedia pada tabel balitas.');
+            }
+
+            return redirect()
+                ->route('kader.data.balita.index')
+                ->with('warning', 'Data Balita berhasil diperbarui, tetapi belum terhubung dengan akun warga.');
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Fatal Error Update Balita: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Kegagalan Server: Gagal memperbarui data.');
+
+            Log::error('Gagal memperbarui data Balita', [
+                'message' => $e->getMessage(),
+                'balita_id' => $id,
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal memperbarui data Balita. Periksa kembali data atau struktur database.');
         }
     }
 
     /**
      * =========================================================================
-     * 7. HAPUS SATU DATA
+     * 7. HAPUS SATU DATA BALITA
      * =========================================================================
      */
-    public function destroy($id)
+    public function destroy($id): RedirectResponse
     {
         $balita = Balita::findOrFail($id);
-        
-        if ($balita->kunjungans()->count() > 0) {
-            return back()->with('error', 'Tindakan Dilarang! Anak ini sudah memiliki rekam medis / riwayat kunjungan. Penghapusan akan merusak laporan Posyandu.');
+
+        if ($balita->kunjungans()->exists()) {
+            return back()
+                ->with('error', 'Data tidak bisa dihapus karena Balita sudah memiliki riwayat kunjungan atau rekam medis.');
         }
-        
-        $balita->delete();
-        return redirect()->route('kader.data.balita.index')->with('success', 'Aksi Final: Data pendaftaran anak berhasil dihapus permanen.');
+
+        try {
+            $balita->delete();
+
+            return redirect()
+                ->route('kader.data.balita.index')
+                ->with('success', 'Data Balita berhasil dihapus.');
+        } catch (\Throwable $e) {
+            Log::error('Gagal menghapus data Balita', [
+                'message' => $e->getMessage(),
+                'balita_id' => $id,
+            ]);
+
+            return back()
+                ->with('error', 'Gagal menghapus data Balita.');
+        }
     }
 
     /**
      * =========================================================================
-     * 8. HAPUS MASAL
+     * 8. HAPUS DATA BALITA SECARA MASSAL
      * =========================================================================
      */
-    public function bulkDelete(Request $request)
+    public function bulkDelete(Request $request): RedirectResponse
     {
-        $ids = $request->ids;
-        if (!$ids || count($ids) == 0) {
-            return redirect()->back()->with('error', 'Misi Dibatalkan: Tidak ada data yang dicentang untuk dihapus.');
+        $ids = $request->input('ids', []);
+
+        if (!is_array($ids) || count($ids) === 0) {
+            return back()
+                ->with('error', 'Tidak ada data Balita yang dipilih untuk dihapus.');
         }
 
-        $anakAktif = Balita::whereIn('id', $ids)->has('kunjungans')->count();
-        
+        $anakAktif = Balita::whereIn('id', $ids)
+            ->has('kunjungans')
+            ->count();
+
         if ($anakAktif > 0) {
-            return redirect()->back()->with('error', "Tindakan Ditolak! $anakAktif dari anak yang Anda centang sudah memiliki jejak rekam medis. Hapus centang pada anak tersebut untuk melanjutkan.");
+            return back()
+                ->with('error', "{$anakAktif} data Balita tidak bisa dihapus karena sudah memiliki riwayat kunjungan atau rekam medis.");
         }
 
         DB::beginTransaction();
+
         try {
-            Balita::whereIn('id', $ids)->delete();
+            $jumlah = Balita::whereIn('id', $ids)->delete();
+
             DB::commit();
-            return redirect()->back()->with('success', 'Pembersihan Sukses: ' . count($ids) . ' data registrasi berhasil dihapus massal.');
-        } catch (\Exception $e) {
+
+            return back()
+                ->with('success', "{$jumlah} data Balita berhasil dihapus.");
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Fatal Error Bulk Delete Balita: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Kegagalan Server: Terjadi konflik saat menghapus data.');
+
+            Log::error('Gagal menghapus massal data Balita', [
+                'message' => $e->getMessage(),
+                'ids' => $ids,
+            ]);
+
+            return back()
+                ->with('error', 'Gagal menghapus data Balita secara massal.');
         }
     }
 
     /**
      * =========================================================================
-     * 9. FITUR TRIGGER MANUAL UNTUK SINKRONISASI AKUN
+     * 9. SINKRONISASI AKUN WARGA MANUAL
      * =========================================================================
      */
-    public function syncUser($id)
+    public function syncUser($id): RedirectResponse
     {
         $balita = Balita::findOrFail($id);
-        // Lacak via NIK Anak
-        $user = $this->findLinkedUser($balita->nik, $balita->nama_lengkap);
-        
-        if ($user) {
-            $balita->user_id = $user->id;
-            $balita->save();
-            return redirect()->back()->with('success', "Integrasi Terkunci! Akun anak berhasil dihubungkan dengan perangkat akses NIK tersebut.");
+
+        $user = $this->findLinkedUser($balita->nik);
+
+        if (!$user) {
+            return back()
+                ->with('error', 'Akun warga dengan NIK Balita ini belum ditemukan.');
         }
 
-        return redirect()->back()->with('error', 'Pencarian Gagal. Sistem tidak menemukan pengguna aplikasi dengan NIK Anak tersebut di database utama.');
+        if (!$this->balitaHasUserIdColumn()) {
+            return back()
+                ->with('error', 'Akun warga ditemukan, tetapi kolom user_id belum tersedia pada tabel balitas. Tambahkan migration user_id dulu, bro. Database jangan diajak cosplay.');
+        }
+
+        $balita->user_id = $user->id;
+        $balita->save();
+
+        return back()
+            ->with('success', 'Data Balita berhasil disinkronkan dengan akun warga.');
+    }
+
+    /**
+     * =========================================================================
+     * HELPER: CARI AKUN WARGA BERDASARKAN NIK
+     * =========================================================================
+     */
+    private function findLinkedUser(?string $nik): ?User
+    {
+        $nik = trim((string) $nik);
+
+        if ($nik === '') {
+            return null;
+        }
+
+        if (!Schema::hasColumn('users', 'nik')) {
+            return null;
+        }
+
+        return User::query()
+            ->where('nik', $nik)
+            ->when(Schema::hasColumn('users', 'role'), function ($query) {
+                $query->where('role', 'user');
+            })
+            ->first();
+    }
+
+    /**
+     * =========================================================================
+     * HELPER: CEK KOLOM user_id DI TABEL balitas
+     * =========================================================================
+     */
+    private function balitaHasUserIdColumn(): bool
+    {
+        return Schema::hasColumn('balitas', 'user_id');
+    }
+
+    /**
+     * =========================================================================
+     * HELPER: GENERATE KODE BALITA
+     * =========================================================================
+     */
+    private function generateKodeBalita(): string
+    {
+        do {
+            $kode = 'BLT-' . now('Asia/Jakarta')->format('ym') . '-' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+        } while (Balita::where('kode_balita', $kode)->exists());
+
+        return $kode;
     }
 }

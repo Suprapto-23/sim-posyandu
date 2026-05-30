@@ -309,4 +309,38 @@ class RemajaController extends Controller
 
         return back()->with('error', 'Gagal! Akun Warga dengan NIK tersebut tidak ditemukan di sistem.');
     }
+    private function findLinkedUser(?string $nik, ?string $nama = null): ?\App\Models\User
+{
+    $nik = trim((string) $nik);
+
+    if ($nik === '') {
+        return null;
+    }
+
+    $query = \App\Models\User::query();
+
+    $query->where(function ($q) use ($nik) {
+        $hasCondition = false;
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'nik')) {
+            $q->orWhere('nik', $nik);
+            $hasCondition = true;
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'username')) {
+            $q->orWhere('username', $nik);
+            $hasCondition = true;
+        }
+
+        if (!$hasCondition) {
+            $q->whereRaw('1 = 0');
+        }
+    });
+
+    if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
+        $query->whereIn('role', ['user', 'warga', 'masyarakat']);
+    }
+
+    return $query->first();
+}
 }

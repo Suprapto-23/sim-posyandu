@@ -214,34 +214,31 @@ class AbsensiController extends Controller
     }
 
     public function destroy($id): RedirectResponse
-    {
-        DB::beginTransaction();
+{
+    DB::beginTransaction();
 
-        try {
-            $absensi = AbsensiPosyandu::findOrFail($id);
+    try {
+        $absensi = AbsensiPosyandu::findOrFail($id);
 
-            $absensi->details()->delete();
-            $absensi->delete();
+        $absensi->details()->delete();
+        $absensi->delete();
 
-            DB::commit();
+        DB::commit();
 
-            return redirect()
-    ->route('kader.absensi.success', ['id' => $absensi->id])
-    ->with([
-        'success' => 'Presensi warga berhasil disimpan.',
-        'last_absensi_id' => $absensi->id,
-    ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
+        return redirect()
+            ->route('kader.absensi.riwayat')
+            ->with('success', 'Data presensi berhasil dihapus.');
+    } catch (\Throwable $e) {
+        DB::rollBack();
 
-            Log::error('Gagal menghapus absensi kader', [
-                'message' => $e->getMessage(),
-                'absensi_id' => $id,
-            ]);
+        Log::error('Gagal menghapus absensi kader', [
+            'message' => $e->getMessage(),
+            'absensi_id' => $id,
+        ]);
 
-            return back()->with('error', 'Gagal menghapus data presensi.');
-        }
+        return back()->with('error', 'Gagal menghapus data presensi.');
     }
+}
 
     private function getPasienByKategori(string $kategori)
     {
