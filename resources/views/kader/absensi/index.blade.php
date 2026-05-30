@@ -592,9 +592,10 @@
 
     {{-- FORM ABSENSI --}}
     <form method="POST" action="{{ route('kader.absensi.store') }}" id="absensiForm" class="abs-glass abs-panel overflow-hidden rounded-[32px]">
-        @csrf
+    @csrf
 
-        <input type="hidden" name="kategori" value="{{ $kategoriAktif }}">
+    <input type="hidden" name="kategori" value="{{ $kategoriAktif }}">
+    <input type="hidden" name="tanggal" value="{{ $tanggal ?? request('tanggal', now()->toDateString()) }}">
 
         <div class="border-b border-emerald-100/60 p-4 sm:p-5">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
