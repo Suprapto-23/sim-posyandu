@@ -1,186 +1,625 @@
 @extends('layouts.bidan')
 
-@section('title', 'Detail Arsip Pemeriksaan Klinis')
+@section('title', 'Detail Pemeriksaan Klinis')
+@section('page-name', 'Detail Pemeriksaan')
+@section('page-title', 'Detail Pemeriksaan Klinis')
 
-@section('content')
 @php
-    $kategori = strtolower($pemeriksaan->kategori_pasien);
+    use Carbon\Carbon;
+
+    $kategori = $kategori ?? data_get($ringkasan ?? [], 'kategori', 'balita');
+    $parameter = collect($parameter ?? []);
+    $ringkasan = $ringkasan ?? [];
+
+    $kategoriMeta = [
+        'balita' => [
+            'label' => 'Balita',
+            'icon' => 'ph-baby',
+            'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
+            'iconBox' => 'bg-sky-50 text-sky-700 ring-sky-100',
+        ],
+        'remaja' => [
+            'label' => 'Remaja',
+            'icon' => 'ph-user-focus',
+            'badge' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+            'iconBox' => 'bg-indigo-50 text-indigo-700 ring-indigo-100',
+        ],
+        'lansia' => [
+            'label' => 'Lansia',
+            'icon' => 'ph-heartbeat',
+            'badge' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+            'iconBox' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+        ],
+    ];
+
+    $meta = $kategoriMeta[$kategori] ?? $kategoriMeta['balita'];
+
+    $getValue = function ($item, array $keys, mixed $default = '-') {
+        foreach ($keys as $key) {
+            $value = data_get($item, $key);
+
+            if ($value !== null && $value !== '') {
+                return $value;
+            }
+        }
+
+        return $default;
+    };
+
+    $formatDate = function ($date) {
+        if (!$date || $date === '-') {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($date)->translatedFormat('d M Y');
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    };
+
+    $formatDateTime = function ($date) {
+        if (!$date || $date === '-') {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($date)->translatedFormat('d M Y, H:i') . ' WIB';
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    };
+
+    $formatParameterValue = function ($value) {
+        if ($value === null || $value === '' || $value === '-') {
+            return 'Belum diisi';
+        }
+
+        return $value;
+    };
+
+    $isEmptyParameter = function ($value) {
+        return $value === null || $value === '' || $value === '-' || $value === 'Belum diisi';
+    };
+
+    $statusRaw = strtolower((string) data_get($pemeriksaan, 'status_verifikasi', ''));
+    $isVerified = in_array($statusRaw, ['verified', 'tervalidasi', 'approved'], true);
+
+    $statusLabel = $isVerified ? 'Tervalidasi' : 'Menunggu Validasi';
+
+    $statusTheme = $isVerified
+        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+        : 'bg-amber-50 text-amber-700 ring-amber-200';
+
+    $statusIcon = $isVerified ? 'ph-check-circle' : 'ph-clock-countdown';
+
+    $backTab = $isVerified ? 'verified' : 'pending';
+
+    $pasienNama = data_get($ringkasan, 'nama_pasien')
+        ?? $getValue($pasien, ['nama_lengkap', 'nama', 'nama_balita', 'nama_remaja', 'nama_lansia'], 'Nama tidak tersedia');
+
+    $pasienNik = data_get($ringkasan, 'nik_pasien')
+        ?? $getValue($pasien, ['nik', 'nik_anak'], '-');
+
+    $jenisKelamin = strtolower((string) $getValue($pasien, ['jenis_kelamin', 'jk', 'gender'], '-'));
+
+    $jenisKelamin = match ($jenisKelamin) {
+        'l', 'laki-laki', 'laki laki', 'male' => 'Laki-laki',
+        'p', 'perempuan', 'female' => 'Perempuan',
+        default => $jenisKelamin === '-' ? '-' : ucfirst($jenisKelamin),
+    };
+
+    $tanggalLahir = $formatDate($getValue($pasien, ['tanggal_lahir', 'tgl_lahir', 'lahir'], null));
+
+    $alamat = $getValue($pasien, ['alamat', 'alamat_lengkap', 'dusun'], '-');
+
+    $tanggalKunjungan = data_get($ringkasan, 'tanggal_kunjungan')
+        ?? $formatDate(data_get($pemeriksaan, 'kunjungan.tanggal_kunjungan') ?? data_get($pemeriksaan, 'created_at'));
+
+    $tanggalPeriksa = data_get($ringkasan, 'tanggal_periksa')
+        ?? $formatDate(data_get($pemeriksaan, 'tanggal_periksa') ?? data_get($pemeriksaan, 'updated_at') ?? data_get($pemeriksaan, 'created_at'));
+
+    $waktuInput = $formatDateTime(data_get($pemeriksaan, 'created_at'));
+    $waktuUpdate = $formatDateTime(data_get($pemeriksaan, 'updated_at'));
+
+    $petugasInput = data_get($ringkasan, 'petugas_input')
+        ?? data_get($pemeriksaan, 'pemeriksa.name')
+        ?? data_get($pemeriksaan, 'pemeriksa.nama')
+        ?? data_get($pemeriksaan, 'kunjungan.petugas.name')
+        ?? data_get($pemeriksaan, 'kunjungan.petugas.nama')
+        ?? '-';
+
+    $bidanValidasi = data_get($ringkasan, 'bidan_validasi')
+        ?? data_get($pemeriksaan, 'verifikator.name')
+        ?? data_get($pemeriksaan, 'verifikator.nama')
+        ?? data_get($pemeriksaan, 'verifikatorLegacy.name')
+        ?? data_get($pemeriksaan, 'verifikatorLegacy.nama')
+        ?? '-';
+
+    $statusRingkasLabel = $kategori === 'balita'
+        ? 'Status Gizi'
+        : 'Status Ringkas Pemeriksaan';
+
+    $statusRingkas = $getValue($pemeriksaan, ['status_gizi'], '-');
+
+    $kesimpulan = $getValue($pemeriksaan, [
+        'kesimpulan_pemeriksaan',
+        'diagnosa',
+        'catatan_bidan',
+    ], '-');
+
+    $tindakan = $getValue($pemeriksaan, [
+        'tindakan',
+        'tindakan_lanjut',
+        'layanan',
+    ], '-');
+
+    $edukasi = $getValue($pemeriksaan, [
+        'catatan_edukasi',
+        'edukasi',
+        'edukasi_kesehatan',
+    ], '-');
+
+    $summaryCards = [
+        [
+            'label' => 'Kategori',
+            'value' => $meta['label'],
+            'icon' => $meta['icon'],
+            'class' => $meta['iconBox'],
+        ],
+        [
+            'label' => 'Status',
+            'value' => $statusLabel,
+            'icon' => $statusIcon,
+            'class' => $statusTheme,
+        ],
+        [
+            'label' => 'Tanggal Pemeriksaan',
+            'value' => $tanggalKunjungan,
+            'icon' => 'ph-calendar-check',
+            'class' => 'bg-sky-50 text-sky-700 ring-sky-100',
+        ],
+        [
+            'label' => 'Petugas Input',
+            'value' => $petugasInput,
+            'icon' => 'ph-user-circle',
+            'class' => 'bg-slate-50 text-slate-700 ring-slate-100',
+        ],
+    ];
 @endphp
-
-<div class="bg-[#f8fafc] min-h-screen pb-12 font-poppins w-full animate-fade-in">
-    
-    {{-- BARIS HEADER --}}
-    <div class="pt-6 pb-4 px-4 md:px-8 max-w-7xl mx-auto flex justify-between items-center shrink-0">
-        <a href="{{ route('bidan.pemeriksaan.index', ['tab' => 'verified']) }}" class="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-slate-700 transition-colors group">
-            <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm group-hover:bg-slate-100 transition-all">
-                <i class="fas fa-arrow-left text-xs"></i>
-            </div>
-            Kembali ke Ruang Tunggu
-        </a>
-        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span class="text-[10px] font-black tracking-widest uppercase text-slate-500">Dokumen Arsip Terverifikasi</span>
-        </div>
-    </div>
-
-    <div class="max-w-7xl mx-auto px-4 md:px-8">
-        {{-- GRID UTAMA --}}
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-stretch w-full">
-            
-            {{-- KOLOM KIRI: PROFIL PASIEN & HASIL UKUR FISIK --}}
-            <div class="lg:col-span-5 h-full flex flex-col gap-6">
-                
-                {{-- Kartu Identitas Pasien --}}
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fas fa-id-card mr-2 text-slate-400"></i>Biodata Pasien</h3>
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center text-xl font-black">
-                            {{ strtoupper(substr($pasien->nama_lengkap, 0, 1)) }}
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <h2 class="text-base font-black text-slate-800 leading-tight truncate">{{ $pasien->nama_lengkap }}</h2>
-                            <p class="text-xs text-slate-400 mt-1 font-bold tracking-wider uppercase">NIK: {{ $pasien->nik ?? '-' }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-slate-100 text-xs">
-                        <div>
-                            <p class="text-slate-400 font-medium">Kategori Pelayanan</p>
-                            <p class="font-black text-slate-700 uppercase mt-0.5">{{ $pemeriksaan->kategori_pasien }}</p>
-                        </div>
-                        <div>
-                            <p class="text-slate-400 font-medium">Tanggal Periksa</p>
-                            <p class="font-bold text-slate-700 mt-0.5">{{ \Carbon\Carbon::parse($pemeriksaan->tanggal_periksa ?? $pemeriksaan->tanggal_kunjungan)->translatedFormat('d M Y') }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Hasil Pengukuran Fisik (Dari Kader Meja 1-4) --}}
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex-1">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4"><i class="fas fa-chart-bar mr-2 text-sky-500"></i>Parameter Fisik Pengukuran</h3>
-                    
-                    <div class="grid grid-cols-2 gap-4 text-xs">
-                        <div class="border-b border-slate-100 pb-2">
-                            <p class="text-slate-400 font-medium">Berat Badan</p>
-                            <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->berat_badan ?? '-' }} kg</p>
-                        </div>
-                        <div class="border-b border-slate-100 pb-2">
-                            <p class="text-slate-400 font-medium">Tinggi / Panjang Badan</p>
-                            <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tinggi_badan ?? '-' }} cm</p>
-                        </div>
-
-                        @if($kategori === 'balita')
-                            <div>
-                                <p class="text-slate-400 font-medium">Lingkar Kepala</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lingkar_kepala ?? '-' }} cm</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">Lingkar Lengan (LILA)</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->lila ?? '-' }} cm</p>
-                            </div>
-                        @elseif($kategori === 'remaja')
-                            <div>
-                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">Kadar Hemoglobin (HB)</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->hb ?? '-' }} g/dL</p>
-                            </div>
-                        
-                        @elseif($kategori === 'lansia')
-                            <div class="border-b border-slate-100 pb-2">
-                                <p class="text-slate-400 font-medium">Tekanan Darah</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->tekanan_darah ?? '-' }} mmHg</p>
-                            </div>
-                            <div class="border-b border-slate-100 pb-2">
-                                <p class="text-slate-400 font-medium">Gula Darah</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->gula_darah ?? '-' }} mg/dL</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">Asam Urat</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->asam_urat ?? '-' }} mg/dL</p>
-                            </div>
-                            <div>
-                                <p class="text-slate-400 font-medium">Kolesterol</p>
-                                <p class="text-sm font-black text-slate-800 mt-0.5">{{ $pemeriksaan->kolesterol ?? '-' }} mg/dL</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            {{-- KOLOM KANAN: RESUME KEPUTUSAN MEDIS RESMI (READ ONLY) --}}
-            <div class="lg:col-span-7 h-full flex flex-col">
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8 h-full flex flex-col justify-between">
-                    
-                    <div class="flex flex-col gap-6">
-                        <div class="border-b border-slate-100 pb-4">
-                            <h3 class="text-base font-black text-slate-800"><i class="fas fa-file-invoice-dollar text-emerald-500 mr-2"></i>Resume Hasil Pemeriksaan Resmi</h3>
-                            <p class="text-xs text-slate-500 mt-1">Salinan dokumen medis resmi yang telah disahkan dan dikunci oleh Bidan Puskesmas.</p>
-                        </div>
-
-                        {{-- DISPLAY STATUS / KATEGORI GIZI --}}
-                        <div class="bg-slate-50 p-4.5 rounded-2xl border border-slate-100">
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Kesimpulan Status Kesehatan</p>
-                            <p class="text-sm font-black text-slate-800 mt-1 flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                {{ $pemeriksaan->status_gizi ?? 'Normal' }}
-                            </p>
-                        </div>
-
-                        {{-- DISPLAY DIAGNOSA KLIINIS --}}
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Catatan Diagnosa Klinis</p>
-                            <div class="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-4">
-                                <p class="text-xs font-bold text-slate-700 leading-relaxed italic">
-                                    "{{ $pemeriksaan->diagnosa ?? 'Pemeriksaan rutin berjalan normal tanpa indikasi klinis lanjutan.' }}"
-                                </p>
-                            </div>
-                        </div>
-
-                        {{-- DISPLAY PEMBERIAN OBAT / TINDAKAN --}}
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Tindakan Medis & Terapi Vitamin</p>
-                            <p class="text-xs font-black text-slate-800 bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl">
-                                <i class="fas fa-capsules text-teal-500 mr-2"></i> {{ $pemeriksaan->tindakan ?? '-' }}
-                            </p>
-                        </div>
-
-                        {{-- DISPLAY CATATAN EDUKASI --}}
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 font-sans">Saran Konseling / Edukasi Keluarga</p>
-                            <p class="text-xs font-medium text-slate-600 bg-slate-50 border border-slate-100 px-4 py-3 rounded-xl leading-relaxed">
-                                {{ $pemeriksaan->edukasi ?? 'Tidak ada catatan edukasi khusus.' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    {{-- STEMPEL VERIFIKATOR DIGITAL (TANDA TANGAN RESMI) --}}
-                    <div class="mt-8 pt-5 border-t border-slate-100 flex justify-end">
-                        <div class="bg-emerald-50/50 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-3 w-full sm:w-auto">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-lg shadow-sm">
-                                <i class="fas fa-signature"></i>
-                            </div>
-                            <div class="text-left text-xs">
-                                <p class="text-[9px] font-black text-emerald-700 uppercase tracking-wider leading-none">Disahkan Digital Oleh:</p>
-                                <p class="font-black text-slate-800 mt-1.5">{{ $pemeriksaan->verifikator->name ?? 'Bidan Puskesmas' }}</p>
-                                <p class="text-[10px] text-slate-400 mt-0.5">NIP/SIP. {{ $pemeriksaan->verifikator->nip ?? '198902142015032001' }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-@endsection
 
 @push('styles')
 <style>
-    .animate-fade-in { animation: fadeIn 0.4s ease forwards; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .nexus-font {
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .nexus-page-enter {
+        animation: nexusMainIn .12s cubic-bezier(.22, 1, .36, 1) both;
+        will-change: transform, opacity;
+    }
+
+    .nexus-panel-enter {
+        animation: nexusPanelIn .12s cubic-bezier(.22, 1, .36, 1) both;
+        will-change: transform, opacity;
+    }
+
+    .parameter-card {
+        min-height: 76px;
+    }
+
+    @keyframes nexusMainIn {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 3px, 0);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+    @keyframes nexusPanelIn {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 2px, 0);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .nexus-page-enter,
+        .nexus-panel-enter {
+            animation-duration: .08s;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .nexus-page-enter,
+        .nexus-panel-enter {
+            animation: none !important;
+        }
+    }
 </style>
 @endpush
+
+@section('content')
+<div class="nexus-font nexus-page-enter space-y-4 pb-8 text-slate-800">
+
+    {{-- HEADER --}}
+    <section class="nexus-panel-enter rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div class="min-w-0">
+                <a href="{{ route('bidan.pemeriksaan.index', ['tab' => $backTab]) }}"
+                   class="mb-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
+                    <i class="ph ph-arrow-left"></i>
+                    Kembali
+                </a>
+
+                <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] ring-1 {{ $statusTheme }}">
+                    <i class="ph {{ $statusIcon }} text-sm"></i>
+                    {{ $statusLabel }}
+                </div>
+
+                <h1 class="mt-3 text-[24px] font-black leading-tight tracking-[-0.025em] text-slate-900 md:text-[28px]">
+                    Detail Pemeriksaan Klinis
+                </h1>
+
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                    Halaman ini menampilkan detail pemeriksaan kesehatan sasaran Posyandu secara read-only.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <span class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-black ring-1 {{ $meta['badge'] }}">
+                    <i class="ph {{ $meta['icon'] }}"></i>
+                    {{ $meta['label'] }}
+                </span>
+
+                @unless($isVerified)
+                    <a href="{{ route('bidan.pemeriksaan.validasi', $pemeriksaan->id) }}"
+                       class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-black text-white transition hover:bg-emerald-700">
+                        <i class="ph ph-check-circle"></i>
+                        Validasi Pemeriksaan
+                    </a>
+                @endunless
+            </div>
+        </div>
+    </section>
+
+    {{-- SUMMARY --}}
+    <section class="nexus-panel-enter grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        @foreach($summaryCards as $card)
+            <div class="rounded-[20px] border border-white/80 bg-white/85 p-4 shadow-sm shadow-slate-200/60 backdrop-blur">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="truncate text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">
+                            {{ $card['label'] }}
+                        </p>
+
+                        <p class="mt-2 truncate text-sm font-black text-slate-900">
+                            {{ $card['value'] }}
+                        </p>
+                    </div>
+
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $card['class'] }}">
+                        <i class="ph {{ $card['icon'] }} text-base"></i>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </section>
+
+    {{-- IDENTITAS SASARAN --}}
+    <section class="nexus-panel-enter rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
+        <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+                <p class="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-600">
+                    Identitas Sasaran
+                </p>
+
+                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
+                    Data Pasien
+                </h2>
+            </div>
+
+            <div class="flex h-10 w-10 items-center justify-center rounded-2xl ring-1 {{ $meta['iconBox'] }}">
+                <i class="ph {{ $meta['icon'] }} text-base"></i>
+            </div>
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Nama
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $pasienNama }}
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    NIK
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $pasienNik }}
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Jenis Kelamin
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $jenisKelamin }}
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Tanggal Lahir
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $tanggalLahir }}
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 xl:col-span-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Alamat
+                </p>
+
+                <p class="mt-2 line-clamp-2 text-sm font-black text-slate-900">
+                    {{ $alamat }}
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {{-- PARAMETER --}}
+    <section class="nexus-panel-enter rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
+        <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+                <p class="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-600">
+                    Data Pemeriksaan
+                </p>
+
+                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
+                    Parameter Pemeriksaan
+                </h2>
+
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                    Parameter berikut berasal dari data pemeriksaan yang dicatat oleh Kader.
+                </p>
+            </div>
+
+            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                <i class="ph ph-clipboard-text text-base"></i>
+            </div>
+        </div>
+
+        @if($parameter->count() > 0)
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach($parameter as $item)
+                    @php
+                        $value = $formatParameterValue(data_get($item, 'value', '-'));
+                        $empty = $isEmptyParameter($value);
+                    @endphp
+
+                    <div class="parameter-card rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 ring-1 ring-slate-100">
+                                <i class="ph {{ data_get($item, 'icon', 'ph-dot') }} text-base"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                                    {{ data_get($item, 'label', '-') }}
+                                </p>
+
+                                <p class="mt-1.5 truncate text-sm font-black {{ $empty ? 'text-slate-400' : 'text-slate-900' }}">
+                                    {{ $value }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
+                    <i class="ph ph-folder-simple-dashed text-2xl"></i>
+                </div>
+
+                <h3 class="mt-4 text-base font-black text-slate-800">
+                    Parameter Belum Tersedia
+                </h3>
+
+                <p class="mt-2 text-sm text-slate-500">
+                    Data parameter pemeriksaan belum tersedia pada catatan ini.
+                </p>
+            </div>
+        @endif
+    </section>
+
+    {{-- HASIL VALIDASI --}}
+    <section class="nexus-panel-enter rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
+        <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+                <p class="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-600">
+                    Hasil Validasi
+                </p>
+
+                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
+                    Catatan Bidan
+                </h2>
+
+                <p class="mt-1 text-xs font-semibold text-slate-500">
+                    Bagian ini menampilkan hasil validasi Bidan setelah pemeriksaan disahkan.
+                </p>
+            </div>
+
+            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                <i class="ph ph-note-pencil text-base"></i>
+            </div>
+        </div>
+
+        @if($isVerified)
+            <div class="grid gap-3">
+                <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        {{ $statusRingkasLabel }}
+                    </p>
+
+                    <p class="mt-2 text-sm font-black text-slate-900">
+                        {{ $statusRingkas }}
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        Kesimpulan Pemeriksaan
+                    </p>
+
+                    <p class="mt-2 text-sm font-semibold leading-7 text-slate-700">
+                        {{ $kesimpulan }}
+                    </p>
+                </div>
+
+                <div class="grid gap-3 lg:grid-cols-2">
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                            Tindakan / Layanan
+                        </p>
+
+                        <p class="mt-2 text-sm font-semibold leading-7 text-slate-700">
+                            {{ $tindakan }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                            Edukasi Kesehatan
+                        </p>
+
+                        <p class="mt-2 text-sm font-semibold leading-7 text-slate-700">
+                            {{ $edukasi }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                            Bidan Validasi
+                        </p>
+
+                        <p class="mt-2 text-sm font-black text-slate-900">
+                            {{ $bidanValidasi }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                            Waktu Pembaruan
+                        </p>
+
+                        <p class="mt-2 text-sm font-black text-slate-900">
+                            {{ $waktuUpdate }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="rounded-2xl border border-amber-100 bg-amber-50/70 p-5">
+                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div class="flex gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700 ring-1 ring-amber-100">
+                            <i class="ph ph-clock-countdown text-lg"></i>
+                        </div>
+
+                        <div>
+                            <h3 class="text-base font-black text-slate-900">
+                                Pemeriksaan Menunggu Validasi
+                            </h3>
+
+                            <p class="mt-1 text-sm leading-6 text-slate-600">
+                                Data ini belum disahkan oleh Bidan. Lakukan validasi agar hasil pemeriksaan dapat masuk ke arsip Rekam Medis.
+                            </p>
+                        </div>
+                    </div>
+
+                    <a href="{{ route('bidan.pemeriksaan.validasi', $pemeriksaan->id) }}"
+                       class="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
+                        <i class="ph ph-check-circle"></i>
+                        Validasi Pemeriksaan
+                    </a>
+                </div>
+            </div>
+        @endif
+    </section>
+
+    {{-- INFORMASI SISTEM --}}
+    <section class="nexus-panel-enter rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
+        <div class="grid gap-3 md:grid-cols-3">
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Waktu Input
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $waktuInput }}
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Tanggal Periksa
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $tanggalPeriksa }}
+                </p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                    Status Data
+                </p>
+
+                <p class="mt-2 truncate text-sm font-black text-slate-900">
+                    {{ $statusLabel }}
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {{-- ACTION --}}
+    <section class="nexus-panel-enter rounded-[24px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur">
+        <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <a href="{{ route('bidan.pemeriksaan.index', ['tab' => $backTab]) }}"
+               class="inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+                Kembali ke Daftar Pemeriksaan
+            </a>
+
+            @unless($isVerified)
+                <a href="{{ route('bidan.pemeriksaan.validasi', $pemeriksaan->id) }}"
+                   class="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
+                    <i class="ph ph-check-circle"></i>
+                    Validasi Pemeriksaan
+                </a>
+            @endunless
+        </div>
+    </section>
+</div>
+@endsection

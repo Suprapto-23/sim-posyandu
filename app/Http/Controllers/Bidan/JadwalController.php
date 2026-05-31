@@ -10,6 +10,7 @@ use App\Models\Notifikasi;
 use App\Models\Remaja;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -17,45 +18,73 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\View\View;
 
 class JadwalController extends Controller
 {
     public function index(Request $request): View|RedirectResponse
     {
         try {
-            $status = $request->get('status', 'semua');
-            $target = $request->get('target', 'semua');
+            $this->syncExpiredSchedules();
+
             $search = trim((string) $request->get('search', ''));
+            $status = $this->normalizeStatus($request->get('status', 'semua'));
+            $kategori = $this->normalizeKategori($request->get('kategori', 'semua'));
+            $target = $this->normalizeTarget($request->get('target', 'semua'));
 
-            $query = JadwalPosyandu::query()
-                ->latest('tanggal')
-                ->latest('id');
-
-            if (in_array($status, ['aktif', 'selesai', 'dibatalkan'], true)) {
-                $query->where('status', $status);
-            }
-
-            if (in_array($target, ['balita', 'remaja', 'lansia'], true)) {
-                $query->where('target_peserta', $target);
-            }
+            $query = JadwalPosyandu::query();
 
             if ($search !== '') {
                 $query->where(function ($q) use ($search) {
                     $q->where('judul', 'like', "%{$search}%")
                         ->orWhere('lokasi', 'like', "%{$search}%")
-                        ->orWhere('kategori', 'like', "%{$search}%")
                         ->orWhere('deskripsi', 'like', "%{$search}%");
                 });
             }
 
-            $jadwals = $query->paginate(10)->withQueryString();
+            if ($status !== 'semua') {
+                $query->where('status', $status);
+            }
+
+            if ($kategori !== 'semua') {
+                $query->where('kategori', $kategori);
+            }
+
+            if ($target !== 'semua') {
+                $query->where('target_peserta', $target);
+            }
+
+            $jadwals = $query
+                ->orderByRaw("CASE WHEN tanggal >= CURDATE() THEN 0 ELSE 1 END")
+                ->orderBy('tanggal')
+                ->orderBy('waktu_mulai')
+                ->paginate(10)
+                ->withQueryString();
+
+            $stats = [
+                'total' => JadwalPosyandu::count(),
+                'aktif' => JadwalPosyandu::where('status', 'aktif')->count(),
+                'bulan_ini' => JadwalPosyandu::whereMonth('tanggal', now()->month)
+                    ->whereYear('tanggal', now()->year)
+                    ->count(),
+                'mendatang' => JadwalPosyandu::whereDate('tanggal', '>=', now()->toDateString())
+                    ->where('status', 'aktif')
+                    ->count(),
+            ];
+
+            $kategoriOptions = $this->kategoriOptions();
+            $targetOptions = $this->targetOptions();
+            $statusOptions = $this->statusOptions();
 
             return view('bidan.jadwal.index', compact(
                 'jadwals',
+                'search',
                 'status',
+                'kategori',
                 'target',
-                'search'
+                'stats',
+                'kategoriOptions',
+                'targetOptions',
+                'statusOptions'
             ));
         } catch (\Throwable $e) {
             Log::error('BIDAN_JADWAL_INDEX_ERROR', [
@@ -68,21 +97,56 @@ class JadwalController extends Controller
         }
     }
 
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
-        return view('bidan.jadwal.create');
+        try {
+            $mode = 'create';
+            $jadwal = null;
+
+            $kategoriOptions = $this->kategoriOptions();
+            $targetOptions = $this->targetOptions();
+            $statusOptions = $this->statusOptions();
+
+            return view('bidan.jadwal.create', compact(
+                'mode',
+                'jadwal',
+                'kategoriOptions',
+                'targetOptions',
+                'statusOptions'
+            ));
+        } catch (\Throwable $e) {
+            Log::error('BIDAN_JADWAL_CREATE_ERROR', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return redirect()
+                ->route('bidan.jadwal.index')
+                ->with('error', 'Gagal membuka form jadwal.');
+        }
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateJadwal($request);
 
+        if (($validated['kategori'] ?? null) === 'imunisasi') {
+            $validated['target_peserta'] = 'balita';
+        }
+
+        if (!$this->isFutureStartTime($validated['tanggal'], $validated['waktu_mulai'])) {
+            return back()
+                ->withInput()
+                ->with('error', 'Jadwal baru harus dibuat sebelum waktu pelaksanaan dimulai.');
+        }
+
         DB::beginTransaction();
 
         try {
             $payload = [
                 'judul' => $validated['judul'],
-                'deskripsi' => $validated['deskripsi'] ?? null,
+                'deskripsi' => $this->cleanValue($validated['deskripsi'] ?? null, null),
                 'tanggal' => $validated['tanggal'],
                 'waktu_mulai' => $validated['waktu_mulai'],
                 'waktu_selesai' => $validated['waktu_selesai'],
@@ -90,26 +154,28 @@ class JadwalController extends Controller
                 'kategori' => $validated['kategori'],
                 'target_peserta' => $validated['target_peserta'],
                 'status' => 'aktif',
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
             ];
 
-            if (Schema::hasColumn('jadwal_posyandus', 'created_by')) {
-                $payload['created_by'] = Auth::id();
-            }
+            $payload = $this->onlyExistingColumns($this->jadwalTable(), $payload);
 
-            $jadwal = JadwalPosyandu::create($payload);
+            $jadwal = new JadwalPosyandu();
+            $jadwal->forceFill($payload)->save();
 
-            $this->kirimNotifikasiJadwal($jadwal, 'created');
+            $this->broadcastJadwalBaru($jadwal);
 
             DB::commit();
 
             return redirect()
                 ->route('bidan.jadwal.index')
-                ->with('success', 'Jadwal berhasil diterbitkan dan notifikasi telah dikirim ke sasaran terkait.');
+                ->with('success', 'Jadwal Posyandu berhasil dibuat dan notifikasi telah dikirim.');
         } catch (\Throwable $e) {
             DB::rollBack();
 
             Log::error('BIDAN_JADWAL_STORE_ERROR', [
                 'message' => $e->getMessage(),
+                'payload' => $validated,
                 'user_id' => Auth::id(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
@@ -117,54 +183,117 @@ class JadwalController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Sistem gagal menerbitkan jadwal: ' . $e->getMessage());
+                ->with('error', 'Gagal menyimpan jadwal: ' . $e->getMessage());
         }
     }
 
     public function show(JadwalPosyandu $jadwal): View|RedirectResponse
     {
         try {
-            return view('bidan.jadwal.show', compact('jadwal'));
+            $this->syncSingleScheduleStatus($jadwal);
+            $jadwal->refresh();
+
+            $kategoriOptions = $this->kategoriOptions();
+            $targetOptions = $this->targetOptions();
+            $statusOptions = $this->statusOptions();
+            $canEdit = $this->canEditJadwal($jadwal);
+            $canDelete = $this->canDeleteJadwal($jadwal);
+
+            return view('bidan.jadwal.show', compact(
+                'jadwal',
+                'kategoriOptions',
+                'targetOptions',
+                'statusOptions',
+                'canEdit',
+                'canDelete'
+            ));
         } catch (\Throwable $e) {
             Log::error('BIDAN_JADWAL_SHOW_ERROR', [
                 'message' => $e->getMessage(),
                 'jadwal_id' => $jadwal->id ?? null,
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
 
             return redirect()
                 ->route('bidan.jadwal.index')
-                ->with('error', 'Detail jadwal tidak dapat ditampilkan.');
+                ->with('error', 'Detail jadwal tidak ditemukan.');
         }
     }
 
     public function edit(JadwalPosyandu $jadwal): View|RedirectResponse
     {
         try {
-            return view('bidan.jadwal.edit', compact('jadwal'));
+            $this->syncSingleScheduleStatus($jadwal);
+            $jadwal->refresh();
+
+            if (!$this->canEditJadwal($jadwal)) {
+                return redirect()
+                    ->route('bidan.jadwal.show', $jadwal->id)
+                    ->with('error', 'Jadwal yang sudah selesai, dibatalkan, atau sudah melewati waktu pelaksanaan tidak dapat diedit.');
+            }
+
+            $mode = 'edit';
+
+            $kategoriOptions = $this->kategoriOptions();
+            $targetOptions = $this->targetOptions();
+            $statusOptions = $this->statusOptions();
+            $canEdit = true;
+
+            return view('bidan.jadwal.edit', compact(
+                'jadwal',
+                'mode',
+                'kategoriOptions',
+                'targetOptions',
+                'statusOptions',
+                'canEdit'
+            ));
         } catch (\Throwable $e) {
             Log::error('BIDAN_JADWAL_EDIT_ERROR', [
                 'message' => $e->getMessage(),
                 'jadwal_id' => $jadwal->id ?? null,
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
 
             return redirect()
                 ->route('bidan.jadwal.index')
-                ->with('error', 'Form edit jadwal tidak dapat ditampilkan.');
+                ->with('error', 'Data jadwal tidak ditemukan.');
         }
     }
 
     public function update(Request $request, JadwalPosyandu $jadwal): RedirectResponse
     {
+        $this->syncSingleScheduleStatus($jadwal);
+        $jadwal->refresh();
+
+        if (!$this->canEditJadwal($jadwal)) {
+            return redirect()
+                ->route('bidan.jadwal.show', $jadwal->id)
+                ->with('error', 'Jadwal yang sudah selesai, dibatalkan, atau sudah melewati waktu pelaksanaan tidak dapat diperbarui.');
+        }
+
         $validated = $this->validateJadwal($request, true);
+
+        if (($validated['kategori'] ?? null) === 'imunisasi') {
+            $validated['target_peserta'] = 'balita';
+        }
+
+        if (($validated['status'] ?? 'aktif') === 'aktif' && !$this->isFutureStartTime($validated['tanggal'], $validated['waktu_mulai'])) {
+            return back()
+                ->withInput()
+                ->with('error', 'Jadwal aktif harus memiliki waktu mulai yang belum terlewati.');
+        }
 
         DB::beginTransaction();
 
         try {
-            $statusSebelum = $jadwal->status;
+            $oldStatus = $jadwal->status;
+            $oldTarget = $jadwal->target_peserta;
 
-            $jadwal->update([
+            $payload = [
                 'judul' => $validated['judul'],
-                'deskripsi' => $validated['deskripsi'] ?? null,
+                'deskripsi' => $this->cleanValue($validated['deskripsi'] ?? null, null),
                 'tanggal' => $validated['tanggal'],
                 'waktu_mulai' => $validated['waktu_mulai'],
                 'waktu_selesai' => $validated['waktu_selesai'],
@@ -172,23 +301,42 @@ class JadwalController extends Controller
                 'kategori' => $validated['kategori'],
                 'target_peserta' => $validated['target_peserta'],
                 'status' => $validated['status'],
+                'updated_by' => Auth::id(),
+            ];
+
+            $payload = $this->onlyExistingColumns($this->jadwalTable(), $payload);
+
+            $jadwal->forceFill($payload)->save();
+
+            $importantChanged = $jadwal->wasChanged([
+                'judul',
+                'tanggal',
+                'waktu_mulai',
+                'waktu_selesai',
+                'lokasi',
+                'kategori',
+                'target_peserta',
+                'status',
             ]);
 
-            if ($jadwal->status === 'dibatalkan' && $statusSebelum !== 'dibatalkan') {
-                $this->kirimNotifikasiJadwal($jadwal->fresh(), 'cancelled');
+            if ($jadwal->status === 'dibatalkan' && $oldStatus !== 'dibatalkan') {
+                $this->broadcastJadwalDibatalkan($jadwal, $oldTarget);
+            } elseif ($importantChanged && $jadwal->status === 'aktif') {
+                $this->broadcastJadwalDiubah($jadwal);
             }
 
             DB::commit();
 
             return redirect()
                 ->route('bidan.jadwal.index')
-                ->with('success', 'Perubahan agenda jadwal berhasil disimpan.');
+                ->with('success', 'Jadwal Posyandu berhasil diperbarui.');
         } catch (\Throwable $e) {
             DB::rollBack();
 
             Log::error('BIDAN_JADWAL_UPDATE_ERROR', [
                 'message' => $e->getMessage(),
                 'jadwal_id' => $jadwal->id ?? null,
+                'payload' => $validated,
                 'user_id' => Auth::id(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
@@ -203,129 +351,392 @@ class JadwalController extends Controller
     public function destroy(JadwalPosyandu $jadwal): RedirectResponse
     {
         try {
+            $this->syncSingleScheduleStatus($jadwal);
+            $jadwal->refresh();
+
+            if (!$this->canDeleteJadwal($jadwal)) {
+                return redirect()
+                    ->route('bidan.jadwal.show', $jadwal->id)
+                    ->with('error', 'Jadwal yang sudah selesai, dibatalkan, atau sudah melewati waktu pelaksanaan tidak dapat dihapus.');
+            }
+
             $jadwal->delete();
 
             return redirect()
                 ->route('bidan.jadwal.index')
-                ->with('success', 'Agenda jadwal berhasil dihapus dari sistem.');
+                ->with('success', 'Jadwal berhasil dihapus dari sistem.');
         } catch (\Throwable $e) {
             Log::error('BIDAN_JADWAL_DESTROY_ERROR', [
                 'message' => $e->getMessage(),
                 'jadwal_id' => $jadwal->id ?? null,
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
 
-            return back()->with('error', 'Gagal menghapus agenda jadwal.');
+            return back()->with('error', 'Jadwal gagal dihapus.');
         }
     }
 
     private function validateJadwal(Request $request, bool $isUpdate = false): array
     {
+        $kategoriKeys = implode(',', array_keys($this->kategoriOptions()));
+        $targetKeys = implode(',', array_keys($this->targetOptions()));
+        $statusKeys = implode(',', array_keys($this->statusOptions()));
+
         $rules = [
             'judul' => ['required', 'string', 'max:191'],
             'tanggal' => ['required', 'date'],
-            'waktu_mulai' => ['required'],
-            'waktu_selesai' => ['required', 'after:waktu_mulai'],
-            'lokasi' => ['required', 'string', 'max:255'],
-            'kategori' => ['required', 'in:imunisasi,pemeriksaan,posyandu,lainnya'],
-            'target_peserta' => ['required', 'in:semua,balita,remaja,lansia'],
-            'deskripsi' => ['nullable', 'string'],
+            'waktu_mulai' => ['required', 'date_format:H:i'],
+            'waktu_selesai' => ['required', 'date_format:H:i', 'after:waktu_mulai'],
+            'lokasi' => ['required', 'string', 'max:191'],
+            'kategori' => ['required', "in:{$kategoriKeys}"],
+            'target_peserta' => ['required', "in:{$targetKeys}"],
+            'deskripsi' => ['nullable', 'string', 'max:1000'],
         ];
 
         if ($isUpdate) {
-            $rules['status'] = ['required', 'in:aktif,selesai,dibatalkan'];
+            $rules['status'] = ['required', "in:{$statusKeys}"];
         }
 
         return $request->validate($rules, [
             'judul.required' => 'Judul kegiatan wajib diisi.',
             'tanggal.required' => 'Tanggal pelaksanaan wajib diisi.',
             'waktu_mulai.required' => 'Jam mulai wajib diisi.',
+            'waktu_mulai.date_format' => 'Format jam mulai tidak valid.',
             'waktu_selesai.required' => 'Jam selesai wajib diisi.',
-            'waktu_selesai.after' => 'Jam selesai harus lebih besar dari jam mulai.',
+            'waktu_selesai.date_format' => 'Format jam selesai tidak valid.',
+            'waktu_selesai.after' => 'Jam selesai harus setelah jam mulai.',
             'lokasi.required' => 'Lokasi kegiatan wajib diisi.',
             'kategori.required' => 'Kategori layanan wajib dipilih.',
             'kategori.in' => 'Kategori layanan tidak valid.',
-            'target_peserta.required' => 'Target sasaran wajib dipilih.',
-            'target_peserta.in' => 'Target sasaran hanya boleh semua, balita, remaja, atau lansia.',
+            'target_peserta.required' => 'Target peserta wajib dipilih.',
+            'target_peserta.in' => 'Target peserta tidak valid.',
             'status.required' => 'Status jadwal wajib dipilih.',
             'status.in' => 'Status jadwal tidak valid.',
         ]);
     }
 
-    private function kirimNotifikasiJadwal(JadwalPosyandu $jadwal, string $mode = 'created'): void
+    private function kategoriOptions(): array
     {
-        if (!Schema::hasTable('notifikasis')) {
-            return;
+        return [
+            'posyandu' => [
+                'label' => 'Posyandu Rutin',
+                'desc' => 'Agenda pelayanan Posyandu umum, absensi, dan pengukuran dasar.',
+                'icon' => 'ph-house-line',
+            ],
+            'imunisasi' => [
+                'label' => 'Imunisasi Balita',
+                'desc' => 'Agenda pelayanan imunisasi untuk sasaran Balita.',
+                'icon' => 'ph-syringe',
+            ],
+            'pemeriksaan' => [
+                'label' => 'Pemeriksaan Klinis',
+                'desc' => 'Agenda pemeriksaan lanjutan oleh Bidan.',
+                'icon' => 'ph-stethoscope',
+            ],
+            'lainnya' => [
+                'label' => 'Kegiatan Lainnya',
+                'desc' => 'Agenda tambahan Posyandu di luar layanan utama.',
+                'icon' => 'ph-calendar-plus',
+            ],
+        ];
+    }
+
+    private function targetOptions(): array
+    {
+        return [
+            'semua' => [
+                'label' => 'Semua Sasaran',
+                'desc' => 'Balita, Remaja, Lansia, dan warga yang terdaftar.',
+                'icon' => 'ph-users-three',
+            ],
+            'balita' => [
+                'label' => 'Balita',
+                'desc' => 'Sasaran Balita.',
+                'icon' => 'ph-baby',
+            ],
+            'remaja' => [
+                'label' => 'Remaja',
+                'desc' => 'Sasaran Remaja.',
+                'icon' => 'ph-user-focus',
+            ],
+            'lansia' => [
+                'label' => 'Lansia',
+                'desc' => 'Sasaran Lansia.',
+                'icon' => 'ph-heartbeat',
+            ],
+        ];
+    }
+
+    private function statusOptions(): array
+    {
+        return [
+            'aktif' => [
+                'label' => 'Aktif',
+                'desc' => 'Jadwal masih berlaku.',
+                'icon' => 'ph-check-circle',
+            ],
+            'selesai' => [
+                'label' => 'Selesai',
+                'desc' => 'Jadwal sudah dilaksanakan.',
+                'icon' => 'ph-flag-checkered',
+            ],
+            'dibatalkan' => [
+                'label' => 'Dibatalkan',
+                'desc' => 'Jadwal dibatalkan atau ditunda.',
+                'icon' => 'ph-x-circle',
+            ],
+        ];
+    }
+
+    private function normalizeKategori(?string $kategori): string
+    {
+        $kategori = strtolower(trim((string) $kategori));
+
+        if ($kategori === 'semua') {
+            return 'semua';
         }
 
-        $now = now();
-        $tanggalFormat = Carbon::parse($jadwal->tanggal)->translatedFormat('d F Y');
-        $kategoriTeks = $this->labelKategori($jadwal->kategori);
-        $targetTeks = $this->labelTarget($jadwal->target_peserta);
+        return array_key_exists($kategori, $this->kategoriOptions())
+            ? $kategori
+            : 'semua';
+    }
 
-        $notifData = [];
+    private function normalizeTarget(?string $target): string
+    {
+        $target = strtolower(trim((string) $target));
 
-        $wargaUsers = $this->ambilUserWargaSesuaiTarget((string) $jadwal->target_peserta);
-
-        if ($mode === 'cancelled') {
-            $judulWarga = 'Peringatan: Jadwal Posyandu Dibatalkan';
-            $pesanWarga = "Mohon maaf, agenda {$jadwal->judul} untuk {$targetTeks} pada {$tanggalFormat} di {$jadwal->lokasi} dibatalkan atau ditunda. Tunggu informasi selanjutnya dari Bidan atau Kader.";
-        } else {
-            $judulWarga = "Jadwal {$kategoriTeks} Baru";
-            $pesanWarga = "Halo, agenda {$jadwal->judul} untuk {$targetTeks} akan dilaksanakan pada {$tanggalFormat} pukul {$this->formatJam($jadwal->waktu_mulai)} sampai {$this->formatJam($jadwal->waktu_selesai)} di {$jadwal->lokasi}.";
-
-            if (!empty($jadwal->deskripsi)) {
-                $pesanWarga .= ' ' . trim((string) $jadwal->deskripsi);
-            }
+        if ($target === 'semua') {
+            return 'semua';
         }
 
-        foreach ($wargaUsers as $userId) {
-            $notifData[] = $this->payloadNotifikasi(
-                (int) $userId,
-                $judulWarga,
-                $pesanWarga,
-                'jadwal',
-                $now
-            );
+        return array_key_exists($target, $this->targetOptions())
+            ? $target
+            : 'semua';
+    }
+
+    private function normalizeStatus(?string $status): string
+    {
+        $status = strtolower(trim((string) $status));
+
+        if ($status === 'semua') {
+            return 'semua';
         }
 
-        $judulKader = $mode === 'cancelled'
-            ? 'Instruksi: Jadwal Dibatalkan'
-            : 'Instruksi: Persiapan ' . $jadwal->judul;
+        return array_key_exists($status, $this->statusOptions())
+            ? $status
+            : 'semua';
+    }
 
-        $pesanKader = $mode === 'cancelled'
-            ? "Agenda {$jadwal->judul} pada {$tanggalFormat} di {$jadwal->lokasi} telah dibatalkan atau ditunda. Mohon informasikan kepada warga sasaran bila diperlukan."
-            : "Bidan menetapkan agenda {$jadwal->judul} untuk {$targetTeks} pada {$tanggalFormat} di {$jadwal->lokasi}. Mohon Kader menyiapkan data sasaran, lokasi, dan kebutuhan pelayanan.";
-
-        $kaderUsers = $this->ambilUserKaderAktif();
-
-        foreach ($kaderUsers as $kaderId) {
-            $notifData[] = $this->payloadNotifikasi(
-                (int) $kaderId,
-                $judulKader,
-                $pesanKader,
-                'jadwal',
-                $now
-            );
+    private function canEditJadwal(JadwalPosyandu $jadwal): bool
+    {
+        if (($jadwal->status ?? 'aktif') !== 'aktif') {
+            return false;
         }
 
-        if (empty($notifData)) {
-            return;
+        $start = $this->jadwalStartDateTime($jadwal);
+
+        if (!$start) {
+            return false;
         }
 
-        foreach (array_chunk($notifData, 500) as $chunk) {
-            Notifikasi::insert($chunk);
+        return now()->lt($start);
+    }
+
+    private function canDeleteJadwal(JadwalPosyandu $jadwal): bool
+    {
+        return $this->canEditJadwal($jadwal);
+    }
+
+    private function isFutureStartTime(string $tanggal, string $waktuMulai): bool
+    {
+        try {
+            $start = Carbon::parse($tanggal . ' ' . $waktuMulai);
+
+            return now()->lt($start);
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 
-    private function ambilUserWargaSesuaiTarget(string $target): Collection
+    private function jadwalStartDateTime(JadwalPosyandu $jadwal): ?Carbon
     {
+        if (empty($jadwal->tanggal)) {
+            return null;
+        }
+
+        try {
+            $tanggal = Carbon::parse($jadwal->tanggal)->format('Y-m-d');
+            $waktu = $jadwal->waktu_mulai
+                ? Carbon::parse($jadwal->waktu_mulai)->format('H:i:s')
+                : '00:00:00';
+
+            return Carbon::parse($tanggal . ' ' . $waktu);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function jadwalEndDateTime(JadwalPosyandu $jadwal): ?Carbon
+    {
+        if (empty($jadwal->tanggal)) {
+            return null;
+        }
+
+        try {
+            $tanggal = Carbon::parse($jadwal->tanggal)->format('Y-m-d');
+            $waktu = $jadwal->waktu_selesai
+                ? Carbon::parse($jadwal->waktu_selesai)->format('H:i:s')
+                : (
+                    $jadwal->waktu_mulai
+                        ? Carbon::parse($jadwal->waktu_mulai)->format('H:i:s')
+                        : '23:59:59'
+                );
+
+            return Carbon::parse($tanggal . ' ' . $waktu);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function syncSingleScheduleStatus(JadwalPosyandu $jadwal): void
+    {
+        if (($jadwal->status ?? null) !== 'aktif') {
+            return;
+        }
+
+        $end = $this->jadwalEndDateTime($jadwal);
+
+        if (!$end) {
+            return;
+        }
+
+        if (now()->gt($end)) {
+            $payload = [
+                'status' => 'selesai',
+                'updated_by' => Auth::id(),
+            ];
+
+            $payload = $this->onlyExistingColumns($this->jadwalTable(), $payload);
+
+            $jadwal->forceFill($payload)->save();
+        }
+    }
+
+    private function syncExpiredSchedules(): void
+    {
+        try {
+            JadwalPosyandu::query()
+                ->where('status', 'aktif')
+                ->where(function ($query) {
+                    $query->whereDate('tanggal', '<', now()->toDateString())
+                        ->orWhere(function ($q) {
+                            $q->whereDate('tanggal', now()->toDateString())
+                                ->whereTime('waktu_selesai', '<', now()->format('H:i:s'));
+                        });
+                })
+                ->update(
+                    $this->onlyExistingColumns($this->jadwalTable(), [
+                        'status' => 'selesai',
+                        'updated_by' => Auth::id(),
+                        'updated_at' => now(),
+                    ])
+                );
+        } catch (\Throwable $e) {
+            Log::warning('BIDAN_JADWAL_SYNC_EXPIRED_WARNING', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function broadcastJadwalBaru(JadwalPosyandu $jadwal): void
+    {
+        $tanggal = $this->formatTanggal($jadwal->tanggal);
+        $waktu = $this->formatWaktu($jadwal->waktu_mulai, $jadwal->waktu_selesai);
+        $kategori = $this->kategoriOptions()[$jadwal->kategori]['label'] ?? ucfirst((string) $jadwal->kategori);
+        $target = $this->targetOptions()[$jadwal->target_peserta]['label'] ?? ucfirst((string) $jadwal->target_peserta);
+
+        $wargaIds = $this->wargaIdsByTarget($jadwal->target_peserta);
+        $kaderIds = $this->userIdsByRole('kader');
+
+        $rows = [];
+
+        foreach ($wargaIds as $userId) {
+            $rows[] = $this->notificationPayload(
+                userId: $userId,
+                judul: "Jadwal {$kategori}",
+                pesan: "Agenda {$jadwal->judul} untuk {$target} akan dilaksanakan pada {$tanggal}, pukul {$waktu}, di {$jadwal->lokasi}. {$this->cleanValue($jadwal->deskripsi, '')}",
+                tipe: 'jadwal'
+            );
+        }
+
+        foreach ($kaderIds as $userId) {
+            $rows[] = $this->notificationPayload(
+                userId: $userId,
+                judul: 'Instruksi Persiapan Jadwal',
+                pesan: "Bidan menetapkan agenda {$jadwal->judul} pada {$tanggal}, pukul {$waktu}, di {$jadwal->lokasi}. Mohon Kader menyiapkan layanan sesuai target {$target}.",
+                tipe: 'jadwal'
+            );
+        }
+
+        $this->insertNotifications($rows);
+    }
+
+    private function broadcastJadwalDiubah(JadwalPosyandu $jadwal): void
+    {
+        $tanggal = $this->formatTanggal($jadwal->tanggal);
+        $waktu = $this->formatWaktu($jadwal->waktu_mulai, $jadwal->waktu_selesai);
+        $target = $this->targetOptions()[$jadwal->target_peserta]['label'] ?? ucfirst((string) $jadwal->target_peserta);
+
+        $userIds = $this->wargaIdsByTarget($jadwal->target_peserta)
+            ->merge($this->userIdsByRole('kader'))
+            ->unique()
+            ->values();
+
+        $rows = [];
+
+        foreach ($userIds as $userId) {
+            $rows[] = $this->notificationPayload(
+                userId: $userId,
+                judul: 'Perubahan Jadwal Posyandu',
+                pesan: "Jadwal {$jadwal->judul} untuk {$target} diperbarui. Pelaksanaan terbaru: {$tanggal}, pukul {$waktu}, di {$jadwal->lokasi}.",
+                tipe: 'jadwal'
+            );
+        }
+
+        $this->insertNotifications($rows);
+    }
+
+    private function broadcastJadwalDibatalkan(JadwalPosyandu $jadwal, ?string $oldTarget = null): void
+    {
+        $tanggal = $this->formatTanggal($jadwal->tanggal);
+        $target = $oldTarget ?: $jadwal->target_peserta;
+
+        $userIds = $this->wargaIdsByTarget($target)
+            ->merge($this->userIdsByRole('kader'))
+            ->unique()
+            ->values();
+
+        $rows = [];
+
+        foreach ($userIds as $userId) {
+            $rows[] = $this->notificationPayload(
+                userId: $userId,
+                judul: 'Jadwal Posyandu Dibatalkan',
+                pesan: "Agenda {$jadwal->judul} pada {$tanggal} di {$jadwal->lokasi} dibatalkan atau ditunda. Silakan menunggu informasi lanjutan dari Bidan atau Kader.",
+                tipe: 'jadwal'
+            );
+        }
+
+        $this->insertNotifications($rows);
+    }
+
+    private function wargaIdsByTarget(?string $target): Collection
+    {
+        $target = $this->normalizeTarget($target);
+
         if ($target === 'semua') {
-            return User::query()
-                ->where('role', 'user')
-                ->whereIn('status', ['active', 'aktif'])
-                ->pluck('id')
-                ->unique()
-                ->values();
+            return $this->userIdsByRole('user');
         }
 
         $modelClass = match ($target) {
@@ -339,144 +750,193 @@ class JadwalController extends Controller
             return collect();
         }
 
-        $directUserIds = collect();
+        return $this->linkedUserIdsForModel($modelClass);
+    }
 
-        if (Schema::hasColumn((new $modelClass())->getTable(), 'user_id')) {
-            $directUserIds = $modelClass::query()
-                ->whereNotNull('user_id')
-                ->pluck('user_id');
+    private function linkedUserIdsForModel(string $modelClass): Collection
+    {
+        $model = new $modelClass();
+        $table = $model->getTable();
+
+        $userIds = collect();
+
+        if ($this->hasColumn($table, 'user_id')) {
+            $userIds = $userIds->merge(
+                $modelClass::query()
+                    ->whereNotNull('user_id')
+                    ->pluck('user_id')
+            );
         }
 
-        $userIdsByNik = collect();
+        $nikColumns = [
+            'nik',
+            'nik_ibu',
+            'nik_ayah',
+            'nik_orang_tua',
+            'nik_orangtua',
+            'nik_wali',
+        ];
 
-        if (Schema::hasColumn((new $modelClass())->getTable(), 'nik')) {
-            $nikSasaran = $modelClass::query()
-                ->whereNotNull('nik')
-                ->pluck('nik');
+        $nikValues = collect();
 
-            if ($nikSasaran->isNotEmpty() && Schema::hasColumn('users', 'nik')) {
-                $userIdsByNik = User::query()
-                    ->where('role', 'user')
-                    ->whereIn('status', ['active', 'aktif'])
-                    ->whereIn('nik', $nikSasaran)
-                    ->pluck('id');
+        foreach ($nikColumns as $column) {
+            if ($this->hasColumn($table, $column)) {
+                $nikValues = $nikValues->merge(
+                    $modelClass::query()
+                        ->whereNotNull($column)
+                        ->pluck($column)
+                );
             }
         }
 
-        $parentUserIds = collect();
+        $nikValues = $nikValues
+            ->filter()
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->unique()
+            ->values();
 
-        if ($target === 'balita') {
-            $balitaTable = (new Balita())->getTable();
+        if ($nikValues->isNotEmpty() && $this->hasColumn('users', 'nik')) {
+            $query = User::query()->whereIn('nik', $nikValues);
 
-            if (
-                Schema::hasColumn($balitaTable, 'nik_ibu') ||
-                Schema::hasColumn($balitaTable, 'nik_ayah')
-            ) {
-                $columns = [];
-
-                if (Schema::hasColumn($balitaTable, 'nik_ibu')) {
-                    $columns[] = 'nik_ibu';
-                }
-
-                if (Schema::hasColumn($balitaTable, 'nik_ayah')) {
-                    $columns[] = 'nik_ayah';
-                }
-
-                $nikOrtu = Balita::query()
-                    ->select($columns)
-                    ->get()
-                    ->flatMap(function ($item) use ($columns) {
-                        return collect($columns)->map(fn ($column) => $item->{$column} ?? null);
-                    })
-                    ->filter()
-                    ->unique()
-                    ->values();
-
-                if ($nikOrtu->isNotEmpty() && Schema::hasColumn('users', 'nik')) {
-                    $parentUserIds = User::query()
-                        ->where('role', 'user')
-                        ->whereIn('status', ['active', 'aktif'])
-                        ->whereIn('nik', $nikOrtu)
-                        ->pluck('id');
-                }
+            if ($this->hasColumn('users', 'role')) {
+                $query->where('role', 'user');
             }
+
+            if ($this->hasColumn('users', 'status')) {
+                $query->whereIn('status', ['active', 'aktif', 'Aktif', '1', 1]);
+            }
+
+            $userIds = $userIds->merge($query->pluck('id'));
         }
 
-        return collect()
-            ->merge($directUserIds)
-            ->merge($userIdsByNik)
-            ->merge($parentUserIds)
+        return $userIds
             ->filter()
             ->unique()
             ->values();
     }
 
-    private function ambilUserKaderAktif(): Collection
+    private function userIdsByRole(string $role): Collection
     {
-        return User::query()
-            ->where('role', 'kader')
-            ->whereIn('status', ['active', 'aktif'])
+        $query = User::query();
+
+        if ($this->hasColumn('users', 'role')) {
+            $query->where('role', $role);
+        }
+
+        if ($this->hasColumn('users', 'status')) {
+            $query->whereIn('status', ['active', 'aktif', 'Aktif', '1', 1]);
+        }
+
+        return $query
             ->pluck('id')
+            ->filter()
             ->unique()
             ->values();
     }
 
-    private function payloadNotifikasi(int $userId, string $judul, string $pesan, string $tipe, $now): array
+    private function notificationPayload(int|string $userId, string $judul, string $pesan, string $tipe = 'jadwal'): array
     {
-        static $hasCreatedBy = null;
+        $now = now();
 
-        if ($hasCreatedBy === null) {
-            $hasCreatedBy = Schema::hasColumn('notifikasis', 'created_by');
-        }
-
-        $payload = [
+        return [
             'user_id' => $userId,
             'judul' => $judul,
-            'pesan' => $pesan,
+            'pesan' => trim($pesan),
             'tipe' => $tipe,
             'is_read' => 0,
+            'read_at' => null,
+            'created_by' => Auth::id(),
             'created_at' => $now,
             'updated_at' => $now,
         ];
+    }
 
-        if ($hasCreatedBy) {
-            $payload['created_by'] = Auth::id();
+    private function insertNotifications(array $rows): void
+    {
+        if (empty($rows) || !Schema::hasTable((new Notifikasi())->getTable())) {
+            return;
         }
 
-        return $payload;
+        $table = (new Notifikasi())->getTable();
+
+        $rows = collect($rows)
+            ->map(fn ($row) => $this->onlyExistingColumns($table, $row))
+            ->filter(fn ($row) => !empty($row))
+            ->values()
+            ->all();
+
+        if (empty($rows)) {
+            return;
+        }
+
+        foreach (array_chunk($rows, 300) as $chunk) {
+            Notifikasi::insert($chunk);
+        }
     }
 
-    private function labelKategori(?string $kategori): string
+    private function formatTanggal($date): string
     {
-        return match ($kategori) {
-            'imunisasi' => 'Imunisasi',
-            'pemeriksaan' => 'Pemeriksaan Kesehatan',
-            'posyandu' => 'Posyandu',
-            'lainnya' => 'Kegiatan Posyandu',
-            default => 'Jadwal Posyandu',
-        };
-    }
-
-    private function labelTarget(?string $target): string
-    {
-        return match ($target) {
-            'balita' => 'Balita',
-            'remaja' => 'Remaja',
-            'lansia' => 'Lansia',
-            default => 'Semua Warga',
-        };
-    }
-
-    private function formatJam($value): string
-    {
-        if (!$value) {
+        if (!$date) {
             return '-';
         }
 
         try {
-            return Carbon::parse($value)->format('H:i') . ' WIB';
-        } catch (\Throwable) {
-            return (string) $value;
+            return Carbon::parse($date)->translatedFormat('d F Y');
+        } catch (\Throwable $e) {
+            return '-';
         }
+    }
+
+    private function formatWaktu($mulai, $selesai): string
+    {
+        try {
+            $mulai = $mulai ? Carbon::parse($mulai)->format('H:i') : '-';
+            $selesai = $selesai ? Carbon::parse($selesai)->format('H:i') : '-';
+
+            return "{$mulai} - {$selesai} WIB";
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    }
+
+    private function cleanValue($value, $fallback = '-')
+    {
+        if ($value === null) {
+            return $fallback;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return $fallback;
+        }
+
+        return $value;
+    }
+
+    private function jadwalTable(): string
+    {
+        return (new JadwalPosyandu())->getTable();
+    }
+
+    private function onlyExistingColumns(string $table, array $payload): array
+    {
+        return collect($payload)
+            ->filter(fn ($value, $column) => $this->hasColumn($table, $column))
+            ->all();
+    }
+
+    private function hasColumn(string $table, string $column): bool
+    {
+        static $cache = [];
+
+        $key = "{$table}.{$column}";
+
+        if (!array_key_exists($key, $cache)) {
+            $cache[$key] = Schema::hasColumn($table, $column);
+        }
+
+        return $cache[$key];
     }
 }
