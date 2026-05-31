@@ -4,16 +4,18 @@ namespace App\Http\Controllers\Bidan;
 
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     private array $tableCache = [];
     private array $columnCache = [];
 
-    public function index()
+    public function index(): View
     {
         $stats = [
             'balita' => $this->safeTableCount('balitas'),
@@ -48,7 +50,7 @@ class DashboardController extends Controller
 
         $stats['total_sasaran'] = $stats['balita'] + $stats['remaja'] + $stats['lansia'];
 
-        // Alias agar aman kalau Blade lama masih memakai nama key berbeda.
+        // Alias aman untuk Blade lama atau komponen yang belum ikut disesuaikan.
         $stats['menunggu_review'] = $stats['menunggu_validasi'];
         $stats['sudah_ditinjau'] = $stats['tervalidasi'];
         $stats['perlu_perbaikan'] = $stats['perlu_revisi'];
@@ -76,6 +78,21 @@ class DashboardController extends Controller
         ));
     }
 
+    public function trend(): JsonResponse
+    {
+        return response()->json([
+            'data' => collect($this->monthlyPemeriksaanStats(6))
+                ->map(function ($item) {
+                    return [
+                        'label' => data_get($item, 'label', data_get($item, 'short', '-')),
+                        'short' => data_get($item, 'short', data_get($item, 'label', '-')),
+                        'count' => (int) data_get($item, 'count', 0),
+                    ];
+                })
+                ->values(),
+        ]);
+    }
+
     private function latestPemeriksaans(int $limit = 5): array
     {
         try {
@@ -96,7 +113,8 @@ class DashboardController extends Controller
                 'status',
             ]);
 
-            $query = DB::table('pemeriksaans')->orderByDesc($dateColumn);
+            $query = DB::table('pemeriksaans')
+                ->orderByDesc($dateColumn);
 
             if ($this->hasColumn('pemeriksaans', 'id')) {
                 $query->orderByDesc('id');
@@ -148,7 +166,8 @@ class DashboardController extends Controller
                 'created_at',
             ]) ?? 'created_at';
 
-            $query = DB::table($table)->orderByDesc($dateColumn);
+            $query = DB::table($table)
+                ->orderByDesc($dateColumn);
 
             if ($this->hasColumn($table, 'id')) {
                 $query->orderByDesc('id');
@@ -163,8 +182,16 @@ class DashboardController extends Controller
 
                     return [
                         'id' => $item->id ?? null,
-                        'nama' => $balita['nama'] ?? 'Balita tidak ditemukan',
-                        'nik' => $balita['nik'] ?? '-',
+                        'nama' => $balita['nama'] ?? $this->firstFilled([
+                            $item->nama_balita ?? null,
+                            $item->nama ?? null,
+                            'Balita tidak ditemukan',
+                        ]),
+                        'nik' => $balita['nik'] ?? $this->firstFilled([
+                            $item->nik ?? null,
+                            $item->nik_anak ?? null,
+                            '-',
+                        ]),
                         'jenis' => $this->firstFilled([
                             $item->jenis_imunisasi ?? null,
                             $item->nama_imunisasi ?? null,
@@ -264,10 +291,7 @@ class DashboardController extends Controller
                             '-',
                         ]),
                         'target' => $this->targetLabel(
-                            $item->target_peserta
-                            ?? $item->sasaran
-                            ?? $item->kategori
-                            ?? null
+                            $item->target_peserta ?? $item->sasaran ?? $item->kategori ?? null
                         ),
                     ];
                 })
@@ -330,9 +354,7 @@ class DashboardController extends Controller
                         ]),
                         'time' => $date ? $date->diffForHumans() : '-',
                         'is_read' => (bool) (
-                            $item->is_read
-                            ?? $item->dibaca
-                            ?? false
+                            $item->is_read ?? $item->dibaca ?? false
                         ),
                     ];
                 })
@@ -645,26 +667,26 @@ class DashboardController extends Controller
     {
         if ($kategori === 'lansia') {
             return [
-                'Tensi' => $this->displayValue($item->tekanan_darah ?? null),
+                'Tensi' => $this->displayValue($item->tekanan_darah ?? $item->tensi ?? null),
                 'Gula' => $this->displayValue($item->gula_darah ?? null, 'mg/dL'),
                 'Kolesterol' => $this->displayValue($item->kolesterol ?? null, 'mg/dL'),
-                'Kemandirian' => $this->displayValue($item->tingkat_kemandirian ?? null),
+                'Asam Urat' => $this->displayValue($item->asam_urat ?? null, 'mg/dL'),
             ];
         }
 
         if ($kategori === 'remaja') {
             return [
-                'BB' => $this->displayValue($item->berat_badan ?? null, 'kg'),
-                'TB' => $this->displayValue($item->tinggi_badan ?? null, 'cm'),
+                'BB' => $this->displayValue($item->berat_badan ?? $item->bb ?? null, 'kg'),
+                'TB' => $this->displayValue($item->tinggi_badan ?? $item->tb ?? null, 'cm'),
                 'IMT' => $this->displayValue($item->imt ?? null),
-                'Tensi' => $this->displayValue($item->tekanan_darah ?? null),
+                'Tensi' => $this->displayValue($item->tekanan_darah ?? $item->tensi ?? null),
             ];
         }
 
         return [
-            'BB' => $this->displayValue($item->berat_badan ?? null, 'kg'),
-            'TB' => $this->displayValue($item->tinggi_badan ?? null, 'cm'),
-            'LK' => $this->displayValue($item->lingkar_kepala ?? null, 'cm'),
+            'BB' => $this->displayValue($item->berat_badan ?? $item->bb ?? null, 'kg'),
+            'TB' => $this->displayValue($item->tinggi_badan ?? $item->tb ?? null, 'cm'),
+            'LK' => $this->displayValue($item->lingkar_kepala ?? $item->lk ?? null, 'cm'),
             'Gizi' => $this->displayValue($item->status_gizi ?? null),
         ];
     }
@@ -675,6 +697,7 @@ class DashboardController extends Controller
             $item->kategori_pasien ?? null,
             $item->jenis_sasaran ?? null,
             $item->pasien_type ?? null,
+            $item->sasaran_type ?? null,
             '',
         ]));
 
@@ -723,6 +746,12 @@ class DashboardController extends Controller
             return $fromKunjungan;
         }
 
+        $direct = $this->directPatientFromRecord($pemeriksaan);
+
+        if ($direct) {
+            return $direct;
+        }
+
         if (!$id) {
             return null;
         }
@@ -738,7 +767,9 @@ class DashboardController extends Controller
             return null;
         }
 
-        $item = DB::table($table)->where('id', $id)->first();
+        $item = DB::table($table)
+            ->where('id', $id)
+            ->first();
 
         if (!$item) {
             return null;
@@ -756,6 +787,37 @@ class DashboardController extends Controller
             'nik' => $this->firstFilled([
                 $item->nik ?? null,
                 $item->nik_anak ?? null,
+                '-',
+            ]),
+        ];
+    }
+
+    private function directPatientFromRecord(?object $record): ?array
+    {
+        if (!$record) {
+            return null;
+        }
+
+        $nama = $this->firstFilled([
+            $record->nama_lengkap ?? null,
+            $record->nama_pasien ?? null,
+            $record->nama_sasaran ?? null,
+            $record->nama_balita ?? null,
+            $record->nama_remaja ?? null,
+            $record->nama_lansia ?? null,
+            $record->nama ?? null,
+            null,
+        ]);
+
+        if ($nama === '-') {
+            return null;
+        }
+
+        return [
+            'nama' => $nama,
+            'nik' => $this->firstFilled([
+                $record->nik ?? null,
+                $record->nik_anak ?? null,
                 '-',
             ]),
         ];
@@ -779,7 +841,8 @@ class DashboardController extends Controller
             return null;
         }
 
-        $pasienType = strtolower((string) ($kunjungan->pasien_type ?? ''));
+        $pasienType = strtolower((string) ($kunjungan->pasien_type ?? $kunjungan->sasaran_type ?? ''));
+
         $table = null;
 
         if (str_contains($pasienType, 'balita')) {
@@ -810,6 +873,9 @@ class DashboardController extends Controller
             'nama' => $this->firstFilled([
                 $pasien->nama_lengkap ?? null,
                 $pasien->nama ?? null,
+                $pasien->nama_balita ?? null,
+                $pasien->nama_remaja ?? null,
+                $pasien->nama_lansia ?? null,
                 '-',
             ]),
             'nik' => $this->firstFilled([
@@ -832,7 +898,7 @@ class DashboardController extends Controller
             ]);
         }
 
-        return null;
+        return $this->directPatientFromRecord($item);
     }
 
     private function safeTableCount(string $table): int
@@ -855,6 +921,7 @@ class DashboardController extends Controller
             '',
             'pending',
             'menunggu',
+            'menunggu_validasi',
             'belum_divalidasi',
         ];
     }
@@ -865,6 +932,8 @@ class DashboardController extends Controller
             'verified',
             'tervalidasi',
             'approved',
+            'valid',
+            'selesai',
         ];
     }
 
@@ -884,7 +953,7 @@ class DashboardController extends Controller
         $status = strtolower((string) $status);
 
         return match ($status) {
-            'verified', 'tervalidasi', 'approved' => 'Tervalidasi',
+            'verified', 'tervalidasi', 'approved', 'valid', 'selesai' => 'Tervalidasi',
             'rejected', 'ditolak', 'revisi', 'perlu_revisi', 'perlu_perbaikan' => 'Perlu Revisi',
             default => 'Menunggu Validasi',
         };
@@ -925,7 +994,11 @@ class DashboardController extends Controller
     private function firstFilled(array $values): string
     {
         foreach ($values as $value) {
-            $value = trim((string) ($value ?? ''));
+            if ($value === null) {
+                continue;
+            }
+
+            $value = trim((string) $value);
 
             if ($value !== '') {
                 return $value;
@@ -1022,6 +1095,10 @@ class DashboardController extends Controller
 
     private function hasColumn(string $table, string $column): bool
     {
+        if (!$this->hasTable($table)) {
+            return false;
+        }
+
         $key = $table . '.' . $column;
 
         if (array_key_exists($key, $this->columnCache)) {
@@ -1034,16 +1111,4 @@ class DashboardController extends Controller
             return $this->columnCache[$key] = false;
         }
     }
-    public function trend()
-{
-    return response()->json([
-        'data' => collect($this->monthlyPemeriksaanStats(6))->map(function ($item) {
-            return [
-                'label' => data_get($item, 'label', data_get($item, 'short', '-')),
-                'short' => data_get($item, 'short', data_get($item, 'label', '-')),
-                'count' => (int) data_get($item, 'count', 0),
-            ];
-        })->values(),
-    ]);
-}
 }
