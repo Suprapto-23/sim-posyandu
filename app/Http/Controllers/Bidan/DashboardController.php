@@ -4,61 +4,51 @@ namespace App\Http\Controllers\Bidan;
 
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
-    private array $columnCache = [];
     private array $tableCache = [];
+    private array $columnCache = [];
 
-    public function index(): View
+    public function index()
     {
-        Carbon::setLocale('id');
-
         $stats = [
             'balita' => $this->safeTableCount('balitas'),
             'remaja' => $this->safeTableCount('remajas'),
             'lansia' => $this->safeTableCount('lansias'),
 
-            'total_sasaran' => $this->safeTableCount('balitas')
-                + $this->safeTableCount('remajas')
-                + $this->safeTableCount('lansias'),
-
             'menunggu_validasi' => $this->countPemeriksaanStatus($this->pendingStatuses()),
             'tervalidasi' => $this->countPemeriksaanStatus($this->verifiedStatuses()),
             'perlu_revisi' => $this->countPemeriksaanStatus($this->revisionStatuses()),
 
-            'pemeriksaan_hari_ini' => $this->countByDate('pemeriksaans', [
-                'tanggal_periksa',
-                'tanggal_pemeriksaan',
-                'tanggal_kunjungan',
-                'created_at',
-            ], 'today'),
+            'pemeriksaan_hari_ini' => $this->countByDate(
+                'pemeriksaans',
+                ['tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'],
+                'today'
+            ),
 
-            'pemeriksaan_bulan_ini' => $this->countByDate('pemeriksaans', [
-                'tanggal_periksa',
-                'tanggal_pemeriksaan',
-                'tanggal_kunjungan',
-                'created_at',
-            ], 'month'),
+            'pemeriksaan_bulan_ini' => $this->countByDate(
+                'pemeriksaans',
+                ['tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'],
+                'month'
+            ),
 
-            'imunisasi_bulan_ini' => $this->countByDate($this->firstExistingTable([
-                'imunisasis',
-                'imunisasi',
-            ]), [
-                'tanggal_imunisasi',
-                'tanggal_pemberian',
-                'tanggal',
-                'created_at',
-            ], 'month'),
+            'imunisasi_bulan_ini' => $this->countByDate(
+                $this->firstExistingTable(['imunisasis', 'imunisasi']),
+                ['tanggal_imunisasi', 'tanggal_pemberian', 'tanggal', 'created_at'],
+                'month'
+            ),
 
             'jadwal_aktif' => $this->countJadwalAktif(),
             'notifikasi_belum_dibaca' => $this->countUnreadNotifications(),
         ];
 
+        $stats['total_sasaran'] = $stats['balita'] + $stats['remaja'] + $stats['lansia'];
+
+        // Alias agar aman kalau Blade lama masih memakai nama key berbeda.
         $stats['menunggu_review'] = $stats['menunggu_validasi'];
         $stats['sudah_ditinjau'] = $stats['tervalidasi'];
         $stats['perlu_perbaikan'] = $stats['perlu_revisi'];
@@ -66,9 +56,7 @@ class DashboardController extends Controller
         $recentPemeriksaans = $this->latestPemeriksaans(5);
         $recentImunisasi = $this->latestImunisasi(4);
         $jadwalTerdekat = $this->upcomingJadwal(4);
-        $notifications = $this->latestNotifications(5);
-
-        $weeklyStats = $this->weeklyPemeriksaanStats();
+        $notifications = $this->latestNotifications(4);
         $monthlyStats = $this->monthlyPemeriksaanStats(6);
 
         $statusSummary = $this->statusSummary($stats);
@@ -81,7 +69,6 @@ class DashboardController extends Controller
             'recentImunisasi',
             'jadwalTerdekat',
             'notifications',
-            'weeklyStats',
             'monthlyStats',
             'statusSummary',
             'sasaranSummary',
@@ -109,38 +96,37 @@ class DashboardController extends Controller
                 'status',
             ]);
 
-            $query = DB::table('pemeriksaans')
-                ->orderByDesc($dateColumn);
+            $query = DB::table('pemeriksaans')->orderByDesc($dateColumn);
 
             if ($this->hasColumn('pemeriksaans', 'id')) {
                 $query->orderByDesc('id');
             }
 
-            $items = $query
+            return $query
                 ->limit($limit)
-                ->get();
+                ->get()
+                ->map(function ($item) use ($dateColumn, $statusColumn) {
+                    $kategori = $this->kategoriFromPemeriksaan($item);
+                    $patientId = $this->patientIdFromPemeriksaan($item, $kategori);
+                    $patient = $this->findPatient($kategori, $patientId, $item);
 
-            return $items->map(function ($item) use ($dateColumn, $statusColumn) {
-                $kategori = $this->kategoriFromPemeriksaan($item);
-                $patientId = $this->patientIdFromPemeriksaan($item, $kategori);
-                $patient = $this->findPatient($kategori, $patientId, $item);
+                    $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
+                    $statusRaw = $statusColumn ? ($item->{$statusColumn} ?? null) : null;
 
-                $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
-                $statusRaw = $statusColumn ? ($item->{$statusColumn} ?? null) : null;
-
-                return [
-                    'id' => $item->id ?? null,
-                    'nama' => $patient['nama'] ?? '-',
-                    'nik' => $patient['nik'] ?? '-',
-                    'kategori' => $this->kategoriLabel($kategori),
-                    'kategori_raw' => $kategori,
-                    'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
-                    'waktu' => $date ? $date->format('H:i') . ' WIB' : '-',
-                    'parameter' => $this->parameterRingkas($item, $kategori),
-                    'status' => $this->statusLabel($statusRaw),
-                    'status_raw' => $statusRaw,
-                ];
-            })->toArray();
+                    return [
+                        'id' => $item->id ?? null,
+                        'nama' => $patient['nama'] ?? 'Warga tidak ditemukan',
+                        'nik' => $patient['nik'] ?? '-',
+                        'kategori' => $this->kategoriLabel($kategori),
+                        'kategori_raw' => $kategori,
+                        'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
+                        'waktu' => $date ? $date->format('H:i') . ' WIB' : '-',
+                        'parameter' => $this->parameterRingkas($item, $kategori),
+                        'status' => $this->statusLabel($statusRaw),
+                        'status_raw' => $statusRaw,
+                    ];
+                })
+                ->toArray();
         } catch (\Throwable) {
             return [];
         }
@@ -149,10 +135,7 @@ class DashboardController extends Controller
     private function latestImunisasi(int $limit = 4): array
     {
         try {
-            $table = $this->firstExistingTable([
-                'imunisasis',
-                'imunisasi',
-            ]);
+            $table = $this->firstExistingTable(['imunisasis', 'imunisasi']);
 
             if (!$table) {
                 return [];
@@ -165,39 +148,38 @@ class DashboardController extends Controller
                 'created_at',
             ]) ?? 'created_at';
 
-            $query = DB::table($table)
-                ->orderByDesc($dateColumn);
+            $query = DB::table($table)->orderByDesc($dateColumn);
 
             if ($this->hasColumn($table, 'id')) {
                 $query->orderByDesc('id');
             }
 
-            $items = $query
+            return $query
                 ->limit($limit)
-                ->get();
+                ->get()
+                ->map(function ($item) use ($dateColumn, $table) {
+                    $balita = $this->findBalitaFromImunisasi($item, $table);
+                    $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
 
-            return $items->map(function ($item) use ($dateColumn, $table) {
-                $balita = $this->findBalitaFromImunisasi($item, $table);
-                $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
-
-                return [
-                    'id' => $item->id ?? null,
-                    'nama' => $balita['nama'] ?? '-',
-                    'nik' => $balita['nik'] ?? '-',
-                    'jenis' => $this->firstFilled([
-                        $item->jenis_imunisasi ?? null,
-                        $item->nama_imunisasi ?? null,
-                        $item->jenis ?? null,
-                        'Imunisasi',
-                    ]),
-                    'vaksin' => $this->firstFilled([
-                        $item->vaksin ?? null,
-                        $item->nama_vaksin ?? null,
-                        '-',
-                    ]),
-                    'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
-                ];
-            })->toArray();
+                    return [
+                        'id' => $item->id ?? null,
+                        'nama' => $balita['nama'] ?? 'Balita tidak ditemukan',
+                        'nik' => $balita['nik'] ?? '-',
+                        'jenis' => $this->firstFilled([
+                            $item->jenis_imunisasi ?? null,
+                            $item->nama_imunisasi ?? null,
+                            $item->jenis ?? null,
+                            'Imunisasi',
+                        ]),
+                        'vaksin' => $this->firstFilled([
+                            $item->vaksin ?? null,
+                            $item->nama_vaksin ?? null,
+                            '-',
+                        ]),
+                        'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
+                    ];
+                })
+                ->toArray();
         } catch (\Throwable) {
             return [];
         }
@@ -281,15 +263,21 @@ class DashboardController extends Controller
                             $item->tempat ?? null,
                             '-',
                         ]),
-                        'target' => $this->targetLabel($item->target_peserta ?? $item->sasaran ?? $item->kategori ?? null),
+                        'target' => $this->targetLabel(
+                            $item->target_peserta
+                            ?? $item->sasaran
+                            ?? $item->kategori
+                            ?? null
+                        ),
                     ];
-                })->toArray();
+                })
+                ->toArray();
         } catch (\Throwable) {
             return [];
         }
     }
 
-    private function latestNotifications(int $limit = 5): array
+    private function latestNotifications(int $limit = 4): array
     {
         try {
             $table = $this->firstExistingTable([
@@ -322,26 +310,33 @@ class DashboardController extends Controller
                 });
             }
 
-            return $query->get()->map(function ($item) {
-                $date = $this->dateValue($item->created_at ?? null);
+            return $query
+                ->get()
+                ->map(function ($item) {
+                    $date = $this->dateValue($item->created_at ?? null);
 
-                return [
-                    'id' => $item->id ?? null,
-                    'title' => $this->firstFilled([
-                        $item->title ?? null,
-                        $item->judul ?? null,
-                        'Notifikasi',
-                    ]),
-                    'message' => $this->firstFilled([
-                        $item->message ?? null,
-                        $item->pesan ?? null,
-                        $item->deskripsi ?? null,
-                        '-',
-                    ]),
-                    'time' => $date ? $date->diffForHumans() : '-',
-                    'is_read' => (bool) ($item->is_read ?? $item->dibaca ?? false),
-                ];
-            })->toArray();
+                    return [
+                        'id' => $item->id ?? null,
+                        'title' => $this->firstFilled([
+                            $item->title ?? null,
+                            $item->judul ?? null,
+                            'Notifikasi',
+                        ]),
+                        'message' => $this->firstFilled([
+                            $item->message ?? null,
+                            $item->pesan ?? null,
+                            $item->deskripsi ?? null,
+                            '-',
+                        ]),
+                        'time' => $date ? $date->diffForHumans() : '-',
+                        'is_read' => (bool) (
+                            $item->is_read
+                            ?? $item->dibaca
+                            ?? false
+                        ),
+                    ];
+                })
+                ->toArray();
         } catch (\Throwable) {
             return [];
         }
@@ -351,16 +346,19 @@ class DashboardController extends Controller
     {
         $base = now('Asia/Jakarta')->startOfMonth();
 
-        $items = collect(range($months - 1, 0))->map(function ($monthOffset) use ($base) {
-            $date = $base->copy()->subMonthsNoOverflow($monthOffset)->startOfMonth();
+        $items = collect(range($months - 1, 0))
+            ->map(function ($monthOffset) use ($base) {
+                $date = $base->copy()
+                    ->subMonthsNoOverflow($monthOffset)
+                    ->startOfMonth();
 
-            return [
-                'date' => $date->toDateString(),
-                'label' => $date->translatedFormat('M Y'),
-                'short' => $date->translatedFormat('M'),
-                'count' => 0,
-            ];
-        });
+                return [
+                    'date' => $date->toDateString(),
+                    'label' => $date->translatedFormat('M Y'),
+                    'short' => $date->translatedFormat('M'),
+                    'count' => 0,
+                ];
+            });
 
         try {
             if (!$this->hasTable('pemeriksaans')) {
@@ -378,67 +376,22 @@ class DashboardController extends Controller
                 return $items->toArray();
             }
 
-            return $items->map(function ($item) use ($dateColumn) {
-                $date = Carbon::parse($item['date'], 'Asia/Jakarta');
+            return $items
+                ->map(function ($item) use ($dateColumn) {
+                    $date = Carbon::parse($item['date'], 'Asia/Jakarta');
 
-                $item['count'] = DB::table('pemeriksaans')
-                    ->whereBetween($dateColumn, [
-                        $date->copy()->startOfMonth(),
-                        $date->copy()->endOfMonth(),
-                    ])
-                    ->count();
+                    $item['count'] = DB::table('pemeriksaans')
+                        ->whereBetween($dateColumn, [
+                            $date->copy()->startOfMonth(),
+                            $date->copy()->endOfMonth(),
+                        ])
+                        ->count();
 
-                return $item;
-            })->toArray();
+                    return $item;
+                })
+                ->toArray();
         } catch (\Throwable) {
             return $items->toArray();
-        }
-    }
-
-    private function weeklyPemeriksaanStats(): array
-    {
-        $days = collect(range(6, 0))->map(function ($day) {
-            $date = now('Asia/Jakarta')->subDays($day);
-
-            return [
-                'date' => $date->toDateString(),
-                'label' => $date->translatedFormat('d M'),
-                'count' => 0,
-            ];
-        });
-
-        try {
-            if (!$this->hasTable('pemeriksaans')) {
-                return $days->toArray();
-            }
-
-            $dateColumn = $this->firstExistingColumn('pemeriksaans', [
-                'tanggal_periksa',
-                'tanggal_pemeriksaan',
-                'tanggal_kunjungan',
-                'created_at',
-            ]);
-
-            if (!$dateColumn) {
-                return $days->toArray();
-            }
-
-            $start = now('Asia/Jakarta')->subDays(6)->startOfDay();
-            $end = now('Asia/Jakarta')->endOfDay();
-
-            $rows = DB::table('pemeriksaans')
-                ->selectRaw("DATE({$dateColumn}) as tanggal, COUNT(*) as total")
-                ->whereBetween($dateColumn, [$start, $end])
-                ->groupBy('tanggal')
-                ->pluck('total', 'tanggal');
-
-            return $days->map(function ($item) use ($rows) {
-                $item['count'] = (int) ($rows[$item['date']] ?? 0);
-
-                return $item;
-            })->toArray();
-        } catch (\Throwable) {
-            return $days->toArray();
         }
     }
 
@@ -547,9 +500,11 @@ class DashboardController extends Controller
                     }
 
                     if ($hasNull) {
-                        empty($normalStatuses)
-                            ? $query->whereNull($statusColumn)
-                            : $query->orWhereNull($statusColumn);
+                        if (!empty($normalStatuses)) {
+                            $query->orWhereNull($statusColumn);
+                        } else {
+                            $query->whereNull($statusColumn);
+                        }
                     }
 
                     if ($hasEmpty) {
@@ -676,6 +631,10 @@ class DashboardController extends Controller
                 return $query->where('dibaca', false)->count();
             }
 
+            if ($this->hasColumn($table, 'read_at')) {
+                return $query->whereNull('read_at')->count();
+            }
+
             return 0;
         } catch (\Throwable) {
             return 0;
@@ -779,9 +738,7 @@ class DashboardController extends Controller
             return null;
         }
 
-        $item = DB::table($table)
-            ->where('id', $id)
-            ->first();
+        $item = DB::table($table)->where('id', $id)->first();
 
         if (!$item) {
             return null;
@@ -823,7 +780,6 @@ class DashboardController extends Controller
         }
 
         $pasienType = strtolower((string) ($kunjungan->pasien_type ?? ''));
-
         $table = null;
 
         if (str_contains($pasienType, 'balita')) {
