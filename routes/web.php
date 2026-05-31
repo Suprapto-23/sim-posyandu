@@ -98,7 +98,7 @@ Route::prefix('bidan')
         // ---------------------------------------------------------------
         // 1. DASHBOARD BIDAN
         // ---------------------------------------------------------------
-        Route::redirect('/', '/bidan/dashboard')->name('home');
+        Route::get('/', fn () => redirect()->route('bidan.dashboard'))->name('home');
 
         Route::get('/dashboard', [\App\Http\Controllers\Bidan\DashboardController::class, 'index'])
             ->name('dashboard');
@@ -224,6 +224,8 @@ Route::prefix('kader')
         */
         Route::get('/dashboard', [KaderDashboard::class, 'index'])
             ->name('dashboard');
+            Route::get('/dashboard/trend', [\App\Http\Controllers\Bidan\DashboardController::class, 'trend'])
+    ->name('dashboard.trend');
 
         /*
         |--------------------------------------------------------------------------

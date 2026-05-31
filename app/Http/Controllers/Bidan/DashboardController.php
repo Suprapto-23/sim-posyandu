@@ -1034,4 +1034,16 @@ class DashboardController extends Controller
             return $this->columnCache[$key] = false;
         }
     }
+    public function trend()
+{
+    return response()->json([
+        'data' => collect($this->monthlyPemeriksaanStats(6))->map(function ($item) {
+            return [
+                'label' => data_get($item, 'label', data_get($item, 'short', '-')),
+                'short' => data_get($item, 'short', data_get($item, 'label', '-')),
+                'count' => (int) data_get($item, 'count', 0),
+            ];
+        })->values(),
+    ]);
+}
 }
