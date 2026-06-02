@@ -8,655 +8,552 @@
 
     Carbon::setLocale('id');
 
-    $details = $details ?? ($absensi->details ?? collect());
-    $totalPasien = $totalPasien ?? $details->count();
-    $totalHadir = $totalHadir ?? $details->where('hadir', true)->count();
-    $totalAbsen = $totalAbsen ?? max(0, $totalPasien - $totalHadir);
-    $persentase = $totalPasien > 0 ? round(($totalHadir / $totalPasien) * 100) : 0;
+    $absensi = $absensi ?? null;
+    $details = $details ?? collect();
+    $semuaSesi = $semuaSesi ?? collect();
 
-    $kategoriLabel = match($absensi->kategori ?? '') {
-        'balita' => 'Balita / Anak',
-        'remaja' => 'Remaja',
-        'lansia' => 'Lansia',
-        default => 'Sasaran',
-    };
+    $totalPasien = (int) ($totalPasien ?? $details->count());
+    $totalHadir = (int) ($totalHadir ?? $details->where('hadir', true)->count());
+    $totalAbsen = (int) ($totalAbsen ?? max(0, $totalPasien - $totalHadir));
 
-    $kategoriIcon = match($absensi->kategori ?? '') {
-        'balita' => 'fa-child-reaching',
-        'remaja' => 'fa-user-graduate',
-        'lansia' => 'fa-person-cane',
-        default => 'fa-users',
-    };
-
-    $tanggal = !empty($absensi->tanggal_posyandu)
-        ? Carbon::parse($absensi->tanggal_posyandu)->translatedFormat('l, d F Y')
-        : '-';
-
-    $tanggalSingkat = !empty($absensi->tanggal_posyandu)
-        ? Carbon::parse($absensi->tanggal_posyandu)->translatedFormat('d M Y')
-        : '-';
-
-    $namaKader = $absensi->kader->name
-        ?? $absensi->kader->nama
-        ?? auth()->user()->name
-        ?? 'Kader Posyandu';
+    $persenHadir = $totalPasien > 0 ? round(($totalHadir / $totalPasien) * 100, 1) : 0;
+    $persenTidak = $totalPasien > 0 ? round(($totalAbsen / $totalPasien) * 100, 1) : 0;
 
     $routeHas = fn ($name) => Route::has($name);
+
+    $kategori = $absensi?->kategori ?? 'balita';
+
+    $kategoriLabel = match ($kategori) {
+        'remaja' => 'Remaja',
+        'lansia' => 'Lansia',
+        default => 'Balita',
+    };
+
+    $kategoriIcon = match ($kategori) {
+        'remaja' => 'fa-user-graduate',
+        'lansia' => 'fa-person-cane',
+        default => 'fa-child-reaching',
+    };
+
+    $kategoriTone = match ($kategori) {
+        'remaja' => 'violet',
+        'lansia' => 'sky',
+        default => 'emerald',
+    };
+
+    $formatTanggal = function ($date, $format = 'd F Y') {
+        if (!$date) return '-';
+
+        try {
+            return Carbon::parse($date)->translatedFormat($format);
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    };
+
+    $badgeClass = function ($tone) {
+        return match ($tone) {
+            'emerald' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            'sky' => 'border-sky-200 bg-sky-50 text-sky-700',
+            'violet' => 'border-violet-200 bg-violet-50 text-violet-700',
+            'orange' => 'border-orange-200 bg-orange-50 text-orange-700',
+            'rose' => 'border-rose-200 bg-rose-50 text-rose-700',
+            'amber' => 'border-amber-200 bg-amber-50 text-amber-700',
+            default => 'border-slate-200 bg-slate-50 text-slate-700',
+        };
+    };
+
+    $toneClass = function ($tone, $type = 'soft') {
+        return match ($tone) {
+            'violet' => match ($type) {
+                'solid' => 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-violet-400/20',
+                'ring' => 'border-violet-200 bg-violet-50 text-violet-800',
+                default => 'from-violet-50 via-fuchsia-50 to-white border-violet-200 text-violet-800',
+            },
+            'sky' => match ($type) {
+                'solid' => 'bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-sky-400/20',
+                'ring' => 'border-sky-200 bg-sky-50 text-sky-800',
+                default => 'from-sky-50 via-cyan-50 to-white border-sky-200 text-sky-800',
+            },
+            default => match ($type) {
+                'solid' => 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-emerald-400/20',
+                'ring' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
+                default => 'from-emerald-50 via-teal-50 to-white border-emerald-200 text-emerald-800',
+            },
+        };
+    };
+
+    $statusRekap = 'Belum Ada Kehadiran';
+    $statusTone = 'rose';
+
+    if ($totalPasien <= 0) {
+        $statusRekap = 'Belum Ada Peserta';
+        $statusTone = 'slate';
+    } elseif ($totalHadir === $totalPasien) {
+        $statusRekap = 'Semua Hadir';
+        $statusTone = 'emerald';
+    } elseif ($totalHadir > 0) {
+        $statusRekap = 'Sebagian Hadir';
+        $statusTone = 'amber';
+    }
+
+    $kodeAbsensi = $absensi?->kode_absensi ?? 'ABS-' . str_pad($absensi?->id ?? 0, 4, '0', STR_PAD_LEFT);
 @endphp
 
 @push('styles')
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
-
-    .show-page {
-        position: relative;
-        isolation: isolate;
-        font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
-        animation: showIn .2s ease-out both;
-    }
-
-    .show-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
+    .kader-shell {
         background:
-            radial-gradient(circle at 10% 8%, rgba(16,185,129,.14), transparent 28%),
-            radial-gradient(circle at 88% 12%, rgba(245,158,11,.11), transparent 26%),
-            linear-gradient(135deg, #f7fffc 0%, #f8fafc 54%, #fffaf1 100%);
+            radial-gradient(circle at 8% 5%, rgba(16, 185, 129, .14), transparent 28%),
+            radial-gradient(circle at 95% 8%, rgba(14, 165, 233, .13), transparent 26%),
+            radial-gradient(circle at 50% 96%, rgba(251, 191, 36, .10), transparent 30%),
+            linear-gradient(135deg, #f3fff9 0%, #eef9ff 48%, #f8fafc 100%);
     }
 
-    @keyframes showIn {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
+    .kader-grid {
+        background-image:
+            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+        background-size: 30px 30px;
     }
 
-    .show-hero {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid rgba(167,243,208,.72);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 30%),
-            radial-gradient(circle at 88% 18%, rgba(245,158,11,.13), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,.96), rgba(236,253,245,.78));
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+    .glass-card {
+        background: rgba(255, 255, 255, .84);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     }
 
-    .show-hero::after {
-        content: "";
-        position: absolute;
-        right: -80px;
-        bottom: -110px;
-        width: 260px;
-        height: 260px;
+    .soft-card {
+        box-shadow: 0 16px 40px rgba(15, 23, 42, .065);
+    }
+
+    .detail-list {
+    height: 610px;
+    max-height: 610px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-right: 8px;
+}
+
+.detail-main-card,
+.detail-side-panel {
+    height: 100%;
+}
+
+.detail-main-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-side-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-side-panel .side-fill {
+    flex: 1;
+}
+
+    .detail-list::-webkit-scrollbar {
+        width: 7px;
+    }
+
+    .detail-list::-webkit-scrollbar-track {
+        background: rgba(226, 232, 240, .50);
         border-radius: 999px;
-        background: rgba(16,185,129,.12);
-        pointer-events: none;
     }
 
-    .show-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: .55rem;
+    .detail-list::-webkit-scrollbar-thumb {
+        background: rgba(16, 185, 129, .42);
         border-radius: 999px;
-        border: 1px solid rgba(16,185,129,.18);
-        background: rgba(236,253,245,.88);
-        color: #047857;
-        padding: .68rem 1rem;
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: .16em;
-        text-transform: uppercase;
     }
 
-    .show-surface {
-        border: 1px solid rgba(226,232,240,.88);
-        background: rgba(255,255,255,.94);
-        box-shadow: 0 14px 34px rgba(15,23,42,.05);
+    .detail-row {
+        transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease;
     }
 
-    .show-stat {
-        border-radius: 26px;
-        border: 1px solid rgba(226,232,240,.86);
-        box-shadow: 0 12px 28px rgba(15,23,42,.04);
-    }
-
-    .stat-emerald {
-        background: linear-gradient(145deg, #ffffff, #ecfdf5);
-        border-color: rgba(16,185,129,.18);
-    }
-
-    .stat-gold {
-        background: linear-gradient(145deg, #ffffff, #fff8eb);
-        border-color: rgba(245,158,11,.16);
-    }
-
-    .stat-rose {
-        background: linear-gradient(145deg, #ffffff, #fff1f2);
-        border-color: rgba(244,63,94,.14);
-    }
-
-    .stat-sky {
-        background: linear-gradient(145deg, #ffffff, #f0f9ff);
-        border-color: rgba(14,165,233,.14);
-    }
-
-    .show-action {
-        border-radius: 18px;
-        font-weight: 900;
-        transition: background .15s ease, transform .15s ease, border-color .15s ease;
-    }
-
-    .show-action:hover {
+    .detail-row:hover {
         transform: translateY(-1px);
+        box-shadow: 0 12px 26px rgba(15, 23, 42, .065);
     }
 
-    .show-primary {
-        background: linear-gradient(135deg, #059669, #10b981);
-        color: white;
-        box-shadow: 0 12px 24px rgba(5,150,105,.16);
+    @media (max-width: 1279px) {
+    .detail-list {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
     }
 
-    .show-dark {
-        background: linear-gradient(135deg, #0f172a, #1e293b);
-        color: white;
-        box-shadow: 0 12px 24px rgba(15,23,42,.13);
+    .detail-main-card,
+    .detail-side-panel {
+        height: auto;
     }
 
-    .show-outline {
-        border: 1px solid rgba(16,185,129,.18);
-        background: white;
-        color: #047857;
+    .detail-side-panel {
+        display: block;
     }
-
-    .show-outline:hover {
-        background: #ecfdf5;
-    }
-
-    .show-row {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid rgba(226,232,240,.86);
-        background: #fff;
-        box-shadow: 0 6px 18px rgba(15,23,42,.035);
-    }
-
-    .show-row::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 14px;
-        bottom: 14px;
-        width: 4px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, #10b981, #f59e0b);
-        opacity: .75;
-    }
-
-    .show-row.present {
-        background: #f0fdf4;
-        border-color: rgba(16,185,129,.24);
-    }
-
-    .show-row.present::before {
-        background: #059669;
-        opacity: 1;
-    }
-
-    .show-row.absent {
-        background: #fff7f8;
-        border-color: rgba(244,63,94,.18);
-    }
-
-    .show-row.absent::before {
-        background: #e11d48;
-        opacity: .9;
-    }
-
-    .detail-scroll {
-        max-height: 640px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding-right: .35rem;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-    }
-
-    .detail-scroll::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .detail-scroll::-webkit-scrollbar-track {
-        background: rgba(226,232,240,.55);
-        border-radius: 999px;
-    }
-
-    .detail-scroll::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #10b981, #f59e0b);
-        border-radius: 999px;
-    }
-
-    .filter-input {
-        border: 1px solid rgba(226,232,240,.9);
-        background: white;
-        outline: none;
-        transition: border-color .15s ease, box-shadow .15s ease;
-    }
-
-    .filter-input:focus {
-        border-color: rgba(16,185,129,.28);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-    }
-
-    .progress-track {
-        height: 10px;
-        border-radius: 999px;
-        background: #f1f5f9;
-        overflow: hidden;
-    }
-
-    .progress-fill {
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #059669, #10b981, #f59e0b);
-    }
-
-    @media print {
-        body * {
-            visibility: hidden !important;
-        }
-
-        #printArea,
-        #printArea * {
-            visibility: visible !important;
-        }
-
-        #printArea {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            background: white !important;
-        }
-
-        .no-print {
-            display: none !important;
-        }
-    }
-
-    @media (max-width: 640px) {
-        .show-action:hover {
-            transform: none;
-        }
-
-        .detail-scroll {
-            max-height: none;
-            overflow: visible;
-            padding-right: 0;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .show-page,
-        .show-action {
-            animation: none !important;
-            transition: none !important;
-        }
-    }
+}
 </style>
 @endpush
 
 @section('content')
-<div class="show-page space-y-6">
+<div class="kader-shell relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+    <div class="pointer-events-none absolute inset-0 kader-grid opacity-70"></div>
 
-    {{-- HERO --}}
-    <section class="show-hero rounded-[32px] p-5 sm:p-6 lg:p-7 no-print">
-        <div class="relative z-10 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="show-badge mb-4">
-                    <i class="fa-solid fa-file-circle-check"></i>
-                    Detail Presensi
-                </div>
+    <div class="relative z-10 mx-auto max-w-[1400px] space-y-5">
 
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Detail Absensi Posyandu
-                </h1>
+        {{-- HERO --}}
+        <section class="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-br from-emerald-50/95 via-cyan-50/90 to-white/95 soft-card">
+            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl"></div>
+            <div class="absolute -bottom-24 left-24 h-72 w-72 rounded-full bg-sky-300/16 blur-3xl"></div>
 
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Rincian lengkap presensi {{ $kategoriLabel }} pada {{ $tanggal }}. Halaman ini bisa dipakai untuk verifikasi data sebelum laporan bulanan dibuat.
-                </p>
-            </div>
+            <div class="relative grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.7fr)] xl:items-stretch">
+                <div class="flex min-w-0 flex-col justify-between gap-5">
+                    <div>
+                        <div class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/75 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                            Attendance Detail
+                        </div>
 
-            <div class="grid grid-cols-2 gap-3 sm:flex">
-                @if($routeHas('kader.absensi.riwayat'))
-                    <a href="{{ route('kader.absensi.riwayat') }}" class="show-action show-outline inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Riwayat
-                    </a>
-                @endif
+                        <h1 class="mt-4 max-w-3xl text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-[1.85rem] lg:text-[2.05rem]">
+                            Detail absensi {{ $kategoriLabel }}.
+                        </h1>
 
-                @if($routeHas('kader.absensi.index'))
-                    <a href="{{ route('kader.absensi.index', ['kategori' => $absensi->kategori]) }}" class="show-action show-primary inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                        Update
-                    </a>
-                @endif
-
-                <button type="button" onclick="window.print()" class="show-action show-dark inline-flex items-center justify-center gap-2 px-5 py-3 text-sm col-span-2 sm:col-span-1">
-                    <i class="fa-solid fa-print"></i>
-                    Cetak
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <div id="printArea" class="space-y-6">
-
-        {{-- HEADER PRINT --}}
-        <section class="show-surface rounded-[30px] p-5 sm:p-6">
-            <div class="grid gap-5 xl:grid-cols-[1.2fr_.8fr] xl:items-center">
-                <div class="flex items-start gap-4">
-                    <div class="grid h-16 w-16 shrink-0 place-items-center rounded-3xl bg-emerald-50 text-emerald-700">
-                        <i class="fa-solid {{ $kategoriIcon }} text-xl"></i>
+                        <p class="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+                            Menampilkan rincian hadir dan tidak hadir untuk satu sesi posyandu. Ini bagian yang bikin rekap bisa dipertanggungjawabkan, bukan sekadar angka cakep di dashboard.
+                        </p>
                     </div>
 
+                    <div class="flex flex-wrap gap-3">
+                        @if($routeHas('kader.absensi.riwayat'))
+                            <a href="{{ route('kader.absensi.riwayat', [
+                                'kategori' => $kategori,
+                                'bulan' => $absensi?->bulan ?? now('Asia/Jakarta')->month,
+                                'tahun' => $absensi?->tahun ?? now('Asia/Jakarta')->year,
+                            ]) }}"
+                               class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                Riwayat Absensi
+                            </a>
+                        @endif
+
+                        @if($routeHas('kader.absensi.index'))
+                            <a href="{{ route('kader.absensi.index', [
+                                'kategori' => $kategori,
+                                'tanggal' => optional($absensi?->tanggal_posyandu)->format('Y-m-d'),
+                            ]) }}"
+                               class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-2.5 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                Update Presensi
+                            </a>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div class="rounded-[1.45rem] border border-white/80 bg-white/75 p-4 shadow-md shadow-emerald-100/60">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Kode Sesi</p>
+                            <span class="shrink-0 rounded-full border px-3 py-1 text-xs font-black {{ $badgeClass($kategoriTone) }}">
+                                {{ $kategoriLabel }}
+                            </span>
+                        </div>
+
+                        <div class="mt-4 flex items-center gap-3">
+                            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl {{ $toneClass($kategoriTone, 'solid') }}">
+                                <i class="fa-solid {{ $kategoriIcon }} text-lg"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <p class="line-clamp-1 text-sm font-black text-slate-950">{{ $kodeAbsensi }}</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">
+                                    Pertemuan ke-{{ $absensi?->nomor_pertemuan ?? '-' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-[1.45rem] border border-white/80 bg-white/75 p-4 shadow-md shadow-sky-100/60">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-400/20">
+                                <i class="fa-solid fa-calendar-day"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-black text-slate-950">
+                                    {{ $formatTanggal($absensi?->tanggal_posyandu ?? null, 'd F Y') }}
+                                </p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">
+                                    Dicatat oleh {{ $absensi?->kader?->name ?? 'Kader' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {{-- SUMMARY --}}
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-[1.55rem] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-white p-4 soft-card">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.16em] text-slate-600">Total Peserta</p>
+                        <p class="mt-2 text-2xl font-black tracking-tight text-slate-950">{{ number_format($totalPasien) }}</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">Catatan sasaran</p>
+                    </div>
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-lg shadow-slate-400/20">
+                        <i class="fa-solid fa-users-line"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-[1.55rem] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-green-50 to-white p-4 soft-card">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.16em] text-emerald-700">Hadir</p>
+                        <p class="mt-2 text-2xl font-black tracking-tight text-slate-950">{{ number_format($totalHadir) }}</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">{{ $persenHadir }}% kehadiran</p>
+                    </div>
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-lg shadow-emerald-400/20">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-[1.55rem] border border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-white p-4 soft-card">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.16em] text-orange-700">Tidak Hadir</p>
+                        <p class="mt-2 text-2xl font-black tracking-tight text-slate-950">{{ number_format($totalAbsen) }}</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">{{ $persenTidak }}% tidak hadir</p>
+                    </div>
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-lg shadow-orange-400/20">
+                        <i class="fa-solid fa-user-xmark"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-[1.55rem] border border-violet-200 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-white p-4 soft-card">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.16em] text-violet-700">Status Rekap</p>
+                        <p class="mt-2 text-xl font-black tracking-tight text-slate-950">{{ $statusRekap }}</p>
+                        <p class="mt-1 text-sm font-semibold text-slate-500">Kualitas sesi</p>
+                    </div>
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-400/20">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {{-- MAIN --}}
+        <section class="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1.48fr)_minmax(330px,.58fr)]">
+            <div class="detail-main-card glass-card min-w-0 rounded-[1.75rem] border border-white/80 p-5 soft-card">
+                <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0">
-                        <p class="text-xs font-black uppercase tracking-[.14em] text-emerald-700">Kode Absensi</p>
-                        <h2 class="mt-1 break-all text-xl font-black text-slate-900 sm:text-2xl">
-                            {{ $absensi->kode_absensi ?? '-' }}
+                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Daftar Detail</p>
+                        <h2 class="mt-1 text-lg font-black tracking-tight text-slate-950 sm:text-xl">
+                            Rincian kehadiran {{ $kategoriLabel }}
                         </h2>
-
-                        <p class="mt-2 text-sm font-bold leading-6 text-slate-500">
-                            {{ $kategoriLabel }} • {{ $tanggal }} • Pertemuan ke-{{ $absensi->nomor_pertemuan ?? '-' }}
+                        <p class="mt-1 text-sm font-medium text-slate-500">
+                            Menampilkan {{ number_format($totalPasien) }} data sasaran dalam sesi ini.
                         </p>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-2xl bg-slate-50 p-4">
-                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Petugas</p>
-                        <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $namaKader }}</p>
-                    </div>
-
-                    <div class="rounded-2xl bg-slate-50 p-4">
-                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Periode</p>
-                        <p class="mt-2 text-sm font-black text-slate-900">
-                            {{ $absensi->bulan ?? '-' }}/{{ $absensi->tahun ?? '-' }}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {{-- STAT --}}
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="show-stat stat-sky p-5">
-                <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Kategori</p>
-                <div class="mt-3 flex items-center gap-3">
-                    <div class="grid h-12 w-12 place-items-center rounded-2xl bg-sky-50 text-sky-600">
-                        <i class="fa-solid {{ $kategoriIcon }}"></i>
-                    </div>
-
-                    <div>
-                        <h2 class="text-lg font-black text-slate-900">{{ $kategoriLabel }}</h2>
-                        <p class="text-xs font-bold text-slate-400">Sasaran Posyandu</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="show-stat stat-emerald p-5">
-                <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Hadir</p>
-                <h2 class="mt-3 text-3xl font-black text-emerald-700">{{ number_format($totalHadir) }}</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">{{ $persentase }}% dari peserta</p>
-            </div>
-
-            <div class="show-stat stat-rose p-5">
-                <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Tidak Hadir</p>
-                <h2 class="mt-3 text-3xl font-black text-rose-600">{{ number_format($totalAbsen) }}</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">Tidak hadir / belum hadir</p>
-            </div>
-
-            <div class="show-stat stat-gold p-5">
-                <p class="text-xs font-black uppercase tracking-[.12em] text-slate-400">Total Peserta</p>
-                <h2 class="mt-3 text-3xl font-black text-slate-900">{{ number_format($totalPasien) }}</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">Tercatat pada sesi ini</p>
-            </div>
-        </section>
-
-        {{-- CONTENT --}}
-        <section class="grid grid-cols-1 gap-5 xl:grid-cols-12">
-
-            {{-- RINGKASAN --}}
-            <div class="show-surface rounded-[30px] p-5 xl:col-span-4">
-                <div class="mb-5">
-                    <h3 class="text-lg font-black text-slate-900">Ringkasan Kehadiran</h3>
-                    <p class="text-xs font-bold text-slate-400">Persentase kehadiran pada sesi ini.</p>
-                </div>
-
-                <div class="rounded-[26px] bg-slate-50 p-5">
-                    <div class="mb-3 flex items-center justify-between">
-                        <span class="text-xs font-black text-slate-500">Kehadiran</span>
-                        <span class="text-sm font-black text-emerald-700">{{ $persentase }}%</span>
-                    </div>
-
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: {{ $persentase }}%"></div>
-                    </div>
-
-                    <div class="mt-5 grid grid-cols-2 gap-3">
-                        <div class="rounded-2xl bg-white p-4 text-center">
-                            <p class="text-2xl font-black text-emerald-700">{{ number_format($totalHadir) }}</p>
-                            <p class="mt-1 text-[10px] font-black uppercase text-slate-400">Hadir</p>
+                    <div class="w-full max-w-md">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text"
+                                   id="detailSearch"
+                                   placeholder="Cari nama, NIK, status..."
+                                   class="w-full rounded-2xl border border-slate-200 bg-white/85 py-3 pl-11 pr-4 text-sm font-bold text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10">
                         </div>
-
-                        <div class="rounded-2xl bg-white p-4 text-center">
-                            <p class="text-2xl font-black text-rose-600">{{ number_format($totalAbsen) }}</p>
-                            <p class="mt-1 text-[10px] font-black uppercase text-slate-400">Tidak Hadir</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 space-y-3">
-                    <div class="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
-                        <span class="text-xs font-black text-slate-500">Tanggal</span>
-                        <span class="text-sm font-black text-slate-900">{{ $tanggalSingkat }}</span>
-                    </div>
-
-                    <div class="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
-                        <span class="text-xs font-black text-slate-500">Pertemuan</span>
-                        <span class="text-sm font-black text-slate-900">Ke-{{ $absensi->nomor_pertemuan ?? '-' }}</span>
-                    </div>
-
-                    <div class="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
-                        <span class="text-xs font-black text-slate-500">Total Detail</span>
-                        <span class="text-sm font-black text-slate-900">{{ number_format($details->count()) }}</span>
-                    </div>
-                </div>
-            </div>
-
-            {{-- DAFTAR DETAIL --}}
-            <div class="show-surface rounded-[30px] p-5 xl:col-span-8">
-                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h3 class="text-lg font-black text-slate-900">Daftar Peserta</h3>
-                        <p class="text-xs font-bold text-slate-400">
-                            <span id="visibleDetailCount">{{ number_format($details->count()) }}</span>
-                            data ditampilkan dari {{ number_format($details->count()) }} peserta.
-                        </p>
-                    </div>
-
-                    <div class="relative no-print">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
-                        <input
-                            type="text"
-                            id="searchDetail"
-                            placeholder="Cari nama, NIK, status..."
-                            class="filter-input h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700 sm:w-80"
-                        >
                     </div>
                 </div>
 
                 @if($details->isNotEmpty())
-                    <div class="detail-scroll space-y-3">
+                    <div class="detail-list flex-1 space-y-3">
                         @foreach($details as $index => $detail)
                             @php
-                                $pasien = $detail->pasien;
-                                $nama = $pasien->nama_lengkap ?? $pasien->nama ?? $detail->nama_pasien ?? 'Data sasaran';
-                                $nik = $pasien->nik ?? $detail->nik_pasien ?? '-';
-                                $isHadir = (bool) $detail->hadir;
-                                $statusText = $isHadir ? 'Hadir' : 'Tidak Hadir';
-                                $searchText = strtolower($nama . ' ' . $nik . ' ' . $statusText);
+                                $hadir = (bool) $detail->hadir;
+                                $statusText = $hadir ? 'Hadir' : 'Tidak Hadir';
+                                $statusTone = $hadir ? 'emerald' : 'orange';
+                                $statusIcon = $hadir ? 'fa-circle-check' : 'fa-circle-xmark';
+
+                                $nama = $detail->nama_pasien ?? $detail->pasien?->nama_lengkap ?? $detail->pasien?->nama ?? 'Data sasaran';
+                                $nik = $detail->nik_pasien ?? $detail->pasien?->nik ?? '-';
+                                $usia = $detail->usia_pasien ?? '-';
+                                $infoTambahan = $detail->info_tambahan_pasien ?? '-';
+                                $keterangan = $detail->keterangan_text ?? ($detail->keterangan ?: '-');
                             @endphp
 
-                            <div class="show-row {{ $isHadir ? 'present' : 'absent' }} rounded-[22px] p-4"
-                                 data-search="{{ $searchText }}">
-                                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                    <div class="flex min-w-0 items-center gap-3">
-                                        <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-sm font-black {{ $isHadir ? 'text-emerald-700' : 'text-rose-600' }}">
-                                            {{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}
+                            <div class="detail-row rounded-[1.35rem] border border-slate-200 bg-white/80 p-4"
+                                 data-search="{{ strtolower($nama . ' ' . $nik . ' ' . $statusText . ' ' . $keterangan) }}">
+                                <div class="grid gap-4 xl:grid-cols-[52px_minmax(0,1fr)_220px] xl:items-center">
+                                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl {{ $toneClass($kategoriTone, 'ring') }} border text-sm font-black">
+                                        {{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                            <h3 class="line-clamp-1 text-[15px] font-black text-slate-950">{{ $nama }}</h3>
+
+                                            <span class="rounded-full border px-2.5 py-1 text-[10px] font-black {{ $badgeClass($statusTone) }}">
+                                                <i class="fa-solid {{ $statusIcon }} mr-1"></i>
+                                                {{ $statusText }}
+                                            </span>
                                         </div>
 
-                                        <div class="min-w-0">
-                                            <h4 class="truncate text-sm font-black text-slate-800">{{ $nama }}</h4>
-                                            <p class="mt-1 text-xs font-bold text-slate-400">
-                                                <i class="fa-solid fa-id-card mr-1"></i>
+                                        <div class="mt-2 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+                                                <i class="fa-solid fa-id-card text-slate-400"></i>
                                                 {{ $nik }}
-                                            </p>
+                                            </span>
+
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+                                                <i class="fa-solid fa-cake-candles text-slate-400"></i>
+                                                {{ $usia }}
+                                            </span>
+
+                                            <span class="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1">
+                                                <i class="fa-solid fa-circle-info text-slate-400"></i>
+                                                <span class="line-clamp-1">{{ $infoTambahan }}</span>
+                                            </span>
+                                        </div>
+
+                                        <div class="mt-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-xs font-bold text-slate-600">
+                                            <i class="fa-solid fa-note-sticky mr-1 text-slate-400"></i>
+                                            {{ $keterangan }}
                                         </div>
                                     </div>
 
-                                    <div class="flex shrink-0 items-center gap-2">
-                                        <span class="rounded-full px-3 py-1 text-[10px] font-black {{ $isHadir ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600' }}">
-                                            {{ $statusText }}
-                                        </span>
+                                    <div class="rounded-[1.25rem] border p-4 text-center {{ $badgeClass($statusTone) }}">
+                                        <p class="text-[10px] font-black uppercase tracking-[.14em]">Status</p>
+                                        <p class="mt-1 text-sm font-black">{{ $statusText }}</p>
                                     </div>
                                 </div>
-
-                                @if(!empty($detail->keterangan))
-                                    <div class="mt-3 rounded-2xl bg-white/80 px-4 py-3 text-xs font-bold text-slate-500">
-                                        <i class="fa-solid fa-note-sticky mr-1 text-amber-500"></i>
-                                        {{ $detail->keterangan }}
-                                    </div>
-                                @endif
                             </div>
                         @endforeach
                     </div>
-
-                    <div id="emptyDetailSearch" class="mt-5 hidden rounded-[24px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center no-print">
-                        <div class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-white text-slate-400">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <p class="text-sm font-black text-slate-500">Peserta tidak ditemukan dari pencarian.</p>
-                    </div>
                 @else
-                    <div class="rounded-[26px] border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                        <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-white text-slate-400">
-                            <i class="fa-regular fa-folder-open text-xl"></i>
+                    <div class="rounded-[1.55rem] border border-dashed border-emerald-200 bg-emerald-50/65 p-8 text-center">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                            <i class="fa-solid fa-users-slash text-lg"></i>
                         </div>
-
-                        <h3 class="text-lg font-black text-slate-800">Belum ada detail peserta</h3>
-                        <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-500">
-                            Detail presensi belum tersedia untuk sesi ini.
+                        <h3 class="mt-4 text-base font-black text-slate-950">Detail absensi belum tersedia</h3>
+                        <p class="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-slate-500">
+                            Sesi ini belum memiliki detail peserta. Cek ulang input absensi atau hapus sesi jika data tidak valid.
                         </p>
                     </div>
                 @endif
             </div>
+
+            {{-- SIDE PANEL --}}
+            <aside class="detail-side-panel min-w-0 space-y-5 xl:sticky xl:top-5">
+                <div class="glass-card rounded-[1.75rem] border border-white/80 p-5 soft-card">
+                    <div class="rounded-[1.45rem] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-teal-50 to-sky-50 p-5">
+                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Informasi Sesi</p>
+                        <h2 class="mt-1 text-lg font-black tracking-tight text-slate-950">Ringkasan absensi</h2>
+
+                        <div class="mt-5 space-y-3">
+                            <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm font-black text-slate-600">Kode</span>
+                                    <span class="text-right text-xs font-black text-slate-950">{{ $kodeAbsensi }}</span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm font-black text-slate-600">Kategori</span>
+                                    <span class="text-sm font-black text-slate-950">{{ $kategoriLabel }}</span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm font-black text-slate-600">Tanggal</span>
+                                    <span class="text-sm font-black text-slate-950">
+                                        {{ $formatTanggal($absensi?->tanggal_posyandu ?? null, 'd M Y') }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm font-black text-slate-600">Status</span>
+                                    <span class="rounded-full border px-2.5 py-1 text-xs font-black {{ $badgeClass($statusTone) }}">
+                                        {{ $statusRekap }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 h-3 overflow-hidden rounded-full bg-white">
+                            <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                                 style="width: {{ min(100, $persenHadir) }}%"></div>
+                        </div>
+
+                        <p class="mt-3 text-xs font-bold text-slate-500">
+                            {{ $persenHadir }}% sasaran tercatat hadir pada sesi ini.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="side-fill glass-card rounded-[1.75rem] border border-white/80 p-5 soft-card">
+    <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Sesi Terdekat</p>
+                    <h2 class="mt-1 text-lg font-black tracking-tight text-slate-950">Riwayat kategori sama</h2>
+
+                    <div class="mt-4 space-y-3">
+                        @forelse($semuaSesi as $sesi)
+                            <a href="{{ $routeHas('kader.absensi.show') ? route('kader.absensi.show', $sesi->id) : '#' }}"
+                               class="block rounded-[1.2rem] border border-slate-200 bg-white/75 p-4 transition hover:-translate-y-0.5 hover:border-emerald-200">
+                                <p class="line-clamp-1 text-sm font-black text-slate-950">
+                                    {{ $sesi->kode_absensi ?? 'ABS-' . str_pad($sesi->id, 4, '0', STR_PAD_LEFT) }}
+                                </p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">
+                                    {{ $formatTanggal($sesi->tanggal_posyandu ?? null, 'd M Y') }}
+                                    • Pertemuan ke-{{ $sesi->nomor_pertemuan ?? '-' }}
+                                </p>
+                            </a>
+                        @empty
+                            <div class="rounded-[1.2rem] border border-dashed border-slate-200 bg-white/65 p-5 text-center">
+                                <p class="text-sm font-black text-slate-700">Belum ada sesi lain.</p>
+                                <p class="mt-1 text-xs font-semibold text-slate-500">Kategori ini baru punya satu sesi.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </aside>
         </section>
-
-        {{-- SESI LAIN --}}
-        @if(!empty($semuaSesi) && $semuaSesi->isNotEmpty())
-            <section class="show-surface rounded-[30px] p-5 no-print">
-                <div class="mb-5">
-                    <h3 class="text-lg font-black text-slate-900">Sesi Lainnya</h3>
-                    <p class="text-xs font-bold text-slate-400">Presensi terbaru lain pada kategori yang sama.</p>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-                    @foreach($semuaSesi as $sesi)
-                        @php
-                            $tglSesi = !empty($sesi->tanggal_posyandu)
-                                ? Carbon::parse($sesi->tanggal_posyandu)->translatedFormat('d M Y')
-                                : '-';
-                        @endphp
-
-                        <a href="{{ route('kader.absensi.show', $sesi->id) }}" class="rounded-[22px] border border-slate-200 bg-white p-4 transition hover:border-emerald-200 hover:bg-emerald-50">
-                            <p class="text-xs font-black uppercase tracking-[.12em] text-emerald-700">
-                                Pertemuan {{ $sesi->nomor_pertemuan ?? '-' }}
-                            </p>
-                            <h4 class="mt-2 truncate text-sm font-black text-slate-900">
-                                {{ $sesi->kode_absensi ?? 'Kode Absensi' }}
-                            </h4>
-                            <p class="mt-1 text-xs font-bold text-slate-400">{{ $tglSesi }}</p>
-                        </a>
-                    @endforeach
-                </div>
-            </section>
-        @endif
     </div>
-
-    {{-- ACTION BAWAH --}}
-    <section class="show-surface rounded-[28px] p-5 no-print">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <h3 class="text-sm font-black text-slate-900">Detail presensi siap digunakan</h3>
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Gunakan halaman ini untuk cek ulang data sebelum dicetak atau dijadikan bahan laporan.
-                </p>
-            </div>
-
-            <div class="flex flex-col gap-3 sm:flex-row">
-                @if($routeHas('kader.absensi.riwayat'))
-                    <a href="{{ route('kader.absensi.riwayat') }}" class="show-action show-outline inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        Kembali ke Riwayat
-                    </a>
-                @endif
-
-                @if($routeHas('kader.dashboard'))
-                    <a href="{{ route('kader.dashboard') }}" class="show-action show-dark inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
-                        <i class="fa-solid fa-house"></i>
-                        Dashboard
-                    </a>
-                @endif
-            </div>
-        </div>
-    </section>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const searchInput = document.getElementById('searchDetail');
-        const rows = Array.from(document.querySelectorAll('.show-row'));
-        const emptyBox = document.getElementById('emptyDetailSearch');
-        const visibleText = document.getElementById('visibleDetailCount');
+(function () {
+    const searchInput = document.querySelector('#detailSearch');
+    const rows = Array.from(document.querySelectorAll('.detail-row'));
+    let timer = null;
 
-        const updateVisible = () => {
-            const visible = rows.filter(row => row.style.display !== 'none').length;
+    if (!searchInput) return;
 
-            if (visibleText) {
-                visibleText.textContent = visible.toLocaleString('id-ID');
-            }
+    searchInput.addEventListener('input', function () {
+        clearTimeout(timer);
 
-            if (emptyBox) {
-                const hasKeyword = searchInput && searchInput.value.trim() !== '';
-                emptyBox.classList.toggle('hidden', visible > 0 || !hasKeyword);
-            }
-        };
+        timer = setTimeout(() => {
+            const keyword = this.value.trim().toLowerCase();
 
-        searchInput?.addEventListener('input', (event) => {
-            const keyword = event.target.value.toLowerCase().trim();
-
-            rows.forEach(row => {
+            rows.forEach((row) => {
                 const text = row.dataset.search || '';
-                row.style.display = text.includes(keyword) ? '' : 'none';
+                row.classList.toggle('hidden', keyword !== '' && !text.includes(keyword));
             });
-
-            updateVisible();
-        });
-
-        updateVisible();
+        }, 80);
     });
+})();
 </script>
 @endpush

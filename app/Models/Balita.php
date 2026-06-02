@@ -3,75 +3,129 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Balita extends Model
 {
-    use HasFactory;
+    protected $table = 'balitas';
 
     protected $fillable = [
-        'user_id', 'kode_balita', 'nik', 'nama_lengkap', 'tempat_lahir',
-        'tanggal_lahir', 'jenis_kelamin', 'nik_ibu', 'nama_ibu', 
-        'nik_ayah', 'nama_ayah', 'alamat', 'berat_lahir', 'panjang_lahir', 'created_by'
+        'user_id',
+        'kode_balita',
+        'nik',
+        'nama_lengkap',
+        'jenis_kelamin',
+        'tempat_lahir',
+        'tanggal_lahir',
+        'berat_lahir',
+        'panjang_lahir',
+        'nama_ibu',
+        'nik_ibu',
+        'nama_ayah',
+        'alamat',
+        'created_by',
     ];
 
     protected $casts = [
         'tanggal_lahir' => 'date',
+        'berat_lahir' => 'decimal:2',
+        'panjang_lahir' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    // ── VIRTUAL ATTRIBUTES (SMART DETECTION BAYI / BALITA) ────────
-
-    /**
-     * Hitung usia dalam bulan secara dinamis (Real-time).
-     * Dapat dipanggil di view dengan: $anak->usia_bulan
-     */
-    public function getUsiaBulanAttribute()
+    public function getUsiaBulanAttribute(): int
     {
-        if (!$this->tanggal_lahir) return 0;
-        return Carbon::parse($this->tanggal_lahir)->diffInMonths(Carbon::now());
+        if (! $this->tanggal_lahir) {
+            return 0;
+        }
+
+        return (int) Carbon::parse($this->tanggal_lahir)->diffInMonths(now());
     }
 
-    /**
-     * Kategorikan otomatis berdasarkan SOP Kemenkes.
-     * Dapat dipanggil di view dengan: $anak->kategori_sop
-     */
-    public function getKategoriSopAttribute()
+    public function getUsiaLabelAttribute(): string
+    {
+        $bulan = $this->usia_bulan;
+
+        if ($bulan < 12) {
+            return $bulan . ' bulan';
+        }
+
+        $tahun = intdiv($bulan, 12);
+        $sisaBulan = $bulan % 12;
+
+        if ($sisaBulan === 0) {
+            return $tahun . ' tahun';
+        }
+
+        return $tahun . ' tahun ' . $sisaBulan . ' bulan';
+    }
+
+    public function getKategoriSopAttribute(): string
     {
         $bulan = $this->usia_bulan;
 
         if ($bulan >= 0 && $bulan <= 11) {
-            return 'Bayi (0 - 11 Bulan)';
-        } elseif ($bulan >= 12 && $bulan <= 59) {
-            return 'Balita (12 - 59 Bulan)';
-        } else {
-            return 'Lulus Posyandu (> 59 Bulan)';
+            return 'Balita usia 0 sampai 11 bulan';
         }
+
+        if ($bulan >= 12 && $bulan <= 59) {
+            return 'Balita usia 12 sampai 59 bulan';
+        }
+
+        return 'Lewat usia sasaran Balita';
     }
 
-    // ── RELASI DASAR ──────────────────────────────────────────────
-    public function user()
+    public function getJenisKelaminLabelAttribute(): string
+    {
+        return match ($this->jenis_kelamin) {
+            'L' => 'Laki-laki',
+            'P' => 'Perempuan',
+            default => '-',
+        };
+    }
+
+    public function getStatusAkunLabelAttribute(): string
+    {
+        return $this->user_id ? 'Terhubung' : 'Belum Terhubung';
+    }
+
+    public function getStatusAkunClassAttribute(): string
+    {
+        return $this->user_id
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : 'border-amber-200 bg-amber-50 text-amber-700';
+    }
+
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function kunjungans()
+    public function pembuat(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function kunjungans(): MorphMany
     {
         return $this->morphMany(Kunjungan::class, 'pasien');
     }
 
-    // ── RELASI PEMERIKSAAN (POWERFUL EAGER LOADING) ───────────────
-    public function pemeriksaans()
+    public function pemeriksaans(): HasMany
     {
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')
-                    ->where('kategori_pasien', 'balita');
+            ->where('kategori_pasien', 'balita');
     }
 
-    public function pemeriksaan_terakhir()
+    public function pemeriksaan_terakhir(): HasOne
     {
-        // Menggunakan latestOfMany() untuk performa tingkat tinggi (Anti N+1 Query)
         return $this->hasOne(Pemeriksaan::class, 'pasien_id')
-                    ->where('kategori_pasien', 'balita')
-                    ->latestOfMany();
+            ->where('kategori_pasien', 'balita')
+            ->latestOfMany();
     }
 }

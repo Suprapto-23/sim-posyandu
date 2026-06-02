@@ -124,23 +124,31 @@ Route::prefix('bidan')
         // Bidan meninjau, melihat detail, dan memvalidasi data pemeriksaan.
         // Input pemeriksaan awal tetap dari Kader.
         Route::prefix('pemeriksaan')
-            ->name('pemeriksaan.')
-            ->group(function () {
-                Route::get('/', [BidanPemeriksaanController::class, 'index'])
-                    ->name('index');
+    ->name('pemeriksaan.')
+    ->group(function () {
+        Route::get('/', [BidanPemeriksaanController::class, 'index'])
+            ->name('index');
 
-                Route::get('/validasi/{id}', [BidanPemeriksaanController::class, 'validasi'])
-                    ->name('validasi');
+        Route::get('/validasi/{id}', [BidanPemeriksaanController::class, 'validasi'])
+            ->whereNumber('id')
+            ->name('validasi');
 
-                Route::put('/validasi/{id}', [BidanPemeriksaanController::class, 'simpanValidasi'])
-                    ->name('simpan-validasi');
+        Route::put('/validasi/{id}', [BidanPemeriksaanController::class, 'simpanValidasi'])
+            ->whereNumber('id')
+            ->name('simpan-validasi');
 
-                Route::put('/{id}/verifikasi', [BidanPemeriksaanController::class, 'verifikasi'])
-                    ->name('verifikasi');
+        Route::put('/{id}/verifikasi', [BidanPemeriksaanController::class, 'verifikasi'])
+            ->whereNumber('id')
+            ->name('verifikasi');
 
-                Route::get('/{id}', [BidanPemeriksaanController::class, 'show'])
-                    ->name('show');
-            });
+        Route::get('/{id}', [BidanPemeriksaanController::class, 'show'])
+            ->whereNumber('id')
+            ->name('show');
+
+        Route::delete('/{id}', [BidanPemeriksaanController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('destroy');
+    });
 
 
         // ---------------------------------------------------------------
@@ -232,7 +240,7 @@ Route::prefix('kader')
         */
         Route::get('/dashboard', [KaderDashboard::class, 'index'])
             ->name('dashboard');
-            Route::get('/dashboard/trend', [\App\Http\Controllers\Bidan\DashboardController::class, 'trend'])
+            Route::get('/dashboard/trend', [KaderDashboard::class, 'trend'])
     ->name('dashboard.trend');
 
         /*

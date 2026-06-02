@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
 class AbsensiDetail extends Model
 {
-    use HasFactory;
-
     protected $table = 'absensi_detail';
 
     protected $fillable = [
@@ -37,12 +35,19 @@ class AbsensiDetail extends Model
         'lansia' => Lansia::class,
     ];
 
+    public const KATEGORI_LABEL = [
+        'balita' => 'Balita',
+        'remaja' => 'Remaja',
+        'lansia' => 'Lansia',
+    ];
+
     protected static function booted(): void
     {
-        Relation::morphMap(self::PASIEN_TYPES);
+        Relation::morphMap(self::PASIEN_TYPES, false);
 
         static::saving(function (self $detail) {
             $detail->pasien_type = self::normalizePasienType($detail->pasien_type);
+            $detail->hadir = (bool) $detail->hadir;
         });
     }
 
@@ -56,75 +61,60 @@ class AbsensiDetail extends Model
         return $this->morphTo(__FUNCTION__, 'pasien_type', 'pasien_id');
     }
 
+    public function setPasienTypeAttribute($value): void
+    {
+        $this->attributes['pasien_type'] = self::normalizePasienType($value);
+    }
+
+    public function setHadirAttribute($value): void
+    {
+        $this->attributes['hadir'] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
     public static function normalizePasienType(?string $type): string
     {
-        $value = trim((string) $type);
+        $raw = trim((string) $type);
 
-        if ($value === '') {
+        if ($raw === Balita::class) {
             return 'balita';
         }
 
-        $base = strtolower(str_replace(['_', '-', ' '], '', class_basename($value)));
+        if ($raw === Remaja::class) {
+            return 'remaja';
+        }
 
-        return match ($base) {
-            'balita', 'balitas', 'anak' => 'balita',
-            'remaja', 'remajas' => 'remaja',
-            'lansia', 'lansias' => 'lansia',
-            default => $value,
+        if ($raw === Lansia::class) {
+            return 'lansia';
+        }
+
+        $value = strtolower($raw);
+        $value = str_replace(['_', '-', ' ', '\\'], '', $value);
+
+        return match ($value) {
+            'balita', 'balitas', 'appmodelsbalita', 'anak' => 'balita',
+            'remaja', 'remajas', 'appmodelsremaja' => 'remaja',
+            'lansia', 'lansias', 'appmodelslansia' => 'lansia',
+            default => 'balita',
         };
     }
 
-    public function getPasienModelClassAttribute(): ?string
+    public static function getModelClass(?string $type): ?string
     {
-        $type = self::normalizePasienType($this->pasien_type);
+        $type = self::normalizePasienType($type);
 
-        if (isset(self::PASIEN_TYPES[$type])) {
-            return self::PASIEN_TYPES[$type];
-        }
-
-        return class_exists($this->pasien_type) ? $this->pasien_type : null;
+        return self::PASIEN_TYPES[$type] ?? null;
     }
 
-    public function getPasienDataAttribute(): ?Model
+    public static function getKategoriLabel(?string $type): string
     {
-        if ($this->relationLoaded('pasien')) {
-            return $this->getRelation('pasien');
-        }
+        $type = self::normalizePasienType($type);
 
-        $modelClass = $this->pasien_model_class;
-
-        if (!$modelClass || !$this->pasien_id) {
-            return null;
-        }
-
-        return $modelClass::find($this->pasien_id);
+        return self::KATEGORI_LABEL[$type] ?? 'Tidak Dikenal';
     }
 
-    public function getNamaPasienAttribute(): string
+    public function getKategoriLabelAttribute(): string
     {
-        $pasien = $this->pasien_data;
-
-        return $pasien?->nama_lengkap
-            ?? $pasien?->nama
-            ?? $pasien?->name
-            ?? 'Data tidak ditemukan';
-    }
-
-    public function getNikPasienAttribute(): string
-    {
-        $pasien = $this->pasien_data;
-
-        return $pasien?->nik ?? '-';
-    }
-
-    public function getKategoriPasienAttribute(): string
-    {
-        return match (self::normalizePasienType($this->pasien_type)) {
-            'balita' => 'Balita / Anak',
-            'remaja' => 'Remaja',
-            'lansia' => 'Lansia',
-            default => 'Tidak Dikenal',
-        };
+        return self::getKategoriLabel($this->pasien_type);
     }
 
     public function getStatusTextAttribute(): string
@@ -134,14 +124,110 @@ class AbsensiDetail extends Model
 
     public function getStatusBadgeAttribute(): string
     {
-        return $this->hadir ? 'emerald' : 'rose';
+        return $this->hadir ? 'emerald' : 'orange';
     }
 
-    public function getStatusClassAttribute(): string
+    public function getStatusIconAttribute(): string
     {
-        return $this->hadir
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-            : 'bg-rose-50 text-rose-700 border-rose-100';
+        return $this->hadir ? 'fa-circle-check' : 'fa-circle-xmark';
+    }
+
+    public function getNamaPasienAttribute(): string
+    {
+        $pasien = $this->getPasienModel();
+
+        return $pasien?->nama_lengkap
+            ?? $pasien?->nama
+            ?? 'Data sasaran';
+    }
+
+    public function getNikPasienAttribute(): string
+    {
+        $pasien = $this->getPasienModel();
+
+        return $pasien?->nik
+            ?? '-';
+    }
+
+    public function getJenisKelaminPasienAttribute(): string
+    {
+        $pasien = $this->getPasienModel();
+
+        return $pasien?->jenis_kelamin
+            ?? '-';
+    }
+
+    public function getTanggalLahirPasienAttribute(): ?string
+    {
+        $pasien = $this->getPasienModel();
+
+        if (!$pasien || empty($pasien->tanggal_lahir)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($pasien->tanggal_lahir)->translatedFormat('d F Y');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public function getUsiaPasienAttribute(): string
+    {
+        $pasien = $this->getPasienModel();
+
+        if (!$pasien || empty($pasien->tanggal_lahir)) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($pasien->tanggal_lahir)->age . ' tahun';
+        } catch (\Throwable) {
+            return '-';
+        }
+    }
+
+    public function getAlamatPasienAttribute(): string
+    {
+        $pasien = $this->getPasienModel();
+
+        return $pasien?->alamat
+            ?? '-';
+    }
+
+    public function getInfoTambahanPasienAttribute(): string
+    {
+        $pasien = $this->getPasienModel();
+        $type = self::normalizePasienType($this->pasien_type);
+
+        if (!$pasien) {
+            return '-';
+        }
+
+        return match ($type) {
+            'balita' => $pasien->nama_ibu
+                ?? $pasien->alamat
+                ?? '-',
+
+            'remaja' => $pasien->sekolah
+                ?? $pasien->kelas
+                ?? $pasien->alamat
+                ?? '-',
+
+            'lansia' => $pasien->tingkat_kemandirian
+                ?? $pasien->tekanan_darah
+                ?? $pasien->alamat
+                ?? '-',
+
+            default => '-',
+        };
+    }
+
+    public function getKeteranganTextAttribute(): string
+    {
+        return filled($this->keterangan)
+            ? $this->keterangan
+            : '-';
     }
 
     public function scopeHadir(Builder $query): Builder
@@ -159,51 +245,40 @@ class AbsensiDetail extends Model
         return $query->where('pasien_type', self::normalizePasienType($kategori));
     }
 
-    public function scopeTanggal(Builder $query, string $tanggal): Builder
+    public function scopeUntukAbsensi(Builder $query, int $absensiId): Builder
     {
-        return $query->whereHas('absensi', function ($q) use ($tanggal) {
-            $q->whereDate('tanggal_posyandu', $tanggal);
-        });
+        return $query->where('absensi_id', $absensiId);
     }
 
-    public function scopeBulan(Builder $query, int $bulan, ?int $tahun = null): Builder
+    public function scopeUntukPasien(Builder $query, string $kategori, int $pasienId): Builder
     {
-        return $query->whereHas('absensi', function ($q) use ($bulan, $tahun) {
-            $q->where('bulan', $bulan);
+        return $query
+            ->where('pasien_type', self::normalizePasienType($kategori))
+            ->where('pasien_id', $pasienId);
+    }
 
-            if ($tahun) {
-                $q->where('tahun', $tahun);
+    private function getPasienModel(): ?Model
+    {
+        if ($this->relationLoaded('pasien')) {
+            $pasien = $this->getRelation('pasien');
+
+            return $pasien instanceof Model ? $pasien : null;
+        }
+
+        if (!$this->pasien_id || !$this->pasien_type) {
+            return null;
+        }
+
+        try {
+            $modelClass = self::getModelClass($this->pasien_type);
+
+            if (!$modelClass || !class_exists($modelClass)) {
+                return null;
             }
-        });
-    }
 
-    public function scopePeriode(Builder $query, int $bulan, int $tahun): Builder
-    {
-        return $query->whereHas('absensi', function ($q) use ($bulan, $tahun) {
-            $q->where('bulan', $bulan)
-                ->where('tahun', $tahun);
-        });
-    }
-
-    public function scopeUntukPasien(Builder $query, int $pasienId, string $pasienType): Builder
-    {
-        return $query->where('pasien_id', $pasienId)
-            ->where('pasien_type', self::normalizePasienType($pasienType));
-    }
-
-    public function tandaiHadir(?string $keterangan = null): bool
-    {
-        $this->hadir = true;
-        $this->keterangan = $keterangan;
-
-        return $this->save();
-    }
-
-    public function tandaiTidakHadir(?string $keterangan = null): bool
-    {
-        $this->hadir = false;
-        $this->keterangan = $keterangan;
-
-        return $this->save();
+            return $modelClass::query()->find($this->pasien_id);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

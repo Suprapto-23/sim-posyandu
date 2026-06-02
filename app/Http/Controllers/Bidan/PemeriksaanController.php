@@ -331,6 +331,8 @@ class PemeriksaanController extends Controller
         }
     }
 
+    
+
     private function findPemeriksaan(int|string $id): Pemeriksaan
     {
         return Pemeriksaan::query()

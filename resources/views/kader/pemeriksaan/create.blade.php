@@ -1,870 +1,920 @@
 @extends('layouts.kader')
 
 @section('title', 'Input Pengukuran Fisik')
+@section('page-name', 'Input Pengukuran Fisik')
+@section('page-title', 'Input Pengukuran Fisik')
 
 @php
-    use Illuminate\Support\Facades\Route;
+    use Carbon\Carbon;
 
-    $kategoriAwal = old('kategori_pasien', $kategori_awal ?? request('kategori', 'balita'));
-    $pasienIdAwal = old('pasien_id', $pasien_id_awal ?? request('pasien_id'));
+    $kategori_awal = $kategori_awal ?? request('kategori', 'balita');
+    $pasien_id_awal = $pasien_id_awal ?? request('pasien_id');
 
-    if (!in_array($kategoriAwal, ['balita', 'remaja', 'lansia'], true)) {
-        $kategoriAwal = 'balita';
+    if (! in_array($kategori_awal, ['balita', 'remaja', 'lansia'], true)) {
+        $kategori_awal = 'balita';
     }
-
-    $apiPasienUrl = Route::has('kader.pemeriksaan.api')
-        ? route('kader.pemeriksaan.api')
-        : url('/kader/pemeriksaan/api/pasien');
-
-    $routeHas = fn ($name) => Route::has($name);
 
     $kategoriMenus = [
         'balita' => [
-            'label' => 'Balita / Anak',
+            'label' => 'Balita',
+            'desc' => 'BB, TB, LK, dan LiLA',
             'icon' => 'fa-child-reaching',
-            'desc' => 'BB, TB/PB, lingkar kepala, LiLA, suhu bila diperlukan.',
+            'solid' => 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white',
+            'soft' => 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-teal-50 to-white',
+            'text' => 'text-emerald-700',
         ],
         'remaja' => [
             'label' => 'Remaja',
+            'desc' => 'BB, TB, LiLA, LP, dan tensi',
             'icon' => 'fa-user-graduate',
-            'desc' => 'BB, TB, IMT, LiLA, lingkar perut, tekanan darah, Hb.',
+            'solid' => 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white',
+            'soft' => 'border-violet-200 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-white',
+            'text' => 'text-violet-700',
         ],
         'lansia' => [
             'label' => 'Lansia',
+            'desc' => 'BB, TB, LP, tensi, dan kemandirian',
             'icon' => 'fa-person-cane',
-            'desc' => 'BB, TB, IMT, tekanan darah, lingkar perut, pemeriksaan tambahan.',
+            'solid' => 'bg-gradient-to-br from-sky-500 to-cyan-500 text-white',
+            'soft' => 'border-sky-200 bg-gradient-to-br from-sky-50 via-cyan-50 to-white',
+            'text' => 'text-sky-700',
         ],
     ];
+
+    $today = now('Asia/Jakarta')->toDateString();
+
+    $oldKategori = old('kategori_pasien', $kategori_awal);
+    $oldPasienId = old('pasien_id', $pasien_id_awal);
 @endphp
 
 @push('styles')
 <style>
-    .ukur-page {
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        position: relative;
-        isolation: isolate;
+    html {
+        scroll-behavior: auto !important;
     }
 
-    .ukur-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
+    html.pc-modal-open,
+    body.pc-modal-open {
+        overflow: hidden !important;
+    }
+
+    .pc-page {
         background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.12), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
-            linear-gradient(135deg, #f8fffc, #f8fafc 58%, #fffaf0);
+            radial-gradient(circle at 8% 5%, rgba(16, 185, 129, .14), transparent 28%),
+            radial-gradient(circle at 95% 8%, rgba(14, 165, 233, .13), transparent 26%),
+            radial-gradient(circle at 50% 96%, rgba(251, 191, 36, .10), transparent 30%),
+            linear-gradient(135deg, #f3fff9 0%, #eef9ff 48%, #f8fafc 100%);
     }
 
-    .ukur-hero,
-    .ukur-panel {
-        border: 1px solid rgba(226,232,240,.88);
-        background: rgba(255,255,255,.95);
-        box-shadow: 0 10px 28px rgba(15,23,42,.045);
+    .pc-grid {
+        background-image:
+            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+        background-size: 30px 30px;
     }
 
-    .ukur-hero {
-        border-color: rgba(167,243,208,.7);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.14), transparent 30%),
-            radial-gradient(circle at 88% 16%, rgba(245,158,11,.12), transparent 30%),
-            linear-gradient(135deg, rgba(255,255,255,.96), rgba(236,253,245,.76));
+    .pc-glass {
+        background: rgba(255, 255, 255, .86);
+        backdrop-filter: blur(9px);
+        -webkit-backdrop-filter: blur(9px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .065);
     }
 
-    .ukur-input {
-        border: 1px solid rgba(226,232,240,.9);
-        background: #fff;
+    .pc-soft-hover {
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .pc-soft-hover:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 36px rgba(15, 23, 42, .07);
+    }
+
+    .pc-field {
+        width: 100%;
+        border-radius: 1rem;
+        border: 1px solid rgba(203, 213, 225, .95);
+        background: rgba(255, 255, 255, .86);
+        padding: .85rem 1rem;
+        font-size: .875rem;
+        font-weight: 800;
+        color: #334155;
         outline: none;
-        transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, .035);
+        transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
     }
 
-    .ukur-input:focus {
-        border-color: rgba(16,185,129,.36);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
+    .pc-field:focus {
+        border-color: rgba(16, 185, 129, .55);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, .10);
+        background: rgba(255, 255, 255, .96);
     }
 
-    .ukur-input.is-error {
-        border-color: rgba(244,63,94,.5);
-        background: #fff1f2;
-        box-shadow: 0 0 0 4px rgba(244,63,94,.08);
+    .pc-label {
+        display: block;
+        margin-bottom: .45rem;
+        font-size: .72rem;
+        font-weight: 950;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+        color: #64748b;
     }
 
-    .kategori-card {
-        border: 1px solid rgba(226,232,240,.9);
-        background: #fff;
-        transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    .pc-help {
+        margin-top: .4rem;
+        font-size: .72rem;
+        font-weight: 700;
+        color: #94a3b8;
     }
 
-    .kategori-card.active {
-        border-color: rgba(16,185,129,.35);
-        background: #ecfdf5;
-        box-shadow: 0 8px 20px rgba(16,185,129,.08);
+    .pc-required::after {
+        content: " *";
+        color: #f43f5e;
     }
 
-    .warga-list {
-        max-height: 300px;
-        overflow-y: auto;
-        padding-right: 4px;
-        overscroll-behavior: contain;
-    }
-
-    .warga-list::-webkit-scrollbar { width: 7px; }
-    .warga-list::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
-    .warga-list::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #10b981, #f59e0b);
-        border-radius: 999px;
-    }
-
-    .warga-item {
-        border: 1px solid rgba(226,232,240,.86);
-        background: #fff;
-        transition: border-color .12s ease, background .12s ease;
-    }
-
-    .warga-item:hover,
-    .warga-item.active {
-        border-color: rgba(16,185,129,.35);
-        background: #ecfdf5;
-    }
-
-    .field-section[hidden] {
+    .pc-hidden {
         display: none !important;
     }
 
-    .toast-custom {
-        position: fixed;
-        top: 96px;
-        right: 24px;
-        z-index: 90;
-        width: min(390px, calc(100vw - 32px));
+    .pc-modal-backdrop {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        z-index: 2147483647 !important;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        padding: 1rem;
+        background: rgba(15, 23, 42, .58);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .pc-modal-backdrop.is-open {
+        display: flex !important;
+    }
+
+    .pc-modal-card {
+        width: min(100%, 470px);
+        transform: translateY(12px) scale(.97);
         opacity: 0;
-        transform: translateY(-10px);
-        pointer-events: none;
-        transition: .18s ease;
+        border-radius: 1.75rem;
+        border: 1px solid rgba(255, 255, 255, .78);
+        background:
+            radial-gradient(circle at 0% 0%, rgba(16, 185, 129, .14), transparent 34%),
+            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
+            rgba(255, 255, 255, .95);
+        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
+        transition: transform .18s ease, opacity .18s ease;
     }
 
-    .toast-custom.show {
+    .pc-modal-backdrop.is-open .pc-modal-card {
+        transform: translateY(0) scale(1);
         opacity: 1;
-        transform: translateY(0);
-        pointer-events: auto;
     }
 
-    @media (max-width: 640px) {
-        .toast-custom {
-            left: 16px;
-            right: 16px;
-            top: 82px;
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: .01ms !important;
+            scroll-behavior: auto !important;
         }
     }
+    .pc-balanced-grid {
+    align-items: stretch !important;
+}
+
+.pc-left-panel {
+    min-height: 100%;
+}
+
+.pc-side-panel {
+    min-height: 100%;
+}
+
+.pc-side-card {
+    min-height: 100%;
+}
+
+.pc-side-fill {
+    flex: 1 1 auto;
+}
+
+.pc-side-bottom {
+    margin-top: auto;
+}
+
+.pc-note-card {
+    min-height: 132px;
+}
+
+@media (max-width: 1279px) {
+    .pc-balanced-grid {
+        align-items: start !important;
+    }
+
+    .pc-left-panel,
+    .pc-side-panel,
+    .pc-side-card {
+        min-height: auto;
+    }
+}
 </style>
 @endpush
 
 @section('content')
-<div class="ukur-page space-y-5">
+<div class="pc-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+    <div class="pointer-events-none absolute inset-0 pc-grid opacity-70"></div>
 
-    <div id="customToast" class="toast-custom">
-        <div class="rounded-[24px] border border-rose-100 bg-white p-4 shadow-[0_22px_60px_rgba(15,23,42,.22)]">
-            <div class="flex gap-3">
-                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
-                    <i class="fa-solid fa-circle-exclamation"></i>
+    <div class="relative z-10 mx-auto max-w-[1400px] space-y-5">
+        <section class="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-br from-emerald-50/95 via-cyan-50/90 to-white/95 pc-glass">
+            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl"></div>
+            <div class="absolute -bottom-24 left-24 h-72 w-72 rounded-full bg-sky-300/16 blur-3xl"></div>
+
+            <div class="relative grid gap-6 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.3fr)_340px] xl:items-stretch">
+                <div class="flex min-w-0 flex-col justify-between gap-6">
+                    <div>
+                        <div class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/75 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                            Input Pengukuran Kader
+                        </div>
+
+                        <h1 class="mt-4 max-w-4xl text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-[1.85rem] lg:text-[2rem]">
+                            Catat pengukuran fisik sasaran dengan data yang jelas.
+                        </h1>
+
+                        <p class="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600">
+                            Pilih kategori, pilih sasaran dari database, lalu isi hasil pengukuran. Data ini masuk antrean review Bidan, bukan langsung jadi vonis kesehatan. Kita bukan sedang bikin aplikasi dukun.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <a href="{{ route('kader.pemeriksaan.index') }}"
+                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-2.5 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            Kembali
+                        </a>
+
+                        <a href="{{ route('kader.dashboard') }}"
+                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+                            <i class="fa-solid fa-chart-line"></i>
+                            Dashboard
+                        </a>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-sm font-black text-slate-900">Data belum lengkap</p>
-                    <p id="customToastText" class="mt-1 text-xs font-bold leading-5 text-slate-500">
-                        Lengkapi data terlebih dahulu.
+
+                <div class="pc-glass rounded-[1.55rem] border border-white/80 p-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Status Output</p>
+                    <h2 class="mt-2 text-xl font-black text-slate-950">Menunggu Review</h2>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Setelah disimpan, data akan masuk ke halaman Bidan untuk dicek sebelum dipakai sebagai riwayat warga.
                     </p>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <section class="ukur-hero rounded-[28px] p-5 sm:p-6">
-        <div class="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-stethoscope"></i>
-                    Input Pengukuran
-                </div>
-
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Input Pengukuran Fisik
-                </h1>
-
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Pilih sasaran, lalu isi parameter sesuai kategori. Form hanya menampilkan kebutuhan kategori yang dipilih.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 sm:flex">
-                @if($routeHas('kader.pemeriksaan.index'))
-                    <a href="{{ route('kader.pemeriksaan.index') }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white px-5 py-3 text-sm font-black text-emerald-700">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Kembali
-                    </a>
-                @endif
-
-                @if($routeHas('kader.dashboard'))
-                    <a href="{{ route('kader.dashboard') }}" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white">
-                        <i class="fa-solid fa-chart-simple"></i>
-                        Dashboard
-                    </a>
-                @endif
-            </div>
-        </div>
-    </section>
-
-    @if($errors->any())
-        <section class="rounded-[22px] border border-rose-100 bg-rose-50 p-4 text-sm font-bold text-rose-700">
-            <div class="mb-2 flex items-center gap-2 font-black">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Data belum lengkap
-            </div>
-            <ul class="ml-5 list-disc space-y-1">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </section>
-    @endif
-
-    <form method="POST" action="{{ route('kader.pemeriksaan.store') }}" id="formPengukuran" class="grid grid-cols-1 gap-5 xl:grid-cols-12" novalidate>
-        @csrf
-
-        <input type="hidden" name="pasien_id" id="pasien_id" value="{{ $pasienIdAwal }}">
-
-        <section class="ukur-panel rounded-[26px] p-4 sm:p-5 xl:col-span-4">
-            <h2 class="text-lg font-black text-slate-900">1. Pilih Sasaran</h2>
-            <p class="mt-1 text-xs font-bold text-slate-400">Pilih kategori, lalu pilih warga dari data sasaran.</p>
-
-            <div class="mt-4 space-y-4">
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Kategori</label>
-
-                    <div class="space-y-3">
-                        @foreach($kategoriMenus as $key => $item)
-    <div>
-        <input
-            type="radio"
-            name="kategori_pasien"
-            value="{{ $key }}"
-            id="kategori_{{ $key }}"
-            class="sr-only kategori-radio"
-            {{ $kategoriAwal === $key ? 'checked' : '' }}
-        >
-
-        <button
-            type="button"
-            class="kategori-card kategori-btn {{ $kategoriAwal === $key ? 'active' : '' }} flex w-full cursor-pointer select-none gap-3 rounded-2xl p-4 text-left"
-            data-category-card="{{ $key }}"
-            data-category="{{ $key }}"
-            aria-pressed="{{ $kategoriAwal === $key ? 'true' : 'false' }}"
-        >
-            <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
-                <i class="fa-solid {{ $item['icon'] }}"></i>
-            </div>
-
-            <div>
-                <p class="text-sm font-black text-slate-900">{{ $item['label'] }}</p>
-                <p class="mt-1 text-xs font-semibold leading-5 text-slate-400">{{ $item['desc'] }}</p>
-            </div>
-        </button>
-    </div>
-@endforeach
-                    </div>
-                </div>
-
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Cari Warga</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-300"></i>
-                        <input type="text" id="searchPasien" class="ukur-input h-12 w-full rounded-2xl pl-10 pr-4 text-sm font-bold text-slate-700" placeholder="Cari nama atau NIK..." autocomplete="off">
-                    </div>
-                </div>
-
-                <div>
-                    <div class="mb-2 flex items-center justify-between">
-                        <label class="block text-xs font-black uppercase tracking-[.12em] text-slate-400">Daftar Warga</label>
-                        <span id="pasienCounter" class="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black text-emerald-700">Memuat...</span>
-                    </div>
-
-                    <div id="patientList" class="warga-list space-y-2">
-                        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm font-bold text-slate-400">
-                            Memuat data warga...
+                    <div class="mt-5 rounded-[1.2rem] border border-amber-200 bg-amber-50/80 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-amber-600">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-slate-950">Default status</p>
+                                <p class="text-xs font-bold text-slate-500">Menunggu review Bidan</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div id="selectedPatientBox" class="hidden rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-emerald-700">Warga Terpilih</p>
-                    <h3 id="selectedPatientName" class="mt-2 text-sm font-black text-slate-900">-</h3>
-                    <p id="selectedPatientNik" class="mt-1 text-xs font-bold text-slate-500">-</p>
-                </div>
             </div>
         </section>
 
-        <section class="ukur-panel rounded-[26px] p-4 sm:p-5 xl:col-span-8">
-            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">2. Isi Pengukuran</h2>
-                    <p id="categoryHelp" class="mt-1 text-xs font-bold leading-5 text-slate-500">
-                        Isi data sesuai kategori yang dipilih.
+        @if(session('success') || session('error') || $errors->any())
+            <section class="space-y-3">
+                @if(session('success'))
+                    <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50/90 p-4 text-sm font-bold text-emerald-800 shadow-sm">
+                        <i class="fa-solid fa-circle-check mr-2"></i>
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="rounded-[1.35rem] border border-rose-200 bg-rose-50/90 p-4 text-sm font-bold text-rose-800 shadow-sm">
+                        <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="rounded-[1.35rem] border border-amber-200 bg-amber-50/90 p-4 text-sm font-bold text-amber-800 shadow-sm">
+                        <div class="flex gap-2">
+                            <i class="fa-solid fa-circle-info mt-0.5"></i>
+                            <div>
+                                <p>Form belum valid. Bereskan dulu sebelum disimpan.</p>
+                                <ul class="mt-2 list-disc space-y-1 pl-5 text-xs font-semibold">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </section>
+        @endif
+
+        <form id="measurementForm"
+      method="POST"
+      action="{{ route('kader.pemeriksaan.store') }}"
+      data-selected-pasien="{{ $oldPasienId }}"
+      data-api-url="{{ route('kader.pemeriksaan.api') }}"
+      class="pc-balanced-grid grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,.55fr)]">
+            @csrf
+
+            <section class="pc-left-panel pc-glass flex h-full flex-col rounded-[1.75rem] border border-white/80 p-5">
+                <div class="mb-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Kategori Sasaran</p>
+                    <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">Pilih kelompok data</h2>
+                    <p class="mt-1 text-sm font-medium text-slate-500">
+                        Field wajib akan berubah sesuai kategori. Teknologi akhirnya melakukan sesuatu yang masuk akal.
                     </p>
                 </div>
 
-                <span class="w-fit rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-amber-700">
-                    Menunggu Review
-                </span>
-            </div>
+                <div class="grid gap-3 md:grid-cols-3">
+                    @foreach($kategoriMenus as $key => $item)
+                        <label class="pc-soft-hover cursor-pointer rounded-[1.35rem] border p-4 {{ $oldKategori === $key ? $item['soft'] : 'border-slate-200 bg-white/75' }}">
+                            <input type="radio"
+                                   name="kategori_pasien"
+                                   value="{{ $key }}"
+                                   class="sr-only"
+                                   data-category-radio
+                                   @checked($oldKategori === $key)>
 
-            <div class="mb-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
-                Data yang dicatat Kader menjadi pengukuran awal dan akan ditinjau Bidan sebelum digunakan sebagai dasar pemeriksaan lanjutan.
-            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $item['solid'] }}">
+                                    <i class="fa-solid {{ $item['icon'] }}"></i>
+                                </div>
 
-            <div class="space-y-5">
-                <div class="rounded-[22px] border border-slate-200 bg-white p-4">
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Tanggal Pengukuran</h3>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                                Tanggal <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="date" name="tanggal_periksa" id="tanggal_periksa" value="{{ old('tanggal_periksa', now()->toDateString()) }}" max="{{ now()->toDateString() }}" class="ukur-input js-required h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700" data-label="Tanggal pengukuran">
-                        </div>
-                    </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-black text-slate-950">{{ $item['label'] }}</p>
+                                    <p class="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">{{ $item['desc'] }}</p>
+                                </div>
+                            </div>
+                        </label>
+                    @endforeach
                 </div>
 
-                {{-- BALITA --}}
-                <section class="field-section rounded-[22px] border border-slate-200 bg-white p-4" data-field-category="balita" {{ $kategoriAwal !== 'balita' ? 'hidden' : '' }}>
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Balita / Anak</h3>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Berat Badan <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="berat_badan" value="{{ old('berat_badan') }}" placeholder="20" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Berat badan">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tinggi / Panjang Badan <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="tinggi_badan" value="{{ old('tinggi_badan') }}" placeholder="100" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Tinggi atau panjang badan">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Suhu Tubuh</label>
-                            <input type="number" step="0.1" name="suhu_tubuh" value="{{ old('suhu_tubuh') }}" placeholder="36.5" class="ukur-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Lingkar Kepala <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="lingkar_kepala" value="{{ old('lingkar_kepala') }}" placeholder="45" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Lingkar kepala">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">LiLA <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="lingkar_lengan" value="{{ old('lingkar_lengan') }}" placeholder="14" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="LiLA">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
+                <div class="mt-6 grid gap-4 lg:grid-cols-2">
+                    <div class="lg:col-span-2">
+                        <label class="pc-label pc-required">Pilih Sasaran</label>
+                        <select name="pasien_id" id="pasienSelect" class="pc-field">
+                            <option value="">Memuat data sasaran...</option>
+                        </select>
+                        <p id="pasienHelp" class="pc-help">Pilih sasaran dari database, jangan input manual seperti catatan warung.</p>
                     </div>
-                </section>
 
-                {{-- REMAJA --}}
-                <section class="field-section rounded-[22px] border border-slate-200 bg-white p-4" data-field-category="remaja" {{ $kategoriAwal !== 'remaja' ? 'hidden' : '' }}>
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Remaja</h3>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Berat Badan <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="berat_badan" value="{{ old('berat_badan') }}" placeholder="55" class="ukur-input js-required js-imt-weight h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Berat badan">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tinggi Badan <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="tinggi_badan" value="{{ old('tinggi_badan') }}" placeholder="160" class="ukur-input js-required js-imt-height h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Tinggi badan">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">IMT Otomatis</label>
-                            <input type="text" id="imt_preview" value="-" class="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-black text-slate-700" readonly>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">LiLA <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="lingkar_lengan" value="{{ old('lingkar_lengan') }}" placeholder="24" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="LiLA">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Lingkar Perut <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="lingkar_perut" value="{{ old('lingkar_perut') }}" placeholder="75" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Lingkar perut">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tekanan Darah <span class="text-rose-500">*</span></label>
-                            <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah') }}" placeholder="120/80" class="ukur-input js-required js-blood h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700" data-label="Tekanan darah">
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Hemoglobin / Hb</label>
-                            <input type="number" step="0.1" name="hemoglobin" value="{{ old('hemoglobin') }}" placeholder="13.5" class="ukur-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                        </div>
+                    <div>
+                        <label class="pc-label pc-required">Tanggal Pengukuran</label>
+                        <input type="date"
+                               name="tanggal_periksa"
+                               value="{{ old('tanggal_periksa', $today) }}"
+                               max="{{ $today }}"
+                               class="pc-field">
                     </div>
-                </section>
 
-                {{-- LANSIA --}}
-                <section class="field-section rounded-[22px] border border-slate-200 bg-white p-4" data-field-category="lansia" {{ $kategoriAwal !== 'lansia' ? 'hidden' : '' }}>
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Lansia</h3>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Berat Badan <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="berat_badan" value="{{ old('berat_badan') }}" placeholder="60" class="ukur-input js-required js-imt-weight h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Berat badan">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tinggi Badan <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="tinggi_badan" value="{{ old('tinggi_badan') }}" placeholder="160" class="ukur-input js-required js-imt-height h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Tinggi badan">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">IMT Otomatis</label>
-                            <input type="text" id="imt_preview_lansia" value="-" class="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-black text-slate-700" readonly>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Lingkar Perut <span class="text-rose-500">*</span></label>
-                            <div class="relative">
-                                <input type="number" step="0.1" name="lingkar_perut" value="{{ old('lingkar_perut') }}" placeholder="85" class="ukur-input js-required h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700" data-label="Lingkar perut">
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tekanan Darah <span class="text-rose-500">*</span></label>
-                            <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah') }}" placeholder="120/80" class="ukur-input js-required js-blood h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700" data-label="Tekanan darah">
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Gula Darah</label>
-                            <input type="number" step="0.1" name="gula_darah" value="{{ old('gula_darah') }}" placeholder="120" class="ukur-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Kolesterol</label>
-                            <input type="number" step="1" name="kolesterol" value="{{ old('kolesterol') }}" placeholder="180" class="ukur-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Asam Urat</label>
-                            <input type="number" step="0.1" name="asam_urat" value="{{ old('asam_urat') }}" placeholder="6.5" class="ukur-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Hemoglobin / Hb</label>
-                            <input type="number" step="0.1" name="hemoglobin" value="{{ old('hemoglobin') }}" placeholder="13.5" class="ukur-input h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                        </div>
-
-                        <div class="md:col-span-3">
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tingkat Kemandirian <span class="text-rose-500">*</span></label>
-                            <select name="tingkat_kemandirian" class="ukur-input js-required h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700" data-label="Tingkat kemandirian">
-                                <option value="">Pilih tingkat kemandirian</option>
-                                <option value="mandiri" {{ old('tingkat_kemandirian') === 'mandiri' ? 'selected' : '' }}>Mandiri</option>
-                                <option value="bantuan_sebagian" {{ old('tingkat_kemandirian') === 'bantuan_sebagian' ? 'selected' : '' }}>Perlu Bantuan Sebagian</option>
-                                <option value="bantuan_penuh" {{ old('tingkat_kemandirian') === 'bantuan_penuh' ? 'selected' : '' }}>Perlu Bantuan Penuh</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="pc-label">Suhu Tubuh</label>
+                        <input type="number"
+                               step="0.1"
+                               min="30"
+                               max="45"
+                               name="suhu_tubuh"
+                               value="{{ old('suhu_tubuh') }}"
+                               placeholder="Contoh: 36.5"
+                               class="pc-field">
                     </div>
-                </section>
 
-                <div class="rounded-[22px] border border-slate-200 bg-white p-4">
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Catatan Kader</h3>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Keluhan</label>
-                            <textarea name="keluhan" rows="4" class="ukur-input w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700" placeholder="Contoh: pusing, demam, batuk, atau tidak ada keluhan...">{{ old('keluhan') }}</textarea>
-                        </div>
+                    <div>
+                        <label class="pc-label pc-required">Berat Badan</label>
+                        <input type="number"
+                               step="0.1"
+                               min="0.1"
+                               max="300"
+                               name="berat_badan"
+                               value="{{ old('berat_badan') }}"
+                               placeholder="Kg"
+                               class="pc-field"
+                               data-imt-source>
+                    </div>
 
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Catatan Tambahan</label>
-                            <textarea name="catatan_kader" rows="4" class="ukur-input w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700" placeholder="Catatan pengukuran atau informasi pendukung...">{{ old('catatan_kader') }}</textarea>
-                        </div>
+                    <div>
+                        <label class="pc-label pc-required">Tinggi / Panjang Badan</label>
+                        <input type="number"
+                               step="0.1"
+                               min="10"
+                               max="250"
+                               name="tinggi_badan"
+                               value="{{ old('tinggi_badan') }}"
+                               placeholder="Cm"
+                               class="pc-field"
+                               data-imt-source>
+                    </div>
+
+                    <div data-field-group="balita">
+                        <label class="pc-label pc-required">Lingkar Kepala</label>
+                        <input type="number"
+                               step="0.1"
+                               min="10"
+                               max="100"
+                               name="lingkar_kepala"
+                               value="{{ old('lingkar_kepala') }}"
+                               placeholder="Cm"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="balita remaja">
+                        <label class="pc-label pc-required">Lingkar Lengan Atas</label>
+                        <input type="number"
+                               step="0.1"
+                               min="5"
+                               max="100"
+                               name="lingkar_lengan"
+                               value="{{ old('lingkar_lengan') }}"
+                               placeholder="Cm"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="remaja lansia">
+                        <label class="pc-label pc-required">Lingkar Perut</label>
+                        <input type="number"
+                               step="0.1"
+                               min="20"
+                               max="200"
+                               name="lingkar_perut"
+                               value="{{ old('lingkar_perut') }}"
+                               placeholder="Cm"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="remaja lansia">
+                        <label class="pc-label pc-required">Tekanan Darah</label>
+                        <input type="text"
+                               name="tekanan_darah"
+                               value="{{ old('tekanan_darah') }}"
+                               placeholder="Contoh: 120/80"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="lansia">
+                        <label class="pc-label pc-required">Tingkat Kemandirian</label>
+                        <select name="tingkat_kemandirian" class="pc-field">
+                            <option value="">Pilih tingkat kemandirian</option>
+                            <option value="mandiri" @selected(old('tingkat_kemandirian') === 'mandiri')>Mandiri</option>
+                            <option value="bantuan_sebagian" @selected(old('tingkat_kemandirian') === 'bantuan_sebagian')>Bantuan Sebagian</option>
+                            <option value="bantuan_penuh" @selected(old('tingkat_kemandirian') === 'bantuan_penuh')>Bantuan Penuh</option>
+                        </select>
+                    </div>
+
+                    <div data-field-group="remaja lansia">
+                        <label class="pc-label">Gula Darah</label>
+                        <input type="number"
+                               step="0.1"
+                               min="10"
+                               max="1000"
+                               name="gula_darah"
+                               value="{{ old('gula_darah') }}"
+                               placeholder="mg/dL"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="remaja lansia">
+                        <label class="pc-label">Kolesterol</label>
+                        <input type="number"
+                               min="10"
+                               max="1000"
+                               name="kolesterol"
+                               value="{{ old('kolesterol') }}"
+                               placeholder="mg/dL"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="remaja lansia">
+                        <label class="pc-label">Asam Urat</label>
+                        <input type="number"
+                               step="0.1"
+                               min="1"
+                               max="30"
+                               name="asam_urat"
+                               value="{{ old('asam_urat') }}"
+                               placeholder="mg/dL"
+                               class="pc-field">
+                    </div>
+
+                    <div data-field-group="remaja">
+                        <label class="pc-label">Hemoglobin</label>
+                        <input type="number"
+                               step="0.1"
+                               min="1"
+                               max="30"
+                               name="hemoglobin"
+                               value="{{ old('hemoglobin') }}"
+                               placeholder="g/dL"
+                               class="pc-field">
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <label class="pc-label">Keluhan / Kondisi Saat Datang</label>
+                        <textarea name="keluhan"
+                                  rows="3"
+                                  placeholder="Contoh: batuk ringan, pusing, tidak ada keluhan"
+                                  class="pc-field resize-none">{{ old('keluhan') }}</textarea>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <label class="pc-label">Catatan Kader</label>
+                        <textarea name="catatan_kader"
+                                  rows="3"
+                                  placeholder="Catatan awal dari Kader sebelum direview Bidan"
+                                  class="pc-field resize-none">{{ old('catatan_kader') }}</textarea>
                     </div>
                 </div>
+            </section>
 
-                <div class="rounded-[24px] border border-emerald-100 bg-white p-4">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p class="text-sm font-black text-slate-900">Simpan Pengukuran Fisik</p>
-                            <p class="mt-1 text-xs font-bold text-slate-400">Data lengkap akan disimpan sebagai Menunggu Review Bidan.</p>
+            <aside class="pc-side-panel flex h-full flex-col space-y-5">
+                <div class="pc-side-card pc-glass flex h-full flex-col rounded-[1.75rem] border border-white/80 p-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Ringkasan Input</p>
+                    <h2 class="mt-1 text-xl font-black text-slate-950">Cek sebelum simpan</h2>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Pastikan kategori, sasaran, tanggal, BB, dan TB sudah benar. Salah data di sini bikin Bidan ikut menghela napas.
+                    </p>
+
+                    <div class="mt-5 space-y-3">
+                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-black text-slate-600">Kategori</span>
+                                <span id="summaryKategori" class="text-sm font-black text-slate-950">-</span>
+                            </div>
                         </div>
 
-                        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(5,150,105,.18)]">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            Simpan Pengukuran
-                        </button>
+                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-black text-slate-600">Sasaran</span>
+                                <span id="summaryPasien" class="line-clamp-1 text-right text-sm font-black text-slate-950">-</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-black text-slate-600">Estimasi IMT</span>
+                                <span id="summaryImt" class="text-sm font-black text-slate-950">-</span>
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="pc-side-bottom pt-5">
+    <button type="submit"
+            id="submitMeasurementBtn"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-400/20 transition hover:-translate-y-0.5">
+        <i class="fa-solid fa-floppy-disk"></i>
+        Simpan Pengukuran
+    </button>
+
+    <p class="mt-3 text-center text-xs font-semibold leading-5 text-slate-500">
+        Data tersimpan sebagai menunggu review Bidan.
+    </p>
+</div>
+                </div>
+            </aside>
+        </form>
+    </div>
+
+    <div id="pcSubmitModal" class="pc-modal-backdrop" aria-hidden="true">
+        <div class="pc-modal-card p-6">
+            <div class="flex gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-circle-check text-xl"></i>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Konfirmasi</p>
+                    <h3 class="mt-1 text-lg font-black text-slate-950">Simpan pengukuran?</h3>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Data akan dikirim ke antrean review Bidan. Pastikan sasaran dan hasil ukur sudah benar.
+                    </p>
                 </div>
             </div>
-        </section>
-    </form>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button"
+                        id="pcCancelSubmit"
+                        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+                    Batal
+                </button>
+
+                <button type="button"
+                        id="pcConfirmSubmit"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-400/20 transition hover:-translate-y-0.5">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const apiUrl = @json($apiPasienUrl);
-    const initialPasienId = @json((string) $pasienIdAwal);
+(function () {
+    'use strict';
 
-    const patientList = document.getElementById('patientList');
-    const pasienCounter = document.getElementById('pasienCounter');
-    const searchPasien = document.getElementById('searchPasien');
-    const pasienIdInput = document.getElementById('pasien_id');
-    const selectedBox = document.getElementById('selectedPatientBox');
-    const selectedName = document.getElementById('selectedPatientName');
-    const selectedNik = document.getElementById('selectedPatientNik');
-    const categoryHelp = document.getElementById('categoryHelp');
-    const toast = document.getElementById('customToast');
-    const toastText = document.getElementById('customToastText');
-    const form = document.getElementById('formPengukuran');
+    const form = document.querySelector('#measurementForm');
+    const categoryRadios = Array.from(document.querySelectorAll('[data-category-radio]'));
+    const pasienSelect = document.querySelector('#pasienSelect');
+    const pasienHelp = document.querySelector('#pasienHelp');
+    const summaryKategori = document.querySelector('#summaryKategori');
+    const summaryPasien = document.querySelector('#summaryPasien');
+    const summaryImt = document.querySelector('#summaryImt');
+    const submitBtn = document.querySelector('#submitMeasurementBtn');
 
-    let currentKategori = document.querySelector('.kategori-radio:checked')?.value || 'balita';
-    let patients = [];
-    let controller = null;
-    let searchTimer = null;
-    let toastTimer = null;
+    let submitModal = document.querySelector('#pcSubmitModal');
 
-    const helpText = {
-        balita: 'Balita tidak menggunakan IMT pada form ini. Isi BB, TB/PB, lingkar kepala, dan LiLA.',
-        remaja: 'Remaja menggunakan IMT otomatis dari berat dan tinggi badan.',
-        lansia: 'Lansia menggunakan IMT otomatis dan parameter tambahan sesuai pemeriksaan yang tersedia.',
+    if (submitModal && submitModal.parentElement !== document.body) {
+        document.body.appendChild(submitModal);
+    }
+
+    const cancelSubmit = document.querySelector('#pcCancelSubmit');
+    const confirmSubmit = document.querySelector('#pcConfirmSubmit');
+
+    const categoryLabels = {
+        balita: 'Balita',
+        remaja: 'Remaja',
+        lansia: 'Lansia'
     };
 
-    const normalize = value => String(value || '').toLowerCase().trim();
+    function lockBody() {
+        document.documentElement.classList.add('pc-modal-open');
+        document.body.classList.add('pc-modal-open');
+    }
 
-    const escapeHtml = value => String(value ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    function unlockBody() {
+        document.documentElement.classList.remove('pc-modal-open');
+        document.body.classList.remove('pc-modal-open');
+    }
 
-    const showToast = message => {
-        if (!toast || !toastText) return;
+    function getSelectedCategory() {
+        const selected = document.querySelector('[data-category-radio]:checked');
+        return selected ? selected.value : 'balita';
+    }
 
-        toastText.textContent = message;
-        toast.classList.add('show');
+    function updateCategoryCards() {
+        const selected = getSelectedCategory();
 
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3500);
-    };
+        categoryRadios.forEach(function (radio) {
+            const card = radio.closest('label');
 
-    const setPatientMessage = (message, error = false) => {
-        if (!patientList) return;
-
-        patientList.innerHTML = `
-            <div class="rounded-2xl border border-dashed ${error ? 'border-rose-100 bg-rose-50 text-rose-600' : 'border-slate-200 bg-slate-50 text-slate-400'} p-5 text-center text-sm font-bold">
-                ${escapeHtml(message)}
-            </div>
-        `;
-    };
-
-    const clearSelectedPatient = () => {
-        pasienIdInput.value = '';
-        selectedBox?.classList.add('hidden');
-        if (selectedName) selectedName.textContent = '-';
-        if (selectedNik) selectedNik.textContent = '-';
-    };
-
-    const updateFields = () => {
-        document.querySelectorAll('[data-category-card]').forEach(card => {
-            const active = card.dataset.categoryCard === currentKategori;
-            card.classList.toggle('active', active);
-            card.setAttribute('aria-pressed', active ? 'true' : 'false');
-        });
-
-        document.querySelectorAll('.field-section').forEach(section => {
-            const active = section.dataset.fieldCategory === currentKategori;
-            section.hidden = !active;
-
-            section.querySelectorAll('input, select, textarea').forEach(input => {
-                input.disabled = !active;
-                input.classList.remove('is-error');
-            });
-        });
-
-        if (categoryHelp) {
-            categoryHelp.textContent = helpText[currentKategori] || 'Isi data sesuai kategori yang dipilih.';
-        }
-
-        updateImt();
-    };
-
-    const updateImt = () => {
-        const activeSection = document.querySelector(`.field-section[data-field-category="${currentKategori}"]`);
-        if (!activeSection) return;
-
-        const preview = activeSection.querySelector('input[readonly]');
-        if (!preview) return;
-
-        const weight = activeSection.querySelector('.js-imt-weight');
-        const height = activeSection.querySelector('.js-imt-height');
-
-        const berat = parseFloat(weight?.value || 0);
-        const tinggi = parseFloat(height?.value || 0);
-
-        if (!berat || !tinggi) {
-            preview.value = '-';
-            return;
-        }
-
-        const meter = tinggi / 100;
-        const imt = berat / (meter * meter);
-
-        preview.value = Number.isFinite(imt) ? imt.toFixed(2) : '-';
-    };
-
-    const renderPatients = () => {
-        const keyword = normalize(searchPasien?.value);
-        const filtered = patients.filter(item => {
-            const nama = normalize(item.nama || item.nama_lengkap);
-            const nik = normalize(item.nik);
-            return nama.includes(keyword) || nik.includes(keyword);
-        });
-
-        if (pasienCounter) {
-            pasienCounter.textContent = `${filtered.length} dari ${patients.length} data`;
-        }
-
-        if (!filtered.length) {
-            setPatientMessage(keyword ? 'Tidak ada warga yang cocok dengan pencarian.' : 'Belum ada data warga pada kategori ini.');
-            return;
-        }
-
-        patientList.innerHTML = filtered.map(item => {
-            const id = escapeHtml(item.id);
-            const nama = escapeHtml(item.nama || item.nama_lengkap || 'Tanpa Nama');
-            const nik = escapeHtml(item.nik || '-');
-            const active = String(item.id) === String(pasienIdInput.value) ? 'active' : '';
-
-            return `
-                <button type="button" class="warga-item ${active} w-full rounded-2xl p-3 text-left" data-id="${id}">
-                    <div class="flex items-center gap-3">
-                        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700">
-                            <i class="fa-solid fa-user"></i>
-                        </div>
-
-                        <div class="min-w-0">
-                            <p class="truncate text-sm font-black text-slate-900">${nama}</p>
-                            <p class="mt-1 text-xs font-bold text-slate-400">${nik}</p>
-                        </div>
-                    </div>
-                </button>
-            `;
-        }).join('');
-
-        document.querySelectorAll('.warga-item').forEach(button => {
-            button.addEventListener('click', () => {
-                const selected = patients.find(item => String(item.id) === String(button.dataset.id));
-                if (!selected) return;
-
-                pasienIdInput.value = selected.id;
-
-                selectedBox?.classList.remove('hidden');
-                selectedName.textContent = selected.nama || selected.nama_lengkap || 'Tanpa Nama';
-                selectedNik.textContent = `NIK: ${selected.nik || '-'}`;
-
-                document.querySelectorAll('.warga-item').forEach(item => {
-                    item.classList.toggle('active', String(item.dataset.id) === String(selected.id));
-                });
-            });
-        });
-    };
-
-    const loadPatients = async () => {
-        if (controller) controller.abort();
-
-        controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
-
-        clearSelectedPatient();
-
-        if (pasienCounter) pasienCounter.textContent = 'Memuat...';
-        setPatientMessage('Memuat data warga...');
-
-        try {
-            const url = new URL(apiUrl, window.location.origin);
-            url.searchParams.set('kategori', currentKategori);
-            url.searchParams.set('_', Date.now());
-
-            const response = await fetch(url.toString(), {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                signal: controller.signal,
-            });
-
-            clearTimeout(timeout);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            if (!card) {
+                return;
             }
 
-            const result = await response.json();
+            card.classList.remove(
+                'border-emerald-200',
+                'border-violet-200',
+                'border-sky-200',
+                'bg-gradient-to-br',
+                'from-emerald-50',
+                'from-violet-50',
+                'from-sky-50',
+                'via-teal-50',
+                'via-fuchsia-50',
+                'via-cyan-50',
+                'to-white'
+            );
 
-            if (Array.isArray(result)) {
-                patients = result;
-            } else if (Array.isArray(result.data)) {
-                patients = result.data;
-            } else if (result.data && Array.isArray(result.data.data)) {
-                patients = result.data.data;
-            } else {
-                patients = [];
-            }
-
-            renderPatients();
-
-            if (initialPasienId) {
-                const selected = patients.find(item => String(item.id) === String(initialPasienId));
-                if (selected) {
-                    pasienIdInput.value = selected.id;
-                    selectedBox?.classList.remove('hidden');
-                    selectedName.textContent = selected.nama || selected.nama_lengkap || 'Tanpa Nama';
-                    selectedNik.textContent = `NIK: ${selected.nik || '-'}`;
-                    renderPatients();
+            if (radio.checked) {
+                if (radio.value === 'balita') {
+                    card.classList.add('border-emerald-200', 'bg-gradient-to-br', 'from-emerald-50', 'via-teal-50', 'to-white');
+                } else if (radio.value === 'remaja') {
+                    card.classList.add('border-violet-200', 'bg-gradient-to-br', 'from-violet-50', 'via-fuchsia-50', 'to-white');
+                } else {
+                    card.classList.add('border-sky-200', 'bg-gradient-to-br', 'from-sky-50', 'via-cyan-50', 'to-white');
                 }
+            } else {
+                card.classList.add('border-slate-200');
             }
-        } catch (error) {
-            clearTimeout(timeout);
-
-            if (error.name === 'AbortError') {
-                patients = [];
-                if (pasienCounter) pasienCounter.textContent = 'Timeout';
-                setPatientMessage('Data warga terlalu lama dimuat. Coba refresh halaman atau cek route API pasien.', true);
-                return;
-            }
-
-            patients = [];
-            if (pasienCounter) pasienCounter.textContent = 'Gagal';
-            setPatientMessage('Gagal memuat data warga. Periksa route API pasien.', true);
-        }
-    };
-
-    const validateForm = () => {
-        document.querySelectorAll('.is-error').forEach(el => {
-            el.classList.remove('is-error');
         });
 
-        if (!pasienIdInput.value) {
-            showToast('Pilih warga dari daftar sasaran terlebih dahulu.');
-            searchPasien?.focus();
-            return false;
+        if (summaryKategori) {
+            summaryKategori.textContent = categoryLabels[selected] || '-';
+        }
+    }
+
+    function updateVisibleFields() {
+        const selected = getSelectedCategory();
+
+        document.querySelectorAll('[data-field-group]').forEach(function (group) {
+            const values = String(group.dataset.fieldGroup || '').split(' ');
+            const visible = values.includes(selected);
+
+            group.classList.toggle('pc-hidden', !visible);
+
+            group.querySelectorAll('input, select, textarea').forEach(function (input) {
+                input.disabled = !visible;
+            });
+        });
+    }
+
+    function loadPasien() {
+        if (!form || !pasienSelect) {
+            return;
         }
 
-        const activeSection = document.querySelector(`.field-section[data-field-category="${currentKategori}"]`);
+        const category = getSelectedCategory();
+        const apiUrl = form.dataset.apiUrl;
+        const selectedPasien = form.dataset.selectedPasien || '';
 
-        if (!activeSection) {
-            showToast('Kategori belum valid. Pilih kategori sasaran terlebih dahulu.');
-            return false;
+        pasienSelect.innerHTML = '<option value="">Memuat data sasaran...</option>';
+        pasienSelect.disabled = true;
+
+        fetch(apiUrl + '?kategori=' + encodeURIComponent(category), {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            cache: 'no-store'
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Gagal memuat sasaran');
+                }
+
+                return response.json();
+            })
+            .then(function (payload) {
+                const rows = Array.isArray(payload.data) ? payload.data : [];
+
+                pasienSelect.innerHTML = '<option value="">Pilih sasaran</option>';
+
+                rows.forEach(function (item) {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.nama} - NIK ${item.nik || '-'}`;
+
+                    if (String(item.id) === String(selectedPasien)) {
+                        option.selected = true;
+                    }
+
+                    pasienSelect.appendChild(option);
+                });
+
+                pasienSelect.disabled = false;
+
+                if (pasienHelp) {
+                    pasienHelp.textContent = rows.length
+                        ? `${rows.length} sasaran tersedia untuk kategori ${categoryLabels[category]}.`
+                        : 'Belum ada data sasaran pada kategori ini.';
+                }
+
+                updateSummaryPasien();
+            })
+            .catch(function () {
+                pasienSelect.innerHTML = '<option value="">Gagal memuat data sasaran</option>';
+
+                if (pasienHelp) {
+                    pasienHelp.textContent = 'API sasaran gagal dimuat. Cek route kader.pemeriksaan.api.';
+                }
+            });
+    }
+
+    function updateSummaryPasien() {
+        if (!summaryPasien || !pasienSelect) {
+            return;
         }
 
-        const requiredFields = [
-            document.getElementById('tanggal_periksa'),
-            ...activeSection.querySelectorAll('.js-required')
-        ].filter(Boolean);
+        const selected = pasienSelect.options[pasienSelect.selectedIndex];
+        summaryPasien.textContent = selected && selected.value ? selected.textContent : '-';
+    }
 
-        const empty = requiredFields.find(input => !String(input.value || '').trim());
+    function calculateImt() {
+        const category = getSelectedCategory();
+        const bb = parseFloat(document.querySelector('[name="berat_badan"]')?.value || 0);
+        const tb = parseFloat(document.querySelector('[name="tinggi_badan"]')?.value || 0);
 
-        if (empty) {
-            empty.classList.add('is-error');
-            empty.focus();
-            showToast(`${empty.dataset.label || 'Data wajib'} wajib diisi terlebih dahulu.`);
-            return false;
+        if (!summaryImt) {
+            return;
         }
 
-        const blood = activeSection.querySelector('.js-blood');
-        const bloodValue = String(blood?.value || '').trim();
-
-        if (blood && bloodValue && !/^[0-9]{2,3}\/[0-9]{2,3}$/.test(bloodValue)) {
-            blood.classList.add('is-error');
-            blood.focus();
-            showToast('Format tekanan darah harus seperti 120/80.');
-            return false;
+        if (category === 'balita') {
+            summaryImt.textContent = 'Tidak dihitung';
+            return;
         }
 
-        return true;
-    };
+        if (!bb || !tb) {
+            summaryImt.textContent = '-';
+            return;
+        }
 
-    document.querySelectorAll('.kategori-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            const nextKategori = button.dataset.category;
+        const meter = tb / 100;
+        const imt = bb / (meter * meter);
 
-            if (!nextKategori || nextKategori === currentKategori) {
-                return;
-            }
+        if (!isFinite(imt)) {
+            summaryImt.textContent = '-';
+            return;
+        }
 
-            currentKategori = nextKategori;
+        summaryImt.textContent = imt.toFixed(2);
+    }
 
-            const radio = document.querySelector(`.kategori-radio[value="${currentKategori}"]`);
-            if (radio) radio.checked = true;
+    function refreshAll(reloadPasien = false) {
+        updateCategoryCards();
+        updateVisibleFields();
+        calculateImt();
 
-            if (searchPasien) searchPasien.value = '';
+        if (reloadPasien) {
+            form.dataset.selectedPasien = '';
+            loadPasien();
+        }
+    }
 
-            updateFields();
-            loadPatients();
+    function openSubmitModal() {
+        if (!submitModal) {
+            HTMLFormElement.prototype.submit.call(form);
+            return;
+        }
+
+        lockBody();
+        submitModal.classList.add('is-open');
+        submitModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeSubmitModal() {
+        if (!submitModal) {
+            return;
+        }
+
+        submitModal.classList.remove('is-open');
+        submitModal.setAttribute('aria-hidden', 'true');
+        unlockBody();
+    }
+
+    categoryRadios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            refreshAll(true);
         });
     });
 
-    searchPasien?.addEventListener('input', () => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(renderPatients, 90);
+    if (pasienSelect) {
+        pasienSelect.addEventListener('change', updateSummaryPasien);
+    }
+
+    document.querySelectorAll('[data-imt-source]').forEach(function (input) {
+        input.addEventListener('input', calculateImt);
     });
 
-    document.addEventListener('input', event => {
-        if (event.target.classList.contains('js-imt-weight') || event.target.classList.contains('js-imt-height')) {
-            updateImt();
-        }
-
-        if (event.target.classList.contains('is-error')) {
-            event.target.classList.remove('is-error');
-        }
-    });
-
-    form?.addEventListener('submit', event => {
-        if (!validateForm()) {
+    if (form) {
+        form.addEventListener('submit', function (event) {
             event.preventDefault();
+            openSubmitModal();
+        });
+    }
+
+    if (cancelSubmit) {
+        cancelSubmit.addEventListener('click', closeSubmitModal);
+    }
+
+    if (submitModal) {
+        submitModal.addEventListener('click', function (event) {
+            if (event.target === submitModal) {
+                closeSubmitModal();
+            }
+        });
+    }
+
+    if (confirmSubmit) {
+        confirmSubmit.addEventListener('click', function () {
+            confirmSubmit.disabled = true;
+            confirmSubmit.classList.add('opacity-70', 'cursor-not-allowed');
+            confirmSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            }
+
+            HTMLFormElement.prototype.submit.call(form);
+        });
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeSubmitModal();
         }
     });
 
-    updateFields();
-    loadPatients();
-});
+    refreshAll(false);
+    loadPasien();
+})();
 </script>
 @endpush

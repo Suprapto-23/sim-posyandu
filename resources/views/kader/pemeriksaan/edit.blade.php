@@ -1,621 +1,731 @@
 @extends('layouts.kader')
 
 @section('title', 'Edit Pengukuran Fisik')
+@section('page-name', 'Edit Pengukuran Fisik')
+@section('page-title', 'Edit Pengukuran Fisik')
 
 @php
     use Carbon\Carbon;
-    use Illuminate\Support\Facades\Route;
+    use Illuminate\Support\Str;
 
     Carbon::setLocale('id');
 
-    $pasien = $pemeriksaan->kunjungan->pasien ?? null;
+    $pasien = optional($pemeriksaan->kunjungan)->pasien;
+
+    $kategori = strtolower((string) ($pemeriksaan->kategori_pasien ?? 'balita'));
+
+    if (! in_array($kategori, ['balita', 'remaja', 'lansia'], true)) {
+        $kategori = 'balita';
+    }
+
+    $kategoriMeta = match ($kategori) {
+        'remaja' => [
+            'label' => 'Remaja',
+            'desc' => 'LiLA, lingkar perut, tensi, dan skrining remaja',
+            'icon' => 'fa-user-graduate',
+            'solid' => 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white',
+            'soft' => 'border-violet-200 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-white',
+            'text' => 'text-violet-700',
+        ],
+        'lansia' => [
+            'label' => 'Lansia',
+            'desc' => 'Lingkar perut, tensi, kemandirian, dan pemeriksaan dasar',
+            'icon' => 'fa-person-cane',
+            'solid' => 'bg-gradient-to-br from-sky-500 to-cyan-500 text-white',
+            'soft' => 'border-sky-200 bg-gradient-to-br from-sky-50 via-cyan-50 to-white',
+            'text' => 'text-sky-700',
+        ],
+        default => [
+            'label' => 'Balita',
+            'desc' => 'BB, TB, lingkar kepala, dan LiLA',
+            'icon' => 'fa-child-reaching',
+            'solid' => 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white',
+            'soft' => 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-teal-50 to-white',
+            'text' => 'text-emerald-700',
+        ],
+    };
 
     $namaPasien = $pasien->nama_lengkap
         ?? $pasien->nama
         ?? $pemeriksaan->nama_pasien
-        ?? 'Data sasaran';
+        ?? $pemeriksaan->nama_pasien
+        ?? 'Tanpa Nama';
 
     $nikPasien = $pasien->nik
         ?? $pemeriksaan->nik_pasien
         ?? '-';
 
-    $kategori = $pemeriksaan->kategori_pasien ?? 'balita';
+    $tanggalValue = old('tanggal_periksa', optional($pemeriksaan->tanggal_periksa)->format('Y-m-d') ?: Carbon::parse($pemeriksaan->tanggal_periksa ?? now())->format('Y-m-d'));
 
-    $kategoriLabel = match($kategori) {
-        'balita' => 'Balita / Anak',
-        'remaja' => 'Remaja',
-        'lansia' => 'Lansia',
-        default => 'Sasaran',
-    };
+    $today = now('Asia/Jakarta')->toDateString();
 
-    $kategoriIcon = match($kategori) {
-        'balita' => 'fa-child-reaching',
-        'remaja' => 'fa-user-graduate',
-        'lansia' => 'fa-person-cane',
-        default => 'fa-users',
-    };
-
-    $statusRaw = strtolower($pemeriksaan->status_verifikasi ?? 'pending');
-
-    $isReviewed = in_array($statusRaw, [
-        'verified',
-        'terverifikasi',
-        'approved',
-        'valid',
-        'tervalidasi',
-        'sudah_ditinjau',
-    ]);
-
-    $needFix = in_array($statusRaw, [
-        'ditolak',
-        'rejected',
-        'direvisi',
-        'perlu_perbaikan',
-    ]);
-
-    $statusLabel = match(true) {
-        $isReviewed => 'Sudah Ditinjau',
-        $needFix => 'Perlu Perbaikan',
-        default => 'Menunggu Review',
-    };
-
-    $statusClass = match(true) {
-        $isReviewed => 'bg-emerald-50 text-emerald-700 border-emerald-100',
-        $needFix => 'bg-rose-50 text-rose-700 border-rose-100',
-        default => 'bg-amber-50 text-amber-700 border-amber-100',
-    };
+    $status = strtolower((string) ($pemeriksaan->status_verifikasi ?? 'pending'));
+    $isRevisi = in_array($status, ['ditolak', 'revisi', 'perlu_revisi', 'needs_revision', 'rejected', 'dikembalikan'], true);
 
     $catatanBidan = $pemeriksaan->catatan_validasi
         ?? $pemeriksaan->catatan_bidan
         ?? $pemeriksaan->catatan_review
         ?? null;
-
-    $routeHas = fn ($name) => Route::has($name);
-
-    $tanggalValue = old(
-        'tanggal_periksa',
-        !empty($pemeriksaan->tanggal_periksa)
-            ? Carbon::parse($pemeriksaan->tanggal_periksa)->format('Y-m-d')
-            : now()->toDateString()
-    );
 @endphp
 
 @push('styles')
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
-
-    .edit-page {
-        position: relative;
-        isolation: isolate;
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        animation: pageIn .18s ease-out both;
+    html {
+        scroll-behavior: auto !important;
     }
 
-    .edit-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
+    html.pc-modal-open,
+    body.pc-modal-open {
+        overflow: hidden !important;
+    }
+
+    .pc-page {
         background:
-            radial-gradient(circle at 8% 6%, rgba(16,185,129,.12), transparent 26%),
-            radial-gradient(circle at 92% 10%, rgba(245,158,11,.10), transparent 24%),
-            linear-gradient(135deg, #f7fffc 0%, #f8fafc 55%, #fffaf1 100%);
+            radial-gradient(circle at 8% 5%, rgba(16, 185, 129, .14), transparent 28%),
+            radial-gradient(circle at 95% 8%, rgba(14, 165, 233, .13), transparent 26%),
+            radial-gradient(circle at 50% 96%, rgba(251, 191, 36, .10), transparent 30%),
+            linear-gradient(135deg, #f3fff9 0%, #eef9ff 48%, #f8fafc 100%);
     }
 
-    @keyframes pageIn {
-        from { opacity: 0; transform: translateY(6px); }
-        to { opacity: 1; transform: translateY(0); }
+    .pc-grid {
+        background-image:
+            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+        background-size: 30px 30px;
     }
 
-    .hero {
-        border: 1px solid rgba(167,243,208,.65);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.14), transparent 28%),
-            radial-gradient(circle at 90% 16%, rgba(245,158,11,.12), transparent 30%),
-            linear-gradient(135deg, rgba(255,255,255,.96), rgba(236,253,245,.78));
-        box-shadow: 0 14px 34px rgba(15,23,42,.055);
+    .pc-glass {
+        background: rgba(255, 255, 255, .86);
+        backdrop-filter: blur(9px);
+        -webkit-backdrop-filter: blur(9px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .065);
     }
 
-    .panel {
-        border: 1px solid rgba(226,232,240,.88);
-        background: rgba(255,255,255,.95);
-        box-shadow: 0 10px 28px rgba(15,23,42,.045);
+    .pc-field {
+        width: 100%;
+        border-radius: 1rem;
+        border: 1px solid rgba(203, 213, 225, .95);
+        background: rgba(255, 255, 255, .86);
+        padding: .85rem 1rem;
+        font-size: .875rem;
+        font-weight: 800;
+        color: #334155;
+        outline: none;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, .035);
+        transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
     }
 
-    .badge-title {
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-        border-radius: 999px;
-        border: 1px solid rgba(16,185,129,.18);
-        background: rgba(236,253,245,.88);
-        color: #047857;
-        padding: .55rem .85rem;
-        font-size: 10px;
-        font-weight: 900;
+    .pc-field:focus {
+        border-color: rgba(16, 185, 129, .55);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, .10);
+        background: rgba(255, 255, 255, .96);
+    }
+
+    .pc-label {
+        display: block;
+        margin-bottom: .45rem;
+        font-size: .72rem;
+        font-weight: 950;
         letter-spacing: .14em;
         text-transform: uppercase;
+        color: #64748b;
     }
 
-    .btn-soft {
-        border-radius: 16px;
-        font-weight: 900;
-        transition: background .15s ease, transform .15s ease, border-color .15s ease;
+    .pc-required::after {
+        content: " *";
+        color: #f43f5e;
     }
 
-    .btn-soft:hover {
-        transform: translateY(-1px);
+    .pc-hidden {
+        display: none !important;
     }
 
-    .btn-primary {
-        color: white;
-        background: linear-gradient(135deg, #059669, #10b981);
-        box-shadow: 0 10px 20px rgba(5,150,105,.14);
+    .pc-modal-backdrop {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        z-index: 2147483647 !important;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        padding: 1rem;
+        background: rgba(15, 23, 42, .58);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
     }
 
-    .btn-dark {
-        color: white;
-        background: linear-gradient(135deg, #0f172a, #1e293b);
-        box-shadow: 0 10px 20px rgba(15,23,42,.12);
+    .pc-modal-backdrop.is-open {
+        display: flex !important;
     }
 
-    .btn-outline {
-        border: 1px solid rgba(16,185,129,.18);
-        color: #047857;
-        background: white;
+    .pc-modal-card {
+        width: min(100%, 470px);
+        transform: translateY(12px) scale(.97);
+        opacity: 0;
+        border-radius: 1.75rem;
+        border: 1px solid rgba(255, 255, 255, .78);
+        background:
+            radial-gradient(circle at 0% 0%, rgba(16, 185, 129, .14), transparent 34%),
+            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
+            rgba(255, 255, 255, .95);
+        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
+        transition: transform .18s ease, opacity .18s ease;
     }
 
-    .btn-outline:hover {
-        background: #ecfdf5;
+    .pc-modal-backdrop.is-open .pc-modal-card {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+    .pc-balanced-grid {
+    align-items: stretch !important;
+}
+
+.pc-left-panel {
+    min-height: 100%;
+}
+
+.pc-side-panel {
+    min-height: 100%;
+}
+
+.pc-side-card {
+    min-height: 100%;
+}
+
+.pc-side-fill {
+    flex: 1 1 auto;
+}
+
+.pc-side-bottom {
+    margin-top: auto;
+}
+
+.pc-note-card {
+    min-height: 132px;
+}
+
+@media (max-width: 1279px) {
+    .pc-balanced-grid {
+        align-items: start !important;
     }
 
-    .input-soft {
-        border: 1px solid rgba(226,232,240,.9);
-        background: white;
-        outline: none;
-        transition: border-color .15s ease, box-shadow .15s ease;
+    .pc-left-panel,
+    .pc-side-panel,
+    .pc-side-card {
+        min-height: auto;
     }
-
-    .input-soft:focus {
-        border-color: rgba(16,185,129,.28);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-    }
-
-    .field-group {
-        border: 1px solid rgba(226,232,240,.82);
-        background: #fff;
-    }
-
-    .identity-card {
-        border: 1px solid rgba(16,185,129,.16);
-        background: #ecfdf5;
-    }
-
-    .fix-alert {
-        border: 1px solid rgba(244,63,94,.16);
-        background: #fff1f2;
-        color: #be123c;
-    }
-
-    .review-alert {
-        border: 1px solid rgba(245,158,11,.18);
-        background: #fff8eb;
-        color: #92400e;
-    }
-
-    @media (max-width: 640px) {
-        .btn-soft:hover { transform: none; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .edit-page,
-        .btn-soft {
-            animation: none !important;
-            transition: none !important;
-        }
-    }
+}
 </style>
 @endpush
 
 @section('content')
-<div class="edit-page space-y-5">
+<div class="pc-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+    <div class="pointer-events-none absolute inset-0 pc-grid opacity-70"></div>
 
-    {{-- HERO --}}
-    <section class="hero rounded-[28px] p-5 sm:p-6">
-        <div class="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="badge-title mb-3">
-                    <i class="fa-solid {{ $needFix ? 'fa-screwdriver-wrench' : 'fa-pen-to-square' }}"></i>
-                    {{ $needFix ? 'Perbaiki Pengukuran' : 'Edit Pengukuran' }}
-                </div>
+    <div class="relative z-10 mx-auto max-w-[1400px] space-y-5">
+        <section class="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-br from-emerald-50/95 via-cyan-50/90 to-white/95 pc-glass">
+            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl"></div>
+            <div class="absolute -bottom-24 left-24 h-72 w-72 rounded-full bg-sky-300/16 blur-3xl"></div>
 
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    {{ $needFix ? 'Perbaiki Pengukuran Fisik' : 'Edit Pengukuran Fisik' }}
-                </h1>
+            <div class="relative grid gap-6 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.3fr)_340px] xl:items-stretch">
+                <div class="flex min-w-0 flex-col justify-between gap-6">
+                    <div>
+                        <div class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/75 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                            Edit Pengukuran Kader
+                        </div>
 
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Perbarui data pengukuran awal {{ $kategoriLabel }}. Setelah disimpan, data akan kembali masuk daftar <b>Menunggu Review</b> Bidan.
-                </p>
-            </div>
+                        <h1 class="mt-4 max-w-4xl text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-[1.85rem] lg:text-[2rem]">
+                            Perbaiki data pengukuran sebelum dikunci Bidan.
+                        </h1>
 
-            <div class="grid grid-cols-2 gap-3 sm:flex">
-                @if($routeHas('kader.pemeriksaan.show'))
-                    <a href="{{ route('kader.pemeriksaan.show', $pemeriksaan->id) }}" class="btn-soft btn-outline inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Detail
-                    </a>
-                @endif
-
-                @if($routeHas('kader.pemeriksaan.index'))
-                    <a href="{{ route('kader.pemeriksaan.index') }}" class="btn-soft btn-dark inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
-                        <i class="fa-solid fa-list"></i>
-                        Daftar
-                    </a>
-                @endif
-            </div>
-        </div>
-    </section>
-
-    @if($errors->any())
-        <section class="rounded-[22px] border border-rose-100 bg-rose-50 p-4 text-sm font-bold text-rose-700">
-            <div class="mb-2 flex items-center gap-2 font-black">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Ada input yang perlu diperbaiki
-            </div>
-            <ul class="ml-5 list-disc space-y-1">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </section>
-    @endif
-
-    @if($needFix && !empty($catatanBidan))
-        <section class="fix-alert rounded-[22px] p-4 text-sm font-bold leading-6">
-            <div class="mb-2 flex items-center gap-2 font-black">
-                <i class="fa-solid fa-note-sticky"></i>
-                Catatan Bidan
-            </div>
-            <p>{{ $catatanBidan }}</p>
-        </section>
-    @elseif(!$needFix)
-        <section class="review-alert rounded-[22px] p-4 text-sm font-bold leading-6">
-            <div class="mb-2 flex items-center gap-2 font-black">
-                <i class="fa-solid fa-circle-info"></i>
-                Status Data
-            </div>
-            <p>Data saat ini berstatus {{ $statusLabel }}. Perubahan akan disimpan sebagai data yang menunggu review Bidan.</p>
-        </section>
-    @endif
-
-    <form method="POST" action="{{ route('kader.pemeriksaan.update', $pemeriksaan->id) }}" id="formEditPengukuran" class="grid grid-cols-1 gap-5 xl:grid-cols-12">
-        @csrf
-        @method('PUT')
-
-        {{-- LEFT --}}
-        <section class="panel rounded-[26px] p-4 sm:p-5 xl:col-span-4">
-            <div class="mb-4">
-                <h2 class="text-lg font-black text-slate-900">Data Sasaran</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Identitas sasaran tidak diubah dari halaman ini.
-                </p>
-            </div>
-
-            <div class="identity-card rounded-[24px] p-5">
-                <div class="mb-4 flex items-start gap-4">
-                    <div class="grid h-14 w-14 shrink-0 place-items-center rounded-3xl bg-white text-emerald-700">
-                        <i class="fa-solid {{ $kategoriIcon }} text-lg"></i>
-                    </div>
-
-                    <div class="min-w-0">
-                        <span class="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[.1em] text-emerald-700">
-                            {{ $kategoriLabel }}
-                        </span>
-
-                        <h3 class="mt-3 truncate text-lg font-black text-slate-900">
-                            {{ $namaPasien }}
-                        </h3>
-
-                        <p class="mt-1 text-xs font-bold text-slate-500">
-                            <i class="fa-solid fa-id-card mr-1"></i>
-                            {{ $nikPasien }}
+                        <p class="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600">
+                            Edit hanya tersedia saat data belum direview atau dikembalikan untuk revisi. Kalau sudah divalidasi, Kader tidak boleh mengubah data. Begitulah data medis bekerja, bukan papan tulis warung.
                         </p>
                     </div>
-                </div>
 
-                <div class="rounded-2xl bg-white/80 p-4">
-                    <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Status Review</p>
-                    <p class="mt-2 inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] {{ $statusClass }}">
-                        {{ $statusLabel }}
-                    </p>
-                </div>
-            </div>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="{{ route('kader.pemeriksaan.index') }}"
+                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-2.5 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            Kembali
+                        </a>
 
-            <div class="mt-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                <h3 class="text-sm font-black text-slate-900">Alur Perbaikan</h3>
-                <p class="mt-2 text-xs font-bold leading-5 text-slate-500">
-                    Jika data diperbaiki, status akan kembali menjadi Menunggu Review agar Bidan dapat meninjau ulang hasil pengukuran.
-                </p>
-            </div>
-        </section>
-
-        {{-- RIGHT --}}
-        <section class="panel rounded-[26px] p-4 sm:p-5 xl:col-span-8">
-            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-lg font-black text-slate-900">Form Pengukuran</h2>
-                    <p class="mt-1 text-xs font-bold leading-5 text-slate-500">
-                        Edit parameter sesuai kategori {{ $kategoriLabel }}. Kolom yang tidak diperiksa dapat dikosongkan.
-                    </p>
-                </div>
-
-                <span class="w-fit rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-amber-700">
-                    Akan Menunggu Review
-                </span>
-            </div>
-
-            <div class="space-y-5">
-
-                {{-- TANGGAL --}}
-                <div class="field-group rounded-[22px] p-4">
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Tanggal Pengukuran</h3>
-
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                                Tanggal
-                            </label>
-                            <input
-                                type="date"
-                                name="tanggal_periksa"
-                                value="{{ $tanggalValue }}"
-                                max="{{ now()->toDateString() }}"
-                                class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700"
-                                required
-                            >
-                        </div>
+                        <a href="{{ route('kader.pemeriksaan.show', $pemeriksaan->id) }}"
+                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+                            <i class="fa-solid fa-eye"></i>
+                            Lihat Detail
+                        </a>
                     </div>
                 </div>
 
-                {{-- PARAMETER DASAR --}}
-                <div class="field-group rounded-[22px] p-4">
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Dasar</h3>
+                <div class="pc-glass rounded-[1.55rem] border border-white/80 p-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] {{ $kategoriMeta['text'] }}">Sasaran</p>
 
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Berat Badan</label>
-                            <div class="relative">
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0.1"
-                                    max="300"
-                                    name="berat_badan"
-                                    id="berat_badan"
-                                    value="{{ old('berat_badan', $pemeriksaan->berat_badan) }}"
-                                    placeholder="20"
-                                    class="input-soft h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700"
-                                >
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">kg</span>
-                            </div>
+                    <div class="mt-4 flex items-center gap-3">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl {{ $kategoriMeta['solid'] }}">
+                            <i class="fa-solid {{ $kategoriMeta['icon'] }}"></i>
                         </div>
 
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                                {{ $kategori === 'balita' ? 'Tinggi / Panjang Badan' : 'Tinggi Badan' }}
-                            </label>
-                            <div class="relative">
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    min="10"
-                                    max="250"
-                                    name="tinggi_badan"
-                                    id="tinggi_badan"
-                                    value="{{ old('tinggi_badan', $pemeriksaan->tinggi_badan) }}"
-                                    placeholder="100"
-                                    class="input-soft h-12 w-full rounded-2xl px-4 pr-12 text-sm font-bold text-slate-700"
-                                >
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">cm</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">IMT Otomatis</label>
-                            <input
-                                type="text"
-                                id="imt_preview"
-                                value="-"
-                                class="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-black text-slate-700"
-                                readonly
-                            >
+                        <div class="min-w-0">
+                            <p class="line-clamp-1 text-base font-black text-slate-950">{{ $namaPasien }}</p>
+                            <p class="mt-1 text-xs font-bold text-slate-500">NIK {{ $nikPasien }}</p>
                         </div>
                     </div>
-                </div>
 
-                {{-- BALITA --}}
-                @if($kategori === 'balita')
-                    <div class="field-group rounded-[22px] p-4">
-                        <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Balita / Anak</h3>
-
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Suhu Tubuh</label>
-                                <input type="number" step="0.1" min="30" max="45" name="suhu_tubuh" value="{{ old('suhu_tubuh', $pemeriksaan->suhu_tubuh) }}" placeholder="36.5" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Lingkar Kepala</label>
-                                <input type="number" step="0.1" min="10" max="100" name="lingkar_kepala" value="{{ old('lingkar_kepala', $pemeriksaan->lingkar_kepala) }}" placeholder="45" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">LiLA</label>
-                                <input type="number" step="0.1" min="5" max="100" name="lingkar_lengan" value="{{ old('lingkar_lengan', $pemeriksaan->lingkar_lengan) }}" placeholder="14" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                {{-- REMAJA --}}
-                @if($kategori === 'remaja')
-                    <div class="field-group rounded-[22px] p-4">
-                        <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Remaja</h3>
-
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">LiLA</label>
-                                <input type="number" step="0.1" min="5" max="100" name="lingkar_lengan" value="{{ old('lingkar_lengan', $pemeriksaan->lingkar_lengan) }}" placeholder="24" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Lingkar Perut</label>
-                                <input type="number" step="0.1" min="20" max="200" name="lingkar_perut" value="{{ old('lingkar_perut', $pemeriksaan->lingkar_perut) }}" placeholder="75" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tekanan Darah</label>
-                                <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah', $pemeriksaan->tekanan_darah) }}" placeholder="120/80" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Hemoglobin / Hb</label>
-                                <input type="number" step="0.1" min="1" max="30" name="hemoglobin" value="{{ old('hemoglobin', $pemeriksaan->hemoglobin) }}" placeholder="13.5" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Suhu Tubuh</label>
-                                <input type="number" step="0.1" min="30" max="45" name="suhu_tubuh" value="{{ old('suhu_tubuh', $pemeriksaan->suhu_tubuh) }}" placeholder="36.5" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                {{-- LANSIA --}}
-                @if($kategori === 'lansia')
-                    <div class="field-group rounded-[22px] p-4">
-                        <h3 class="mb-3 text-sm font-black text-slate-900">Parameter Lansia</h3>
-
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Lingkar Perut</label>
-                                <input type="number" step="0.1" min="20" max="200" name="lingkar_perut" value="{{ old('lingkar_perut', $pemeriksaan->lingkar_perut) }}" placeholder="85" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tekanan Darah</label>
-                                <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah', $pemeriksaan->tekanan_darah) }}" placeholder="120/80" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Gula Darah</label>
-                                <input type="number" step="0.1" min="10" max="1000" name="gula_darah" value="{{ old('gula_darah', $pemeriksaan->gula_darah) }}" placeholder="120" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Kolesterol</label>
-                                <input type="number" min="10" max="1000" name="kolesterol" value="{{ old('kolesterol', $pemeriksaan->kolesterol) }}" placeholder="180" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Asam Urat</label>
-                                <input type="number" step="0.1" min="1" max="30" name="asam_urat" value="{{ old('asam_urat', $pemeriksaan->asam_urat) }}" placeholder="6.5" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Hemoglobin / Hb</label>
-                                <input type="number" step="0.1" min="1" max="30" name="hemoglobin" value="{{ old('hemoglobin', $pemeriksaan->hemoglobin) }}" placeholder="13.5" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                            </div>
-
-                            <div class="md:col-span-3">
-                                <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Tingkat Kemandirian</label>
-                                <select name="tingkat_kemandirian" class="input-soft h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700">
-                                    <option value="">Pilih tingkat kemandirian</option>
-                                    <option value="mandiri" {{ old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'mandiri' ? 'selected' : '' }}>Mandiri</option>
-                                    <option value="bantuan_sebagian" {{ old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'bantuan_sebagian' ? 'selected' : '' }}>Perlu Bantuan Sebagian</option>
-                                    <option value="bantuan_penuh" {{ old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'bantuan_penuh' ? 'selected' : '' }}>Perlu Bantuan Penuh</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                {{-- CATATAN --}}
-                <div class="field-group rounded-[22px] p-4">
-                    <h3 class="mb-3 text-sm font-black text-slate-900">Catatan Kader</h3>
-
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Keluhan</label>
-                            <textarea name="keluhan" rows="4" placeholder="Contoh: pusing, demam, batuk, atau tidak ada keluhan..." class="input-soft w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700">{{ old('keluhan', $pemeriksaan->keluhan) }}</textarea>
-                        </div>
-
-                        <div>
-                            <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">Catatan Tambahan</label>
-                            <textarea name="catatan_kader" rows="4" placeholder="Catatan pengukuran atau informasi pendukung..." class="input-soft w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-700">{{ old('catatan_kader', $pemeriksaan->catatan_kader) }}</textarea>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ACTION --}}
-                <div class="sticky bottom-4 z-20 rounded-[24px] border border-emerald-100 bg-white/95 p-4 shadow-[0_14px_34px_rgba(15,23,42,.10)]">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p class="text-sm font-black text-slate-900">
-                                {{ $needFix ? 'Simpan Perbaikan Data' : 'Simpan Perubahan Data' }}
-                            </p>
-                            <p class="mt-1 text-xs font-bold text-slate-400">
-                                Setelah disimpan, data akan masuk daftar Menunggu Review Bidan.
-                            </p>
-                        </div>
-
-                        <button type="submit" class="btn-soft btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 text-sm">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            {{ $needFix ? 'Simpan Perbaikan' : 'Simpan Perubahan' }}
-                        </button>
+                    <div class="mt-5 rounded-[1.2rem] border {{ $kategoriMeta['soft'] }} p-4">
+                        <p class="text-sm font-black text-slate-950">{{ $kategoriMeta['label'] }}</p>
+                        <p class="mt-1 text-xs font-semibold text-slate-500">{{ $kategoriMeta['desc'] }}</p>
                     </div>
                 </div>
             </div>
         </section>
-    </form>
+
+        @if(session('success') || session('error') || $errors->any())
+            <section class="space-y-3">
+                @if(session('success'))
+                    <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50/90 p-4 text-sm font-bold text-emerald-800 shadow-sm">
+                        <i class="fa-solid fa-circle-check mr-2"></i>
+                        {{ session('success') }}
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="rounded-[1.35rem] border border-rose-200 bg-rose-50/90 p-4 text-sm font-bold text-rose-800 shadow-sm">
+                        <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="rounded-[1.35rem] border border-amber-200 bg-amber-50/90 p-4 text-sm font-bold text-amber-800 shadow-sm">
+                        <div class="flex gap-2">
+                            <i class="fa-solid fa-circle-info mt-0.5"></i>
+                            <div>
+                                <p>Form belum valid. Perbaiki bagian yang masih salah.</p>
+                                <ul class="mt-2 list-disc space-y-1 pl-5 text-xs font-semibold">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </section>
+        @endif
+
+        @if($isRevisi && $catatanBidan)
+            <section class="rounded-[1.55rem] border border-rose-200 bg-rose-50/90 p-5 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[.18em] text-rose-700">Catatan Bidan</p>
+                <h2 class="mt-1 text-lg font-black text-slate-950">Data dikembalikan untuk revisi</h2>
+                <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">{{ $catatanBidan }}</p>
+            </section>
+        @endif
+
+        <form id="measurementEditForm"
+      method="POST"
+      action="{{ route('kader.pemeriksaan.update', $pemeriksaan->id) }}"
+      class="pc-balanced-grid grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,.55fr)]">
+            @csrf
+            @method('PUT')
+
+            <section class="pc-left-panel pc-glass flex h-full flex-col rounded-[1.75rem] border border-white/80 p-5">
+                <div class="mb-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Form Pengukuran</p>
+                    <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">Perbarui hasil pengukuran</h2>
+                    <p class="mt-1 text-sm font-medium text-slate-500">
+                        Kategori dan sasaran dikunci agar data tidak pindah identitas seenaknya.
+                    </p>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="pc-label pc-required">Tanggal Pengukuran</label>
+                        <input type="date"
+                               name="tanggal_periksa"
+                               value="{{ $tanggalValue }}"
+                               max="{{ $today }}"
+                               class="pc-field">
+                    </div>
+
+                    <div>
+                        <label class="pc-label">Suhu Tubuh</label>
+                        <input type="number"
+                               step="0.1"
+                               min="30"
+                               max="45"
+                               name="suhu_tubuh"
+                               value="{{ old('suhu_tubuh', $pemeriksaan->suhu_tubuh) }}"
+                               placeholder="Contoh: 36.5"
+                               class="pc-field">
+                    </div>
+
+                    <div>
+                        <label class="pc-label pc-required">Berat Badan</label>
+                        <input type="number"
+                               step="0.1"
+                               min="0.1"
+                               max="300"
+                               name="berat_badan"
+                               value="{{ old('berat_badan', $pemeriksaan->berat_badan) }}"
+                               placeholder="Kg"
+                               class="pc-field"
+                               data-imt-source>
+                    </div>
+
+                    <div>
+                        <label class="pc-label pc-required">Tinggi / Panjang Badan</label>
+                        <input type="number"
+                               step="0.1"
+                               min="10"
+                               max="250"
+                               name="tinggi_badan"
+                               value="{{ old('tinggi_badan', $pemeriksaan->tinggi_badan) }}"
+                               placeholder="Cm"
+                               class="pc-field"
+                               data-imt-source>
+                    </div>
+
+                    <div class="{{ $kategori !== 'balita' ? 'pc-hidden' : '' }}">
+                        <label class="pc-label pc-required">Lingkar Kepala</label>
+                        <input type="number"
+                               step="0.1"
+                               min="10"
+                               max="100"
+                               name="lingkar_kepala"
+                               value="{{ old('lingkar_kepala', $pemeriksaan->lingkar_kepala) }}"
+                               placeholder="Cm"
+                               class="pc-field"
+                               @disabled($kategori !== 'balita')>
+                    </div>
+
+                    <div class="{{ ! in_array($kategori, ['balita', 'remaja'], true) ? 'pc-hidden' : '' }}">
+                        <label class="pc-label pc-required">Lingkar Lengan Atas</label>
+                        <input type="number"
+                               step="0.1"
+                               min="5"
+                               max="100"
+                               name="lingkar_lengan"
+                               value="{{ old('lingkar_lengan', $pemeriksaan->lingkar_lengan) }}"
+                               placeholder="Cm"
+                               class="pc-field"
+                               @disabled(! in_array($kategori, ['balita', 'remaja'], true))>
+                    </div>
+
+                    <div class="{{ ! in_array($kategori, ['remaja', 'lansia'], true) ? 'pc-hidden' : '' }}">
+                        <label class="pc-label pc-required">Lingkar Perut</label>
+                        <input type="number"
+                               step="0.1"
+                               min="20"
+                               max="200"
+                               name="lingkar_perut"
+                               value="{{ old('lingkar_perut', $pemeriksaan->lingkar_perut) }}"
+                               placeholder="Cm"
+                               class="pc-field"
+                               @disabled(! in_array($kategori, ['remaja', 'lansia'], true))>
+                    </div>
+
+                    <div class="{{ ! in_array($kategori, ['remaja', 'lansia'], true) ? 'pc-hidden' : '' }}">
+                        <label class="pc-label pc-required">Tekanan Darah</label>
+                        <input type="text"
+                               name="tekanan_darah"
+                               value="{{ old('tekanan_darah', $pemeriksaan->tekanan_darah) }}"
+                               placeholder="Contoh: 120/80"
+                               class="pc-field"
+                               @disabled(! in_array($kategori, ['remaja', 'lansia'], true))>
+                    </div>
+
+                    <div class="{{ $kategori !== 'lansia' ? 'pc-hidden' : '' }}">
+                        <label class="pc-label pc-required">Tingkat Kemandirian</label>
+                        <select name="tingkat_kemandirian"
+                                class="pc-field"
+                                @disabled($kategori !== 'lansia')>
+                            <option value="">Pilih tingkat kemandirian</option>
+                            <option value="mandiri" @selected(old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'mandiri')>Mandiri</option>
+                            <option value="bantuan_sebagian" @selected(old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'bantuan_sebagian')>Bantuan Sebagian</option>
+                            <option value="bantuan_penuh" @selected(old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'bantuan_penuh')>Bantuan Penuh</option>
+                        </select>
+                    </div>
+
+                    <div class="{{ ! in_array($kategori, ['remaja', 'lansia'], true) ? 'pc-hidden' : '' }}">
+                        <label class="pc-label">Gula Darah</label>
+                        <input type="number"
+                               step="0.1"
+                               min="10"
+                               max="1000"
+                               name="gula_darah"
+                               value="{{ old('gula_darah', $pemeriksaan->gula_darah) }}"
+                               placeholder="mg/dL"
+                               class="pc-field"
+                               @disabled(! in_array($kategori, ['remaja', 'lansia'], true))>
+                    </div>
+
+                    <div class="{{ ! in_array($kategori, ['remaja', 'lansia'], true) ? 'pc-hidden' : '' }}">
+                        <label class="pc-label">Kolesterol</label>
+                        <input type="number"
+                               min="10"
+                               max="1000"
+                               name="kolesterol"
+                               value="{{ old('kolesterol', $pemeriksaan->kolesterol) }}"
+                               placeholder="mg/dL"
+                               class="pc-field"
+                               @disabled(! in_array($kategori, ['remaja', 'lansia'], true))>
+                    </div>
+
+                    <div class="{{ ! in_array($kategori, ['remaja', 'lansia'], true) ? 'pc-hidden' : '' }}">
+                        <label class="pc-label">Asam Urat</label>
+                        <input type="number"
+                               step="0.1"
+                               min="1"
+                               max="30"
+                               name="asam_urat"
+                               value="{{ old('asam_urat', $pemeriksaan->asam_urat) }}"
+                               placeholder="mg/dL"
+                               class="pc-field"
+                               @disabled(! in_array($kategori, ['remaja', 'lansia'], true))>
+                    </div>
+
+                    <div class="{{ $kategori !== 'remaja' ? 'pc-hidden' : '' }}">
+                        <label class="pc-label">Hemoglobin</label>
+                        <input type="number"
+                               step="0.1"
+                               min="1"
+                               max="30"
+                               name="hemoglobin"
+                               value="{{ old('hemoglobin', $pemeriksaan->hemoglobin) }}"
+                               placeholder="g/dL"
+                               class="pc-field"
+                               @disabled($kategori !== 'remaja')>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <label class="pc-label">Keluhan / Kondisi Saat Datang</label>
+                        <textarea name="keluhan"
+                                  rows="3"
+                                  placeholder="Contoh: batuk ringan, pusing, tidak ada keluhan"
+                                  class="pc-field resize-none">{{ old('keluhan', $pemeriksaan->keluhan) }}</textarea>
+                    </div>
+
+                    <div class="lg:col-span-2">
+                        <label class="pc-label">Catatan Kader</label>
+                        <textarea name="catatan_kader"
+                                  rows="3"
+                                  placeholder="Catatan awal dari Kader sebelum direview Bidan"
+                                  class="pc-field resize-none">{{ old('catatan_kader', $pemeriksaan->catatan_kader) }}</textarea>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="pc-side-panel flex h-full flex-col space-y-5">
+                <div class="pc-side-card pc-glass flex h-full flex-col rounded-[1.75rem] border border-white/80 p-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Ringkasan Revisi</p>
+                    <h2 class="mt-1 text-xl font-black text-slate-950">Siap diperbarui</h2>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Jika data sebelumnya revisi, setelah disimpan status akan kembali ke menunggu review Bidan.
+                    </p>
+
+                    <div class="mt-5 space-y-3">
+                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-black text-slate-600">Kategori</span>
+                                <span class="text-sm font-black text-slate-950">{{ $kategoriMeta['label'] }}</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-black text-slate-600">Sasaran</span>
+                                <span class="line-clamp-1 text-right text-sm font-black text-slate-950">{{ $namaPasien }}</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-black text-slate-600">Estimasi IMT</span>
+                                <span id="summaryImt" class="text-sm font-black text-slate-950">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pc-side-bottom pt-5">
+    <button type="submit"
+            id="submitMeasurementBtn"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-400/20 transition hover:-translate-y-0.5">
+        <i class="fa-solid fa-floppy-disk"></i>
+        Simpan Perubahan
+    </button>
+</div>
+                </div>
+            </aside>
+        </form>
+    </div>
+
+    <div id="pcSubmitModal" class="pc-modal-backdrop" aria-hidden="true">
+        <div class="pc-modal-card p-6">
+            <div class="flex gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-circle-check text-xl"></i>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Konfirmasi</p>
+                    <h3 class="mt-1 text-lg font-black text-slate-950">Simpan perubahan?</h3>
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Data akan diperbarui dan dikirim kembali ke antrean review Bidan bila sebelumnya berstatus revisi.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button"
+                        id="pcCancelSubmit"
+                        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+                    Batal
+                </button>
+
+                <button type="button"
+                        id="pcConfirmSubmit"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-400/20 transition hover:-translate-y-0.5">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const kategori = @json($kategori);
-        const beratInput = document.getElementById('berat_badan');
-        const tinggiInput = document.getElementById('tinggi_badan');
-        const imtPreview = document.getElementById('imt_preview');
+(function () {
+    'use strict';
 
-        const updateImt = () => {
-            if (!imtPreview) return;
+    const form = document.querySelector('#measurementEditForm');
+    const summaryImt = document.querySelector('#summaryImt');
+    const submitBtn = document.querySelector('#submitMeasurementBtn');
+    const category = @json($kategori);
 
-            if (kategori === 'balita') {
-                imtPreview.value = 'Tidak dihitung';
-                return;
-            }
+    let submitModal = document.querySelector('#pcSubmitModal');
 
-            const berat = parseFloat(beratInput?.value || 0);
-            const tinggi = parseFloat(tinggiInput?.value || 0);
+    if (submitModal && submitModal.parentElement !== document.body) {
+        document.body.appendChild(submitModal);
+    }
 
-            if (!berat || !tinggi) {
-                imtPreview.value = '-';
-                return;
-            }
+    const cancelSubmit = document.querySelector('#pcCancelSubmit');
+    const confirmSubmit = document.querySelector('#pcConfirmSubmit');
 
-            const meter = tinggi / 100;
-            const imt = berat / (meter * meter);
+    function lockBody() {
+        document.documentElement.classList.add('pc-modal-open');
+        document.body.classList.add('pc-modal-open');
+    }
 
-            imtPreview.value = Number.isFinite(imt) ? imt.toFixed(2) : '-';
-        };
+    function unlockBody() {
+        document.documentElement.classList.remove('pc-modal-open');
+        document.body.classList.remove('pc-modal-open');
+    }
 
-        beratInput?.addEventListener('input', updateImt);
-        tinggiInput?.addEventListener('input', updateImt);
+    function calculateImt() {
+        const bb = parseFloat(document.querySelector('[name="berat_badan"]')?.value || 0);
+        const tb = parseFloat(document.querySelector('[name="tinggi_badan"]')?.value || 0);
 
-        updateImt();
+        if (!summaryImt) {
+            return;
+        }
+
+        if (category === 'balita') {
+            summaryImt.textContent = 'Tidak dihitung';
+            return;
+        }
+
+        if (!bb || !tb) {
+            summaryImt.textContent = '-';
+            return;
+        }
+
+        const meter = tb / 100;
+        const imt = bb / (meter * meter);
+
+        if (!isFinite(imt)) {
+            summaryImt.textContent = '-';
+            return;
+        }
+
+        summaryImt.textContent = imt.toFixed(2);
+    }
+
+    function openSubmitModal() {
+        if (!submitModal) {
+            HTMLFormElement.prototype.submit.call(form);
+            return;
+        }
+
+        lockBody();
+        submitModal.classList.add('is-open');
+        submitModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeSubmitModal() {
+        if (!submitModal) {
+            return;
+        }
+
+        submitModal.classList.remove('is-open');
+        submitModal.setAttribute('aria-hidden', 'true');
+        unlockBody();
+    }
+
+    document.querySelectorAll('[data-imt-source]').forEach(function (input) {
+        input.addEventListener('input', calculateImt);
     });
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            openSubmitModal();
+        });
+    }
+
+    if (cancelSubmit) {
+        cancelSubmit.addEventListener('click', closeSubmitModal);
+    }
+
+    if (submitModal) {
+        submitModal.addEventListener('click', function (event) {
+            if (event.target === submitModal) {
+                closeSubmitModal();
+            }
+        });
+    }
+
+    if (confirmSubmit) {
+        confirmSubmit.addEventListener('click', function () {
+            confirmSubmit.disabled = true;
+            confirmSubmit.classList.add('opacity-70', 'cursor-not-allowed');
+            confirmSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            }
+
+            HTMLFormElement.prototype.submit.call(form);
+        });
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeSubmitModal();
+        }
+    });
+
+    calculateImt();
+})();
 </script>
 @endpush

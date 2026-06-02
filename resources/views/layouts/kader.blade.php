@@ -908,6 +908,7 @@
         });
     </script>
 
-    @stack('scripts')
+@stack('scripts')
+@stack('modals')
 </body>
 </html>
