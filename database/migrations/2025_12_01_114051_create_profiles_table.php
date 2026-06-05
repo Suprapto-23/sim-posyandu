@@ -10,12 +10,9 @@ return new class extends Migration
     {
         Schema::create('profiles', function (Blueprint $table) {
             $table->id();
-            // Relasi ke tabel users
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            
-            // Biodata Umum
             $table->string('full_name');
-            $table->string('nik', 16)->nullable()->unique(); // NIK wajib unik
+            $table->string('nik', 16)->nullable()->unique();
             $table->string('tempat_lahir')->nullable();
             $table->date('tanggal_lahir')->nullable();
             $table->enum('jenis_kelamin', ['L', 'P'])->nullable();
@@ -23,7 +20,6 @@ return new class extends Migration
             $table->string('telepon', 20)->nullable();
             $table->string('pekerjaan')->nullable();
             $table->string('golongan_darah', 5)->nullable();
-            
             $table->timestamps();
         });
     }

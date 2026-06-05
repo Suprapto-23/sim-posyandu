@@ -2,719 +2,701 @@
 
 @section('title', 'Data Lansia')
 @section('page-name', 'Data Lansia')
+@section('page-title', 'Data Lansia')
 
 @php
-    use Illuminate\Support\Carbon;
-    use Illuminate\Support\Facades\Route;
+    use Carbon\Carbon;
     use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Route;
 
     Carbon::setLocale('id');
 
     $routeHas = fn ($name) => Route::has($name);
 
-    $items = $items ?? ($lansias ?? collect());
-    $search = $search ?? request('search', '');
+    $search = trim((string) ($search ?? request('search', '')));
     $statusAkun = $statusAkun ?? request('status_akun', 'semua');
     $jenisKelamin = $jenisKelamin ?? request('jenis_kelamin', 'semua');
     $kemandirian = $kemandirian ?? request('kemandirian', 'semua');
 
-    $statTotal = $statTotal ?? 0;
+    $indexRoute = $routeHas('kader.data.lansia.index')
+        ? route('kader.data.lansia.index')
+        : url('/kader/data/lansia');
+
+    $createRoute = $routeHas('kader.data.lansia.create')
+        ? route('kader.data.lansia.create')
+        : url('/kader/data/lansia/create');
+
+    $bulkDeleteRoute = $routeHas('kader.data.lansia.bulk-delete')
+        ? route('kader.data.lansia.bulk-delete')
+        : url('/kader/data/lansia/bulk-delete');
+
+    $templateRoute = $routeHas('kader.import.template')
+        ? route('kader.import.template', ['type' => 'lansia'])
+        : null;
+
+    $importRoute = $routeHas('kader.import.index')
+        ? route('kader.import.index', ['type' => 'lansia'])
+        : null;
+
+    $statusOptions = [
+        'semua' => 'Semua Status',
+        'terhubung' => 'Terhubung',
+        'belum' => 'Belum Terhubung',
+    ];
+
+    $genderOptions = [
+        'semua' => 'Semua Gender',
+        'L' => 'Laki-laki',
+        'P' => 'Perempuan',
+    ];
+
+    $kemandirianOptions = [
+        'semua' => 'Semua Kemandirian',
+        'mandiri' => 'Mandiri',
+        'bantuan_sebagian' => 'Bantuan Sebagian',
+        'ketergantungan_penuh' => 'Ketergantungan Penuh',
+    ];
+
+    $totalData = method_exists($items, 'total') ? $items->total() : $items->count();
+
+    $statTotal = $statTotal ?? $totalData;
     $statLaki = $statLaki ?? 0;
     $statPerempuan = $statPerempuan ?? 0;
     $statTerhubung = $statTerhubung ?? 0;
     $statBelumTerhubung = $statBelumTerhubung ?? 0;
+    $statBulanIni = $statBulanIni ?? 0;
     $statMandiri = $statMandiri ?? 0;
     $statButuhBantuan = $statButuhBantuan ?? 0;
     $statTensiTercatat = $statTensiTercatat ?? 0;
 
-    $sessionType = session('success') ? 'success' : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
-    $sessionMessage = session('success') ?? session('warning') ?? session('error');
+    $rangeText = method_exists($items, 'firstItem')
+        ? 'Menampilkan ' . (($items->firstItem() ?? 0)) . ' sampai ' . (($items->lastItem() ?? 0)) . ' dari ' . $items->total() . ' data'
+        : 'Menampilkan ' . $items->count() . ' data';
 
-    $genderLabel = function ($jk) {
-        return match ($jk) {
-            'L' => 'Laki-laki',
-            'P' => 'Perempuan',
-            default => '-',
-        };
+    $formatDate = function ($value, $format = 'd M Y') {
+        return $value ? Carbon::parse($value)->translatedFormat($format) : '-';
     };
 
-    $genderBadgeClass = function ($jk) {
-        return match ($jk) {
-            'L' => 'border-sky-100 bg-sky-50 text-sky-700',
-            'P' => 'border-pink-100 bg-pink-50 text-pink-700',
-            default => 'border-slate-100 bg-slate-50 text-slate-600',
-        };
+    $ageText = function ($lansia) {
+        if (! $lansia->tanggal_lahir) {
+            return '-';
+        }
+
+        $birth = Carbon::parse($lansia->tanggal_lahir);
+        $diff = $birth->diff(now());
+
+        return $diff->y . ' tahun ' . $diff->m . ' bulan';
     };
 
-    $kemandirianLabel = function ($value) {
-        return match ($value) {
-            'mandiri' => 'Mandiri',
-            'bantuan_sebagian' => 'Bantuan Sebagian',
-            'ketergantungan_penuh' => 'Ketergantungan Penuh',
-            default => 'Belum Diisi',
-        };
+    $initial = fn ($name) => Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'L';
+
+    $genderLabel = fn ($gender) => match ($gender) {
+        'L' => 'Laki-laki',
+        'P' => 'Perempuan',
+        default => '-',
     };
 
-    $kemandirianBadgeClass = function ($value) {
-        return match ($value) {
-            'mandiri' => 'border-emerald-100 bg-emerald-50 text-emerald-700',
-            'bantuan_sebagian' => 'border-amber-100 bg-amber-50 text-amber-700',
-            'ketergantungan_penuh' => 'border-rose-100 bg-rose-50 text-rose-700',
-            default => 'border-slate-100 bg-slate-50 text-slate-600',
-        };
+    $genderClass = fn ($gender) => match ($gender) {
+        'L' => 'bg-sky-50 text-sky-700 ring-sky-200',
+        'P' => 'bg-rose-50 text-rose-700 ring-rose-200',
+        default => 'bg-slate-50 text-slate-600 ring-slate-200',
+    };
+
+    $kemandirianLabel = fn ($value) => match ($value) {
+        'mandiri' => 'Mandiri',
+        'bantuan_sebagian' => 'Bantuan Sebagian',
+        'ketergantungan_penuh' => 'Ketergantungan Penuh',
+        default => 'Belum Diisi',
+    };
+
+    $kemandirianClass = fn ($value) => match ($value) {
+        'mandiri' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+        'bantuan_sebagian' => 'bg-amber-50 text-amber-700 ring-amber-200',
+        'ketergantungan_penuh' => 'bg-rose-50 text-rose-700 ring-rose-200',
+        default => 'bg-slate-50 text-slate-600 ring-slate-200',
+    };
+
+    $isConnected = fn ($lansia) => filled($lansia->user_id ?? null);
+
+    $accountLabel = fn ($lansia) => $isConnected($lansia) ? 'Terhubung' : 'Belum Terhubung';
+
+    $accountClass = fn ($lansia) => $isConnected($lansia)
+        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+        : 'bg-amber-50 text-amber-700 ring-amber-200';
+
+    $numberValue = function ($value, $unit = '') {
+        if (blank($value)) {
+            return '-';
+        }
+
+        $value = rtrim(rtrim((string) $value, '0'), '.');
+
+        return trim($value . ' ' . $unit);
     };
 @endphp
 
-@section('content')
-    <style>
-        .nexus-toast-show {
-            animation: nexusToastShow .2s ease-out both;
+@push('styles')
+<style>
+    .nexus-bg {
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16, 185, 129, 0.16), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245, 158, 11, 0.14), transparent 26%),
+            radial-gradient(circle at 80% 82%, rgba(14, 165, 233, 0.12), transparent 30%),
+            linear-gradient(135deg, #f8fafc 0%, #ecfdf5 42%, #eff6ff 100%);
+    }
+
+    .nexus-bg::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+        background-size: 34px 34px;
+        mask-image: linear-gradient(to bottom, black, transparent 85%);
+    }
+
+    .nexus-glass {
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.76);
+        backdrop-filter: blur(22px);
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+    }
+
+    .stat-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 55px rgba(15, 23, 42, 0.07);
+    }
+
+    .stat-card::after {
+        content: "";
+        position: absolute;
+        right: -34px;
+        top: -34px;
+        height: 120px;
+        width: 120px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.42);
+    }
+
+    .data-row {
+        display: grid;
+        grid-template-columns: 36px minmax(250px, 1.1fr) minmax(150px, .65fr) minmax(210px, .9fr) minmax(180px, .75fr) 148px;
+        gap: 14px;
+        align-items: center;
+    }
+
+    .action-box {
+        width: 148px;
+        min-width: 148px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+    }
+
+    .row-action {
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
+        transition: transform .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .row-action:hover {
+        transform: translateY(-1px);
+    }
+
+    .action-sync {
+        grid-column: span 2;
+        background: #fffbeb;
+        border-color: #fcd34d;
+        color: #92400e;
+    }
+
+    .action-detail {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #047857;
+    }
+
+    .action-edit {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .action-delete {
+        grid-column: span 2;
+        background: #fff1f2;
+        border-color: #fecdd3;
+        color: #be123c;
+    }
+
+    .live-loading {
+        opacity: .55;
+        pointer-events: none;
+        transition: opacity .18s ease;
+    }
+
+    .nexus-modal {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .22s ease;
+    }
+
+    .nexus-modal.is-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .nexus-modal-card {
+        transform: translateY(16px) scale(.96);
+        opacity: 0;
+        transition: transform .24s ease, opacity .24s ease;
+    }
+
+    .nexus-modal.is-open .nexus-modal-card {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+
+    @media (max-width: 1536px) {
+        .data-row {
+            grid-template-columns: 36px minmax(230px, 1fr) minmax(150px, .7fr) minmax(210px, .9fr) 148px;
         }
 
-        .nexus-toast-hide {
-            animation: nexusToastHide .16s ease-in both;
-        }
-
-        .nexus-modal-show {
-            animation: nexusModalShow .16s ease-out both;
-        }
-
-        @keyframes nexusToastShow {
-            from {
-                opacity: 0;
-                transform: translateY(-10px) scale(.985);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        @keyframes nexusToastHide {
-            from {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-
-            to {
-                opacity: 0;
-                transform: translateY(-10px) scale(.985);
-            }
-        }
-
-        @keyframes nexusModalShow {
-            from {
-                opacity: 0;
-                transform: translateY(10px) scale(.985);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        body.nexus-modal-lock {
-            overflow: hidden !important;
-        }
-
-        #nexusConfirmOverlay {
-            position: fixed !important;
-            inset: 0 !important;
-            z-index: 999999 !important;
+        .col-health {
             display: none;
-            place-items: center;
-            min-height: 100dvh;
-            padding: 18px;
-            background: rgba(15, 23, 42, .48);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+        }
+    }
+
+    @media (max-width: 1280px) {
+        .data-row {
+            grid-template-columns: 34px minmax(0, 1fr);
+            align-items: start;
         }
 
-        #nexusConfirmOverlay.is-open {
-            display: grid !important;
+        .mobile-stack {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
         }
 
-        #nexusConfirmBox {
-            width: min(100%, 440px);
-            max-height: calc(100dvh - 36px);
-            overflow-y: auto;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, .8);
-            background: rgba(255, 255, 255, .98);
-            box-shadow: 0 26px 80px rgba(15, 23, 42, .22);
+        .action-box {
+            width: 100%;
+            min-width: 0;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
-        #nexusMiniToast {
-            position: fixed !important;
-            top: 16px !important;
-            right: 16px !important;
-            z-index: 1000000 !important;
-            width: min(calc(100% - 32px), 390px);
+        .action-sync,
+        .action-delete {
+            grid-column: auto;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .action-box {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        @media (max-width: 640px) {
-            #nexusConfirmOverlay {
-                padding: 14px;
-                backdrop-filter: blur(4px);
-                -webkit-backdrop-filter: blur(4px);
-            }
-
-            #nexusConfirmBox {
-                border-radius: 24px;
-            }
-
-            #nexusMiniToast {
-                top: 12px !important;
-                right: 12px !important;
-                width: calc(100% - 24px);
-            }
+        .action-sync,
+        .action-delete {
+            grid-column: span 2;
         }
+    }
+</style>
+@endpush
 
-        @media (prefers-reduced-motion: reduce) {
-            .nexus-toast-show,
-            .nexus-toast-hide,
-            .nexus-modal-show {
-                animation: none !important;
-            }
-        }
-    </style>
+@section('content')
+<div class="nexus-bg relative min-h-[calc(100vh-96px)] px-4 py-6 sm:px-6 lg:px-8">
+    <div class="relative z-10 mx-auto max-w-7xl space-y-6">
 
-    <div class="w-full space-y-5">
+        <section class="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800 shadow-[0_30px_90px_rgba(15,23,42,0.16)]">
+            <div class="absolute right-0 top-0 h-44 w-44 rounded-bl-[90px] bg-white/10"></div>
+            <div class="absolute -bottom-20 right-40 h-40 w-40 rounded-full bg-amber-300/10 blur-2xl"></div>
 
-        {{-- SESSION TOAST --}}
-        @if($sessionType && $sessionMessage)
-            <div id="nexusSessionToast" class="fixed right-4 top-4 z-[100000] w-[calc(100%-2rem)] max-w-md nexus-toast-show">
-                <div
-                    class="overflow-hidden rounded-3xl border bg-white shadow-2xl shadow-slate-900/10
-                    {{ $sessionType === 'success' ? 'border-emerald-100' : ($sessionType === 'warning' ? 'border-amber-100' : 'border-rose-100') }}"
-                >
-                    <div class="flex items-start gap-3 p-4">
-                        <div
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border
-                            {{ $sessionType === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : ($sessionType === 'warning' ? 'border-amber-100 bg-amber-50 text-amber-700' : 'border-rose-100 bg-rose-50 text-rose-700') }}"
-                        >
-                            <i class="ph-fill {{ $sessionType === 'success' ? 'ph-check-circle' : ($sessionType === 'warning' ? 'ph-warning-circle' : 'ph-x-circle') }} text-2xl"></i>
+            <div class="relative p-6 sm:p-8">
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="max-w-3xl">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-100 backdrop-blur-xl">
+                            <span class="h-2 w-2 rounded-full bg-emerald-300"></span>
+                            Master Data Sasaran
                         </div>
 
-                        <div class="min-w-0 flex-1">
-                            <p
-                                class="text-sm font-black
-                                {{ $sessionType === 'success' ? 'text-emerald-800' : ($sessionType === 'warning' ? 'text-amber-800' : 'text-rose-800') }}"
-                            >
-                                {{ $sessionType === 'success' ? 'Berhasil Diproses' : ($sessionType === 'warning' ? 'Perhatian Sistem' : 'Aksi Gagal') }}
-                            </p>
+                        <h1 class="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl">
+                            Data Lansia
+                        </h1>
 
-                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                {{ $sessionMessage }}
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            class="nexus-toast-close flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            aria-label="Tutup notifikasi"
-                        >
-                            <i class="ph-bold ph-x text-lg"></i>
-                        </button>
+                        <p class="mt-3 max-w-2xl text-sm font-semibold leading-7 text-emerald-50/80 sm:text-base">
+                            Kelola data Lansia, pemeriksaan dasar, tingkat kemandirian, dan indikator kesehatan rutin Posyandu.
+                        </p>
                     </div>
 
-                    <div
-                        class="h-1 w-full
-                        {{ $sessionType === 'success' ? 'bg-emerald-500' : ($sessionType === 'warning' ? 'bg-amber-500' : 'bg-rose-500') }}"
-                    ></div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-[460px]">
+                        @if($templateRoute)
+                            <a href="{{ $templateRoute }}"
+                               class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/15">
+                                Template Excel
+                            </a>
+                        @endif
+
+                        @if($importRoute)
+                            <a href="{{ $importRoute }}"
+                               class="rounded-2xl border border-emerald-300/25 bg-emerald-300/15 px-4 py-4 text-sm font-black text-emerald-50 backdrop-blur-xl transition hover:bg-emerald-300/20">
+                                Import Data
+                            </a>
+                        @endif
+
+                        <a href="{{ $createRoute }}"
+                           class="rounded-2xl bg-emerald-400 px-4 py-4 text-center text-sm font-black text-emerald-950 shadow-[0_18px_40px_rgba(52,211,153,0.24)] transition hover:bg-emerald-300">
+                            Tambah Lansia
+                        </a>
+                    </div>
                 </div>
+            </div>
+        </section>
+
+        @if(session('success') || session('error') || session('warning'))
+            @php
+                $flashType = session('error') ? 'error' : (session('warning') ? 'warning' : 'success');
+                $flashText = session('error') ?: (session('warning') ?: session('success'));
+
+                $flashClass = match ($flashType) {
+                    'error' => 'border-rose-200 bg-rose-50/90 text-rose-800',
+                    'warning' => 'border-amber-200 bg-amber-50/90 text-amber-800',
+                    default => 'border-emerald-200 bg-emerald-50/90 text-emerald-800',
+                };
+
+                $flashTitle = match ($flashType) {
+                    'error' => 'Aksi gagal',
+                    'warning' => 'Perhatian',
+                    default => 'Berhasil',
+                };
+            @endphp
+
+            <div class="rounded-[24px] border px-5 py-4 shadow-sm backdrop-blur-xl {{ $flashClass }}">
+                <p class="text-sm font-black">{{ $flashTitle }}</p>
+                <p class="mt-1 text-sm font-semibold leading-6">{{ $flashText }}</p>
             </div>
         @endif
 
-        {{-- HERO --}}
-        <section class="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 p-5 shadow-sm sm:p-6">
-            <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-emerald-200/20 blur-3xl"></div>
-            <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-amber-200/20 blur-3xl"></div>
+        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div class="stat-card bg-white/72 p-5">
+                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-slate-400">Total Lansia</p>
+                <p class="relative mt-3 text-4xl font-black text-slate-950">{{ number_format($statTotal) }}</p>
+                <p class="relative mt-1 text-sm font-bold text-slate-500">Seluruh data sasaran</p>
+            </div>
 
-            <div class="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div class="max-w-3xl">
-                    <div class="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-white/70 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
-                        <i class="ph-fill ph-person-simple-walk text-base"></i>
-                        Database Lansia
-                    </div>
+            <div class="stat-card bg-emerald-100/75 p-5">
+                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Mandiri</p>
+                <p class="relative mt-3 text-4xl font-black text-emerald-950">{{ number_format($statMandiri) }}</p>
+                <p class="relative mt-1 text-sm font-bold text-emerald-800/70">Tingkat kemandirian</p>
+            </div>
 
-                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-                        Data Lansia
-                    </h1>
+            <div class="stat-card bg-amber-100/80 p-5">
+                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-amber-700">Butuh Bantuan</p>
+                <p class="relative mt-3 text-4xl font-black text-amber-950">{{ number_format($statButuhBantuan) }}</p>
+                <p class="relative mt-1 text-sm font-bold text-amber-800/70">Perlu perhatian</p>
+            </div>
 
-                    <p class="mt-2 max-w-2xl text-sm font-semibold leading-7 text-slate-600">
-                        Kelola data sasaran Lansia untuk pemantauan kesehatan dasar, tingkat kemandirian, pemeriksaan fisik, dan laporan Posyandu.
-                    </p>
+            <div class="stat-card bg-cyan-100/75 p-5">
+                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-cyan-700">Tensi Tercatat</p>
+                <p class="relative mt-3 text-4xl font-black text-cyan-950">{{ number_format($statTensiTercatat) }}</p>
+                <p class="relative mt-1 text-sm font-bold text-cyan-800/70">Data tekanan darah</p>
+            </div>
 
-                    <div class="mt-3 max-w-2xl rounded-2xl border border-emerald-100 bg-white/60 px-4 py-3 text-xs font-bold leading-6 text-slate-600">
-                        <i class="ph-fill ph-info mr-1 text-emerald-600"></i>
-                        Akun warga Lansia memakai <span class="font-black text-emerald-700">NIK Lansia</span>. Data kesehatan seperti tensi, gula darah, kolesterol, asam urat, dan kemandirian wajib dijaga konsisten.
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2 sm:flex-row lg:items-center">
-                    @if($routeHas('kader.import.create'))
-                        <a
-                            href="{{ route('kader.import.create') }}"
-                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-black text-amber-700 shadow-sm transition-all duration-150 ease-out hover:bg-amber-100"
-                        >
-                            <i class="ph-fill ph-file-arrow-up text-lg"></i>
-                            Import
-                        </a>
-                    @endif
-
-                    @if($routeHas('kader.data.lansia.create'))
-                        <a
-                            href="{{ route('kader.data.lansia.create') }}"
-                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
-                        >
-                            <i class="ph-bold ph-plus text-lg"></i>
-                            Tambah Lansia
-                        </a>
-                    @endif
-                </div>
+            <div class="stat-card bg-rose-100/75 p-5">
+                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-rose-700">Belum Terhubung</p>
+                <p class="relative mt-3 text-4xl font-black text-rose-950">{{ number_format($statBelumTerhubung) }}</p>
+                <p class="relative mt-1 text-sm font-bold text-rose-800/70">Perlu sinkron akun</p>
             </div>
         </section>
 
-        {{-- STATS --}}
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                        <i class="ph-fill ph-users-three text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-500">Total</span>
-                </div>
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Total Lansia</p>
-                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statTotal }}</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">Seluruh sasaran lansia</p>
-            </div>
-
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-                        <i class="ph-fill ph-person-simple-walk text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-teal-50 px-3 py-1 text-[11px] font-black text-teal-700">Mandiri</span>
-                </div>
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Mandiri</p>
-                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statMandiri }}</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">Tingkat kemandirian mandiri</p>
-            </div>
-
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                        <i class="ph-fill ph-hand-heart text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700">Bantuan</span>
-                </div>
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Butuh Bantuan</p>
-                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statButuhBantuan }}</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">Sebagian atau penuh</p>
-            </div>
-
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
-                        <i class="ph-fill ph-heartbeat text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-black text-sky-700">Tensi</span>
-                </div>
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Tensi Tercatat</p>
-                <h2 class="mt-1 text-3xl font-black text-slate-900">{{ $statTensiTercatat }}</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">{{ $statTerhubung }} akun terhubung</p>
-            </div>
-        </section>
-
-        {{-- FILTER --}}
-        <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-4 shadow-sm">
-            <form id="filterForm" action="{{ route('kader.data.lansia.index') }}" method="GET" class="grid gap-3 2xl:grid-cols-[1fr_190px_210px_240px_auto_auto] 2xl:items-end">
+        <section class="nexus-glass rounded-[30px] p-4 sm:p-5">
+            <form id="liveSearchForm"
+                  action="{{ $indexRoute }}"
+                  method="GET"
+                  class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_190px_220px_250px_auto] xl:items-end">
                 <div>
-                    <label for="searchInput" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    <label for="liveSearchInput" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                         Cari Lansia
                     </label>
 
                     <div class="relative">
-                        <i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input
-                            id="searchInput"
-                            type="text"
-                            name="search"
-                            value="{{ $search }}"
-                            autocomplete="off"
-                            placeholder="Ketik nama, NIK, alamat, tensi, penyakit, atau keluhan..."
-                            class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-2.5 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none transition-all duration-150 ease-out placeholder:text-slate-400 focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-                        >
+                        <input type="text"
+                               id="liveSearchInput"
+                               name="search"
+                               value="{{ $search }}"
+                               autocomplete="off"
+                               placeholder="Ketik nama, NIK, alamat, penyakit, atau tensi..."
+                               class="h-14 w-full rounded-[22px] border border-emerald-100 bg-emerald-50/70 px-5 pr-24 text-sm font-extrabold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+
+                        <div id="liveSearchState"
+                             class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-2xl bg-slate-950 px-3 py-2 text-[11px] font-black text-white">
+                            Mencari
+                        </div>
                     </div>
 
-                    <p class="mt-2 text-xs font-semibold text-slate-400">
-                        Live search aktif. Ketik minimal 2 huruf, sistem akan mencari otomatis.
+                    <p class="mt-2 text-xs font-bold text-slate-500">
+                        Pencarian mengambil data dari server, bukan cuma data yang sedang tampil.
                     </p>
                 </div>
 
                 <div>
-                    <label for="jenisKelaminFilter" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                        Jenis Kelamin
+                    <label for="jenis_kelamin" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                        Gender
                     </label>
 
-                    <select
-                        id="jenisKelaminFilter"
-                        name="jenis_kelamin"
-                        class="live-filter h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-                    >
-                        <option value="semua" @selected($jenisKelamin === 'semua')>Semua</option>
-                        <option value="L" @selected($jenisKelamin === 'L')>Laki-laki</option>
-                        <option value="P" @selected($jenisKelamin === 'P')>Perempuan</option>
+                    <select id="jenis_kelamin"
+                            name="jenis_kelamin"
+                            class="h-14 w-full rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                        @foreach($genderOptions as $key => $label)
+                            <option value="{{ $key }}" @selected($jenisKelamin === $key)>
+                                {{ $label }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div>
-                    <label for="statusAkunFilter" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                        Status Akun
-                    </label>
-
-                    <select
-                        id="statusAkunFilter"
-                        name="status_akun"
-                        class="live-filter h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-                    >
-                        <option value="semua" @selected($statusAkun === 'semua')>Semua Status</option>
-                        <option value="terhubung" @selected($statusAkun === 'terhubung')>Terhubung Akun</option>
-                        <option value="belum" @selected($statusAkun === 'belum')>Belum Terhubung</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label for="kemandirianFilter" class="mb-2 block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
+                    <label for="kemandirian" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                         Kemandirian
                     </label>
 
-                    <select
-                        id="kemandirianFilter"
-                        name="kemandirian"
-                        class="live-filter h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-sm font-black text-slate-700 outline-none transition-all duration-150 ease-out focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
-                    >
-                        <option value="semua" @selected($kemandirian === 'semua')>Semua</option>
-                        <option value="mandiri" @selected($kemandirian === 'mandiri')>Mandiri</option>
-                        <option value="bantuan_sebagian" @selected($kemandirian === 'bantuan_sebagian')>Bantuan Sebagian</option>
-                        <option value="ketergantungan_penuh" @selected($kemandirian === 'ketergantungan_penuh')>Ketergantungan Penuh</option>
+                    <select id="kemandirian"
+                            name="kemandirian"
+                            class="h-14 w-full rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                        @foreach($kemandirianOptions as $key => $label)
+                            <option value="{{ $key }}" @selected($kemandirian === $key)>
+                                {{ $label }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
-                <button
-                    type="submit"
-                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
-                >
-                    <i class="ph-fill ph-funnel text-lg"></i>
-                    Filter
-                </button>
+                <div>
+                    <label for="status_akun" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                        Status Akun
+                    </label>
 
-                <a
-                    href="{{ route('kader.data.lansia.index') }}"
-                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-100"
-                >
-                    <i class="ph-bold ph-arrow-counter-clockwise text-lg"></i>
-                    Reset
-                </a>
+                    <select id="status_akun"
+                            name="status_akun"
+                            class="h-14 w-full rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
+                        @foreach($statusOptions as $key => $label)
+                            <option value="{{ $key }}" @selected($statusAkun === $key)>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="submit"
+                            class="h-14 rounded-[22px] bg-slate-950 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(15,23,42,0.18)] transition hover:bg-slate-800">
+                        Filter
+                    </button>
+
+                    <a href="{{ $indexRoute }}"
+                       id="resetSearchButton"
+                       class="inline-flex h-14 items-center justify-center rounded-[22px] border border-emerald-100 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-emerald-50">
+                        Reset
+                    </a>
+                </div>
             </form>
         </section>
 
-        @if($routeHas('kader.data.lansia.bulk-delete'))
-            <form
-                id="bulkDeleteForm"
-                action="{{ route('kader.data.lansia.bulk-delete') }}"
-                method="POST"
-                class="hidden"
-                data-confirm="true"
-                data-confirm-variant="danger"
-                data-confirm-title="Hapus Data Terpilih?"
-                data-confirm-message="Data Lansia yang dipilih akan dihapus. Data yang sudah memiliki riwayat pemeriksaan tetap akan ditolak sistem."
-                data-confirm-button="Ya, Hapus"
-            >
-                @csrf
-                @method('DELETE')
-            </form>
-        @endif
+        <section id="lansiaLiveRegion" data-live-region>
+            <div class="overflow-hidden rounded-[34px] border border-white/70 bg-white/78 shadow-[0_24px_85px_rgba(15,23,42,0.09)] backdrop-blur-xl">
+                <div class="border-b border-emerald-900/20 bg-gradient-to-r from-slate-950 via-emerald-950 to-teal-900 px-5 py-5 text-white sm:px-6">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.22em] text-emerald-200">
+                                Daftar Lansia
+                            </p>
 
-        {{-- LIST --}}
-        <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-4 shadow-sm">
-            <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h2 class="text-2xl font-black text-slate-900">
-                        Daftar Lansia
-                    </h2>
-                    <p class="mt-1 text-sm font-semibold text-slate-500">
-                        Menampilkan data Lansia berdasarkan filter aktif.
-                    </p>
+                            <h2 class="mt-2 text-2xl font-black">
+                                Data Sasaran Lansia
+                            </h2>
+
+                            <p class="mt-1 text-sm font-semibold text-white/65">
+                                {{ $rangeText }}
+                            </p>
+                        </div>
+
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <label class="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-black text-white backdrop-blur-xl">
+                                <input type="checkbox"
+                                       id="selectAllLansia"
+                                       class="h-4 w-4 rounded border-white/40 text-emerald-500 focus:ring-emerald-400">
+                                Pilih Semua
+                            </label>
+
+                            @if($routeHas('kader.data.lansia.bulk-delete'))
+                                <button type="button"
+                                        id="bulkDeleteButton"
+                                        disabled
+                                        data-confirm-submit
+                                        data-confirm-form="bulkDeleteForm"
+                                        data-confirm-title="Hapus Data Terpilih?"
+                                        data-confirm-message="Data Lansia yang dipilih akan dihapus jika belum memiliki riwayat layanan."
+                                        data-confirm-tone="danger"
+                                        class="inline-flex h-11 items-center justify-center rounded-2xl border border-rose-300/40 bg-rose-400/15 px-4 text-sm font-black text-rose-100 opacity-50 transition hover:bg-rose-400/25 disabled:cursor-not-allowed">
+                                    Hapus Terpilih
+                                </button>
+                            @endif
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    <span id="visibleCountBadge" class="inline-flex h-9 items-center rounded-full bg-emerald-50 px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-700">
-                        {{ method_exists($items, 'total') ? $items->total() : $items->count() }} Data
-                    </span>
-
-                    @if($routeHas('kader.data.lansia.bulk-delete') && $items->count())
-                        <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-xs font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-100">
-                            <input
-                                id="checkAllLansia"
-                                type="checkbox"
-                                class="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
-                            >
-                            Pilih Semua
-                        </label>
-
-                        <button
-                            id="bulkDeleteButton"
-                            type="submit"
-                            form="bulkDeleteForm"
-                            disabled
-                            class="inline-flex h-9 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-4 text-xs font-black text-white opacity-45 shadow-sm transition-all duration-150 ease-out hover:bg-rose-700 disabled:cursor-not-allowed"
-                        >
-                            <i class="ph-fill ph-trash text-base"></i>
-                            Hapus Terpilih
-                        </button>
-                    @endif
-                </div>
-            </div>
-
-            @if($items->count())
-                <div id="bulkDeleteInfo" class="mb-4 hidden rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700">
-                    <i class="ph-fill ph-warning-circle mr-1"></i>
-                    <span id="selectedCountText">0 data dipilih.</span>
-                </div>
-
-                <div id="lansiaList" class="grid gap-3">
-                    @foreach($items as $item)
+                <div class="space-y-4 p-4 sm:p-5">
+                    @forelse($items as $item)
                         @php
-                            $tanggalLahir = filled($item->tanggal_lahir ?? null) ? Carbon::parse($item->tanggal_lahir) : null;
-
-                            $usiaText = '-';
-                            if ($tanggalLahir) {
-                                $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
-                                $usiaText = $diff->y . ' tahun ' . $diff->m . ' bulan';
-                            }
-
-                            $akunTerhubung = filled(data_get($item, 'user_id'));
-                            $pemeriksaan = data_get($item, 'pemeriksaan_terakhir');
-                            $initial = strtoupper(substr($item->nama_lengkap ?? 'L', 0, 1));
-                            $imt = $item->imt ?? null;
-
-                            $searchText = Str::lower(collect([
-                                $item->nama_lengkap ?? '',
-                                $item->nik ?? '',
-                                $item->kode_lansia ?? '',
-                                $item->tempat_lahir ?? '',
-                                $item->alamat ?? '',
-                                $item->penyakit_bawaan ?? '',
-                                $item->tingkat_kemandirian ?? '',
-                                $item->tekanan_darah ?? '',
-                                $item->gula_darah ?? '',
-                                $item->kolesterol ?? '',
-                                $item->asam_urat ?? '',
-                                $item->lingkar_perut ?? '',
-                                $item->keluhan ?? '',
-                                $genderLabel($item->jenis_kelamin),
-                                $kemandirianLabel($item->tingkat_kemandirian ?? null),
-                                $akunTerhubung ? 'terhubung akun siap' : 'belum terhubung sinkron',
-                            ])->join(' '));
+                            $name = $item->nama_lengkap ?? '-';
+                            $nik = $item->nik ?? '-';
+                            $connected = $isConnected($item);
                         @endphp
 
-                        <article
-                            class="lansia-card rounded-[1.5rem] border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-4 shadow-sm transition-all duration-150 ease-out hover:border-emerald-100 hover:shadow-md"
-                            data-search-text="{{ $searchText }}"
-                        >
-                            <div class="grid gap-4 xl:grid-cols-[1fr_170px] xl:items-start">
+                        <article class="group overflow-hidden rounded-[28px] border border-emerald-100/70 bg-gradient-to-br from-white/92 via-emerald-50/35 to-amber-50/30 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_22px_65px_rgba(15,23,42,0.08)]">
+                            <div class="data-row">
+                                <div class="pt-3 xl:pt-0">
+                                    <input type="checkbox"
+                                           name="ids[]"
+                                           value="{{ $item->id }}"
+                                           form="bulkDeleteForm"
+                                           class="lansia-check h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                </div>
 
-                                {{-- INFO --}}
-                                <div class="flex min-w-0 gap-3">
-                                    @if($routeHas('kader.data.lansia.bulk-delete'))
-                                        <div class="pt-1.5">
-                                            <input
-                                                type="checkbox"
-                                                name="ids[]"
-                                                value="{{ $item->id }}"
-                                                form="bulkDeleteForm"
-                                                class="bulk-check h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-500"
-                                                aria-label="Pilih {{ $item->nama_lengkap }}"
-                                            >
+                                <div class="mobile-stack min-w-0">
+                                    <div class="flex min-w-0 items-center gap-3">
+                                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-slate-950 text-lg font-black text-emerald-200 shadow-[0_14px_32px_rgba(15,23,42,0.18)]">
+                                            {{ $initial($name) }}
                                         </div>
-                                    @endif
 
-                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-lg font-black text-white shadow-sm">
-                                        {{ $initial }}
-                                    </div>
+                                        <div class="min-w-0">
+                                            <h3 class="truncate text-base font-black text-slate-950">
+                                                {{ $name }}
+                                            </h3>
 
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-center gap-1.5">
-                                            <span class="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-emerald-700">
-                                                Lansia
-                                            </span>
+                                            <p class="mt-1 truncate text-sm font-extrabold text-slate-500">
+                                                NIK {{ $nik }}
+                                            </p>
 
-                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] {{ $genderBadgeClass($item->jenis_kelamin) }}">
-                                                {{ $genderLabel($item->jenis_kelamin) }}
-                                            </span>
-
-                                            <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] {{ $kemandirianBadgeClass($item->tingkat_kemandirian ?? null) }}">
-                                                {{ $kemandirianLabel($item->tingkat_kemandirian ?? null) }}
-                                            </span>
-
-                                            @if($akunTerhubung)
-                                                <span class="inline-flex items-center gap-1 rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-teal-700">
-                                                    <i class="ph-fill ph-link-simple"></i>
-                                                    Akun Terhubung
+                                            <div class="mt-2 flex flex-wrap gap-2">
+                                                <span class="rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-white">
+                                                    Lansia
                                                 </span>
-                                            @else
-                                                <span class="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-amber-700">
-                                                    <i class="ph-fill ph-warning-circle"></i>
-                                                    Belum Terhubung
+
+                                                <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] ring-1 {{ $genderClass($item->jenis_kelamin) }}">
+                                                    {{ $genderLabel($item->jenis_kelamin) }}
                                                 </span>
-                                            @endif
-                                        </div>
 
-                                        <h3 class="mt-2 truncate text-lg font-black text-slate-900">
-                                            {{ $item->nama_lengkap }}
-                                        </h3>
-
-                                        <p class="mt-0.5 text-sm font-bold text-slate-500">
-                                            NIK Lansia:
-                                            <span class="font-black text-slate-700">{{ $item->nik ?? '-' }}</span>
-                                        </p>
-
-                                        <div class="mt-3 grid gap-2 md:grid-cols-4">
-                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
-                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">Usia</p>
-                                                <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $usiaText }}</p>
-                                                <p class="text-xs font-semibold text-slate-500">
-                                                    {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
-                                                </p>
-                                            </div>
-
-                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
-                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">Tensi</p>
-                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
-                                                    {{ $item->tekanan_darah ?? '-' }}
-                                                </p>
-                                                <p class="truncate text-xs font-semibold text-slate-500">mmHg</p>
-                                            </div>
-
-                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
-                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">Gula/Kolesterol</p>
-                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
-                                                    GD {{ $item->gula_darah ?? '-' }}
-                                                </p>
-                                                <p class="truncate text-xs font-semibold text-slate-500">
-                                                    Kol {{ $item->kolesterol ?? '-' }}
-                                                </p>
-                                            </div>
-
-                                            <div class="rounded-2xl border border-slate-100 bg-white/75 p-3">
-                                                <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-400">IMT/Lingkar</p>
-                                                <p class="mt-1 truncate text-sm font-black text-slate-800">
-                                                    IMT {{ $imt ?? '-' }}
-                                                </p>
-                                                <p class="truncate text-xs font-semibold text-slate-500">
-                                                    LP {{ $item->lingkar_perut ?? '-' }} cm
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div class="mt-2 grid gap-2 md:grid-cols-2">
-                                            <div class="rounded-2xl border border-slate-100 bg-white/70 px-3 py-2.5 text-sm font-semibold text-slate-500">
-                                                <i class="ph-fill ph-map-pin mr-1 text-emerald-600"></i>
-                                                {{ $item->alamat ?? 'Alamat belum diisi' }}
-                                            </div>
-
-                                            <div class="rounded-2xl border border-slate-100 bg-white/70 px-3 py-2.5 text-sm font-semibold text-slate-500">
-                                                <i class="ph-fill ph-note-pencil mr-1 text-amber-600"></i>
-                                                {{ $item->keluhan ?? 'Keluhan belum diisi' }}
+                                                <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] ring-1 {{ $accountClass($item) }}">
+                                                    {{ $accountLabel($item) }}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {{-- AKSI --}}
-                                <div class="grid gap-1.5 xl:w-[170px]">
-                                    @if($pemeriksaan)
-                                        <div class="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 px-2.5 text-[11px] font-black text-emerald-700">
-                                            <i class="ph-fill ph-check-circle mr-1 text-sm"></i>
-                                            Pemeriksaan Ada
-                                        </div>
-                                    @else
-                                        <div class="inline-flex h-9 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 px-2.5 text-[11px] font-black text-slate-500">
-                                            <i class="ph-fill ph-clock mr-1 text-sm"></i>
-                                            Belum Pemeriksaan
-                                        </div>
-                                    @endif
+                                <div class="min-w-0 rounded-[20px] border border-emerald-100/80 bg-white/78 p-3 shadow-sm">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                        Usia
+                                    </p>
 
-                                    @if(!$akunTerhubung && $routeHas('kader.data.lansia.sync'))
-                                        <form
-                                            action="{{ route('kader.data.lansia.sync', $item->id) }}"
-                                            method="POST"
-                                            data-confirm="true"
-                                            data-confirm-variant="warning"
-                                            data-confirm-title="Sinkronkan Akun?"
-                                            data-confirm-message="Pastikan akun warga sudah dibuat Admin memakai NIK Lansia yang sama."
-                                            data-confirm-button="Ya, Sinkronkan"
-                                        >
+                                    <p class="mt-1 truncate text-sm font-black text-slate-950">
+                                        {{ $ageText($item) }}
+                                    </p>
+
+                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">
+                                        {{ $formatDate($item->tanggal_lahir) }}
+                                    </p>
+                                </div>
+
+                                <div class="min-w-0 rounded-[20px] border border-emerald-100/80 bg-white/78 p-3 shadow-sm">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                        Kemandirian
+                                    </p>
+
+                                    <p class="mt-1 truncate text-sm font-black text-slate-950">
+                                        {{ $kemandirianLabel($item->tingkat_kemandirian ?? null) }}
+                                    </p>
+
+                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">
+                                        Tensi {{ $item->tekanan_darah ?: '-' }}
+                                    </p>
+                                </div>
+
+                                <div class="col-health min-w-0 rounded-[20px] border border-emerald-100/80 bg-white/78 p-3 shadow-sm">
+                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                        Kesehatan
+                                    </p>
+
+                                    <p class="mt-1 truncate text-sm font-black text-slate-950">
+                                        GD {{ $numberValue($item->gula_darah ?? null, 'mg/dL') }}
+                                    </p>
+
+                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">
+                                        Kol {{ $numberValue($item->kolesterol ?? null, 'mg/dL') }}
+                                    </p>
+                                </div>
+
+                                <div class="action-box">
+                                    @if(! $connected && $routeHas('kader.data.lansia.sync'))
+                                        <form action="{{ route('kader.data.lansia.sync', $item->id) }}"
+                                              method="POST"
+                                              class="contents">
                                             @csrf
-                                            <button
-                                                type="submit"
-                                                class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-black text-amber-700 transition-all duration-150 ease-out hover:bg-amber-100"
-                                            >
-                                                <i class="ph-bold ph-link-simple text-sm"></i>
+
+                                            <button type="button"
+                                                    class="row-action action-sync"
+                                                    data-confirm-submit
+                                                    data-confirm-title="Sinkronkan Akun?"
+                                                    data-confirm-message="Sistem akan mencoba menghubungkan data Lansia ini dengan akun warga berdasarkan NIK yang sama."
+                                                    data-confirm-tone="gold">
                                                 Sinkron
                                             </button>
                                         </form>
-                                    @else
-                                        <div class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-teal-100 bg-teal-50 px-2.5 text-[11px] font-black text-teal-700">
-                                            <i class="ph-fill ph-check-circle text-sm"></i>
-                                            Akun Siap
-                                        </div>
                                     @endif
 
-                                    <div class="grid grid-cols-2 gap-1.5">
-                                        @if($routeHas('kader.data.lansia.show'))
-                                            <a
-                                                href="{{ route('kader.data.lansia.show', $item->id) }}"
-                                                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-[11px] font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
-                                            >
-                                                <i class="ph-fill ph-eye text-sm"></i>
-                                                Detail
-                                            </a>
-                                        @endif
+                                    @if($routeHas('kader.data.lansia.show'))
+                                        <a href="{{ route('kader.data.lansia.show', $item->id) }}"
+                                           class="row-action action-detail">
+                                            Detail
+                                        </a>
+                                    @endif
 
-                                        @if($routeHas('kader.data.lansia.edit'))
-                                            <a
-                                                href="{{ route('kader.data.lansia.edit', $item->id) }}"
-                                                class="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-2 text-[11px] font-black text-sky-700 transition-all duration-150 ease-out hover:bg-sky-100"
-                                            >
-                                                <i class="ph-fill ph-pencil-simple text-sm"></i>
-                                                Edit
-                                            </a>
-                                        @endif
-                                    </div>
+                                    @if($routeHas('kader.data.lansia.edit'))
+                                        <a href="{{ route('kader.data.lansia.edit', $item->id) }}"
+                                           class="row-action action-edit">
+                                            Edit
+                                        </a>
+                                    @endif
 
                                     @if($routeHas('kader.data.lansia.destroy'))
-                                        <form
-                                            action="{{ route('kader.data.lansia.destroy', $item->id) }}"
-                                            method="POST"
-                                            data-confirm="true"
-                                            data-confirm-variant="danger"
-                                            data-confirm-title="Hapus Data Lansia?"
-                                            data-confirm-message="Data Lansia {{ $item->nama_lengkap }} akan dihapus. Jika sudah punya riwayat pemeriksaan, sistem akan menolak penghapusan."
-                                            data-confirm-button="Ya, Hapus"
-                                        >
+                                        <form action="{{ route('kader.data.lansia.destroy', $item->id) }}"
+                                              method="POST"
+                                              class="contents">
                                             @csrf
                                             @method('DELETE')
 
-                                            <button
-                                                type="submit"
-                                                class="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-[11px] font-black text-rose-700 transition-all duration-150 ease-out hover:bg-rose-100"
-                                            >
-                                                <i class="ph-fill ph-trash text-sm"></i>
+                                            <button type="button"
+                                                    class="row-action action-delete"
+                                                    data-confirm-submit
+                                                    data-confirm-title="Hapus Data Lansia?"
+                                                    data-confirm-message="Data Lansia ini akan dihapus jika belum memiliki riwayat layanan. Gunakan Edit kalau cuma mau memperbaiki data."
+                                                    data-confirm-tone="danger">
                                                 Hapus
                                             </button>
                                         </form>
@@ -722,426 +704,341 @@
                                 </div>
                             </div>
                         </article>
-                    @endforeach
+                    @empty
+                        <div class="rounded-[28px] border border-dashed border-emerald-300 bg-emerald-50/70 p-10 text-center">
+                            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-slate-950 text-2xl font-black text-emerald-200">
+                                L
+                            </div>
+
+                            <h3 class="mt-5 text-xl font-black text-slate-950">
+                                Data Lansia tidak ditemukan
+                            </h3>
+
+                            <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-600">
+                                Data dengan kata kunci tersebut belum ada. Tambahkan data baru kalau memang belum masuk.
+                            </p>
+
+                            <a href="{{ $createRoute }}"
+                               class="mt-5 inline-flex h-12 items-center justify-center rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800">
+                                Tambah Lansia
+                            </a>
+                        </div>
+                    @endforelse
                 </div>
 
-                <div id="noLiveResult" class="hidden rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-12 text-center">
-                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                        <i class="ph-fill ph-magnifying-glass text-3xl"></i>
-                    </div>
-
-                    <h3 class="mt-5 text-xl font-black text-slate-900">
-                        Data Tidak Ditemukan
-                    </h3>
-
-                    <p class="mx-auto mt-2 max-w-lg text-sm font-semibold leading-7 text-slate-500">
-                        Tidak ada data Lansia yang cocok dengan kata kunci pencarian saat ini.
-                    </p>
-                </div>
-
-                @if(method_exists($items, 'hasPages') && $items->hasPages())
-                    <div id="paginationWrap" class="mt-5">
+                @if(method_exists($items, 'links'))
+                    <div id="lansiaPagination" class="border-t border-emerald-100/80 bg-emerald-50/45 px-5 py-4">
                         {{ $items->links() }}
                     </div>
                 @endif
-            @else
-                <div class="rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-12 text-center">
-                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                        <i class="ph-fill ph-person-simple-walk text-3xl"></i>
-                    </div>
-
-                    <h3 class="mt-5 text-xl font-black text-slate-900">
-                        Data Lansia Kosong
-                    </h3>
-
-                    <p class="mx-auto mt-2 max-w-lg text-sm font-semibold leading-7 text-slate-500">
-                        Belum ada data Lansia yang cocok dengan filter saat ini.
-                    </p>
-                </div>
-            @endif
+            </div>
         </section>
+
+        @if($routeHas('kader.data.lansia.bulk-delete'))
+            <form id="bulkDeleteForm" action="{{ $bulkDeleteRoute }}" method="POST" class="hidden">
+                @csrf
+                @method('DELETE')
+            </form>
+        @endif
     </div>
+</div>
+@endsection
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const filterForm = document.getElementById('filterForm');
-            const searchInput = document.getElementById('searchInput');
-            const liveFilters = Array.from(document.querySelectorAll('.live-filter'));
+@push('modals')
+<div id="nexusConfirmModal"
+     class="nexus-modal fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+    <div class="nexus-modal-card w-full max-w-md overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_30px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl">
+        <div id="nexusConfirmHeader" class="relative overflow-hidden px-6 py-6 text-white">
+            <div class="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-white/10"></div>
+            <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-t-[80px] bg-amber-300/15"></div>
 
-            const checkAll = document.getElementById('checkAllLansia');
-            const bulkChecks = Array.from(document.querySelectorAll('.bulk-check'));
-            const bulkDeleteButton = document.getElementById('bulkDeleteButton');
-            const bulkDeleteInfo = document.getElementById('bulkDeleteInfo');
-            const selectedCountText = document.getElementById('selectedCountText');
-            const visibleCountBadge = document.getElementById('visibleCountBadge');
-            const noLiveResult = document.getElementById('noLiveResult');
-            const paginationWrap = document.getElementById('paginationWrap');
-            const cards = Array.from(document.querySelectorAll('.lansia-card'));
+            <div class="relative">
+                <div id="nexusConfirmBadge" class="mb-4 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-50">
+                    Konfirmasi
+                </div>
 
-            const sessionToast = document.getElementById('nexusSessionToast');
+                <h3 id="nexusConfirmTitle" class="text-2xl font-black tracking-tight">
+                    Konfirmasi Aksi
+                </h3>
 
-            let pendingForm = null;
-            let isSubmitting = false;
-            let toastTimer = null;
-            let searchTimer = null;
-            const initialSearch = searchInput ? searchInput.value.trim() : '';
+                <p id="nexusConfirmMessage" class="mt-2 text-sm font-semibold leading-6 text-white/75">
+                    Pastikan data sudah benar sebelum melanjutkan.
+                </p>
+            </div>
+        </div>
 
-            function normalizeText(value) {
-                return (value || '').toString().toLowerCase().trim();
-            }
+        <div class="bg-gradient-to-br from-white via-emerald-50/50 to-amber-50/35 px-6 py-5">
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">
+                Aksi ini akan langsung diproses oleh sistem setelah tombol konfirmasi ditekan.
+            </div>
 
-            function filterCardsLocal() {
-                if (!searchInput || cards.length === 0) {
-                    return;
-                }
+            <div class="mt-5 grid grid-cols-2 gap-3">
+                <button type="button"
+                        id="nexusConfirmCancel"
+                        class="h-12 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                    Batal
+                </button>
 
-                const keyword = normalizeText(searchInput.value);
-                let visibleCount = 0;
+                <button type="button"
+                        id="nexusConfirmOk"
+                        class="h-12 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800">
+                    Lanjutkan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endpush
 
-                cards.forEach(function (card) {
-                    const text = normalizeText(card.dataset.searchText);
-                    const matched = keyword === '' || text.includes(keyword);
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('liveSearchForm');
+        const searchInput = document.getElementById('liveSearchInput');
+        const genderInput = document.getElementById('jenis_kelamin');
+        const kemandirianInput = document.getElementById('kemandirian');
+        const statusInput = document.getElementById('status_akun');
+        const resetButton = document.getElementById('resetSearchButton');
+        const liveRegion = document.querySelector('[data-live-region]');
+        const liveState = document.getElementById('liveSearchState');
 
-                    card.classList.toggle('hidden', !matched);
+        const confirmModal = document.getElementById('nexusConfirmModal');
+        const confirmHeader = document.getElementById('nexusConfirmHeader');
+        const confirmBadge = document.getElementById('nexusConfirmBadge');
+        const confirmTitle = document.getElementById('nexusConfirmTitle');
+        const confirmMessage = document.getElementById('nexusConfirmMessage');
+        const confirmCancel = document.getElementById('nexusConfirmCancel');
+        const confirmOk = document.getElementById('nexusConfirmOk');
 
-                    if (matched) {
-                        visibleCount += 1;
-                    }
+        let liveTimer = null;
+        let liveController = null;
+        let pendingForm = null;
 
-                    const checkbox = card.querySelector('.bulk-check');
+        function bindBulkSelection() {
+            const selectAll = document.getElementById('selectAllLansia');
+            const checks = Array.from(document.querySelectorAll('.lansia-check'));
+            const bulkButton = document.getElementById('bulkDeleteButton');
 
-                    if (!matched && checkbox) {
-                        checkbox.checked = false;
-                    }
-                });
-
-                if (visibleCountBadge) {
-                    visibleCountBadge.textContent = visibleCount + ' Data';
-                }
-
-                if (noLiveResult) {
-                    noLiveResult.classList.toggle('hidden', visibleCount > 0);
-                }
-
-                if (paginationWrap) {
-                    paginationWrap.classList.toggle('hidden', keyword.length > 0);
-                }
-
-                updateBulkState();
-            }
-
-            function scheduleServerSearch() {
-                if (!filterForm || !searchInput) {
-                    return;
-                }
-
-                const keyword = searchInput.value.trim();
-
-                clearTimeout(searchTimer);
-
-                searchTimer = setTimeout(function () {
-                    if (keyword === initialSearch) {
-                        return;
-                    }
-
-                    if (keyword.length === 0 || keyword.length >= 2) {
-                        filterForm.submit();
-                    }
-                }, 650);
-            }
-
-            if (searchInput) {
-                searchInput.addEventListener('input', function () {
-                    filterCardsLocal();
-                    scheduleServerSearch();
-                });
-            }
-
-            liveFilters.forEach(function (select) {
-                select.addEventListener('change', function () {
-                    if (filterForm) {
-                        filterForm.submit();
-                    }
-                });
-            });
-
-            function createFloatingLayer() {
-                document.getElementById('nexusConfirmOverlay')?.remove();
-                document.getElementById('nexusMiniToast')?.remove();
-
-                document.body.insertAdjacentHTML('beforeend', `
-                    <div id="nexusConfirmOverlay" aria-hidden="true">
-                        <div id="nexusConfirmBox" class="nexus-modal-show p-5" role="dialog" aria-modal="true" aria-labelledby="nexusConfirmTitle">
-                            <div class="flex items-start gap-3.5">
-                                <div id="nexusConfirmIconWrap" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700">
-                                    <i id="nexusConfirmIcon" class="ph-fill ph-check-circle text-2xl"></i>
-                                </div>
-
-                                <div class="min-w-0 flex-1">
-                                    <h3 id="nexusConfirmTitle" class="text-lg font-black leading-6 text-slate-900">
-                                        Konfirmasi Aksi
-                                    </h3>
-
-                                    <p id="nexusConfirmMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                        Pastikan data sudah benar sebelum diproses.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="mt-5 grid grid-cols-2 gap-2">
-                                <button
-                                    id="nexusConfirmCancel"
-                                    type="button"
-                                    class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
-                                >
-                                    Batal
-                                </button>
-
-                                <button
-                                    id="nexusConfirmSubmit"
-                                    type="button"
-                                    class="inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
-                                >
-                                    Ya, Lanjutkan
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="nexusMiniToast" class="hidden">
-                        <div class="nexus-toast-show rounded-3xl border border-amber-100 bg-white p-4 shadow-2xl shadow-slate-900/10">
-                            <div class="flex items-start gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700">
-                                    <i class="ph-fill ph-warning-circle text-xl"></i>
-                                </div>
-
-                                <div class="min-w-0">
-                                    <p class="text-sm font-black text-amber-800">Perhatian</p>
-                                    <p id="nexusMiniToastMessage" class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                        Aksi belum bisa diproses.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `);
-            }
-
-            createFloatingLayer();
-
-            const confirmOverlay = document.getElementById('nexusConfirmOverlay');
-            const confirmTitle = document.getElementById('nexusConfirmTitle');
-            const confirmMessage = document.getElementById('nexusConfirmMessage');
-            const confirmSubmit = document.getElementById('nexusConfirmSubmit');
-            const confirmCancel = document.getElementById('nexusConfirmCancel');
-            const confirmIconWrap = document.getElementById('nexusConfirmIconWrap');
-            const confirmIcon = document.getElementById('nexusConfirmIcon');
-
-            const miniToast = document.getElementById('nexusMiniToast');
-            const miniToastMessage = document.getElementById('nexusMiniToastMessage');
-
-            function showMiniToast(message) {
-                if (!miniToast || !miniToastMessage) {
-                    return;
-                }
-
-                miniToastMessage.textContent = message;
-                miniToast.classList.remove('hidden', 'nexus-toast-hide');
-                miniToast.classList.add('nexus-toast-show');
-
-                clearTimeout(toastTimer);
-
-                toastTimer = setTimeout(function () {
-                    miniToast.classList.remove('nexus-toast-show');
-                    miniToast.classList.add('nexus-toast-hide');
-
-                    setTimeout(function () {
-                        miniToast.classList.add('hidden');
-                    }, 220);
-                }, 2400);
-            }
-
-            function closeSessionToast() {
-                if (!sessionToast) {
-                    return;
-                }
-
-                sessionToast.classList.remove('nexus-toast-show');
-                sessionToast.classList.add('nexus-toast-hide');
-
-                setTimeout(function () {
-                    sessionToast.remove();
-                }, 240);
-            }
-
-            if (sessionToast) {
-                setTimeout(closeSessionToast, 3800);
-
-                const closeButton = sessionToast.querySelector('.nexus-toast-close');
-
-                if (closeButton) {
-                    closeButton.addEventListener('click', closeSessionToast);
-                }
-            }
-
-            function updateBulkState() {
-                const selectedCount = bulkChecks.filter(function (checkbox) {
-                    return checkbox.checked;
+            function refresh() {
+                const checkedCount = checks.filter(function (item) {
+                    return item.checked;
                 }).length;
 
-                if (bulkDeleteButton) {
-                    bulkDeleteButton.disabled = selectedCount === 0;
-                    bulkDeleteButton.classList.toggle('opacity-45', selectedCount === 0);
-                    bulkDeleteButton.classList.toggle('opacity-100', selectedCount > 0);
+                if (bulkButton) {
+                    bulkButton.disabled = checkedCount === 0;
+                    bulkButton.classList.toggle('opacity-50', checkedCount === 0);
                 }
 
-                if (bulkDeleteInfo) {
-                    bulkDeleteInfo.classList.toggle('hidden', selectedCount === 0);
-                }
-
-                if (selectedCountText) {
-                    selectedCountText.textContent = selectedCount + ' data dipilih.';
-                }
-
-                if (checkAll) {
-                    checkAll.checked = bulkChecks.length > 0 && selectedCount === bulkChecks.length;
-                    checkAll.indeterminate = selectedCount > 0 && selectedCount < bulkChecks.length;
+                if (selectAll) {
+                    selectAll.checked = checks.length > 0 && checkedCount === checks.length;
+                    selectAll.indeterminate = checkedCount > 0 && checkedCount < checks.length;
                 }
             }
 
-            function setConfirmVariant(variant) {
-                const variants = {
-                    danger: {
-                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-700',
-                        icon: 'ph-fill ph-trash text-2xl',
-                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-rose-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-rose-700',
-                    },
-                    warning: {
-                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700',
-                        icon: 'ph-fill ph-warning-circle text-2xl',
-                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-amber-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-amber-700',
-                    },
-                    success: {
-                        wrap: 'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700',
-                        icon: 'ph-fill ph-check-circle text-2xl',
-                        button: 'inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800',
-                    },
-                };
-
-                const selected = variants[variant] || variants.success;
-
-                confirmIconWrap.className = selected.wrap;
-                confirmIcon.className = selected.icon;
-                confirmSubmit.className = selected.button;
-            }
-
-            function openConfirm(form) {
-                pendingForm = form;
-
-                confirmTitle.textContent = form.getAttribute('data-confirm-title') || 'Konfirmasi Aksi';
-                confirmMessage.textContent = form.getAttribute('data-confirm-message') || 'Pastikan data sudah benar sebelum diproses.';
-                confirmSubmit.textContent = form.getAttribute('data-confirm-button') || 'Ya, Lanjutkan';
-
-                setConfirmVariant(form.getAttribute('data-confirm-variant') || 'success');
-
-                confirmOverlay.classList.add('is-open');
-                confirmOverlay.setAttribute('aria-hidden', 'false');
-                document.body.classList.add('nexus-modal-lock');
-            }
-
-            function closeConfirm() {
-                pendingForm = null;
-                confirmOverlay.classList.remove('is-open');
-                confirmOverlay.setAttribute('aria-hidden', 'true');
-                document.body.classList.remove('nexus-modal-lock');
-            }
-
-            if (checkAll) {
-                checkAll.addEventListener('change', function () {
-                    bulkChecks.forEach(function (checkbox) {
-                        if (!checkbox.closest('.lansia-card')?.classList.contains('hidden')) {
-                            checkbox.checked = checkAll.checked;
-                        }
-                    });
-
-                    updateBulkState();
+            selectAll?.addEventListener('change', function () {
+                checks.forEach(function (item) {
+                    item.checked = selectAll.checked;
                 });
-            }
 
-            bulkChecks.forEach(function (checkbox) {
-                checkbox.addEventListener('change', updateBulkState);
+                refresh();
             });
 
-            document.querySelectorAll('form[data-confirm="true"]').forEach(function (form) {
-                form.addEventListener('submit', function (event) {
-                    if (isSubmitting) {
-                        return;
-                    }
-
-                    if (form.id === 'bulkDeleteForm') {
-                        const selectedCount = bulkChecks.filter(function (checkbox) {
-                            return checkbox.checked;
-                        }).length;
-
-                        if (selectedCount === 0) {
-                            event.preventDefault();
-                            showMiniToast('Pilih minimal satu data Lansia dulu sebelum menghapus.');
-                            return;
-                        }
-
-                        form.setAttribute(
-                            'data-confirm-message',
-                            'Hapus ' + selectedCount + ' data Lansia yang dipilih? Data yang sudah punya riwayat pemeriksaan tetap akan ditolak oleh sistem.'
-                        );
-                    }
-
-                    if (!form.dataset.confirmed) {
-                        event.preventDefault();
-                        openConfirm(form);
-                    }
-                });
+            checks.forEach(function (item) {
+                item.addEventListener('change', refresh);
             });
 
-            if (confirmCancel) {
-                confirmCancel.addEventListener('click', closeConfirm);
+            refresh();
+        }
+
+        function buildSearchUrl(pageUrl) {
+            const base = pageUrl || form.action;
+            const url = new URL(base, window.location.origin);
+
+            const keyword = searchInput.value.trim();
+            const gender = genderInput.value || 'semua';
+            const kemandirian = kemandirianInput.value || 'semua';
+            const status = statusInput.value || 'semua';
+
+            keyword ? url.searchParams.set('search', keyword) : url.searchParams.delete('search');
+            gender !== 'semua' ? url.searchParams.set('jenis_kelamin', gender) : url.searchParams.delete('jenis_kelamin');
+            kemandirian !== 'semua' ? url.searchParams.set('kemandirian', kemandirian) : url.searchParams.delete('kemandirian');
+            status !== 'semua' ? url.searchParams.set('status_akun', status) : url.searchParams.delete('status_akun');
+
+            return url;
+        }
+
+        async function loadLiveResults(pageUrl) {
+            if (!form || !liveRegion) return;
+
+            if (liveController) {
+                liveController.abort();
             }
 
-            if (confirmOverlay) {
-                confirmOverlay.addEventListener('click', function (event) {
-                    if (event.target === confirmOverlay) {
-                        closeConfirm();
-                    }
+            liveController = new AbortController();
+
+            const url = buildSearchUrl(pageUrl);
+
+            liveRegion.classList.add('live-loading');
+            liveState?.classList.remove('hidden');
+
+            try {
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html'
+                    },
+                    signal: liveController.signal
                 });
-            }
 
-            if (confirmSubmit) {
-                confirmSubmit.addEventListener('click', function () {
-                    if (!pendingForm || isSubmitting) {
-                        return;
-                    }
+                const html = await response.text();
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const nextRegion = doc.querySelector('[data-live-region]');
 
-                    isSubmitting = true;
-                    pendingForm.dataset.confirmed = 'true';
-                    confirmSubmit.disabled = true;
-                    confirmSubmit.classList.add('opacity-70', 'cursor-wait');
-                    confirmSubmit.textContent = 'Memproses...';
-
-                    if (pendingForm.requestSubmit) {
-                        pendingForm.requestSubmit();
-                    } else {
-                        pendingForm.submit();
-                    }
-                });
-            }
-
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape' && confirmOverlay && confirmOverlay.classList.contains('is-open')) {
-                    closeConfirm();
+                if (!nextRegion) {
+                    window.location.href = url.toString();
+                    return;
                 }
-            });
 
-            filterCardsLocal();
-            updateBulkState();
+                liveRegion.innerHTML = nextRegion.innerHTML;
+                window.history.replaceState({}, '', url.toString());
+
+                bindBulkSelection();
+                bindPaginationLinks();
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Live search gagal:', error);
+                }
+            } finally {
+                liveRegion.classList.remove('live-loading');
+                liveState?.classList.add('hidden');
+            }
+        }
+
+        function scheduleSearch() {
+            clearTimeout(liveTimer);
+            liveTimer = setTimeout(function () {
+                loadLiveResults();
+            }, 260);
+        }
+
+        function bindPaginationLinks() {
+            document.querySelectorAll('#lansiaPagination a').forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    loadLiveResults(link.href);
+                });
+            });
+        }
+
+        function openConfirm(options) {
+            const tone = options.tone || 'emerald';
+
+            confirmTitle.textContent = options.title || 'Konfirmasi Aksi';
+            confirmMessage.textContent = options.message || 'Pastikan data sudah benar sebelum melanjutkan.';
+            confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white';
+
+            if (tone === 'danger') {
+                confirmHeader.classList.add('bg-gradient-to-br', 'from-rose-950', 'via-rose-800', 'to-orange-700');
+                confirmBadge.textContent = 'Aksi Hapus';
+                confirmOk.className = 'h-12 rounded-2xl bg-rose-600 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(225,29,72,0.22)] transition hover:bg-rose-700';
+            } else if (tone === 'gold') {
+                confirmHeader.classList.add('bg-gradient-to-br', 'from-amber-950', 'via-amber-700', 'to-emerald-800');
+                confirmBadge.textContent = 'Sinkronisasi';
+                confirmOk.className = 'h-12 rounded-2xl bg-amber-500 px-5 text-sm font-black text-amber-950 shadow-[0_14px_35px_rgba(245,158,11,0.22)] transition hover:bg-amber-400';
+            } else {
+                confirmHeader.classList.add('bg-gradient-to-br', 'from-emerald-950', 'via-emerald-800', 'to-teal-700');
+                confirmBadge.textContent = 'Konfirmasi';
+                confirmOk.className = 'h-12 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800';
+            }
+
+            confirmModal.classList.add('is-open');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeConfirm() {
+            pendingForm = null;
+            confirmModal?.classList.remove('is-open');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        searchInput?.addEventListener('input', function () {
+            this.value = this.value.replace(/\s+/g, ' ');
+            scheduleSearch();
         });
-    </script>
-@endsection
+
+        genderInput?.addEventListener('change', function () {
+            loadLiveResults();
+        });
+
+        kemandirianInput?.addEventListener('change', function () {
+            loadLiveResults();
+        });
+
+        statusInput?.addEventListener('change', function () {
+            loadLiveResults();
+        });
+
+        form?.addEventListener('submit', function (event) {
+            event.preventDefault();
+            loadLiveResults();
+        });
+
+        resetButton?.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            searchInput.value = '';
+            genderInput.value = 'semua';
+            kemandirianInput.value = 'semua';
+            statusInput.value = 'semua';
+
+            loadLiveResults(form.action);
+        });
+
+        document.addEventListener('click', function (event) {
+            const trigger = event.target.closest('[data-confirm-submit]');
+
+            if (!trigger || trigger.disabled) return;
+
+            const formId = trigger.dataset.confirmForm;
+            pendingForm = formId ? document.getElementById(formId) : trigger.closest('form');
+
+            if (!pendingForm) return;
+
+            openConfirm({
+                title: trigger.dataset.confirmTitle,
+                message: trigger.dataset.confirmMessage,
+                tone: trigger.dataset.confirmTone
+            });
+        });
+
+        confirmCancel?.addEventListener('click', closeConfirm);
+
+        confirmModal?.addEventListener('click', function (event) {
+            if (event.target === confirmModal) closeConfirm();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && confirmModal?.classList.contains('is-open')) closeConfirm();
+        });
+
+        confirmOk?.addEventListener('click', function () {
+            if (!pendingForm) {
+                closeConfirm();
+                return;
+            }
+
+            const targetForm = pendingForm;
+            pendingForm = null;
+
+            confirmModal?.classList.remove('is-open');
+            document.body.classList.remove('overflow-hidden');
+
+            HTMLFormElement.prototype.submit.call(targetForm);
+        });
+
+        bindBulkSelection();
+        bindPaginationLinks();
+    });
+</script>
+@endpush

@@ -1,994 +1,518 @@
 @extends('layouts.kader')
 
-@section('title', 'Detail Data Remaja')
-@section('page-name', 'Detail Data Remaja')
+@section('title', 'Edit Data Remaja')
+@section('page-name', 'Edit Data Remaja')
+@section('page-title', 'Edit Data Remaja')
 
 @php
-    use Illuminate\Support\Carbon;
+    use Carbon\Carbon;
     use Illuminate\Support\Facades\Route;
-
-    Carbon::setLocale('id');
 
     $routeHas = fn ($name) => Route::has($name);
 
-    $kunjungans = collect($remaja->kunjungans ?? []);
-    $totalKunjungan = $kunjungans->count();
+    $backRoute = $routeHas('kader.data.remaja.index')
+        ? route('kader.data.remaja.index')
+        : url('/kader/data/remaja');
 
-    $pemeriksaanTerakhir = $kunjungans
-        ->filter(fn ($item) => filled(data_get($item, 'pemeriksaan')))
-        ->first();
-
-    $tanggalLahir = filled($remaja->tanggal_lahir ?? null)
-        ? Carbon::parse($remaja->tanggal_lahir)
+    $showRoute = $routeHas('kader.data.remaja.show')
+        ? route('kader.data.remaja.show', $remaja->id)
         : null;
 
-    $usiaText = '-';
+    $updateRoute = $routeHas('kader.data.remaja.update')
+        ? route('kader.data.remaja.update', $remaja->id)
+        : url('/kader/data/remaja/' . $remaja->id);
 
-    if ($tanggalLahir) {
-        $diff = $tanggalLahir->diff(now('Asia/Jakarta'));
-        $usiaText = $diff->y . ' tahun ' . $diff->m . ' bulan';
-    }
+    $selectedGender = old('jenis_kelamin', $remaja->jenis_kelamin ?? '');
 
-    $genderLabel = match ($remaja->jenis_kelamin ?? null) {
-        'L' => 'Laki-laki',
-        'P' => 'Perempuan',
-        default => '-',
-    };
+    $tanggalLahir = old(
+        'tanggal_lahir',
+        $remaja->tanggal_lahir ? Carbon::parse($remaja->tanggal_lahir)->format('Y-m-d') : ''
+    );
 
-    $genderClass = match ($remaja->jenis_kelamin ?? null) {
-        'L' => 'border-sky-100 bg-sky-50 text-sky-700',
-        'P' => 'border-pink-100 bg-pink-50 text-pink-700',
-        default => 'border-slate-100 bg-slate-50 text-slate-600',
-    };
+    $akunTerhubung = filled($remaja->user_id ?? null);
 
-    $akunTerhubung = filled($remaja->user_id ?? null) || filled($userTerhubung ?? null);
+    $sessionType = session('success')
+        ? 'success'
+        : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
 
-    $sessionType = session('success') ? 'success' : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
     $sessionMessage = session('success') ?? session('warning') ?? session('error');
-
-    $initial = strtoupper(substr($remaja->nama_lengkap ?? 'R', 0, 1));
 @endphp
 
+@push('styles')
+<style>
+    .form-page {
+        background:
+            radial-gradient(circle at 8% 10%, rgba(16, 185, 129, 0.16), transparent 30%),
+            radial-gradient(circle at 92% 12%, rgba(245, 158, 11, 0.13), transparent 27%),
+            radial-gradient(circle at 78% 86%, rgba(14, 165, 233, 0.11), transparent 30%),
+            linear-gradient(135deg, #f8fafc 0%, #ecfdf5 45%, #eff6ff 100%);
+    }
+
+    .form-page::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+            linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+        background-size: 34px 34px;
+        mask-image: linear-gradient(to bottom, black, transparent 84%);
+    }
+
+    .glass-card {
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.78);
+        backdrop-filter: blur(22px);
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+    }
+
+    .form-label {
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgb(100, 116, 139);
+    }
+
+    .form-input,
+    .form-textarea {
+        width: 100%;
+        border-radius: 1.1rem;
+        border: 1px solid rgba(203, 213, 225, 0.92);
+        background: rgba(248, 250, 252, 0.88);
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: rgb(15, 23, 42);
+        outline: none;
+        transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+    }
+
+    .form-input {
+        height: 3.35rem;
+        padding: 0 1rem;
+    }
+
+    .form-textarea {
+        min-height: 8rem;
+        resize: vertical;
+        padding: 1rem;
+        line-height: 1.7;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus {
+        border-color: rgba(5, 150, 105, 0.75);
+        background: rgb(255, 255, 255);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+    }
+
+    .form-error {
+        border-color: rgba(225, 29, 72, 0.75) !important;
+        box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.1) !important;
+    }
+
+    .form-error-text {
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: rgb(225, 29, 72);
+    }
+
+    .gender-card {
+        display: flex;
+        min-height: 3.35rem;
+        cursor: pointer;
+        align-items: center;
+        gap: 0.8rem;
+        border-radius: 1.1rem;
+        border: 1px solid rgba(203, 213, 225, 0.92);
+        background: rgba(248, 250, 252, 0.88);
+        padding: 0.6rem 0.75rem;
+        transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease, transform .2s ease;
+    }
+
+    .gender-card:hover,
+    .gender-card:has(input:checked) {
+        border-color: rgba(5, 150, 105, 0.75);
+        background: rgb(255, 255, 255);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.10);
+    }
+
+    .gender-card:hover {
+        transform: translateY(-1px);
+    }
+
+    .gender-dot {
+        display: flex;
+        height: 2.35rem;
+        width: 2.35rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.85rem;
+        font-size: 0.8rem;
+        font-weight: 900;
+    }
+
+    .nexus-modal {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .22s ease;
+    }
+
+    .nexus-modal.is-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .nexus-modal-card {
+        transform: translateY(16px) scale(.96);
+        opacity: 0;
+        transition: transform .24s ease, opacity .24s ease;
+    }
+
+    .nexus-modal.is-open .nexus-modal-card {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+</style>
+@endpush
+
 @section('content')
-    <style>
-        .nexus-toast-show {
-            animation: nexusToastShow .22s ease-out both;
-        }
+<div class="form-page relative min-h-[calc(100vh-96px)] px-4 py-6 sm:px-6 lg:px-8">
+    <div class="relative z-10 mx-auto max-w-6xl space-y-6">
 
-        .nexus-toast-hide {
-            animation: nexusToastHide .18s ease-in both;
-        }
+        <section class="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800 shadow-[0_30px_90px_rgba(15,23,42,0.16)]">
+            <div class="absolute right-0 top-0 h-44 w-44 rounded-bl-[90px] bg-white/10"></div>
+            <div class="absolute -bottom-20 right-40 h-40 w-40 rounded-full bg-amber-300/10 blur-2xl"></div>
 
-        .nexus-modal-show {
-            animation: nexusModalShow .16s ease-out both;
-        }
-
-        @keyframes nexusToastShow {
-            from {
-                opacity: 0;
-                transform: translateY(-10px) scale(.985);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        @keyframes nexusToastHide {
-            from {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-
-            to {
-                opacity: 0;
-                transform: translateY(-10px) scale(.985);
-            }
-        }
-
-        @keyframes nexusModalShow {
-            from {
-                opacity: 0;
-                transform: translateY(10px) scale(.985);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        body.nexus-modal-lock {
-            overflow: hidden !important;
-        }
-
-        #nexusConfirmOverlay {
-            position: fixed !important;
-            inset: 0 !important;
-            z-index: 999999 !important;
-            display: none;
-            place-items: center;
-            min-height: 100dvh;
-            padding: 18px;
-            background: rgba(15, 23, 42, .48);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-        }
-
-        #nexusConfirmOverlay.is-open {
-            display: grid !important;
-        }
-
-        #nexusConfirmBox {
-            width: min(100%, 440px);
-            max-height: calc(100dvh - 36px);
-            overflow-y: auto;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, .8);
-            background: rgba(255, 255, 255, .98);
-            box-shadow: 0 26px 80px rgba(15, 23, 42, .22);
-        }
-
-        @media (max-width: 640px) {
-            #nexusConfirmOverlay {
-                padding: 14px;
-                backdrop-filter: blur(4px);
-                -webkit-backdrop-filter: blur(4px);
-            }
-
-            #nexusConfirmBox {
-                border-radius: 24px;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .nexus-toast-show,
-            .nexus-toast-hide,
-            .nexus-modal-show {
-                animation: none !important;
-            }
-        }
-    </style>
-
-    <div class="w-full space-y-5">
-
-        {{-- SESSION TOAST --}}
-        @if($sessionType && $sessionMessage)
-            <div
-                id="nexusSessionToast"
-                class="fixed right-4 top-4 z-[100000] w-[calc(100%-2rem)] max-w-md nexus-toast-show"
-            >
-                <div
-                    class="overflow-hidden rounded-3xl border bg-white shadow-2xl shadow-slate-900/10
-                    {{ $sessionType === 'success' ? 'border-emerald-100' : ($sessionType === 'warning' ? 'border-amber-100' : 'border-rose-100') }}"
-                >
-                    <div class="flex items-start gap-3 p-4">
-                        <div
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border
-                            {{ $sessionType === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : ($sessionType === 'warning' ? 'border-amber-100 bg-amber-50 text-amber-700' : 'border-rose-100 bg-rose-50 text-rose-700') }}"
-                        >
-                            <i class="ph-fill {{ $sessionType === 'success' ? 'ph-check-circle' : ($sessionType === 'warning' ? 'ph-warning-circle' : 'ph-x-circle') }} text-2xl"></i>
+            <div class="relative p-6 sm:p-8">
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="max-w-3xl">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-100 backdrop-blur-xl">
+                            <span class="h-2 w-2 rounded-full bg-emerald-300"></span>
+                            Mode Perubahan Data
                         </div>
 
-                        <div class="min-w-0 flex-1">
-                            <p
-                                class="text-sm font-black
-                                {{ $sessionType === 'success' ? 'text-emerald-800' : ($sessionType === 'warning' ? 'text-amber-800' : 'text-rose-800') }}"
-                            >
-                                {{ $sessionType === 'success' ? 'Berhasil Diproses' : ($sessionType === 'warning' ? 'Perhatian Sistem' : 'Aksi Gagal') }}
-                            </p>
+                        <h1 class="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl">
+                            Edit Data Remaja
+                        </h1>
 
-                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                {{ $sessionMessage }}
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            class="nexus-toast-close flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            aria-label="Tutup notifikasi"
-                        >
-                            <i class="ph-bold ph-x text-lg"></i>
-                        </button>
+                        <p class="mt-3 max-w-2xl text-sm font-semibold leading-7 text-emerald-50/80 sm:text-base">
+                            Perbarui data Remaja seperlunya. Ubah NIK dengan hati-hati, jangan sembrono seperti commit tanpa cek.
+                        </p>
                     </div>
 
-                    <div
-                        class="h-1 w-full
-                        {{ $sessionType === 'success' ? 'bg-emerald-500' : ($sessionType === 'warning' ? 'bg-amber-500' : 'bg-rose-500') }}"
-                    ></div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[320px]">
+                        <a href="{{ $backRoute }}" class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-center text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/15">
+                            Kembali
+                        </a>
+
+                        @if($showRoute)
+                            <a href="{{ $showRoute }}" class="rounded-2xl bg-emerald-400 px-4 py-4 text-center text-sm font-black text-emerald-950 shadow-[0_18px_40px_rgba(52,211,153,0.24)] transition hover:bg-emerald-300">
+                                Detail
+                            </a>
+                        @endif
+                    </div>
                 </div>
+            </div>
+        </section>
+
+        @if($sessionType && $sessionMessage)
+            @php
+                $alertClass = match ($sessionType) {
+                    'error' => 'border-rose-200 bg-rose-50/90 text-rose-800',
+                    'warning' => 'border-amber-200 bg-amber-50/90 text-amber-800',
+                    default => 'border-emerald-200 bg-emerald-50/90 text-emerald-800',
+                };
+
+                $alertTitle = match ($sessionType) {
+                    'error' => 'Aksi gagal',
+                    'warning' => 'Perhatian',
+                    default => 'Berhasil',
+                };
+            @endphp
+
+            <div class="rounded-[24px] border px-5 py-4 shadow-sm backdrop-blur-xl {{ $alertClass }}">
+                <p class="text-sm font-black">{{ $alertTitle }}</p>
+                <p class="mt-1 text-sm font-semibold leading-6">{{ $sessionMessage }}</p>
             </div>
         @endif
 
-        {{-- HERO --}}
-        <section class="relative overflow-hidden rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-50 p-5 shadow-sm sm:p-6">
-            <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-emerald-200/20 blur-3xl"></div>
-            <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-sky-200/20 blur-3xl"></div>
+        @if($errors->any())
+            <div class="rounded-[24px] border border-rose-200 bg-rose-50/90 px-5 py-4 text-rose-800 shadow-sm backdrop-blur-xl">
+                <p class="text-sm font-black">Data belum bisa diperbarui</p>
+                <ul class="mt-2 space-y-1 text-sm font-semibold leading-6">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
-            <div class="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
-                    <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.5rem] bg-emerald-700 text-3xl font-black text-white shadow-sm">
-                        {{ $initial }}
-                    </div>
+        <form id="remajaEditForm" action="{{ $updateRoute }}" method="POST" class="glass-card overflow-hidden rounded-[34px]">
+            @csrf
+            @method('PUT')
 
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-white/70 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
-                                <i class="ph-fill ph-student text-base"></i>
-                                Detail Remaja
-                            </span>
-
-                            <span class="inline-flex items-center rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] {{ $genderClass }}">
-                                {{ $genderLabel }}
-                            </span>
-
-                            @if($akunTerhubung)
-                                <span class="inline-flex items-center gap-1 rounded-2xl border border-teal-100 bg-teal-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-teal-700">
-                                    <i class="ph-fill ph-link-simple"></i>
-                                    Akun Terhubung
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1 rounded-2xl border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-amber-700">
-                                    <i class="ph-fill ph-warning-circle"></i>
-                                    Belum Terhubung
-                                </span>
-                            @endif
-                        </div>
-
-                        <h1 class="mt-3 truncate text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-                            {{ $remaja->nama_lengkap }}
-                        </h1>
-
-                        <p class="mt-2 text-sm font-bold leading-6 text-slate-600">
-                            NIK Remaja:
-                            <span class="font-black text-slate-800">{{ $remaja->nik ?? '-' }}</span>
+            <div class="border-b border-emerald-100/80 bg-gradient-to-r from-white/85 via-emerald-50/70 to-amber-50/50 px-6 py-5 sm:px-8">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[0.20em] text-emerald-700">
+                            Formulir Perubahan Data
                         </p>
-
-                        <p class="mt-1 max-w-2xl text-sm font-semibold leading-7 text-slate-600">
-                            Detail data sasaran Remaja untuk pemantauan kesehatan, edukasi, pemeriksaan, dan sinkronisasi akun warga.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2 sm:flex-row lg:items-center">
-                    @if($routeHas('kader.data.remaja.index'))
-                        <a
-                            href="{{ route('kader.data.remaja.index') }}"
-                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 shadow-sm transition-all duration-150 ease-out hover:bg-slate-50"
-                        >
-                            <i class="ph-bold ph-arrow-left text-lg"></i>
-                            Kembali
-                        </a>
-                    @endif
-
-                    @if($routeHas('kader.data.remaja.edit'))
-                        <a
-                            href="{{ route('kader.data.remaja.edit', $remaja->id) }}"
-                            class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
-                        >
-                            <i class="ph-fill ph-pencil-simple text-lg"></i>
-                            Edit Data
-                        </a>
-                    @endif
-                </div>
-            </div>
-        </section>
-
-        {{-- STATISTIK --}}
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                        <i class="ph-fill ph-calendar-heart text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
-                        Usia
-                    </span>
-                </div>
-
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Usia Saat Ini
-                </p>
-
-                <h2 class="mt-1 text-2xl font-black text-slate-900">
-                    {{ $usiaText }}
-                </h2>
-
-                <p class="mt-1 text-xs font-semibold text-slate-500">
-                    Berdasarkan tanggal lahir
-                </p>
-            </div>
-
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
-                        <i class="ph-fill ph-stethoscope text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-black text-sky-700">
-                        Layanan
-                    </span>
-                </div>
-
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Total Kunjungan
-                </p>
-
-                <h2 class="mt-1 text-3xl font-black text-slate-900">
-                    {{ $totalKunjungan }}
-                </h2>
-
-                <p class="mt-1 text-xs font-semibold text-slate-500">
-                    Riwayat layanan tercatat
-                </p>
-            </div>
-
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                        <i class="ph-fill ph-ruler text-xl"></i>
-                    </div>
-                    <span class="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black text-amber-700">
-                        Fisik
-                    </span>
-                </div>
-
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Pemeriksaan
-                </p>
-
-                <h2 class="mt-1 text-2xl font-black text-slate-900">
-                    {{ $pemeriksaanTerakhir ? 'Ada' : 'Belum Ada' }}
-                </h2>
-
-                <p class="mt-1 text-xs font-semibold text-slate-500">
-                    Data pemeriksaan terakhir
-                </p>
-            </div>
-
-            <div class="rounded-3xl border border-slate-100 bg-white/85 p-4 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <div
-                        class="flex h-10 w-10 items-center justify-center rounded-2xl
-                        {{ $akunTerhubung ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700' }}"
-                    >
-                        <i class="ph-fill {{ $akunTerhubung ? 'ph-link-simple' : 'ph-warning-circle' }} text-xl"></i>
-                    </div>
-                    <span
-                        class="rounded-full px-3 py-1 text-[11px] font-black
-                        {{ $akunTerhubung ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700' }}"
-                    >
-                        Akun
-                    </span>
-                </div>
-
-                <p class="mt-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                    Status Akun
-                </p>
-
-                <h2 class="mt-1 text-2xl font-black text-slate-900">
-                    {{ $akunTerhubung ? 'Terhubung' : 'Belum' }}
-                </h2>
-
-                <p class="mt-1 text-xs font-semibold text-slate-500">
-                    Akses warga Remaja
-                </p>
-            </div>
-        </section>
-
-        <div class="grid gap-5 xl:grid-cols-[1fr_360px]">
-
-            {{-- KONTEN KIRI --}}
-            <div class="space-y-5">
-
-                {{-- PROFIL --}}
-                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
-                    <div class="mb-5">
-                        <div class="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
-                            <i class="ph-fill ph-identification-card"></i>
-                            Identitas
-                        </div>
-
-                        <h2 class="mt-3 text-2xl font-black text-slate-900">
-                            Profil Remaja
+                        <h2 class="mt-2 text-2xl font-black text-slate-950">
+                            {{ $remaja->nama_lengkap ?? 'Data Remaja' }}
                         </h2>
-
-                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
-                            Data dasar Remaja, pendidikan, dan keluarga.
+                        <p class="mt-1 text-sm font-semibold text-slate-500">
+                            NIK {{ $remaja->nik ?? '-' }}
                         </p>
                     </div>
 
-                    <div class="grid gap-3 md:grid-cols-2">
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Nama Lengkap
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->nama_lengkap ?? '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                NIK Remaja
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->nik ?? '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Tempat, Tanggal Lahir
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->tempat_lahir ?? '-' }},
-                                {{ $tanggalLahir ? $tanggalLahir->translatedFormat('d F Y') : '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Jenis Kelamin
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $genderLabel }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Sekolah
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->sekolah ?? '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Kelas
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->kelas ?? '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Orang Tua/Wali
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->nama_ortu ?? '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Telepon Orang Tua/Wali
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $remaja->telepon_ortu ?? '-' }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:col-span-2">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Alamat
-                            </p>
-                            <p class="mt-2 text-sm font-semibold leading-7 text-slate-700">
-                                {{ $remaja->alamat ?? '-' }}
-                            </p>
-                        </div>
+                    <div class="rounded-2xl border {{ $akunTerhubung ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700' }} px-4 py-3 text-sm font-black shadow-sm">
+                        {{ $akunTerhubung ? 'Akun Terhubung' : 'Belum Terhubung' }}
                     </div>
-                </section>
-
-                {{-- PEMERIKSAAN TERAKHIR --}}
-                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
-                    <div class="mb-5">
-                        <div class="inline-flex items-center gap-2 rounded-2xl bg-sky-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-sky-700">
-                            <i class="ph-fill ph-ruler"></i>
-                            Pemeriksaan
-                        </div>
-
-                        <h2 class="mt-3 text-2xl font-black text-slate-900">
-                            Pemeriksaan Terakhir
-                        </h2>
-
-                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
-                            Ringkasan pemeriksaan fisik terakhir jika sudah tersedia.
-                        </p>
-                    </div>
-
-                    @if($pemeriksaanTerakhir && $pemeriksaanTerakhir->pemeriksaan)
-                        @php
-                            $pemeriksaan = $pemeriksaanTerakhir->pemeriksaan;
-                        @endphp
-
-                        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                                <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                    Berat Badan
-                                </p>
-                                <p class="mt-2 text-2xl font-black text-slate-900">
-                                    {{ $pemeriksaan->berat_badan ?? '-' }}
-                                    <span class="text-sm text-slate-500">kg</span>
-                                </p>
-                            </div>
-
-                            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                                <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                    Tinggi Badan
-                                </p>
-                                <p class="mt-2 text-2xl font-black text-slate-900">
-                                    {{ $pemeriksaan->tinggi_badan ?? '-' }}
-                                    <span class="text-sm text-slate-500">cm</span>
-                                </p>
-                            </div>
-
-                            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                                <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                    Lingkar Lengan
-                                </p>
-                                <p class="mt-2 text-2xl font-black text-slate-900">
-                                    {{ $pemeriksaan->lila ?? '-' }}
-                                    <span class="text-sm text-slate-500">cm</span>
-                                </p>
-                            </div>
-
-                            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                                <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                    Status Gizi
-                                </p>
-                                <p class="mt-2 text-2xl font-black text-slate-900">
-                                    {{ $pemeriksaan->status_gizi ?? '-' }}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold leading-6 text-sky-700">
-                            <i class="ph-fill ph-calendar-check mr-1"></i>
-                            Pemeriksaan terakhir tercatat pada
-                            <span class="font-black">
-                                {{ filled($pemeriksaanTerakhir->tanggal_kunjungan ?? null) ? Carbon::parse($pemeriksaanTerakhir->tanggal_kunjungan)->translatedFormat('d F Y') : '-' }}
-                            </span>
-                        </div>
-                    @else
-                        <div class="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center">
-                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
-                                <i class="ph-fill ph-ruler text-2xl"></i>
-                            </div>
-
-                            <h3 class="mt-4 text-lg font-black text-slate-900">
-                                Belum Ada Pemeriksaan
-                            </h3>
-
-                            <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">
-                                Data pemeriksaan Remaja belum tersedia. Input pemeriksaan dapat dilakukan melalui menu pemeriksaan Kader.
-                            </p>
-
-                            @if($routeHas('kader.pemeriksaan.create'))
-                                <a
-                                    href="{{ route('kader.pemeriksaan.create') }}"
-                                    class="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
-                                >
-                                    <i class="ph-fill ph-plus-circle text-lg"></i>
-                                    Input Pemeriksaan
-                                </a>
-                            @endif
-                        </div>
-                    @endif
-                </section>
-
-                {{-- RIWAYAT --}}
-                <section class="rounded-[1.75rem] border border-slate-100 bg-white/85 p-5 shadow-sm">
-                    <div class="mb-5">
-                        <div class="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
-                            <i class="ph-fill ph-clock-counter-clockwise"></i>
-                            Riwayat
-                        </div>
-
-                        <h2 class="mt-3 text-2xl font-black text-slate-900">
-                            Riwayat Kunjungan
-                        </h2>
-
-                        <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
-                            Maksimal 10 kunjungan terakhir yang terhubung dengan data Remaja.
-                        </p>
-                    </div>
-
-                    @if($kunjungans->count())
-                        <div class="overflow-hidden rounded-2xl border border-slate-100">
-                            <div class="hidden grid-cols-[150px_1fr_160px_110px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-400 lg:grid">
-                                <span>Tanggal</span>
-                                <span>Jenis Layanan</span>
-                                <span>Petugas</span>
-                                <span>Aksi</span>
-                            </div>
-
-                            <div class="divide-y divide-slate-100">
-                                @foreach($kunjungans as $kunjungan)
-                                    @php
-                                        $tanggalKunjungan = filled($kunjungan->tanggal_kunjungan ?? null)
-                                            ? Carbon::parse($kunjungan->tanggal_kunjungan)
-                                            : null;
-
-                                        $jenisKunjungan = $kunjungan->jenis_kunjungan ?? 'kunjungan';
-
-                                        $badgeClass = match ($jenisKunjungan) {
-                                            'pemeriksaan' => 'border-emerald-100 bg-emerald-50 text-emerald-700',
-                                            'edukasi' => 'border-sky-100 bg-sky-50 text-sky-700',
-                                            default => 'border-slate-100 bg-slate-50 text-slate-600',
-                                        };
-
-                                        $jenisLabel = match ($jenisKunjungan) {
-                                            'pemeriksaan' => 'Pemeriksaan Remaja',
-                                            'edukasi' => 'Edukasi Kesehatan',
-                                            default => 'Kunjungan Posyandu',
-                                        };
-                                    @endphp
-
-                                    <div class="grid gap-3 px-4 py-4 lg:grid-cols-[150px_1fr_160px_110px] lg:items-center">
-                                        <div>
-                                            <p class="text-sm font-black text-slate-900">
-                                                {{ $tanggalKunjungan ? $tanggalKunjungan->translatedFormat('d M Y') : '-' }}
-                                            </p>
-                                            <p class="mt-0.5 text-xs font-semibold text-slate-500">
-                                                {{ $tanggalKunjungan ? $tanggalKunjungan->format('H:i') . ' WIB' : 'Waktu tidak tercatat' }}
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <span class="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] {{ $badgeClass }}">
-                                                {{ $jenisLabel }}
-                                            </span>
-
-                                            @if($kunjungan->pemeriksaan)
-                                                <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                                                    BB {{ $kunjungan->pemeriksaan->berat_badan ?? '-' }} kg,
-                                                    TB {{ $kunjungan->pemeriksaan->tinggi_badan ?? '-' }} cm
-                                                </p>
-                                            @else
-                                                <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                                                    Tidak ada data pemeriksaan fisik pada kunjungan ini.
-                                                </p>
-                                            @endif
-                                        </div>
-
-                                        <div>
-                                            <p class="text-sm font-black text-slate-800">
-                                                {{ data_get($kunjungan, 'petugas.name') ?? data_get($kunjungan, 'petugas.nama_lengkap') ?? '-' }}
-                                            </p>
-                                            <p class="mt-0.5 text-xs font-semibold text-slate-500">
-                                                Petugas layanan
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            @if($routeHas('kader.kunjungan.show'))
-                                                <a
-                                                    href="{{ route('kader.kunjungan.show', $kunjungan->id) }}"
-                                                    class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
-                                                >
-                                                    <i class="ph-fill ph-eye text-base"></i>
-                                                    Detail
-                                                </a>
-                                            @else
-                                                <span class="inline-flex h-10 w-full items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 px-3 text-xs font-black text-slate-400">
-                                                    Tidak Ada Aksi
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @else
-                        <div class="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center">
-                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
-                                <i class="ph-fill ph-clipboard-text text-2xl"></i>
-                            </div>
-
-                            <h3 class="mt-4 text-lg font-black text-slate-900">
-                                Riwayat Masih Kosong
-                            </h3>
-
-                            <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-7 text-slate-500">
-                                Belum ada riwayat kunjungan atau pemeriksaan yang tercatat untuk Remaja ini.
-                            </p>
-                        </div>
-                    @endif
-                </section>
+                </div>
             </div>
 
-            {{-- SIDEBAR KANAN --}}
-            <aside class="space-y-5">
-                <section class="sticky top-5 rounded-[1.75rem] border border-slate-100 bg-white/90 p-5 shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="flex h-12 w-12 items-center justify-center rounded-2xl border
-                            {{ $akunTerhubung ? 'border-teal-100 bg-teal-50 text-teal-700' : 'border-amber-100 bg-amber-50 text-amber-700' }}"
-                        >
-                            <i class="ph-fill {{ $akunTerhubung ? 'ph-link-simple' : 'ph-warning-circle' }} text-2xl"></i>
+            <div class="space-y-7 p-6 sm:p-8">
+                <section class="rounded-[28px] border border-emerald-100/80 bg-white/72 p-5 shadow-[0_16px_50px_rgba(15,23,42,0.04)] sm:p-6">
+                    <div class="mb-6 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-sm font-black text-emerald-700">
+                            01
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-950">Identitas Remaja</h3>
+                            <p class="text-sm font-semibold text-slate-500">Perbaiki data dasar sasaran.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <div>
+                            <label for="nik" class="form-label">NIK Remaja <span class="text-rose-500">*</span></label>
+                            <input type="text" id="nik" name="nik" value="{{ old('nik', $remaja->nik) }}" required maxlength="16" inputmode="numeric" pattern="[0-9]{16}" autocomplete="off" class="form-input @error('nik') form-error @enderror">
+                            @error('nik') <p class="form-error-text">{{ $message }}</p> @enderror
                         </div>
 
                         <div>
-                            <h3 class="text-lg font-black text-slate-900">
-                                Akun Warga
-                            </h3>
-                            <p class="text-sm font-semibold text-slate-500">
-                                Akses Remaja.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div
-                        class="mt-5 rounded-2xl border px-4 py-3
-                        {{ $akunTerhubung ? 'border-teal-100 bg-teal-50 text-teal-800' : 'border-amber-100 bg-amber-50 text-amber-800' }}"
-                    >
-                        <p class="text-sm font-black">
-                            {{ $akunTerhubung ? 'Akun Terhubung' : 'Belum Terhubung' }}
-                        </p>
-
-                        <p class="mt-1 text-xs font-semibold leading-5">
-                            {{ $akunTerhubung ? 'Data Remaja sudah bisa diakses oleh akun warga terkait.' : 'Akun warga belum tersinkron dengan data Remaja ini.' }}
-                        </p>
-                    </div>
-
-                    @if($userTerhubung)
-                        <div class="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                            <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Nama Akun
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ $userTerhubung->name ?? '-' }}
-                            </p>
-
-                            <p class="mt-3 text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Email
-                            </p>
-                            <p class="mt-2 break-all text-sm font-semibold text-slate-700">
-                                {{ $userTerhubung->email ?? '-' }}
-                            </p>
-
-                            <p class="mt-3 text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">
-                                Status
-                            </p>
-                            <p class="mt-2 text-sm font-black text-slate-800">
-                                {{ ucfirst($userTerhubung->status ?? 'aktif') }}
-                            </p>
-                        </div>
-                    @else
-                        <div class="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
-                            <p class="text-sm font-black text-amber-800">
-                                Akun belum ditemukan
-                            </p>
-                            <p class="mt-1 text-xs font-semibold leading-5 text-amber-700">
-                                Admin perlu membuat akun warga dengan NIK Remaja yang sama, lalu Kader dapat melakukan sinkronisasi.
-                            </p>
+                            <label for="nama_lengkap" class="form-label">Nama Lengkap <span class="text-rose-500">*</span></label>
+                            <input type="text" id="nama_lengkap" name="nama_lengkap" value="{{ old('nama_lengkap', $remaja->nama_lengkap) }}" required autocomplete="off" class="form-input @error('nama_lengkap') form-error @enderror">
+                            @error('nama_lengkap') <p class="form-error-text">{{ $message }}</p> @enderror
                         </div>
 
-                        @if($routeHas('kader.data.remaja.sync'))
-                            <form
-                                action="{{ route('kader.data.remaja.sync', $remaja->id) }}"
-                                method="POST"
-                                class="mt-4"
-                                data-confirm="true"
-                                data-confirm-variant="warning"
-                                data-confirm-title="Sinkronkan Akun?"
-                                data-confirm-message="Pastikan akun warga sudah dibuat Admin memakai NIK Remaja yang sama."
-                                data-confirm-button="Ya, Sinkronkan"
-                            >
-                                @csrf
+                        <div>
+                            <label for="tempat_lahir" class="form-label">Tempat Lahir <span class="text-rose-500">*</span></label>
+                            <input type="text" id="tempat_lahir" name="tempat_lahir" value="{{ old('tempat_lahir', $remaja->tempat_lahir) }}" required autocomplete="off" class="form-input @error('tempat_lahir') form-error @enderror">
+                            @error('tempat_lahir') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
 
-                                <button
-                                    type="submit"
-                                    class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-black text-amber-700 transition-all duration-150 ease-out hover:bg-amber-100"
-                                >
-                                    <i class="ph-fill ph-link-simple text-lg"></i>
-                                    Coba Sinkron Akun
-                                </button>
-                            </form>
-                        @endif
-                    @endif
+                        <div>
+                            <label for="tanggal_lahir" class="form-label">Tanggal Lahir <span class="text-rose-500">*</span></label>
+                            <input type="date" id="tanggal_lahir" name="tanggal_lahir" value="{{ $tanggalLahir }}" max="{{ now()->format('Y-m-d') }}" required class="form-input @error('tanggal_lahir') form-error @enderror">
+                            @error('tanggal_lahir') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
 
-                    <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                        <h4 class="text-sm font-black text-slate-800">
-                            Ringkasan Sistem
-                        </h4>
+                        <div class="lg:col-span-2">
+                            <label class="form-label">Jenis Kelamin <span class="text-rose-500">*</span></label>
 
-                        <ul class="mt-3 space-y-2 text-xs font-semibold leading-5 text-slate-600">
-                            <li class="flex gap-2">
-                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
-                                <span>NIK utama yang digunakan adalah NIK Remaja.</span>
-                            </li>
-                            <li class="flex gap-2">
-                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
-                                <span>Akun warga bisa dipakai Remaja untuk melihat data kesehatannya.</span>
-                            </li>
-                            <li class="flex gap-2">
-                                <i class="ph-fill ph-check-circle mt-0.5 text-emerald-600"></i>
-                                <span>Riwayat pemeriksaan tidak boleh hilang saat data digunakan.</span>
-                            </li>
-                        </ul>
-                    </div>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <label class="gender-card">
+                                    <input type="radio" name="jenis_kelamin" value="L" class="peer sr-only" {{ $selectedGender === 'L' ? 'checked' : '' }} required>
+                                    <span class="gender-dot bg-cyan-50 text-cyan-700 peer-checked:bg-cyan-600 peer-checked:text-white">L</span>
+                                    <span>
+                                        <span class="block text-sm font-black text-slate-800">Laki-laki</span>
+                                        <span class="block text-xs font-bold text-slate-400">Kode L</span>
+                                    </span>
+                                </label>
 
-                    <div class="mt-5 grid gap-2">
-                        @if($routeHas('kader.data.remaja.edit'))
-                            <a
-                                href="{{ route('kader.data.remaja.edit', $remaja->id) }}"
-                                class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-emerald-800"
-                            >
-                                <i class="ph-fill ph-pencil-simple text-lg"></i>
-                                Edit Data Remaja
-                            </a>
-                        @endif
+                                <label class="gender-card">
+                                    <input type="radio" name="jenis_kelamin" value="P" class="peer sr-only" {{ $selectedGender === 'P' ? 'checked' : '' }} required>
+                                    <span class="gender-dot bg-rose-50 text-rose-600 peer-checked:bg-rose-500 peer-checked:text-white">P</span>
+                                    <span>
+                                        <span class="block text-sm font-black text-slate-800">Perempuan</span>
+                                        <span class="block text-xs font-bold text-slate-400">Kode P</span>
+                                    </span>
+                                </label>
+                            </div>
 
-                        @if($routeHas('kader.data.remaja.index'))
-                            <a
-                                href="{{ route('kader.data.remaja.index') }}"
-                                class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
-                            >
-                                <i class="ph-bold ph-arrow-left text-lg"></i>
-                                Kembali ke Daftar
-                            </a>
-                        @endif
+                            @error('jenis_kelamin') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
                     </div>
                 </section>
-            </aside>
-        </div>
-    </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const sessionToast = document.getElementById('nexusSessionToast');
-            let pendingForm = null;
-            let isSubmitting = false;
-
-            function closeSessionToast() {
-                if (!sessionToast) {
-                    return;
-                }
-
-                sessionToast.classList.remove('nexus-toast-show');
-                sessionToast.classList.add('nexus-toast-hide');
-
-                setTimeout(function () {
-                    sessionToast.remove();
-                }, 240);
-            }
-
-            if (sessionToast) {
-                setTimeout(closeSessionToast, 3800);
-
-                const closeButton = sessionToast.querySelector('.nexus-toast-close');
-
-                if (closeButton) {
-                    closeButton.addEventListener('click', closeSessionToast);
-                }
-            }
-
-            function createConfirmLayer() {
-                document.getElementById('nexusConfirmOverlay')?.remove();
-
-                document.body.insertAdjacentHTML('beforeend', `
-                    <div id="nexusConfirmOverlay" aria-hidden="true">
-                        <div id="nexusConfirmBox" class="nexus-modal-show p-5" role="dialog" aria-modal="true" aria-labelledby="nexusConfirmTitle">
-                            <div class="flex items-start gap-3.5">
-                                <div id="nexusConfirmIconWrap" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700">
-                                    <i id="nexusConfirmIcon" class="ph-fill ph-warning-circle text-2xl"></i>
-                                </div>
-
-                                <div class="min-w-0 flex-1">
-                                    <h3 id="nexusConfirmTitle" class="text-lg font-black leading-6 text-slate-900">
-                                        Konfirmasi Aksi
-                                    </h3>
-
-                                    <p id="nexusConfirmMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                        Pastikan data sudah benar sebelum diproses.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="mt-5 grid grid-cols-2 gap-2">
-                                <button
-                                    id="nexusConfirmCancel"
-                                    type="button"
-                                    class="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-600 transition-all duration-150 ease-out hover:bg-slate-50"
-                                >
-                                    Batal
-                                </button>
-
-                                <button
-                                    id="nexusConfirmSubmit"
-                                    type="button"
-                                    class="inline-flex h-11 items-center justify-center rounded-2xl bg-amber-600 px-4 text-sm font-black text-white shadow-sm transition-all duration-150 ease-out hover:bg-amber-700"
-                                >
-                                    Ya, Lanjutkan
-                                </button>
-                            </div>
+                <section class="rounded-[28px] border border-cyan-100/80 bg-white/72 p-5 shadow-[0_16px_50px_rgba(15,23,42,0.04)] sm:p-6">
+                    <div class="mb-6 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-100 text-sm font-black text-cyan-700">
+                            02
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-950">Pendidikan dan Domisili</h3>
+                            <p class="text-sm font-semibold text-slate-500">Data sekolah dan alamat tinggal.</p>
                         </div>
                     </div>
-                `);
-            }
 
-            createConfirmLayer();
+                    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <div>
+                            <label for="sekolah" class="form-label">Nama Sekolah</label>
+                            <input type="text" id="sekolah" name="sekolah" value="{{ old('sekolah', $remaja->sekolah) }}" autocomplete="off" class="form-input @error('sekolah') form-error @enderror">
+                            @error('sekolah') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
 
-            const confirmOverlay = document.getElementById('nexusConfirmOverlay');
-            const confirmTitle = document.getElementById('nexusConfirmTitle');
-            const confirmMessage = document.getElementById('nexusConfirmMessage');
-            const confirmSubmit = document.getElementById('nexusConfirmSubmit');
-            const confirmCancel = document.getElementById('nexusConfirmCancel');
+                        <div>
+                            <label for="kelas" class="form-label">Kelas</label>
+                            <input type="text" id="kelas" name="kelas" value="{{ old('kelas', $remaja->kelas) }}" autocomplete="off" class="form-input @error('kelas') form-error @enderror">
+                            @error('kelas') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
 
-            function openConfirm(form) {
-                pendingForm = form;
+                        <div class="lg:col-span-2">
+                            <label for="alamat" class="form-label">Alamat Domisili <span class="text-rose-500">*</span></label>
+                            <textarea id="alamat" name="alamat" rows="4" required class="form-textarea @error('alamat') form-error @enderror">{{ old('alamat', $remaja->alamat) }}</textarea>
+                            @error('alamat') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </section>
 
-                confirmTitle.textContent = form.getAttribute('data-confirm-title') || 'Konfirmasi Aksi';
-                confirmMessage.textContent = form.getAttribute('data-confirm-message') || 'Pastikan data sudah benar sebelum diproses.';
-                confirmSubmit.textContent = form.getAttribute('data-confirm-button') || 'Ya, Lanjutkan';
+                <section class="rounded-[28px] border border-amber-100/90 bg-white/72 p-5 shadow-[0_16px_50px_rgba(15,23,42,0.04)] sm:p-6">
+                    <div class="mb-6 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100 text-sm font-black text-amber-700">
+                            03
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-950">Data Orang Tua</h3>
+                            <p class="text-sm font-semibold text-slate-500">Data wali atau keluarga yang dapat dihubungi.</p>
+                        </div>
+                    </div>
 
-                confirmOverlay.classList.add('is-open');
-                confirmOverlay.setAttribute('aria-hidden', 'false');
-                document.body.classList.add('nexus-modal-lock');
-            }
+                    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <div>
+                            <label for="nama_ortu" class="form-label">Nama Orang Tua/Wali <span class="text-rose-500">*</span></label>
+                            <input type="text" id="nama_ortu" name="nama_ortu" value="{{ old('nama_ortu', $remaja->nama_ortu) }}" required autocomplete="off" class="form-input @error('nama_ortu') form-error @enderror">
+                            @error('nama_ortu') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
 
-            function closeConfirm() {
-                pendingForm = null;
-                confirmOverlay.classList.remove('is-open');
-                confirmOverlay.setAttribute('aria-hidden', 'true');
-                document.body.classList.remove('nexus-modal-lock');
-            }
+                        <div>
+                            <label for="telepon_ortu" class="form-label">No. HP Orang Tua/Wali</label>
+                            <input type="text" id="telepon_ortu" name="telepon_ortu" value="{{ old('telepon_ortu', $remaja->telepon_ortu) }}" autocomplete="off" class="form-input @error('telepon_ortu') form-error @enderror">
+                            @error('telepon_ortu') <p class="form-error-text">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </section>
+            </div>
 
-            document.querySelectorAll('form[data-confirm="true"]').forEach(function (form) {
-                form.addEventListener('submit', function (event) {
-                    if (isSubmitting) {
-                        return;
-                    }
+            <div class="border-t border-emerald-100/80 bg-gradient-to-r from-white/80 via-emerald-50/70 to-amber-50/45 px-6 py-5 sm:px-8">
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm font-bold text-slate-500">
+                        Simpan hanya jika data sudah sesuai.
+                    </p>
 
-                    if (!form.dataset.confirmed) {
-                        event.preventDefault();
-                        openConfirm(form);
-                    }
-                });
-            });
+                    <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                        <a href="{{ $backRoute }}" class="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                            Batal
+                        </a>
 
-            if (confirmCancel) {
-                confirmCancel.addEventListener('click', closeConfirm);
-            }
-
-            if (confirmOverlay) {
-                confirmOverlay.addEventListener('click', function (event) {
-                    if (event.target === confirmOverlay) {
-                        closeConfirm();
-                    }
-                });
-            }
-
-            if (confirmSubmit) {
-                confirmSubmit.addEventListener('click', function () {
-                    if (!pendingForm || isSubmitting) {
-                        return;
-                    }
-
-                    isSubmitting = true;
-                    pendingForm.dataset.confirmed = 'true';
-                    confirmSubmit.disabled = true;
-                    confirmSubmit.classList.add('opacity-70', 'cursor-wait');
-                    confirmSubmit.textContent = 'Memproses...';
-
-                    if (pendingForm.requestSubmit) {
-                        pendingForm.requestSubmit();
-                    } else {
-                        pendingForm.submit();
-                    }
-                });
-            }
-
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape' && confirmOverlay && confirmOverlay.classList.contains('is-open')) {
-                    closeConfirm();
-                }
-            });
-        });
-    </script>
+                        <button type="submit" class="inline-flex h-12 items-center justify-center rounded-2xl bg-emerald-700 px-7 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.24)] transition hover:bg-emerald-800">
+                            Simpan Perubahan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
+
+@push('modals')
+<div id="nexusEditConfirm" class="nexus-modal fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+    <div class="nexus-modal-card w-full max-w-md overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_30px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl">
+        <div class="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-700 px-6 py-6 text-white">
+            <div class="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-white/10"></div>
+            <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-t-[80px] bg-amber-300/15"></div>
+
+            <div class="relative">
+                <div class="mb-4 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-50">
+                    Konfirmasi Edit
+                </div>
+
+                <h3 class="text-2xl font-black tracking-tight">Simpan Perubahan Data?</h3>
+
+                <p class="mt-2 text-sm font-semibold leading-6 text-white/75">
+                    Data Remaja akan diperbarui dan sistem akan mengecek ulang sinkronisasi akun warga berdasarkan NIK.
+                </p>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-white via-emerald-50/50 to-amber-50/35 px-6 py-5">
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">
+                Pastikan NIK, nama, tanggal lahir, dan alamat sudah benar sebelum menyimpan.
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+                <button type="button" id="nexusEditCancel" class="h-12 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50">
+                    Batal
+                </button>
+
+                <button type="button" id="nexusEditOk" class="h-12 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800">
+                    Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endpush
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('remajaEditForm');
+        const nikInput = document.getElementById('nik');
+        const modal = document.getElementById('nexusEditConfirm');
+        const cancelButton = document.getElementById('nexusEditCancel');
+        const okButton = document.getElementById('nexusEditOk');
+
+        let confirmedSubmit = false;
+
+        if (modal && modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+
+        function openModal() {
+            modal?.classList.add('is-open');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeModal() {
+            modal?.classList.remove('is-open');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        nikInput?.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 16);
+        });
+
+        form?.addEventListener('submit', function (event) {
+            if (confirmedSubmit) return;
+
+            event.preventDefault();
+            openModal();
+        });
+
+        cancelButton?.addEventListener('click', closeModal);
+
+        modal?.addEventListener('click', function (event) {
+            if (event.target === modal) closeModal();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && modal?.classList.contains('is-open')) closeModal();
+        });
+
+        okButton?.addEventListener('click', function () {
+            confirmedSubmit = true;
+            closeModal();
+            HTMLFormElement.prototype.submit.call(form);
+        });
+    });
+</script>
+@endpush

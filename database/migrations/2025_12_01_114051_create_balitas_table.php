@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('balitas', function (Blueprint $table) {
             $table->id();
-            $table->string('kode_balita')->unique()->nullable(); // Contoh: BLT-001
+            $table->string('kode_balita')->unique()->nullable();
             $table->string('nik', 16)->unique()->nullable();
             $table->string('nama_lengkap');
             $table->enum('jenis_kelamin', ['L', 'P']);
@@ -18,8 +18,8 @@ return new class extends Migration
             $table->date('tanggal_lahir');
             
             // Data Fisik Lahir
-            $table->decimal('berat_lahir', 5, 2)->nullable(); // kg, contoh 3.50
-            $table->decimal('panjang_lahir', 5, 2)->nullable(); // cm, contoh 50.00
+            $table->decimal('berat_lahir', 5, 2)->nullable(); 
+            $table->decimal('panjang_lahir', 5, 2)->nullable(); 
             
             // Data Orang Tua
             $table->string('nama_ibu');

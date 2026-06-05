@@ -6,22 +6,20 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Kader Workspace') | PosyanduCare</title>
 
-    {{-- Deteksi transisi dari login supaya loader masuknya sinkron seperti Admin/Bidan --}}
+    {{--
+        pc_from_login  → loading screen masuk (login)
+        pc_doing_logout → loading screen keluar (logout)
+        Navigasi biasa  → TIDAK ada loading screen, cukup progress bar tipis
+    --}}
     <script>
         (function () {
             try {
-                if (sessionStorage.getItem('pc_from_login') === '1') {
-                    document.documentElement.classList.add('pc-from-login');
-                } else {
-                    document.documentElement.classList.add('pc-normal-entry');
-                }
+                var fl = sessionStorage.getItem('pc_from_login') === '1';
+                document.documentElement.classList.add(fl ? 'pc-from-login' : 'pc-normal-entry');
             } catch (e) {
                 document.documentElement.classList.add('pc-normal-entry');
             }
-
-            if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'manual';
-            }
+            if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
         })();
     </script>
 
@@ -56,13 +54,14 @@
             -webkit-font-smoothing:antialiased;
         }
 
-        body.locked, body.pc-scroll-lock { overflow:hidden !important; touch-action:none; }
+        body.locked { overflow:hidden !important; touch-action:none; }
         [x-cloak] { display:none!important; }
         button,input,select,textarea { font-family:inherit; outline:none; }
         ::selection { background:rgba(16,185,129,.18); color:var(--g900); }
         ::-webkit-scrollbar { width:6px; height:6px; }
         ::-webkit-scrollbar-thumb { background:rgba(148,163,184,.42); border-radius:999px; }
 
+        /* ─── Background FX ─────────────────────────────── */
         .bgfx,.gridfx { position:fixed; inset:0; pointer-events:none; }
         .bgfx { z-index:0; overflow:hidden; }
         .bgfx:before,.bgfx:after {
@@ -79,212 +78,114 @@
             mask-image:radial-gradient(circle at center,#000,transparent 72%);
         }
 
-        .loader-bar {
-            position:fixed; top:0; left:0; right:0; z-index:9999; height:3px;
-            opacity:0; transform:translateY(-3px); overflow:hidden;
-            background:rgba(236,253,245,.92); transition:.16s ease;
-        }
-        body.loading .loader-bar { opacity:1; transform:translateY(0); }
-        .loader-bar:before {
-            content:""; position:absolute; inset:0 auto 0 0; width:38%; border-radius:999px;
+        /* ─── Progress bar navigasi (ringan, tanpa spinner) ─ */
+        #pc-nav-bar {
+            position:fixed; top:0; left:0; right:0; z-index:9990;
+            height:2.5px; pointer-events:none;
+            transform:scaleX(0); transform-origin:left;
             background:linear-gradient(90deg,var(--g700),var(--g500),var(--a500));
-            animation:loadbar .65s infinite var(--ease);
-        }
-        @keyframes loadbar { from{transform:translateX(-115%)} to{transform:translateX(290%)} }
-
-        .loader-toast {
-            position:fixed; top:18px; left:50%; z-index:9998;
-            display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:999px;
-            color:var(--g800); background:rgba(255,255,255,.9); border:1px solid rgba(226,232,240,.86);
-            box-shadow:0 18px 44px rgba(15,23,42,.10);
-            opacity:0; pointer-events:none; transform:translate(-50%,-10px) scale(.96);
-            transition:.16s var(--ease);
-        }
-        body.loading .loader-toast { opacity:1; transform:translate(-50%,0) scale(1); }
-        .loader-spin {
-            width:16px; height:16px; border-radius:999px;
-            border:2px solid rgba(16,185,129,.18); border-top-color:var(--g600);
-            animation:spin .65s linear infinite;
-        }
-        @keyframes spin { to{transform:rotate(360deg)} }
-
-
-        /* =========================================================
-           LOADING SCREEN, disamakan dengan Admin/Login: orbit + heart pulse + dots.
-           Tetap cepat, karena HP bukan mesin render trailer film.
-        ========================================================= */
-        .loader-toast { display:none !important; }
-
-        #pcKaderLoader {
-            position:fixed;
-            inset:0;
-            z-index:99999;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            visibility:hidden;
-            pointer-events:none;
-        }
-
-        #pcKaderLoader.show {
-            visibility:visible;
-            pointer-events:auto;
-        }
-
-        .ld-veil {
-            position:absolute;
-            inset:0;
-            background:rgba(240,255,248,.78);
-            backdrop-filter:blur(9px) saturate(1.12);
-            -webkit-backdrop-filter:blur(9px) saturate(1.12);
+            transition:transform .08s linear, opacity .22s ease;
             opacity:0;
-            transition:opacity .18s ease;
         }
-
-        #pcKaderLoader.show .ld-veil {
+        #pc-nav-bar.running {
             opacity:1;
+            animation:navProgress 1.6s var(--ease) forwards;
+        }
+        #pc-nav-bar.done {
+            transform:scaleX(1);
+            opacity:0;
+            transition:transform .18s ease, opacity .24s ease .1s;
+        }
+        @keyframes navProgress {
+            0%   { transform:scaleX(0); }
+            30%  { transform:scaleX(.45); }
+            70%  { transform:scaleX(.75); }
+            90%  { transform:scaleX(.9); }
+            100% { transform:scaleX(.92); }
         }
 
+        /* ─── Loading screen HANYA login/logout ─────────── */
+        #pcKaderLoader {
+            position:fixed; inset:0; z-index:99999;
+            display:flex; align-items:center; justify-content:center;
+            visibility:hidden; pointer-events:none;
+        }
+        #pcKaderLoader.show {
+            visibility:visible; pointer-events:auto;
+        }
+        .ld-veil {
+            position:absolute; inset:0;
+            background:rgba(240,255,248,.82);
+            backdrop-filter:blur(10px) saturate(1.1);
+            -webkit-backdrop-filter:blur(10px) saturate(1.1);
+            opacity:0; transition:opacity .2s ease;
+        }
+        #pcKaderLoader.show .ld-veil { opacity:1; }
         .ld-panel {
-            position:relative;
-            z-index:2;
-            min-width:236px;
-            padding:30px 40px 28px;
+            position:relative; z-index:2;
+            min-width:220px; padding:30px 40px 28px;
             border-radius:24px;
-            background:rgba(255,255,255,.96);
+            background:rgba(255,255,255,.97);
             border:1px solid rgba(16,185,129,.13);
             box-shadow:0 22px 54px rgba(15,23,42,.12), inset 0 1px 0 rgba(255,255,255,.92);
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            text-align:center;
-            opacity:0;
-            transform:translateY(12px) scale(.96);
+            display:flex; flex-direction:column; align-items:center; text-align:center;
+            opacity:0; transform:translateY(12px) scale(.96);
             transition:opacity .24s var(--ease) .04s, transform .24s var(--ease) .04s;
-            will-change:opacity, transform;
+            will-change:opacity,transform;
         }
-
-        #pcKaderLoader.show .ld-panel {
-            opacity:1;
-            transform:none;
-        }
-
+        #pcKaderLoader.show .ld-panel { opacity:1; transform:none; }
         .ld-orbit {
-            position:relative;
-            width:62px;
-            height:62px;
-            margin:0 auto 17px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
+            position:relative; width:62px; height:62px; margin:0 auto 17px;
+            display:flex; align-items:center; justify-content:center;
         }
-
         .ld-ring {
-            position:absolute;
-            inset:0;
-            border-radius:50%;
-            border:2.25px solid transparent;
-            will-change:transform;
+            position:absolute; inset:0; border-radius:50%;
+            border:2.25px solid transparent; will-change:transform;
         }
-
-        .ld-ring:nth-child(1) {
-            border-top-color:var(--g500);
-            border-right-color:rgba(16,185,129,.25);
-            animation:spinR .78s linear infinite;
-        }
-
-        .ld-ring:nth-child(2) {
-            inset:8px;
-            border-bottom-color:var(--g400);
-            border-left-color:rgba(52,211,153,.25);
-            animation:spinR 1.15s linear infinite reverse;
-        }
-
-        .ld-ring:nth-child(3) {
-            inset:17px;
-            border-top-color:var(--a500);
-            border-right-color:rgba(245,158,11,.22);
-            animation:spinR 1.65s linear infinite;
-        }
-
+        .ld-ring:nth-child(1) { border-top-color:var(--g500); border-right-color:rgba(16,185,129,.25); animation:spinR .78s linear infinite; }
+        .ld-ring:nth-child(2) { inset:8px; border-bottom-color:var(--g400); border-left-color:rgba(52,211,153,.25); animation:spinR 1.15s linear infinite reverse; }
+        .ld-ring:nth-child(3) { inset:17px; border-top-color:var(--a500); border-right-color:rgba(245,158,11,.22); animation:spinR 1.65s linear infinite; }
         @keyframes spinR { to { transform:rotate(360deg); } }
-
         .ld-heart {
-            position:relative;
-            z-index:2;
-            font-size:17px;
-            color:var(--g600);
-            animation:heartBeat 1.08s ease-in-out infinite;
-            will-change:transform;
+            position:relative; z-index:2; font-size:17px; color:var(--g600);
+            animation:heartBeat 1.08s ease-in-out infinite; will-change:transform;
         }
-
         @keyframes heartBeat {
             0%,100% { transform:scale(1); opacity:.9; }
             18%     { transform:scale(1.16); }
             36%     { transform:scale(1); }
             52%     { transform:scale(1.07); }
         }
-
-        .ld-name {
-            font-size:15px;
-            font-weight:900;
-            color:var(--s900);
-            margin-bottom:2px;
-        }
-
-        .ld-label {
-            font-size:10.5px;
-            font-weight:800;
-            color:var(--s500);
-            text-transform:uppercase;
-            letter-spacing:.6px;
-            margin-bottom:14px;
-        }
-
-        .ld-dots {
-            display:flex;
-            gap:5px;
-            align-items:center;
-            justify-content:center;
-        }
-
-        .ld-dot {
-            width:6px;
-            height:6px;
-            border-radius:50%;
-            background:var(--g400);
-            animation:dotPop .72s ease-in-out infinite both;
-            will-change:transform, opacity;
-        }
-
-        .ld-dot:nth-child(1) { animation-delay:0s; }
-        .ld-dot:nth-child(2) { animation-delay:.12s; background:var(--g500); }
-        .ld-dot:nth-child(3) { animation-delay:.24s; background:var(--g600); }
-        .ld-dot:nth-child(4) { animation-delay:.36s; background:var(--a500); }
-
+        .ld-name  { font-size:15px; font-weight:900; color:var(--s900); margin-bottom:2px; }
+        .ld-label { font-size:10.5px; font-weight:800; color:var(--s500); text-transform:uppercase; letter-spacing:.6px; margin-bottom:14px; }
+        .ld-dots  { display:flex; gap:5px; align-items:center; justify-content:center; }
+        .ld-dot   { width:6px; height:6px; border-radius:50%; background:var(--g400); animation:dotPop .72s ease-in-out infinite both; will-change:transform,opacity; }
+        .ld-dot:nth-child(1){ animation-delay:0s; }
+        .ld-dot:nth-child(2){ animation-delay:.12s; background:var(--g500); }
+        .ld-dot:nth-child(3){ animation-delay:.24s; background:var(--g600); }
+        .ld-dot:nth-child(4){ animation-delay:.36s; background:var(--a500); }
         @keyframes dotPop {
             0%,80%,100% { transform:scale(.55); opacity:.35; }
             40%         { transform:scale(1.12); opacity:1; }
         }
 
+        /* ─── Shell & Sidebar ────────────────────────────── */
         .shell { position:relative; z-index:5; min-height:100vh; }
         .sidebar {
             position:fixed; inset:0 auto 0 0; z-index:90;
             width:var(--open); height:100dvh; padding:12px;
             transform:translateX(-105%);
-            transition:width .24s var(--ease), transform .22s var(--ease);
+            transition:width .22s var(--ease), transform .2s var(--ease);
             will-change:width,transform;
         }
         .sidebar.open { transform:translateX(0); }
         .content {
             min-height:100vh; display:flex; flex-direction:column;
-            transition:margin-left .24s var(--ease), opacity .14s ease;
+            transition:margin-left .22s var(--ease);
         }
-        body.loading .content { opacity:.94; }
         .backdrop {
             position:fixed; inset:0; z-index:60;
             background:rgba(15,23,42,.34);
-            backdrop-filter:none; -webkit-backdrop-filter:none;
         }
 
         .side-card {
@@ -293,7 +194,6 @@
             background:linear-gradient(180deg,#fff 0%,#f8fffc 100%);
             border:1px solid rgba(226,232,240,.82);
             box-shadow:0 22px 55px rgba(15,23,42,.13), inset 0 1px 0 rgba(255,255,255,.95);
-            backdrop-filter:none; -webkit-backdrop-filter:none;
             transition:.20s var(--ease);
         }
         .side-card,.side-card * { filter:none; text-shadow:none; }
@@ -305,7 +205,6 @@
             color:var(--g700); background:rgba(236,253,245,.95);
             box-shadow:0 10px 22px rgba(15,23,42,.07); cursor:pointer;
         }
-
         .side-user {
             margin:0 14px 14px; padding:12px;
             display:flex; align-items:center; gap:11px; flex-shrink:0;
@@ -321,60 +220,61 @@
         }
         .avatar img { width:100%; height:100%; object-fit:cover; }
         .side-user h4 { margin:0; max-width:150px; color:var(--g900); font-size:13px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .side-user p { margin:3px 0 0; color:var(--s500); font-size:11px; font-weight:700; }
-
+        .side-user p  { margin:3px 0 0; color:var(--s500); font-size:11px; font-weight:700; }
         .side-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:0 12px 14px; scrollbar-width:none; }
         .side-scroll::-webkit-scrollbar { display:none; }
-        .side-user-info,.menu-title,.menu-text,.caret,.submenu {
-            transition:opacity .16s ease,width .22s var(--ease),max-width .22s var(--ease);
-            overflow:hidden;
-        }
+        .side-user-info,.menu-title,.menu-text,.caret,.submenu { transition:opacity .16s ease,width .22s var(--ease),max-width .22s var(--ease); overflow:hidden; }
 
         .menu-group { margin-bottom:16px; }
         .menu-title { margin:0 0 8px 8px; color:var(--s400); font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap; }
-        .menu-list { display:grid; gap:5px; }
+        .menu-list  { display:grid; gap:5px; }
         .menu-item {
             position:relative; min-height:43px; width:100%; padding:10px 12px;
             display:flex; align-items:center; gap:12px; border:1px solid transparent;
             border-radius:15px; color:var(--s600); background:transparent;
             text-decoration:none; font-size:13px; font-weight:800; cursor:pointer;
-            transition:.16s var(--ease);
+            transition:.14s var(--ease);
         }
         .menu-item:hover { color:var(--g700); background:rgba(236,253,245,.86); transform:translateX(2px); }
         .menu-item.active { color:var(--g800); background:#fff; border-color:rgba(209,250,229,.86); box-shadow:0 9px 18px rgba(16,185,129,.07); }
         .menu-item.active:before { content:""; position:absolute; left:0; top:11px; bottom:11px; width:4px; border-radius:0 999px 999px 0; background:var(--g500); }
-        .menu-icon { width:22px; display:grid; place-items:center; flex-shrink:0; color:var(--s400); transition:.16s var(--ease); }
+        .menu-icon { width:22px; display:grid; place-items:center; flex-shrink:0; color:var(--s400); transition:.14s var(--ease); }
         .menu-item:hover .menu-icon,.menu-item.active .menu-icon { color:var(--g600); }
         .menu-text { flex:1; min-width:0; text-align:left; white-space:nowrap; text-overflow:ellipsis; }
-        .caret { color:var(--s400); font-size:11px; }
+        .caret { color:var(--s400); font-size:11px; transition:transform .22s var(--ease); }
+        .rotate-180 { transform:rotate(180deg); }
         .submenu { max-height:0; margin-left:24px; padding-left:13px; border-left:1px dashed rgba(203,213,225,.9); }
         .submenu.open { max-height:180px; margin-top:5px; }
         .submenu a {
             min-height:34px; padding:8px 10px; display:flex; align-items:center; gap:9px;
-            border-radius:12px; color:var(--s500); text-decoration:none; font-size:12px; font-weight:800; transition:.15s ease;
+            border-radius:12px; color:var(--s500); text-decoration:none; font-size:12px; font-weight:800; transition:.12s ease;
         }
         .submenu a:hover,.submenu a.active { color:var(--g800); background:rgba(236,253,245,.86); }
         .dot { width:6px; height:6px; border-radius:999px; background:var(--s300); }
         .submenu a.active .dot,.submenu a:hover .dot { background:var(--g500); }
+        .submenu-icon { width:18px; display:grid; place-items:center; color:var(--s400); font-size:11px; flex-shrink:0; }
+        .submenu a:hover .submenu-icon,.submenu a.active .submenu-icon { color:var(--g600); }
         .logout { color:#dc2626; }
         .logout:hover { background:#fff1f2; color:#b91c1c; }
 
+        /* ─── Topbar ─────────────────────────────────────── */
         .topbar {
             position:sticky; top:12px; z-index:40; min-height:68px;
             margin:16px 22px 0; padding:10px 12px;
             display:flex; align-items:center; justify-content:space-between; gap:12px;
-            border-radius:24px; background:rgba(255,255,255,.82);
+            border-radius:24px; background:rgba(255,255,255,.88);
             border:1px solid rgba(226,232,240,.84);
-            box-shadow:0 18px 42px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.86);
-            backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+            box-shadow:0 8px 24px rgba(15,23,42,.06), inset 0 1px 0 rgba(255,255,255,.86);
+            /* Kurangi backdrop-filter agar lebih ringan */
+            backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
         }
         .top-left,.top-right { display:flex; align-items:center; gap:10px; min-width:0; }
         .top-right { margin-left:auto; }
         .icon-btn,.notif-btn,.profile-btn {
             height:46px; border:1px solid rgba(226,232,240,.86);
-            background:rgba(255,255,255,.86); color:var(--s600);
-            box-shadow:0 12px 26px rgba(15,23,42,.045), inset 0 1px 0 rgba(255,255,255,.82);
-            cursor:pointer; transition:.16s var(--ease);
+            background:rgba(255,255,255,.9); color:var(--s600);
+            box-shadow:0 4px 12px rgba(15,23,42,.04), inset 0 1px 0 rgba(255,255,255,.82);
+            cursor:pointer; transition:.14s var(--ease);
         }
         .icon-btn,.notif-btn { width:46px; display:grid; place-items:center; border-radius:16px; }
         .icon-btn:hover,.notif-btn:hover,.profile-btn:hover { transform:translateY(-1px); color:var(--g700); border-color:rgba(16,185,129,.28); background:#fff; }
@@ -411,15 +311,26 @@
         .drop-logout { color:#dc2626; }
         .drop-logout:hover { color:#be123c; background:#fff1f2; }
 
+        /* ─── Main content ───────────────────────────────── */
         .main { width:100%; max-width:1480px; margin:0 auto; padding:24px 24px 42px; flex:1; }
-        .main-inner { animation:contentIn .20s var(--ease) both; }
-        @keyframes contentIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .main-inner { animation:contentIn .18s var(--ease) both; }
+        @keyframes contentIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+        /* View Transitions API untuk perpindahan mulus */
+        @supports (view-transition-name: none) {
+            ::view-transition-old(root) { animation:vtOut .16s ease both; }
+            ::view-transition-new(root) { animation:vtIn  .2s var(--ease) both; }
+            @keyframes vtOut { to { opacity:0; transform:translateY(-4px); } }
+            @keyframes vtIn  { from { opacity:0; transform:translateY(6px); } }
+        }
+
         .admin-card,.stat-card,.dashboard-card,.content-card,.table-card,.kader-card {
             border-radius:24px; background:rgba(255,255,255,.84);
             border:1px solid rgba(226,232,240,.84);
             box-shadow:0 18px 44px rgba(15,23,42,.052), inset 0 1px 0 rgba(255,255,255,.84);
         }
 
+        /* ─── SweetAlert ─────────────────────────────────── */
         .swal2-popup.nexus-swal {
             border-radius:28px!important; font-family:'Plus Jakarta Sans',sans-serif!important;
             background:rgba(255,255,255,.98)!important; border:1px solid rgba(226,232,240,.86)!important;
@@ -427,8 +338,9 @@
         }
         .btn-nexus-confirm,.btn-nexus-cancel { border:0!important; border-radius:15px!important; padding:12px 24px!important; font-weight:900!important; }
         .btn-nexus-confirm { color:#fff!important; background:linear-gradient(135deg,var(--g500),var(--g700))!important; }
-        .btn-nexus-cancel { color:var(--s500)!important; background:var(--s100)!important; }
+        .btn-nexus-cancel  { color:var(--s500)!important; background:var(--s100)!important; }
 
+        /* ─── Responsive ─────────────────────────────────── */
         @media (min-width:1024px) {
             .sidebar { transform:translateX(0); }
             .sidebar.collapsed { width:var(--mini); }
@@ -437,15 +349,13 @@
             .desktop-only { display:grid; }
             .mobile-only { display:none; }
 
-            .sidebar.collapsed .side-card { border-radius:24px; box-shadow:0 18px 42px rgba(15,23,42,.07), inset 0 1px 0 rgba(255,255,255,.9); }
+            .sidebar.collapsed .side-card { border-radius:24px; }
             .sidebar.collapsed .side-logo img { width:42px; transform:scale(.96); }
             .sidebar.collapsed .side-user { justify-content:center; margin-inline:10px; padding:10px; gap:0; }
             .sidebar.collapsed .side-user-info,
             .sidebar.collapsed .menu-title,
             .sidebar.collapsed .menu-text,
-            .sidebar.collapsed .caret {
-                opacity:0; width:0; max-width:0; flex:0 0 0; pointer-events:none;
-            }
+            .sidebar.collapsed .caret { opacity:0; width:0; max-width:0; flex:0 0 0; pointer-events:none; }
             .sidebar.collapsed .side-scroll { padding-inline:9px; }
             .sidebar.collapsed .menu-group { margin-bottom:12px; }
             .sidebar.collapsed .menu-item { justify-content:center; padding-inline:0; gap:0; }
@@ -455,50 +365,16 @@
         }
 
         @media (max-width:1023px) {
-            .sidebar { width:min(300px, calc(100vw - 24px)); padding:10px; transform:translateX(-110%); transition:transform .28s var(--ease); }
+            .sidebar { width:min(300px, calc(100vw - 24px)); padding:10px; transform:translateX(-110%); transition:transform .26s var(--ease); }
             .sidebar.open { transform:translateX(0); }
             .side-card { height:calc(100dvh - 20px); border-radius:23px; }
             .side-close { display:grid; }
             .topbar { top:10px; min-height:64px; margin:10px 10px 0; padding:9px 10px; border-radius:22px; }
             .chip { display:none; }
             .main { padding:20px 12px 32px; }
-            body.locked .content { filter:none; transform:none; opacity:1; pointer-events:none; }
+            body.locked .content { pointer-events:none; }
+            .side-card,.side-card * { filter:none!important; text-shadow:none!important; }
         }
-        .submenu-icon {
-    width: 18px;
-    display: grid;
-    place-items: center;
-    color: var(--slate-400, #94a3b8);
-    font-size: 11px;
-    flex-shrink: 0;
-}
-
-.submenu a:hover .submenu-icon,
-.submenu a.active .submenu-icon {
-    color: var(--green-600, #059669);
-}
-
-.caret {
-    transition: transform .22s cubic-bezier(.16, 1, .3, 1);
-}
-
-.rotate-180 {
-    transform: rotate(180deg);
-}
-
-@media (max-width: 1023px) {
-    .side-card,
-    .side-card * {
-        filter: none !important;
-        text-shadow: none !important;
-    }
-
-    .mobile-overlay {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        background: rgba(15, 23, 42, .36);
-    }
-}
 
         @media (max-width:640px) {
             .profile-meta { display:none; }
@@ -524,20 +400,19 @@
     $initial = strtoupper(substr($name, 0, 1));
     $profileUrl = \Illuminate\Support\Facades\Route::has('kader.profile.index') ? route('kader.profile.index') : '#';
     $unread = 0;
-
     if (class_exists('\App\Models\Notifikasi') && Auth::check()) {
-        $unread = \App\Models\Notifikasi::where('user_id', Auth::id())
-            ->where('is_read', false)
-            ->count();
+        $unread = \App\Models\Notifikasi::where('user_id', Auth::id())->where('is_read', false)->count();
     }
 @endphp
 
 <body x-data="layoutKader()" x-init="init()" @close-sidebar.window="closeSide()">
     <div class="bgfx"></div>
     <div class="gridfx"></div>
-    <div class="loader-bar"></div>
 
-    {{-- Loading screen, disamakan dengan Admin/Login --}}
+    {{-- Progress bar navigasi — ringan, tanpa spinner --}}
+    <div id="pc-nav-bar" aria-hidden="true"></div>
+
+    {{-- Loading screen HANYA untuk login masuk & logout keluar --}}
     <div id="pcKaderLoader" role="status" aria-label="Memuat, harap tunggu..." aria-live="polite">
         <div class="ld-veil"></div>
         <div class="ld-panel">
@@ -562,9 +437,9 @@
         <div
             x-cloak
             x-show="sideOpen"
-            x-transition.opacity.duration.160ms
+            x-transition.opacity.duration.140ms
             @click="closeSide()"
-            class="backdrop mobile-overlay lg:hidden"
+            class="backdrop lg:hidden"
             aria-hidden="true"
         ></div>
 
@@ -596,8 +471,7 @@
                                 <span class="notif-dot"></span>
                             @endif
                         </button>
-
-                        <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false" x-transition.opacity.scale.95.duration.140ms class="dropdown">
+                        <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false" x-transition.opacity.scale.95.duration.120ms class="dropdown">
                             <div class="drop-head">
                                 <div class="avatar"><i class="fa-regular fa-bell"></i></div>
                                 <div>
@@ -625,8 +499,7 @@
                                 <div class="profile-role">Kader</div>
                             </div>
                         </button>
-
-                        <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false" x-transition.opacity.scale.95.duration.140ms class="dropdown">
+                        <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false" x-transition.opacity.scale.95.duration.120ms class="dropdown">
                             <div class="drop-head">
                                 <div class="avatar">
                                     @if(!empty($user?->foto))
@@ -640,14 +513,12 @@
                                     <p class="drop-sub">Petugas Kader</p>
                                 </div>
                             </div>
-
                             @if($profileUrl !== '#')
                                 <a href="{{ $profileUrl }}" class="drop-link">
                                     <i class="fa-regular fa-user"></i>
                                     Profil Saya
                                 </a>
                             @endif
-
                             <form method="POST" action="{{ route('logout') }}" class="js-logout-form">
                                 @csrf
                                 <button type="submit" class="drop-logout">
@@ -669,220 +540,148 @@
     </div>
 
     <script>
+        /* ─── Alpine layout state ───────────────────────── */
         function layoutKader() {
             return {
-                sideOpen: false,
-                sideMini: false,
-                notifOpen: false,
+                sideOpen:    false,
+                sideMini:    false,
+                notifOpen:   false,
                 profileOpen: false,
 
                 init() {
-                    try {
-                        this.sideMini = localStorage.getItem('pc_kader_side_mini') === '1';
-                    } catch (e) {}
-
-                    this.$watch('sideOpen', value => {
-                        document.body.classList.toggle('locked', value && window.innerWidth < 1024);
+                    try { this.sideMini = localStorage.getItem('pc_kader_side_mini') === '1'; } catch (e) {}
+                    this.$watch('sideOpen', v => {
+                        document.body.classList.toggle('locked', v && window.innerWidth < 1024);
                     });
-
-                    window.addEventListener('resize', () => {
-                        if (window.innerWidth >= 1024) this.closeSide();
-                    });
-
-                    window.addEventListener('keydown', event => {
-                        if (event.key === 'Escape') {
-                            this.closeSide();
-                            this.notifOpen = false;
-                            this.profileOpen = false;
-                        }
+                    window.addEventListener('resize', () => { if (window.innerWidth >= 1024) this.closeSide(); });
+                    window.addEventListener('keydown', e => {
+                        if (e.key === 'Escape') { this.closeSide(); this.notifOpen = false; this.profileOpen = false; }
                     });
                 },
-
-                openSide() {
-                    this.sideOpen = true;
-                },
-
-                closeSide() {
-                    this.sideOpen = false;
-                    document.body.classList.remove('locked');
-                },
-
+                openSide()   { this.sideOpen = true; },
+                closeSide()  { this.sideOpen = false; document.body.classList.remove('locked'); },
                 toggleMini() {
                     this.sideMini = !this.sideMini;
-
-                    try {
-                        localStorage.setItem('pc_kader_side_mini', this.sideMini ? '1' : '0');
-                    } catch (e) {}
+                    try { localStorage.setItem('pc_kader_side_mini', this.sideMini ? '1' : '0'); } catch (e) {}
                 },
-
                 toggleNotif() {
                     this.notifOpen = !this.notifOpen;
                     this.profileOpen = false;
-
                     if (this.notifOpen) this.loadNotif();
                 },
-
                 loadNotif() {
                     @if(\Illuminate\Support\Facades\Route::has('kader.notifikasi.fetch'))
-                        fetch("{{ route('kader.notifikasi.fetch') }}", {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.html) {
-                                    const list = document.getElementById('notifList');
-                                    if (list) list.innerHTML = data.html;
-                                }
-                            })
+                        fetch("{{ route('kader.notifikasi.fetch') }}", { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(r => r.json())
+                            .then(data => { if (data.html) { const el = document.getElementById('notifList'); if (el) el.innerHTML = data.html; } })
                             .catch(() => {});
                     @endif
                 }
             }
         }
 
+        /* ─── DOMContentLoaded: navigasi, loader login/logout ── */
         document.addEventListener('DOMContentLoaded', () => {
-            const body = document.body;
-            const html = document.documentElement;
-            const pcKaderLoader = document.getElementById('pcKaderLoader');
-            const pcKaderLoaderLabel = document.getElementById('pcKaderLoaderLabel');
+            const html   = document.documentElement;
+            const body   = document.body;
+            const loader = document.getElementById('pcKaderLoader');
+            const label  = document.getElementById('pcKaderLoaderLabel');
+            const navBar = document.getElementById('pc-nav-bar');
 
-            let loaderTimer = null;
-            let loaderDelay = null;
-
-            const showLoader = (label = 'Memuat Halaman') => {
-                clearTimeout(loaderTimer);
-                clearTimeout(loaderDelay);
-
-                loaderDelay = setTimeout(() => {
-                    if (pcKaderLoaderLabel) pcKaderLoaderLabel.textContent = label;
-
-                    body.classList.add('loading');
-                    body.classList.add('locked');
-                    pcKaderLoader?.classList.add('show');
-                }, 70);
-
-                loaderTimer = setTimeout(() => {
-                    hideLoader();
-                }, 4200);
+            /* -- Progress bar ringan (bukan full-screen loader) -- */
+            let navTimer = null;
+            const navStart = () => {
+                clearTimeout(navTimer);
+                navBar.classList.remove('done');
+                navBar.classList.add('running');
+            };
+            const navDone = () => {
+                navBar.classList.remove('running');
+                navBar.classList.add('done');
+                navTimer = setTimeout(() => navBar.classList.remove('done'), 400);
             };
 
+            /* -- Full-screen loader: hanya login & logout -- */
+            let ldTimer = null;
+            const showLoader = (msg = 'Memuat Halaman') => {
+                clearTimeout(ldTimer);
+                if (label) label.textContent = msg;
+                body.classList.add('locked');
+                loader?.classList.add('show');
+                ldTimer = setTimeout(hideLoader, 5000); // safety fallback
+            };
             const hideLoader = () => {
-                clearTimeout(loaderTimer);
-                clearTimeout(loaderDelay);
-                body.classList.remove('loading');
+                clearTimeout(ldTimer);
                 body.classList.remove('locked');
-                body.classList.remove('pc-scroll-lock');
-                pcKaderLoader?.classList.remove('show');
-                body.style.overflow = '';
+                loader?.classList.remove('show');
             };
 
+            /* -- Login masuk -- */
             if (html.classList.contains('pc-from-login')) {
                 showLoader('Membuka Workspace');
-
                 setTimeout(() => {
-                    try {
-                        sessionStorage.removeItem('pc_from_login');
-                    } catch (e) {}
-
-                    html.classList.remove('pc-from-login');
-                    html.classList.add('pc-normal-entry');
+                    try { sessionStorage.removeItem('pc_from_login'); } catch (e) {}
+                    html.classList.replace('pc-from-login', 'pc-normal-entry');
                     hideLoader();
                     window.scrollTo(0, 0);
-                }, 950);
-            } else {
-                hideLoader();
+                }, 900);
             }
 
-            window.nexusAlert = function (title, text, type = 'success') {
-                Swal.fire({
-                    title,
-                    text,
-                    icon: type,
-                    confirmButtonText: 'MENGERTI',
-                    customClass: {
-                        popup: 'nexus-swal',
-                        confirmButton: 'btn-nexus-confirm'
-                    },
-                    buttonsStyling: false
-                });
-            };
-
-            window.nexusConfirm = function (options = {}) {
-                return Swal.fire({
-                    title: options.title || 'Konfirmasi',
-                    text: options.text || 'Data akan diproses.',
-                    icon: options.icon || 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: options.confirmText || 'LANJUTKAN',
-                    cancelButtonText: options.cancelText || 'BATAL',
-                    customClass: {
-                        popup: 'nexus-swal',
-                        confirmButton: 'btn-nexus-confirm',
-                        cancelButton: 'btn-nexus-cancel'
-                    },
-                    buttonsStyling: false
-                });
-            };
-
-            const realNavigation = link => {
-                const rawHref = link.getAttribute('href') || '';
-
-                if (
-                    rawHref === '#' ||
-                    rawHref.endsWith('#') ||
-                    rawHref.startsWith('#') ||
-                    rawHref.startsWith('javascript:') ||
-                    rawHref.startsWith('mailto:') ||
-                    rawHref.startsWith('tel:') ||
-                    link.hasAttribute('download')
-                ) {
-                    return false;
-                }
-
+            /* -- Navigasi biasa: hanya progress bar, TANPA loader -- */
+            const isRealNav = link => {
+                const href = link.getAttribute('href') || '';
+                if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:') ||
+                    href.startsWith('mailto:') || href.startsWith('tel:') || link.hasAttribute('download')) return false;
                 try {
-                    const url = new URL(rawHref, window.location.href);
-                    const now = window.location.pathname + window.location.search;
-                    const target = url.pathname + url.search;
-
-                    return url.origin === window.location.origin && now !== target;
-                } catch (e) {
-                    return true;
-                }
+                    const url = new URL(href, location.href);
+                    return url.origin === location.origin && (url.pathname + url.search) !== (location.pathname + location.search);
+                } catch { return true; }
             };
 
-            document.addEventListener('click', event => {
-                const link = event.target.closest('a[href]');
-
-                if (
-                    !link ||
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    event.shiftKey ||
-                    event.altKey ||
-                    event.defaultPrevented
-                ) {
-                    return;
-                }
-
-                if (realNavigation(link)) showLoader('Memuat Halaman');
+            document.addEventListener('click', e => {
+                const link = e.target.closest('a[href]');
+                if (!link || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.defaultPrevented) return;
+                if (isRealNav(link)) navStart();
             });
 
+            /* -- View Transitions API (browser modern) -- */
+            if (document.startViewTransition) {
+                document.addEventListener('click', e => {
+                    const link = e.target.closest('a[href]');
+                    if (!link || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.defaultPrevented) return;
+                    if (!isRealNav(link)) return;
+                    // Biarkan browser handle, VT akan aktif otomatis
+                }, { capture: true });
+            }
+
+            window.addEventListener('pageshow', navDone);
+            window.addEventListener('load', navDone);
+
+            /* -- SweetAlert helpers -- */
+            window.nexusAlert = (title, text, type = 'success') =>
+                Swal.fire({ title, text, icon: type, confirmButtonText: 'MENGERTI',
+                    customClass: { popup: 'nexus-swal', confirmButton: 'btn-nexus-confirm' },
+                    buttonsStyling: false });
+
+            window.nexusConfirm = (opts = {}) =>
+                Swal.fire({
+                    title: opts.title || 'Konfirmasi', text: opts.text || 'Data akan diproses.',
+                    icon: opts.icon || 'warning', showCancelButton: true,
+                    confirmButtonText: opts.confirmText || 'LANJUTKAN', cancelButtonText: opts.cancelText || 'BATAL',
+                    customClass: { popup: 'nexus-swal', confirmButton: 'btn-nexus-confirm', cancelButton: 'btn-nexus-cancel' },
+                    buttonsStyling: false });
+
+            /* -- Logout: tampilkan full-screen loader -- */
             document.querySelectorAll('.js-logout-form').forEach(form => {
-                form.addEventListener('submit', event => {
+                form.addEventListener('submit', e => {
                     if (form.dataset.confirmed === '1') return;
-
-                    event.preventDefault();
-
+                    e.preventDefault();
                     nexusConfirm({
                         title: 'Keluar dari akun?',
                         text: 'Sesi kamu akan ditutup dan kamu harus login ulang untuk masuk lagi.',
-                        icon: 'warning',
-                        confirmText: 'YA, KELUAR',
-                        cancelText: 'BATAL'
-                    }).then(result => {
-                        if (result.isConfirmed) {
+                        icon: 'warning', confirmText: 'YA, KELUAR', cancelText: 'BATAL'
+                    }).then(r => {
+                        if (r.isConfirmed) {
                             form.dataset.confirmed = '1';
                             showLoader('Keluar Sistem');
                             form.submit();
@@ -891,19 +690,12 @@
                 });
             });
 
-            document.addEventListener('submit', event => {
-                if (!event.target.classList.contains('js-logout-form')) showLoader('Memproses Data');
-            });
-
-            window.addEventListener('pageshow', hideLoader);
-            window.addEventListener('load', hideLoader);
-
+            /* -- Session flash alerts -- */
             @if(session('success'))
-                setTimeout(() => nexusAlert('Berhasil!', "{{ session('success') }}", 'success'), 120);
+                setTimeout(() => nexusAlert('Berhasil!', "{{ addslashes(session('success')) }}", 'success'), 120);
             @endif
-
             @if(session('error'))
-                setTimeout(() => nexusAlert('Perhatian!', "{{ session('error') }}", 'error'), 120);
+                setTimeout(() => nexusAlert('Perhatian!', "{{ addslashes(session('error')) }}", 'error'), 120);
             @endif
         });
     </script>
