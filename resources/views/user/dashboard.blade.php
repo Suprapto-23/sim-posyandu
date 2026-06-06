@@ -1,247 +1,582 @@
 @extends('layouts.user')
 
 @section('title', 'Beranda Saya')
+@section('page_title', 'Beranda Saya')
+
+@php
+    use Carbon\Carbon;
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Route;
+    use Illuminate\Support\Str;
+
+    Carbon::setLocale('id');
+
+    $user = Auth::user();
+    $userName = $user->name ?? 'Warga';
+    $firstName = Str::of($userName)->explode(' ')->first() ?: 'Warga';
+
+    $routeTo = function ($names, $params = []) {
+        foreach ((array) $names as $name) {
+            if (Route::has($name)) {
+                return route($name, $params);
+            }
+        }
+
+        return '#';
+    };
+
+    $anakList = isset($dataAnak) ? collect($dataAnak) : collect();
+
+    $remajaList = collect();
+    if (isset($dataRemaja)) {
+        $remajaList = $dataRemaja instanceof \Illuminate\Support\Collection
+            ? $dataRemaja
+            : collect([$dataRemaja])->filter();
+    }
+
+    $lansiaList = collect();
+    if (isset($dataLansia)) {
+        $lansiaList = $dataLansia instanceof \Illuminate\Support\Collection
+            ? $dataLansia
+            : collect([$dataLansia])->filter();
+    }
+
+    $jadwalList = isset($jadwalTerdekat) ? collect($jadwalTerdekat) : collect();
+    $jadwalUtama = $jadwalList->first();
+
+    $notifList = isset($notifikasiTerbaru) ? collect($notifikasiTerbaru)->take(4) : collect();
+    $jumlahNotif = $totalNotifikasiBelumDibaca ?? $notifList->where('is_read', false)->count();
+
+    $totalSasaran = $anakList->count() + $remajaList->count() + $lansiaList->count();
+
+    $monitoringRoute = $routeTo('user.monitoring.index');
+    $riwayatRoute = $routeTo('user.riwayat.index');
+    $jadwalRoute = $routeTo('user.jadwal.index');
+    $notifikasiRoute = $routeTo('user.notifikasi.index');
+    $profileRoute = $routeTo('user.profile.edit');
+
+    $balitaShowRoute = fn ($id) => $routeTo(['user.balita.show', 'user.monitoring.balita.show'], [$id]);
+    $remajaShowRoute = fn ($id) => $routeTo(['user.remaja.show', 'user.monitoring.remaja.show'], [$id]);
+    $lansiaShowRoute = fn ($id) => $routeTo(['user.lansia.show', 'user.monitoring.lansia.show'], [$id]);
+
+    $formatDate = fn ($value, $format = 'd F Y') => $value
+        ? Carbon::parse($value)->translatedFormat($format)
+        : '-';
+
+    $formatTime = fn ($value) => $value
+        ? Carbon::parse($value)->format('H:i')
+        : '-';
+
+    $ageText = function ($tanggalLahir) {
+        if (blank($tanggalLahir)) return '-';
+
+        $diff = Carbon::parse($tanggalLahir)->diff(now());
+
+        return $diff->y > 0 ? $diff->y . ' tahun' : $diff->m . ' bulan';
+    };
+
+    $genderText = fn ($value) => match ($value) {
+        'L' => 'Laki-laki',
+        'P' => 'Perempuan',
+        default => 'Belum diisi',
+    };
+
+    $healthItems = collect();
+
+    foreach ($anakList->take(2) as $anak) {
+        $healthItems->push([
+            'type' => 'Balita',
+            'name' => $anak->nama_lengkap,
+            'meta' => $ageText($anak->tanggal_lahir) . ' • ' . $genderText($anak->jenis_kelamin),
+            'caption' => 'Lihat KMS',
+            'href' => $balitaShowRoute($anak->id),
+            'icon' => 'child',
+            'tone' => 'rose',
+        ]);
+    }
+
+    foreach ($remajaList->take(1) as $remaja) {
+        $healthItems->push([
+            'type' => 'Remaja',
+            'name' => $remaja->nama_lengkap,
+            'meta' => $ageText($remaja->tanggal_lahir) . ' • ' . ($remaja->sekolah ?: 'Sekolah belum diisi'),
+            'caption' => 'Cek IMT',
+            'href' => $remajaShowRoute($remaja->id),
+            'icon' => 'user-graduate',
+            'tone' => 'sky',
+        ]);
+    }
+
+    foreach ($lansiaList->take(1) as $lansia) {
+        $healthItems->push([
+            'type' => 'Lansia',
+            'name' => $lansia->nama_lengkap,
+            'meta' => $ageText($lansia->tanggal_lahir) . ' • ' . ucwords(str_replace('_', ' ', $lansia->tingkat_kemandirian ?: 'Belum diisi')),
+            'caption' => 'Cek Tensi',
+            'href' => $lansiaShowRoute($lansia->id),
+            'icon' => 'heart-pulse',
+            'tone' => 'amber',
+        ]);
+    }
+
+    $toneMap = [
+        'emerald' => [
+            'icon' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
+            'badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'hover' => 'group-hover:text-emerald-700',
+            'circle' => 'bg-emerald-50 text-emerald-600',
+        ],
+        'rose' => [
+            'icon' => 'bg-rose-50 text-rose-500 border-rose-100',
+            'badge' => 'bg-rose-50 text-rose-700 border-rose-200',
+            'hover' => 'group-hover:text-rose-600',
+            'circle' => 'bg-rose-50 text-rose-500',
+        ],
+        'sky' => [
+            'icon' => 'bg-sky-50 text-sky-500 border-sky-100',
+            'badge' => 'bg-sky-50 text-sky-700 border-sky-200',
+            'hover' => 'group-hover:text-sky-600',
+            'circle' => 'bg-sky-50 text-sky-500',
+        ],
+        'amber' => [
+            'icon' => 'bg-amber-50 text-amber-500 border-amber-100',
+            'badge' => 'bg-amber-50 text-amber-700 border-amber-200',
+            'hover' => 'group-hover:text-amber-600',
+            'circle' => 'bg-amber-50 text-amber-500',
+        ],
+        'violet' => [
+            'icon' => 'bg-violet-50 text-violet-500 border-violet-100',
+            'badge' => 'bg-violet-50 text-violet-700 border-violet-200',
+            'hover' => 'group-hover:text-violet-600',
+            'circle' => 'bg-violet-50 text-violet-500',
+        ],
+    ];
+
+    $menus = [
+        ['icon' => 'heartbeat', 'label' => 'Pantau', 'caption' => 'Kesehatan', 'href' => $monitoringRoute, 'tone' => 'rose'],
+        ['icon' => 'file-medical', 'label' => 'Riwayat', 'caption' => 'Rekam medis', 'href' => $riwayatRoute, 'tone' => 'sky'],
+        ['icon' => 'calendar-check', 'label' => 'Jadwal', 'caption' => 'Agenda', 'href' => $jadwalRoute, 'tone' => 'emerald'],
+        ['icon' => 'bell', 'label' => 'Pesan', 'caption' => 'Notifikasi', 'href' => $notifikasiRoute, 'tone' => 'amber'],
+        ['icon' => 'user-cog', 'label' => 'Profil', 'caption' => 'Akun', 'href' => $profileRoute, 'tone' => 'violet'],
+    ];
+@endphp
 
 @push('styles')
 <style>
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .animate-slide-up-1 { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards; }
-    .animate-slide-up-2 { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; }
-    @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Efek Hover Kartu Menu Cerdas */
-    .quick-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .quick-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px -10px rgba(20, 184, 166, 0.3); }
-    .quick-icon { transition: all 0.3s ease; }
-    .quick-card:hover .quick-icon { transform: scale(1.15) rotate(5deg); }
-    
-    /* Scrollbar minimalis untuk Kotak Masuk */
-    .notif-scroll::-webkit-scrollbar { width: 4px; }
-    .notif-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .nexus-enter {
+        opacity: 0;
+        animation: nexusEnter .38s cubic-bezier(.16, 1, .3, 1) forwards;
+    }
+
+    .nexus-enter-2 {
+        opacity: 0;
+        animation: nexusEnter .38s cubic-bezier(.16, 1, .3, 1) .06s forwards;
+    }
+
+    .nexus-enter-3 {
+        opacity: 0;
+        animation: nexusEnter .38s cubic-bezier(.16, 1, .3, 1) .12s forwards;
+    }
+
+    @keyframes nexusEnter {
+        from {
+            opacity: 0;
+            transform: translateY(12px) scale(.99);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .nexus-page {
+        background:
+            radial-gradient(circle at 8% 8%, rgba(16, 185, 129, .14), transparent 28%),
+            radial-gradient(circle at 90% 12%, rgba(14, 165, 233, .11), transparent 26%),
+            radial-gradient(circle at 74% 88%, rgba(245, 158, 11, .11), transparent 28%),
+            linear-gradient(135deg, #f8fafc 0%, #ecfdf5 44%, #eff6ff 100%);
+    }
+
+    .nexus-card {
+        border: 1px solid rgba(255,255,255,.76);
+        background: rgba(255,255,255,.68);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 16px 46px rgba(15,23,42,.055);
+    }
+
+    .nexus-soft {
+        border: 1px solid rgba(226,232,240,.78);
+        background: rgba(255,255,255,.70);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 10px 28px rgba(15,23,42,.04);
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+    .nexus-soft:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16,185,129,.28);
+        box-shadow: 0 16px 38px rgba(15,23,42,.065);
+    }
+
+    .nexus-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .nexus-scroll::-webkit-scrollbar-thumb {
+        background: rgba(148,163,184,.55);
+        border-radius: 999px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .nexus-enter,
+        .nexus-enter-2,
+        .nexus-enter-3 {
+            animation: none;
+            opacity: 1;
+        }
+
+        .nexus-soft,
+        .nexus-soft:hover {
+            transition: none;
+            transform: none;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
-<div class="w-full pb-10">
+<div class="nexus-page -mx-4 -my-4 min-h-[calc(100vh-96px)] px-4 py-5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <div class="mx-auto max-w-7xl space-y-5">
 
-    {{-- 1. HERO SECTION --}}
-    <div class="animate-slide-up bg-gradient-to-r from-teal-600 to-emerald-500 rounded-[32px] p-8 md:p-10 shadow-[0_15px_40px_-10px_rgba(20,184,166,0.4)] relative overflow-hidden mb-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 min-h-[200px]">
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute right-10 bottom-0 opacity-10 pointer-events-none hidden md:block">
-            <i class="fas fa-heartbeat text-[150px]"></i>
-        </div>
-        
-        <div class="relative z-10 w-full">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-full border border-white/30 mb-4 shadow-sm">
-                <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span> E-Posyandu Aktif
-            </span>
-            <h2 class="text-3xl md:text-4xl font-black tracking-tight leading-tight font-poppins mb-2">
-                Halo, {{ ucwords(Auth::user()->name) }}! 👋
-            </h2>
-            <p class="text-teal-50 font-medium text-[13px] md:text-[14px] max-w-lg leading-relaxed">
-                Pantau jadwal posyandu, rekam medis, dan perkembangan kesehatan keluarga Anda secara presisi dalam satu layar.
-            </p>
-        </div>
-    </div>
+        <section class="nexus-enter grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
 
-    {{-- 2. WARNING NIK (Akses Terkunci) --}}
-    @if(isset($pesanError) && $pesanError)
-    <div class="animate-slide-up-1 bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 p-5 rounded-[24px] flex items-center gap-5 shadow-sm mb-8 relative overflow-hidden">
-        <i class="fas fa-id-card-clip absolute -right-4 -bottom-6 text-6xl text-rose-500/10 pointer-events-none"></i>
-        <div class="w-12 h-12 rounded-[16px] bg-white text-rose-500 flex items-center justify-center text-2xl shrink-0 shadow-sm border border-rose-100">
-            <i class="fas fa-lock animate-pulse"></i>
-        </div>
-        <div class="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-            <div>
-                <h4 class="text-[13px] font-black text-rose-800 uppercase tracking-widest">Akses Terbatas</h4>
-                <p class="text-[12px] font-medium text-rose-600 mt-0.5 leading-snug">{{ $pesanError }}</p>
-            </div>
-            <a href="{{ route('user.profile.edit') }}" class="smooth-route shrink-0 inline-flex items-center gap-2 px-5 py-3 bg-rose-500 hover:bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-sm transition-all hover:-translate-y-0.5">
-                Lengkapi NIK <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-    </div>
-    @endif
+            <div class="nexus-card relative overflow-hidden rounded-[30px] p-5 sm:p-6">
+                <div class="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl"></div>
+                <div class="pointer-events-none absolute -bottom-24 left-8 h-56 w-56 rounded-full bg-sky-300/14 blur-3xl"></div>
 
-    {{-- 3. QUICK MENU GRID --}}
-    <div class="animate-slide-up-1 grid grid-cols-4 md:grid-cols-5 gap-3 sm:gap-5 mb-10">
-        @php
-            $menus = [
-                ['icon' => 'heartbeat', 'color' => 'rose', 'label' => 'Pantau', 'route' => 'user.monitoring.index'],
-                ['icon' => 'file-medical', 'color' => 'sky', 'label' => 'Riwayat', 'route' => 'user.riwayat.index'],
-                ['icon' => 'calendar-check', 'color' => 'teal', 'label' => 'Jadwal', 'route' => 'user.jadwal.index'],
-                ['icon' => 'bell', 'color' => 'amber', 'label' => 'Pesan', 'route' => 'user.notifikasi.index'],
-                ['icon' => 'user-cog', 'color' => 'slate', 'label' => 'Profil', 'route' => 'user.profile.edit'],
-            ];
-        @endphp
+                <div class="relative">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/90 px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        Portal Warga Aktif
+                    </span>
 
-        @foreach($menus as $m)
-        <a href="{{ route($m['route']) }}" class="smooth-route bg-white border border-slate-100 rounded-[24px] p-4 flex flex-col items-center justify-center gap-3 quick-card h-full">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-[16px] bg-{{ $m['color'] }}-50 border border-{{ $m['color'] }}-100 text-{{ $m['color'] }}-500 flex items-center justify-center text-xl sm:text-2xl quick-icon shrink-0">
-                <i class="fas fa-{{ $m['icon'] }}"></i>
-            </div>
-            <span class="text-[10px] sm:text-[11px] font-black text-slate-600 uppercase tracking-widest text-center leading-tight mt-auto">{{ $m['label'] }}</span>
-        </a>
-        @endforeach
-    </div>
+                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-800 sm:text-4xl">
+                        Halo, {{ ucwords($firstName) }}
+                    </h1>
 
-    {{-- 4. KONTEN UTAMA (GRID PRESISI) --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {{-- KOLOM KIRI (Jadwal & Ringkasan Medis) --}}
-        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-8 animate-slide-up-2 w-full">
-            
-            {{-- A. JADWAL TERDEKAT --}}
-            <div class="w-full">
-                <div class="flex items-center justify-between mb-4 px-1">
-                    <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-calendar-day text-teal-500 mr-2"></i> Agenda Terdekat</h3>
-                    <a href="{{ route('user.jadwal.index') }}" class="smooth-route text-[10px] font-black text-teal-600 bg-teal-50 hover:bg-teal-500 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Semua Jadwal</a>
-                </div>
-                
-                @if(isset($jadwalTerdekat) && $jadwalTerdekat->isNotEmpty())
-                    @php $jadwal = $jadwalTerdekat->first(); @endphp
-                    <div class="bg-white rounded-[24px] p-6 border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group hover:border-teal-300 transition-colors w-full">
-                        <div class="absolute right-0 top-0 w-2 h-full bg-teal-500"></div>
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-5">
-                            <div class="w-16 h-16 bg-teal-50 text-teal-600 rounded-[18px] flex flex-col items-center justify-center shrink-0 border border-teal-100">
-                                <span class="text-[10px] font-black uppercase mb-0.5">{{ \Carbon\Carbon::parse($jadwal->tanggal)->translatedFormat('M') }}</span>
-                                <span class="text-2xl font-black font-poppins leading-none">{{ \Carbon\Carbon::parse($jadwal->tanggal)->translatedFormat('d') }}</span>
-                            </div>
-                            <div class="flex-1">
-                                <span class="inline-block px-2.5 py-1 bg-slate-100 text-slate-500 rounded-md text-[9px] font-black tracking-widest uppercase mb-2 border border-slate-200">
-                                    Target: {{ str_replace('_', ' ', $jadwal->target_peserta) }}
-                                </span>
-                                <h4 class="font-black text-lg text-slate-800 leading-snug mb-2">{{ $jadwal->judul }}</h4>
-                                <div class="flex flex-wrap gap-4 text-[12px] font-bold text-slate-500">
-                                    <span class="flex items-center gap-1.5"><i class="far fa-clock text-slate-300"></i> Pukul {{ date('H:i', strtotime($jadwal->waktu_mulai)) }} WIB</span>
-                                    <span class="flex items-center gap-1.5"><i class="fas fa-map-marker-alt text-slate-300"></i> {{ $jadwal->lokasi }}</span>
-                                </div>
-                            </div>
+                    <p class="mt-2 max-w-3xl text-sm font-semibold leading-7 text-slate-600">
+                        Pantau jadwal, data kesehatan, dan pemberitahuan Posyandu dalam tampilan yang ringkas, segar, dan tidak terasa seperti tabel administrasi zaman batu.
+                    </p>
+
+                    <div class="mt-5 grid grid-cols-3 gap-3">
+                        <div class="rounded-[20px] border border-emerald-100 bg-white/70 px-3 py-3">
+                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Data</p>
+                            <p class="mt-1 text-2xl font-black text-slate-800">{{ $totalSasaran }}</p>
+                        </div>
+
+                        <div class="rounded-[20px] border border-sky-100 bg-white/70 px-3 py-3">
+                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Jadwal</p>
+                            <p class="mt-1 text-2xl font-black text-sky-700">{{ $jadwalList->count() }}</p>
+                        </div>
+
+                        <div class="rounded-[20px] border border-amber-100 bg-white/70 px-3 py-3">
+                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Pesan</p>
+                            <p class="mt-1 text-2xl font-black text-amber-700">{{ $jumlahNotif }}</p>
                         </div>
                     </div>
-                @else
-                    <div class="bg-white border-2 border-dashed border-slate-200 rounded-[24px] p-8 text-center w-full">
-                        <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300 text-2xl">
-                            <i class="fas fa-calendar-times"></i>
+                </div>
+            </div>
+
+            <div class="nexus-card relative overflow-hidden rounded-[30px] p-5">
+                <div class="absolute -right-12 -top-16 h-40 w-40 rounded-full bg-emerald-200/24 blur-3xl"></div>
+
+                <div class="relative flex h-full flex-col justify-between">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                                Jadwal Terdekat
+                            </p>
+
+                            @if($jadwalUtama)
+                                <h2 class="mt-3 line-clamp-2 text-xl font-black leading-tight text-slate-800">
+                                    {{ $jadwalUtama->judul }}
+                                </h2>
+
+                                <p class="mt-2 text-sm font-bold leading-6 text-slate-500">
+                                    {{ $formatDate($jadwalUtama->tanggal, 'l, d F Y') }}
+                                    <br>
+                                    {{ $formatTime($jadwalUtama->waktu_mulai) }} sampai {{ $formatTime($jadwalUtama->waktu_selesai) }} WIB
+                                </p>
+                            @else
+                                <h2 class="mt-3 text-xl font-black text-slate-800">
+                                    Belum Ada Agenda
+                                </h2>
+
+                                <p class="mt-2 text-sm font-bold leading-6 text-slate-500">
+                                    Jadwal aktif belum tersedia.
+                                </p>
+                            @endif
                         </div>
-                        <h4 class="text-[14px] font-black text-slate-700 mb-1">Tidak Ada Jadwal</h4>
-                        <p class="text-[12px] font-medium text-slate-500">Belum ada agenda Posyandu dalam waktu dekat.</p>
+
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-emerald-100 text-base font-black text-emerald-700">
+                            J
+                        </div>
                     </div>
-                @endif
-            </div>
 
-            {{-- B. STATUS KESEHATAN MULTI-ROLE (GRID PRESISI) --}}
-            @if((isset($dataAnak) && $dataAnak->isNotEmpty()) || isset($dataLansia) || isset($dataRemaja))
-            <div class="w-full flex flex-col h-full">
-                <div class="flex items-center justify-between mb-4 px-1 shrink-0">
-                    <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-file-medical-alt text-rose-500 mr-2"></i> Pantau Kesehatan</h3>
-                </div>
-                
-                {{-- items-stretch memastikan semua kolom di dalam grid memiliki tinggi maksimum yang sama --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch flex-1">
-                    
-                    {{-- 1. BALITA --}}
-                    @if(isset($dataAnak) && $dataAnak->isNotEmpty())
-                        @foreach($dataAnak->take(2) as $anak)
-                        <a href="{{ route('user.balita.show', $anak->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(244,63,94,0.1)] hover:border-rose-300 transition-all group">
-                            <div class="flex items-center gap-3 mb-4 flex-1">
-                                <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-lg shrink-0 border border-rose-100"><i class="fas fa-child"></i></div>
-                                <div>
-                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-rose-600 transition-colors line-clamp-1">{{ $anak->nama_lengkap }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kategori: Balita</p>
-                                </div>
-                            </div>
-                            {{-- mt-auto memaksa bagian ini menempel ke bawah secara presisi --}}
-                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Lihat KMS Buku KIA</span>
-                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-rose-50 group-hover:text-rose-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
-                            </div>
-                        </a>
-                        @endforeach
-                    @endif
-
-                  
-
-                    {{-- 3. LANSIA --}}
-                    @if(isset($dataLansia) && $dataLansia)
-                        <a href="{{ route('user.lansia.show', $dataLansia->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(249,115,22,0.1)] hover:border-orange-300 transition-all group">
-                            <div class="flex items-center gap-3 mb-4 flex-1">
-                                <div class="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-lg shrink-0 border border-orange-100"><i class="fas fa-wheelchair"></i></div>
-                                <div>
-                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-orange-600 transition-colors line-clamp-1">{{ $dataLansia->nama_lengkap }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kategori: Lansia</p>
-                                </div>
-                            </div>
-                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Cek Gula & Tensi</span>
-                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
-                            </div>
-                        </a>
-                    @endif
-
-                    {{-- 4. REMAJA --}}
-                    @if(isset($dataRemaja) && $dataRemaja)
-                        <a href="{{ route('user.remaja.show', $dataRemaja->id) }}" class="smooth-route flex flex-col h-full bg-white border border-slate-200 rounded-[24px] p-5 shadow-sm hover:shadow-[0_10px_30px_rgba(59,130,246,0.1)] hover:border-blue-300 transition-all group">
-                            <div class="flex items-center gap-3 mb-4 flex-1">
-                                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-lg shrink-0 border border-blue-100"><i class="fas fa-user-graduate"></i></div>
-                                <div>
-                                    <h4 class="text-[13px] font-black text-slate-800 leading-tight group-hover:text-blue-600 transition-colors line-clamp-1">{{ $dataRemaja->nama_lengkap }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Kategori: Remaja</p>
-                                </div>
-                            </div>
-                            <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">Cek IMT & Anemia</span>
-                                <div class="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors shrink-0"><i class="fas fa-arrow-right text-[9px]"></i></div>
-                            </div>
-                        </a>
-                    @endif
-
+                    <a href="{{ $jadwalRoute }}"
+                       class="smooth-route mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_12px_26px_rgba(16,185,129,.22)] transition hover:bg-emerald-700">
+                        Lihat Jadwal
+                    </a>
                 </div>
             </div>
-            @endif
-        </div>
+        </section>
 
-        {{-- KOLOM KANAN (Kotak Masuk Notifikasi) --}}
-        <div class="lg:col-span-5 xl:col-span-4 w-full flex flex-col h-full animate-slide-up-2">
-            <div class="flex items-center justify-between mb-4 px-1 shrink-0">
-                <h3 class="font-black text-slate-800 text-[15px] uppercase tracking-tight font-poppins"><i class="fas fa-bullhorn text-indigo-500 mr-2"></i> Kotak Masuk</h3>
-                <a href="{{ route('user.notifikasi.index') }}" class="smooth-route text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-500 hover:text-white px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Semua</a>
-            </div>
-            
-            <div id="main-notif-wrapper" class="bg-white border border-slate-200 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden flex-1 flex flex-col">
-                {{-- max-h dihapus dan diganti flex-1 agar tingginya adaptif dengan kolom kiri --}}
-                <div class="flex-1 overflow-y-auto notif-scroll p-2 space-y-1">
-                    @forelse($notifikasiTerbaru ?? [] as $notif)
-                        <a href="{{ route('user.notifikasi.index') }}" class="smooth-route block p-4 hover:bg-slate-50 transition-colors rounded-[18px] {{ !$notif['is_read'] ? 'bg-indigo-50/30 border border-indigo-100/50' : 'border border-transparent' }}">
-                            <div class="flex gap-4">
-                                <div class="w-10 h-10 rounded-full {{ !$notif['is_read'] ? 'bg-indigo-100 text-indigo-600 border border-indigo-200' : 'bg-slate-100 text-slate-400 border border-slate-200' }} flex items-center justify-center text-lg shrink-0">
-                                    <i class="fas {{ !$notif['is_read'] ? 'fa-envelope' : 'fa-envelope-open' }}"></i>
+        @if(isset($pesanError) && $pesanError)
+            <section class="nexus-enter-2 relative overflow-hidden rounded-[24px] border border-amber-200 bg-amber-50/85 p-5 text-amber-800 shadow-sm backdrop-blur-xl">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex gap-4">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-600 shadow-sm">
+                            <i class="fas fa-lock"></i>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.16em]">Akses Data Terbatas</p>
+                            <p class="mt-1 text-sm font-semibold leading-6">{{ $pesanError }}</p>
+                        </div>
+                    </div>
+
+                    <a href="{{ $profileRoute }}"
+                       class="smooth-route inline-flex h-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 px-5 text-xs font-black uppercase tracking-[0.12em] text-amber-950 shadow-[0_12px_26px_rgba(245,158,11,.22)] transition hover:bg-amber-400">
+                        Lengkapi Profil
+                    </a>
+                </div>
+            </section>
+        @endif
+
+        <section class="nexus-enter-2 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            @foreach($menus as $menu)
+                @php $tone = $toneMap[$menu['tone']]; @endphp
+
+                <a href="{{ $menu['href'] }}"
+                   class="smooth-route nexus-soft group rounded-[22px] p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border text-lg {{ $tone['icon'] }}">
+                            <i class="fas fa-{{ $menu['icon'] }}"></i>
+                        </div>
+
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-black text-slate-800">{{ $menu['label'] }}</p>
+                            <p class="mt-0.5 truncate text-xs font-semibold text-slate-500">{{ $menu['caption'] }}</p>
+                        </div>
+                    </div>
+                </a>
+            @endforeach
+        </section>
+
+        <section class="nexus-enter-3 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+
+            <div class="grid grid-cols-1 gap-5">
+
+                <div class="nexus-card overflow-hidden rounded-[30px]">
+                    <div class="border-b border-emerald-100/80 bg-gradient-to-r from-white/86 via-emerald-50/72 to-sky-50/62 px-5 py-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-700">
+                                    Agenda
+                                </p>
+                                <h3 class="mt-1 text-xl font-black text-slate-800">Jadwal Posyandu</h3>
+                            </div>
+
+                            <a href="{{ $jadwalRoute }}"
+                               class="smooth-route inline-flex h-10 items-center rounded-2xl border border-emerald-100 bg-white/80 px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-700 hover:bg-emerald-50">
+                                Semua
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="p-4">
+                        @if($jadwalUtama)
+                            <article class="relative overflow-hidden rounded-[26px] border border-emerald-100 bg-gradient-to-br from-white/82 via-emerald-50/48 to-sky-50/44 p-4">
+                                <div class="absolute right-0 top-0 h-full w-1.5 bg-emerald-400/80"></div>
+
+                                <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                                    <div class="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-[22px] border border-emerald-100 bg-white/78 text-emerald-700 shadow-sm">
+                                        <span class="text-[10px] font-black uppercase tracking-[0.14em]">
+                                            {{ $formatDate($jadwalUtama->tanggal, 'M') }}
+                                        </span>
+                                        <span class="text-2xl font-black leading-none">
+                                            {{ $formatDate($jadwalUtama->tanggal, 'd') }}
+                                        </span>
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap gap-2">
+                                            <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] text-emerald-700">
+                                                {{ ucwords(str_replace('_', ' ', $jadwalUtama->target_peserta ?? 'Semua')) }}
+                                            </span>
+
+                                            <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] text-sky-700">
+                                                {{ $formatTime($jadwalUtama->waktu_mulai) }} WIB
+                                            </span>
+                                        </div>
+
+                                        <h4 class="mt-3 line-clamp-2 text-lg font-black leading-tight text-slate-800">
+                                            {{ $jadwalUtama->judul }}
+                                        </h4>
+
+                                        <p class="mt-2 line-clamp-1 text-sm font-semibold text-slate-500">
+                                            <i class="fas fa-map-marker-alt mr-1.5 text-emerald-400"></i>
+                                            {{ $jadwalUtama->lokasi ?? '-' }}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div class="flex-1 min-w-0 pt-0.5">
-                                    <div class="flex justify-between items-start gap-2 mb-1">
-                                        <h4 class="text-[13px] font-black text-slate-800 truncate pr-2 {{ !$notif['is_read'] ? 'text-indigo-900' : '' }}">{{ $notif['judul'] }}</h4>
-                                        @if(!$notif['is_read']) 
-                                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 mt-1 shadow-sm shadow-rose-200 animate-pulse"></span> 
+                            </article>
+                        @else
+                            <div class="rounded-[26px] border border-dashed border-emerald-300 bg-emerald-50/60 p-8 text-center">
+                                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-2xl text-emerald-500 shadow-sm">
+                                    <i class="fas fa-calendar-times"></i>
+                                </div>
+                                <h4 class="mt-4 text-base font-black text-slate-800">Tidak Ada Jadwal</h4>
+                                <p class="mt-1 text-sm font-semibold text-slate-500">Belum ada agenda Posyandu dalam waktu dekat.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="nexus-card overflow-hidden rounded-[30px]">
+                    <div class="border-b border-emerald-100/80 bg-gradient-to-r from-white/86 via-emerald-50/72 to-amber-50/60 px-5 py-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-700">
+                                    Monitoring
+                                </p>
+                                <h3 class="mt-1 text-xl font-black text-slate-800">Data Keluarga</h3>
+                            </div>
+
+                            <a href="{{ $monitoringRoute }}"
+                               class="smooth-route inline-flex h-10 items-center rounded-2xl border border-emerald-100 bg-white/80 px-4 text-xs font-black uppercase tracking-[0.12em] text-emerald-700 hover:bg-emerald-50">
+                                Semua
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+                        @forelse($healthItems as $item)
+                            @php $tone = $toneMap[$item['tone']]; @endphp
+
+                            <a href="{{ $item['href'] }}"
+                               class="smooth-route nexus-soft group rounded-[24px] p-4">
+                                <div class="flex items-start gap-4">
+                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border text-lg {{ $tone['icon'] }}">
+                                        <i class="fas fa-{{ $item['icon'] }}"></i>
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+                                        <span class="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] {{ $tone['badge'] }}">
+                                            {{ $item['type'] }}
+                                        </span>
+
+                                        <h4 class="mt-3 line-clamp-1 text-base font-black text-slate-800 {{ $tone['hover'] }}">
+                                            {{ $item['name'] }}
+                                        </h4>
+
+                                        <p class="mt-1 line-clamp-1 text-sm font-semibold text-slate-500">
+                                            {{ $item['meta'] }}
+                                        </p>
+
+                                        <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                                            <span class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                                                {{ $item['caption'] }}
+                                            </span>
+                                            <span class="flex h-7 w-7 items-center justify-center rounded-full {{ $tone['circle'] }}">
+                                                <i class="fas fa-chevron-right text-[10px]"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        @empty
+                            <div class="col-span-full rounded-[26px] border border-dashed border-emerald-300 bg-emerald-50/60 p-8 text-center">
+                                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-xl text-emerald-500 shadow-sm">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <h4 class="mt-4 text-base font-black text-slate-800">Data Belum Terhubung</h4>
+                                <p class="mx-auto mt-1 max-w-md text-sm font-semibold leading-6 text-slate-500">
+                                    Lengkapi NIK atau hubungi Kader agar data kesehatan keluarga muncul.
+                                </p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <aside class="nexus-card flex max-h-[720px] min-h-[460px] flex-col overflow-hidden rounded-[30px]">
+                <div class="border-b border-sky-100/80 bg-gradient-to-r from-white/86 via-sky-50/72 to-emerald-50/62 px-5 py-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.20em] text-sky-700">
+                                Kotak Masuk
+                            </p>
+                            <h3 class="mt-1 text-xl font-black text-slate-800">Notifikasi</h3>
+                        </div>
+
+                        <a href="{{ $notifikasiRoute }}"
+                           class="smooth-route inline-flex h-10 items-center rounded-2xl border border-sky-100 bg-white/80 px-4 text-xs font-black uppercase tracking-[0.12em] text-sky-700 hover:bg-sky-50">
+                            Semua
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nexus-scroll flex-1 space-y-3 overflow-y-auto p-4">
+                    @forelse($notifList as $notif)
+                        <a href="{{ $notifikasiRoute }}"
+                           class="smooth-route block rounded-[22px] border p-4 shadow-sm transition hover:-translate-y-0.5
+                           {{ !($notif['is_read'] ?? true)
+                                ? 'border-sky-200 bg-sky-50/70'
+                                : 'border-slate-100 bg-white/70 hover:border-sky-200 hover:bg-sky-50/45' }}">
+                            <div class="flex gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border
+                                {{ !($notif['is_read'] ?? true)
+                                    ? 'border-sky-200 bg-white text-sky-600'
+                                    : 'border-slate-200 bg-slate-50 text-slate-400' }}">
+                                    <i class="fas {{ !($notif['is_read'] ?? true) ? 'fa-envelope' : 'fa-envelope-open' }}"></i>
+                                </div>
+
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <h4 class="line-clamp-1 text-sm font-black text-slate-800">
+                                            {{ $notif['judul'] ?? 'Pemberitahuan' }}
+                                        </h4>
+
+                                        @if(!($notif['is_read'] ?? true))
+                                            <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-rose-500"></span>
                                         @endif
                                     </div>
-                                    <p class="text-[12px] font-medium text-slate-500 line-clamp-2 leading-relaxed">{{ $notif['pesan'] }}</p>
-                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 block"><i class="fas fa-clock mr-1"></i> {{ $notif['waktu'] }}</p>
+
+                                    <p class="mt-1 line-clamp-2 text-sm font-semibold leading-6 text-slate-500">
+                                        {{ $notif['pesan'] ?? '-' }}
+                                    </p>
+
+                                    <p class="mt-3 text-[10px] font-black uppercase tracking-[0.12em] text-sky-600">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ $notif['waktu'] ?? '-' }}
+                                    </p>
                                 </div>
                             </div>
                         </a>
                     @empty
-                        <div class="text-center py-16 px-4 flex flex-col items-center justify-center h-full">
-                            <div class="w-16 h-16 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl text-slate-300">
+                        <div class="flex h-full min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-dashed border-sky-300 bg-sky-50/55 p-8 text-center">
+                            <div class="flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-xl text-sky-500 shadow-sm">
                                 <i class="fas fa-check-double"></i>
                             </div>
-                            <h4 class="text-[14px] font-black text-slate-700 mb-1">Kotak Masuk Bersih</h4>
-                            <p class="text-[12px] font-medium text-slate-500">Anda sudah membaca semua pemberitahuan.</p>
+                            <h4 class="mt-4 text-base font-black text-slate-800">Kotak Masuk Bersih</h4>
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">Belum ada pemberitahuan baru.</p>
                         </div>
                     @endforelse
                 </div>
-            </div>
-        </div>
-
+            </aside>
+        </section>
     </div>
 </div>
 @endsection

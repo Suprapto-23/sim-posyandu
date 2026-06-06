@@ -12,44 +12,20 @@
 
     <title>@yield('title', 'Portal Warga') | PosyanduCare</title>
 
-    {{-- DETEKSI TRANSISI DARI LOGIN --}}
-    <script>
-        (function () {
-            try {
-                if (sessionStorage.getItem('pc_from_login') === '1') {
-                    document.documentElement.classList.add('pc-from-login');
-                } else {
-                    document.documentElement.classList.add('pc-normal-entry');
-                }
-            } catch (e) {
-                document.documentElement.classList.add('pc-normal-entry');
-            }
-
-            if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'manual';
-            }
-        })();
-    </script>
-
-    {{-- FAVICON --}}
     <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('img/logo.png') }}">
 
-    {{-- FONTS --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap"
           rel="stylesheet">
 
-    {{-- TAILWIND --}}
     <script src="https://cdn.tailwindcss.com"></script>
 
-    {{-- ICON --}}
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    {{-- SWEET ALERT --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
     <script>
@@ -59,24 +35,10 @@
                     fontFamily: {
                         sans: ['Plus Jakarta Sans', 'sans-serif'],
                         poppins: ['Poppins', 'sans-serif']
-                    },
-                    colors: {
-                        emerald: {
-                            50: '#ecfdf5',
-                            100: '#d1fae5',
-                            200: '#a7f3d0',
-                            300: '#6ee7b7',
-                            400: '#34d399',
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                            800: '#065f46',
-                            900: '#064e3b'
-                        }
                     }
                 }
             }
-        }
+        };
     </script>
 
     <style>
@@ -103,8 +65,6 @@
             --slate-50: #f8fafc;
 
             --ease-premium: cubic-bezier(.16, 1, .3, 1);
-            --ease-smooth: cubic-bezier(.22, 1, .36, 1);
-
             --dock-height: 82px;
             --topbar-height: 72px;
             --user-sidebar-width: 292px;
@@ -117,32 +77,27 @@
 
         html {
             width: 100%;
-            height: 100%;
-            overflow: hidden;
+            min-height: 100%;
             scroll-behavior: auto !important;
         }
 
         body {
             width: 100%;
-            height: 100%;
+            min-height: 100vh;
             margin: 0;
             padding: 0;
 
-            overflow: hidden;
-
+            overflow-x: hidden;
             font-family: 'Plus Jakarta Sans', sans-serif;
             color: var(--slate-800);
 
             background:
-                radial-gradient(circle at top left, rgba(16,185,129,.12), transparent 34%),
-                radial-gradient(circle at 95% 10%, rgba(245,158,11,.07), transparent 28%),
-                radial-gradient(circle at bottom right, rgba(20,184,166,.13), transparent 35%),
-                linear-gradient(135deg, #f8fffc 0%, #f8fafc 46%, #effbf6 100%);
+                radial-gradient(circle at 0% 0%, rgba(16,185,129,.12), transparent 30%),
+                radial-gradient(circle at 100% 100%, rgba(20,184,166,.10), transparent 32%),
+                linear-gradient(135deg, #f8fffc 0%, #f8fafc 48%, #effbf6 100%);
 
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-
-            overscroll-behavior: none;
         }
 
         body.user-lock {
@@ -170,6 +125,12 @@
 
         a {
             color: inherit;
+            text-decoration: none;
+        }
+
+        ::selection {
+            background: rgba(16,185,129,.18);
+            color: var(--green-900);
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -181,47 +142,36 @@
             scrollbar-width: none;
         }
 
-        ::selection {
-            background: rgba(16,185,129,.18);
-            color: var(--green-900);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | BACKGROUND
-        |--------------------------------------------------------------------------
-        */
-
         .user-bg-layer {
             position: fixed;
             inset: 0;
             z-index: 0;
-            overflow: hidden;
             pointer-events: none;
+            overflow: hidden;
         }
 
         .user-bg-layer::before {
             content: "";
             position: absolute;
-            width: 420px;
-            height: 420px;
-            top: -190px;
-            left: -180px;
+            width: 360px;
+            height: 360px;
+            top: -180px;
+            left: -160px;
             border-radius: 999px;
-            background: rgba(16,185,129,.16);
-            filter: blur(64px);
+            background: rgba(16,185,129,.13);
+            filter: blur(58px);
         }
 
         .user-bg-layer::after {
             content: "";
             position: absolute;
-            width: 380px;
-            height: 380px;
-            right: -180px;
-            bottom: -180px;
+            width: 320px;
+            height: 320px;
+            right: -150px;
+            bottom: -150px;
             border-radius: 999px;
-            background: rgba(20,184,166,.15);
-            filter: blur(62px);
+            background: rgba(20,184,166,.12);
+            filter: blur(56px);
         }
 
         .user-dot-pattern {
@@ -230,18 +180,12 @@
             right: 18px;
             width: 88px;
             height: 88px;
-            opacity: .12;
+            opacity: .10;
             z-index: 1;
             pointer-events: none;
             background-image: radial-gradient(rgba(16,185,129,.52) 1.1px, transparent 1.1px);
             background-size: 9px 9px;
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | LOADING SCREEN CEPAT, SAMA DENGAN LOGIN/ADMIN/BIDAN/KADER
-        |--------------------------------------------------------------------------
-        */
 
         #pcUserLoader {
             position: fixed;
@@ -253,71 +197,51 @@
             justify-content: center;
 
             visibility: hidden;
+            opacity: 0;
             pointer-events: none;
+
+            background: rgba(240,255,248,.78);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+
+            transition: opacity .16s ease, visibility .16s ease;
         }
 
         #pcUserLoader.show {
             visibility: visible;
+            opacity: 1;
             pointer-events: auto;
         }
 
-        .ld-veil {
-            position: absolute;
-            inset: 0;
-
-            background: rgba(240,255,248,.78);
-            backdrop-filter: blur(9px) saturate(1.12);
-            -webkit-backdrop-filter: blur(9px) saturate(1.12);
-
-            opacity: 0;
-            transition: opacity .18s ease;
-        }
-
-        #pcUserLoader.show .ld-veil {
-            opacity: 1;
-        }
-
         .ld-panel {
-            position: relative;
-            z-index: 2;
-
-            min-width: 236px;
-            padding: 30px 40px 28px;
+            min-width: 230px;
+            padding: 28px 34px 26px;
             border-radius: 24px;
 
             background: rgba(255,255,255,.96);
-            border: 1px solid rgba(16,185,129,.13);
+            border: 1px solid rgba(16,185,129,.14);
 
             box-shadow:
                 0 22px 54px rgba(15,23,42,.12),
                 inset 0 1px 0 rgba(255,255,255,.92);
 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             text-align: center;
 
+            transform: translateY(10px) scale(.96);
             opacity: 0;
-            transform: translateY(12px) scale(.96);
-
-            transition:
-                opacity .24s var(--ease-smooth) .04s,
-                transform .24s var(--ease-smooth) .04s;
-
-            will-change: opacity, transform;
+            transition: opacity .2s var(--ease-premium), transform .2s var(--ease-premium);
         }
 
         #pcUserLoader.show .ld-panel {
+            transform: translateY(0) scale(1);
             opacity: 1;
-            transform: none;
         }
 
         .ld-orbit {
             position: relative;
-
-            width: 62px;
-            height: 62px;
-            margin: 0 auto 17px;
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 16px;
 
             display: flex;
             align-items: center;
@@ -327,17 +251,14 @@
         .ld-ring {
             position: absolute;
             inset: 0;
-
-            border-radius: 50%;
-            border: 2.25px solid transparent;
-
-            will-change: transform;
+            border-radius: 999px;
+            border: 2px solid transparent;
         }
 
         .ld-ring:nth-child(1) {
             border-top-color: var(--green-500);
             border-right-color: rgba(16,185,129,.25);
-            animation: spinR .78s linear infinite;
+            animation: spinR .82s linear infinite;
         }
 
         .ld-ring:nth-child(2) {
@@ -351,164 +272,57 @@
             inset: 17px;
             border-top-color: var(--amber-500);
             border-right-color: rgba(245,158,11,.22);
-            animation: spinR 1.65s linear infinite;
+            animation: spinR 1.55s linear infinite;
         }
 
         @keyframes spinR {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .ld-heart {
             position: relative;
             z-index: 2;
-
             font-size: 17px;
             color: var(--green-600);
-
-            animation: heartBeat 1.08s ease-in-out infinite;
-            will-change: transform;
-        }
-
-        @keyframes heartBeat {
-            0%,100% { transform: scale(1); opacity: .9; }
-            18%     { transform: scale(1.16); }
-            36%     { transform: scale(1); }
-            52%     { transform: scale(1.07); }
         }
 
         .ld-name {
             font-family: 'Poppins', sans-serif;
             font-size: 15px;
-            font-weight: 800;
+            font-weight: 900;
             color: var(--slate-900);
             margin-bottom: 2px;
         }
 
         .ld-label {
             font-size: 10.5px;
-            font-weight: 700;
+            font-weight: 800;
             color: var(--slate-500);
             text-transform: uppercase;
-            letter-spacing: .6px;
-            margin-bottom: 14px;
+            letter-spacing: .08em;
         }
-
-        .ld-dots {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ld-dot {
-            width: 6px;
-            height: 6px;
-
-            border-radius: 50%;
-            background: var(--green-400);
-
-            animation: dotPop .72s ease-in-out infinite both;
-            will-change: transform, opacity;
-        }
-
-        .ld-dot:nth-child(1) { animation-delay: 0s; }
-        .ld-dot:nth-child(2) { animation-delay: .12s; background: var(--green-500); }
-        .ld-dot:nth-child(3) { animation-delay: .24s; background: var(--green-600); }
-        .ld-dot:nth-child(4) { animation-delay: .36s; background: var(--amber-500); }
-
-        @keyframes dotPop {
-            0%,80%,100% { transform: scale(.55); opacity: .35; }
-            40%         { transform: scale(1.12); opacity: 1; }
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | PAGE LOADER BAR
-        |--------------------------------------------------------------------------
-        */
-
-        .page-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-
-            height: 3px;
-            z-index: 99998;
-
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(-3px);
-            pointer-events: none;
-
-            transition:
-                opacity .14s ease,
-                transform .14s ease;
-        }
-
-        body.is-navigating .page-loader {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .page-loader::before {
-            content: "";
-            position: absolute;
-            inset: 0 auto 0 0;
-
-            width: 46%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, rgba(16,185,129,0), var(--green-500), rgba(52,211,153,.55));
-
-            animation: loadingBar .72s infinite cubic-bezier(.76, 0, .24, 1);
-        }
-
-        @keyframes loadingBar {
-            0%   { transform: translateX(-115%); }
-            100% { transform: translateX(265%); }
-        }
-
-        .route-overlay {
-            display: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | MAIN APP MOBILE FIRST
-        |--------------------------------------------------------------------------
-        */
 
         .user-shell {
             position: relative;
             z-index: 10;
-
             width: 100%;
-            height: 100dvh;
             min-height: 100dvh;
-
-            overflow: hidden;
         }
 
         .user-app {
             position: relative;
             z-index: 10;
-
             width: 100%;
-            height: 100dvh;
             min-height: 100dvh;
 
             display: flex;
             flex-direction: column;
 
-            overflow: hidden;
-
             opacity: 0;
-            transform: translateY(10px);
-
-            animation: userAppEnter .34s var(--ease-smooth) forwards;
+            transform: translateY(8px);
+            animation: userAppEnter .22s var(--ease-premium) forwards;
         }
 
         @keyframes userAppEnter {
@@ -518,36 +332,12 @@
             }
         }
 
-        html.pc-from-login .user-app {
-            opacity: 0;
-            transform: translateY(16px);
-            filter: none;
-            animation: none;
-        }
-
-        html.pc-from-login.pc-content-in .user-app {
-            opacity: 1;
-            transform: translateY(0);
-            filter: blur(0);
-
-            transition:
-                opacity .34s var(--ease-smooth),
-                transform .34s var(--ease-smooth),
-                filter .34s var(--ease-smooth);
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | TOPBAR DIAM DI ATAS
-        |--------------------------------------------------------------------------
-        */
-
         .user-topbar {
-            position: relative;
+            position: sticky;
+            top: 0;
             z-index: 40;
 
             flex-shrink: 0;
-
             min-height: var(--topbar-height);
 
             padding:
@@ -560,22 +350,28 @@
             justify-content: space-between;
             gap: 12px;
 
-            background:
-                linear-gradient(135deg, rgba(255,255,255,.94), rgba(255,255,255,.80));
+            background: rgba(255,255,255,.88);
+            border-bottom: 1px solid rgba(226,232,240,.78);
 
-            border-bottom: 1px solid rgba(226,232,240,.76);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
 
-            backdrop-filter: blur(14px) saturate(1.08);
-            -webkit-backdrop-filter: blur(14px) saturate(1.08);
+            box-shadow: 0 10px 26px rgba(15,23,42,.045);
+        }
 
-            box-shadow: 0 12px 30px rgba(15,23,42,.045);
+        .user-topbar-left,
+        .user-topbar-right {
+            display: flex;
+            align-items: center;
         }
 
         .user-topbar-left {
-            display: flex;
-            align-items: center;
             gap: 10px;
             min-width: 0;
+        }
+
+        .user-topbar-right {
+            gap: 8px;
         }
 
         .user-menu-button,
@@ -586,7 +382,7 @@
             border: 1px solid rgba(226,232,240,.86);
             border-radius: 16px;
 
-            background: rgba(255,255,255,.86);
+            background: rgba(255,255,255,.90);
             color: var(--slate-600);
 
             display: flex;
@@ -594,22 +390,26 @@
             justify-content: center;
 
             box-shadow:
-                0 10px 22px rgba(15,23,42,.045),
+                0 8px 20px rgba(15,23,42,.04),
                 inset 0 1px 0 rgba(255,255,255,.88);
 
-            transition: all .16s var(--ease-premium);
-        }
-
-        .user-menu-button:active,
-        .user-icon-button:active {
-            transform: scale(.94);
+            transition:
+                transform .14s var(--ease-premium),
+                border-color .14s var(--ease-premium),
+                color .14s var(--ease-premium),
+                background .14s var(--ease-premium);
         }
 
         .user-menu-button:hover,
         .user-icon-button:hover {
             color: var(--green-700);
             border-color: rgba(16,185,129,.28);
-            background: white;
+            background: #ffffff;
+        }
+
+        .user-menu-button:active,
+        .user-icon-button:active {
+            transform: scale(.95);
         }
 
         .user-title-block {
@@ -618,16 +418,14 @@
 
         .user-page-title {
             margin: 0;
-
             max-width: 190px;
 
             color: var(--slate-900);
-
             font-size: 16.5px;
             font-family: 'Poppins', sans-serif;
             font-weight: 900;
             line-height: 1.05;
-            letter-spacing: -0.035em;
+            letter-spacing: -.035em;
 
             white-space: nowrap;
             overflow: hidden;
@@ -638,17 +436,10 @@
             margin-top: 4px;
 
             color: var(--green-700);
-
             font-size: 9px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: .14em;
-        }
-
-        .user-topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .user-notif-area {
@@ -677,13 +468,13 @@
 
         @keyframes notifPulse {
             0% {
-                transform: scale(.8);
+                transform: scale(.85);
                 opacity: .65;
             }
 
             80%,
             100% {
-                transform: scale(2.1);
+                transform: scale(2);
                 opacity: 0;
             }
         }
@@ -703,18 +494,11 @@
 
             font-size: 13px;
             font-weight: 900;
-            text-decoration: none;
 
             box-shadow:
-                0 12px 26px rgba(16,185,129,.22),
+                0 12px 24px rgba(16,185,129,.22),
                 inset 0 1px 0 rgba(255,255,255,.22);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | NOTIF DROPDOWN
-        |--------------------------------------------------------------------------
-        */
 
         .notif-dropdown {
             position: fixed;
@@ -724,19 +508,15 @@
             right: 12px;
 
             z-index: 70;
-
             max-height: min(440px, calc(100dvh - 110px));
 
             border-radius: 26px;
-            background: rgba(255,255,255,.96);
+            background: rgba(255,255,255,.97);
             border: 1px solid rgba(226,232,240,.90);
 
             box-shadow:
-                0 28px 80px rgba(15,23,42,.16),
+                0 28px 70px rgba(15,23,42,.16),
                 inset 0 1px 0 rgba(255,255,255,.88);
-
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
 
             overflow: hidden;
 
@@ -744,12 +524,12 @@
             visibility: hidden;
             pointer-events: none;
 
-            transform: translateY(14px) scale(.98);
+            transform: translateY(10px) scale(.985);
 
             transition:
-                opacity .18s var(--ease-premium),
-                transform .18s var(--ease-premium),
-                visibility .18s var(--ease-premium);
+                opacity .16s var(--ease-premium),
+                transform .16s var(--ease-premium),
+                visibility .16s var(--ease-premium);
         }
 
         .notif-dropdown.show {
@@ -760,23 +540,20 @@
         }
 
         .notif-head {
-            padding: 16px 16px 13px;
-
-            border-bottom: 1px solid rgba(241,245,249,.9);
+            padding: 16px;
+            border-bottom: 1px solid rgba(241,245,249,.95);
 
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
 
-            background: rgba(248,250,252,.74);
+            background: rgba(248,250,252,.78);
         }
 
         .notif-head-title {
             margin: 0;
-
             color: var(--slate-900);
-
             font-size: 14px;
             font-weight: 900;
             font-family: 'Poppins', sans-serif;
@@ -784,7 +561,6 @@
 
         .notif-status {
             padding: 5px 9px;
-
             border-radius: 999px;
             background: var(--slate-100);
             color: var(--slate-500);
@@ -804,53 +580,38 @@
         .notif-list {
             max-height: 330px;
             overflow-y: auto;
-            background: rgba(255,255,255,.56);
+            background: rgba(255,255,255,.58);
         }
 
         .notif-footer {
             padding: 13px 16px;
-
-            border-top: 1px solid rgba(241,245,249,.9);
-
-            background: rgba(248,250,252,.74);
-
+            border-top: 1px solid rgba(241,245,249,.95);
+            background: rgba(248,250,252,.78);
             text-align: center;
         }
 
         .notif-footer a {
             color: var(--green-700);
-
             font-size: 10px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: .13em;
-            text-decoration: none;
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | SIDEBAR MOBILE
-        |--------------------------------------------------------------------------
-        */
 
         .user-sidebar-overlay {
             position: fixed;
             inset: 0;
-
             z-index: 80;
 
-            background: rgba(2,6,23,.38);
-
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(2,6,23,.34);
 
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
 
             transition:
-                opacity .18s ease,
-                visibility .18s ease;
+                opacity .16s ease,
+                visibility .16s ease;
         }
 
         .user-sidebar-overlay.show {
@@ -864,31 +625,22 @@
             inset: 10px auto 10px 10px;
 
             width: min(292px, calc(100vw - 22px));
-
             z-index: 90;
 
             transform: translateX(calc(-100% - 18px));
-            opacity: .6;
-            filter: none;
+            opacity: .8;
             pointer-events: none;
 
             transition:
-                transform .24s var(--ease-premium),
-                opacity .18s ease;
+                transform .2s var(--ease-premium),
+                opacity .16s ease;
         }
 
         .user-sidebar-wrap.show {
             transform: translateX(0);
             opacity: 1;
-            filter: blur(0);
             pointer-events: auto;
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | KONTEN MOBILE YANG SCROLL
-        |--------------------------------------------------------------------------
-        */
 
         .user-main {
             position: relative;
@@ -925,22 +677,16 @@
         .user-main-inner {
             max-width: 1040px;
             margin: 0 auto;
-        }
 
-        .user-main-inner > * {
             opacity: 0;
-            transform: translateY(18px);
-            filter: none;
-
-            animation: contentUp .34s var(--ease-smooth) forwards;
-            animation-delay: calc(min(var(--content-index, 0), 8) * 30ms);
+            transform: translateY(10px);
+            animation: contentIn .22s var(--ease-premium) .02s forwards;
         }
 
-        @keyframes contentUp {
+        @keyframes contentIn {
             to {
                 opacity: 1;
                 transform: translateY(0);
-                filter: blur(0);
             }
         }
 
@@ -953,17 +699,11 @@
             background: rgba(255,255,255,.84);
             border: 1px solid rgba(226,232,240,.82);
             box-shadow:
-                0 18px 44px rgba(15,23,42,.055),
+                0 16px 36px rgba(15,23,42,.05),
                 inset 0 1px 0 rgba(255,255,255,.84);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | BOTTOM DOCK DIAM DI BAWAH MOBILE
-        |--------------------------------------------------------------------------
-        */
 
         .mobile-dock {
             position: fixed;
@@ -988,29 +728,23 @@
             gap: 6px;
 
             box-shadow:
-                0 22px 60px rgba(15,23,42,.14),
-                0 6px 18px rgba(16,185,129,.07),
+                0 20px 52px rgba(15,23,42,.13),
+                0 6px 18px rgba(16,185,129,.06),
                 inset 0 1px 0 rgba(255,255,255,.95);
 
-            backdrop-filter: blur(16px) saturate(1.10);
-            -webkit-backdrop-filter: blur(16px) saturate(1.10);
-
-            transform: translateZ(0);
-            will-change: transform;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
         }
 
         .dock-link {
             position: relative;
-
             flex: 1;
             min-width: 0;
-
             height: 54px;
 
             border-radius: 18px;
 
             color: var(--slate-400);
-            text-decoration: none;
 
             display: flex;
             flex-direction: column;
@@ -1018,7 +752,14 @@
             justify-content: center;
             gap: 4px;
 
-            transition: all .16s var(--ease-premium);
+            transition:
+                transform .14s var(--ease-premium),
+                color .14s var(--ease-premium),
+                background .14s var(--ease-premium);
+        }
+
+        .dock-link:active {
+            transform: scale(.95);
         }
 
         .dock-link i {
@@ -1048,13 +789,11 @@
 
             border-radius: 999px;
             background: var(--green-500);
-
             box-shadow: 0 0 0 4px rgba(16,185,129,.10);
         }
 
         .dock-center {
             position: relative;
-
             flex: 1;
             min-width: 0;
             height: 54px;
@@ -1073,11 +812,8 @@
 
             border-radius: 999px;
 
-            background:
-                linear-gradient(135deg, var(--green-700), var(--green-500));
-
+            background: linear-gradient(135deg, var(--green-700), var(--green-500));
             color: white;
-            text-decoration: none;
 
             display: flex;
             align-items: center;
@@ -1086,14 +822,14 @@
             border: 4px solid rgba(255,255,255,.96);
 
             box-shadow:
-                0 18px 34px rgba(16,185,129,.34),
+                0 18px 34px rgba(16,185,129,.30),
                 inset 0 1px 0 rgba(255,255,255,.24);
 
-            transition: all .16s var(--ease-premium);
+            transition: transform .14s var(--ease-premium);
         }
 
         .dock-action:active {
-            transform: scale(.94);
+            transform: scale(.95);
         }
 
         .dock-action i {
@@ -1113,81 +849,10 @@
             white-space: nowrap;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | ANIMASI MASUK
-        |--------------------------------------------------------------------------
-        */
-
-        .pc-animate-topbar {
-            opacity: 0;
-            transform: translateY(-22px);
-            animation: topbarIn .32s var(--ease-smooth) forwards;
-            animation-delay: .03s;
-        }
-
-        .pc-animate-main {
-            opacity: 0;
-            transform: translateY(24px);
-            animation: mainIn .34s var(--ease-smooth) forwards;
-            animation-delay: .05s;
-        }
-
-        .pc-animate-dock {
-            opacity: 0;
-            transform: translateY(24px) translateZ(0);
-            animation: dockIn .34s var(--ease-smooth) forwards;
-            animation-delay: .07s;
-        }
-
-        @keyframes topbarIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes mainIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes dockIn {
-            to {
-                opacity: 1;
-                transform: translateY(0) translateZ(0);
-            }
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | DESKTOP / TABLET
-        |--------------------------------------------------------------------------
-        | Desktop sidebar tampil permanen. Mobile tetap off-canvas.
-        |--------------------------------------------------------------------------
-        */
-
         @media (min-width: 768px) {
-            html {
-                height: auto;
-                min-height: 100%;
-                overflow-x: hidden;
-                overflow-y: auto;
-            }
-
             body {
-                height: auto;
                 min-height: 100vh;
-                overflow-x: hidden;
                 overflow-y: auto;
-                overscroll-behavior-y: auto;
-            }
-
-            body.user-lock {
-                overflow: hidden !important;
-                height: 100vh !important;
             }
 
             .user-sidebar-wrap {
@@ -1199,29 +864,11 @@
                 right: auto;
 
                 width: var(--user-sidebar-width);
-
                 z-index: 70;
 
                 transform: translateX(0);
                 opacity: 1;
-                filter: blur(0);
                 pointer-events: auto;
-
-                animation: desktopSidebarIn .32s var(--ease-smooth) both;
-            }
-
-            @keyframes desktopSidebarIn {
-                from {
-                    opacity: 0;
-                    transform: translateX(-34px);
-                    filter: blur(8px);
-                }
-
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                    filter: blur(0);
-                }
             }
 
             .user-sidebar-overlay {
@@ -1229,37 +876,28 @@
             }
 
             .user-shell {
-                height: auto;
                 min-height: 100vh;
-                overflow: visible;
-
                 padding-left: calc(var(--user-sidebar-width) + 28px);
             }
 
             .user-app {
-                height: auto;
                 min-height: 100vh;
                 overflow: visible;
             }
 
             .user-topbar {
-                position: sticky;
-                top: 0;
-
                 min-height: 84px;
 
                 margin: 14px 18px 0 0;
                 padding: 14px 28px;
 
                 border-radius: 28px;
-
                 border: 1px solid rgba(226,232,240,.82);
 
-                background:
-                    linear-gradient(135deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
+                background: rgba(255,255,255,.86);
 
                 box-shadow:
-                    0 22px 55px rgba(15,23,42,.065),
+                    0 18px 46px rgba(15,23,42,.058),
                     inset 0 1px 0 rgba(255,255,255,.90);
             }
 
@@ -1270,10 +908,6 @@
             .user-page-title {
                 max-width: 420px;
                 font-size: 21px;
-            }
-
-            .user-page-subtitle {
-                display: block;
             }
 
             .user-main {
@@ -1313,11 +947,8 @@
             .mobile-dock {
                 left: 8px;
                 right: 8px;
-
                 height: 70px;
-
                 border-radius: 24px;
-
                 padding-left: 7px;
                 padding-right: 7px;
             }
@@ -1337,20 +968,6 @@
             }
         }
 
-        @media (max-width: 390px) {
-            .ld-panel {
-                min-width: unset;
-                width: 86vw;
-                padding: 26px 22px 24px;
-            }
-
-            .ld-orbit {
-                width: 58px;
-                height: 58px;
-                margin-bottom: 15px;
-            }
-        }
-
         @media (prefers-reduced-motion: reduce) {
             *,
             *::before,
@@ -1367,15 +984,39 @@
 </head>
 
 <body>
-
 @php
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Route;
+
     $userName = Auth::user()->name ?? 'Warga';
     $initial = strtoupper(substr($userName, 0, 1));
+
+    $notifIndexRoute = Route::has('user.notifikasi.index')
+        ? route('user.notifikasi.index')
+        : '#';
+
+    $profileRoute = Route::has('user.profile.edit')
+        ? route('user.profile.edit')
+        : '#';
+
+    $dashboardRoute = Route::has('user.dashboard')
+        ? route('user.dashboard')
+        : '#';
+
+    $jadwalRoute = Route::has('user.jadwal.index')
+        ? route('user.jadwal.index')
+        : '#';
+
+    $monitoringRoute = Route::has('user.monitoring.index')
+        ? route('user.monitoring.index')
+        : '#';
+
+    $riwayatRoute = Route::has('user.riwayat.index')
+        ? route('user.riwayat.index')
+        : '#';
 @endphp
 
-{{-- LOADING SCREEN: sama gaya dengan Login/Admin/Bidan/Kader --}}
 <div id="pcUserLoader" role="status" aria-label="Memuat, harap tunggu..." aria-live="polite">
-    <div class="ld-veil"></div>
     <div class="ld-panel">
         <div class="ld-orbit">
             <div class="ld-ring"></div>
@@ -1385,26 +1026,13 @@
         </div>
 
         <div class="ld-name">PosyanduCare</div>
-        <div id="pcUserLoaderLabel" class="ld-label">Memuat Halaman</div>
-
-        <div class="ld-dots">
-            <span class="ld-dot"></span>
-            <span class="ld-dot"></span>
-            <span class="ld-dot"></span>
-            <span class="ld-dot"></span>
-        </div>
+        <div id="pcUserLoaderLabel" class="ld-label">Keluar Sistem</div>
     </div>
 </div>
 
-{{-- BACKGROUND --}}
 <div class="user-bg-layer" aria-hidden="true"></div>
 <div class="user-dot-pattern" aria-hidden="true"></div>
 
-{{-- ROUTE LOADER --}}
-<div class="page-loader" aria-hidden="true"></div>
-<div class="route-overlay" aria-hidden="true"></div>
-
-{{-- SIDEBAR OVERLAY MOBILE --}}
 <div
     id="sidebarOverlay"
     class="user-sidebar-overlay"
@@ -1412,17 +1040,14 @@
     aria-hidden="true"
 ></div>
 
-{{-- SIDEBAR --}}
 <div id="userSidebarWrap" class="user-sidebar-wrap">
     @include('partials.sidebar.user')
 </div>
 
-{{-- APP --}}
 <div class="user-shell">
     <div class="user-app">
 
-        {{-- TOPBAR --}}
-        <header class="user-topbar pc-animate-topbar">
+        <header class="user-topbar">
             <div class="user-topbar-left">
                 <button
                     type="button"
@@ -1445,8 +1070,6 @@
             </div>
 
             <div class="user-topbar-right">
-
-                {{-- NOTIF --}}
                 <div class="user-notif-area" id="notifArea">
                     <button
                         type="button"
@@ -1482,17 +1105,16 @@
                         </div>
 
                         <div class="notif-footer">
-                            <a href="{{ route('user.notifikasi.index') }}" class="js-nav-link">
+                            <a href="{{ $notifIndexRoute }}">
                                 Lihat Semua Notifikasi
                             </a>
                         </div>
                     </div>
                 </div>
 
-                {{-- PROFILE --}}
                 <a
-                    href="{{ route('user.profile.edit') }}"
-                    class="mobile-profile-bubble js-nav-link"
+                    href="{{ $profileRoute }}"
+                    class="mobile-profile-bubble"
                     aria-label="Profil"
                 >
                     {{ $initial }}
@@ -1500,26 +1122,24 @@
             </div>
         </header>
 
-        {{-- MAIN CONTENT --}}
-        <main class="user-main pc-animate-main" id="userMainScrollArea">
+        <main class="user-main" id="userMainScrollArea">
             <div class="user-main-inner">
                 @yield('content')
             </div>
         </main>
 
-        {{-- BOTTOM DOCK MOBILE --}}
-        <nav class="mobile-dock pc-animate-dock" aria-label="Navigasi utama warga">
+        <nav class="mobile-dock" aria-label="Navigasi utama warga">
             <a
-                href="{{ route('user.dashboard') }}"
-                class="dock-link js-nav-link {{ request()->routeIs('user.dashboard*') ? 'active' : '' }}"
+                href="{{ $dashboardRoute }}"
+                class="dock-link {{ request()->routeIs('user.dashboard*') ? 'active' : '' }}"
             >
                 <i class="fa-solid fa-house"></i>
                 <span>Home</span>
             </a>
 
             <a
-                href="{{ route('user.jadwal.index') }}"
-                class="dock-link js-nav-link {{ request()->routeIs('user.jadwal*') ? 'active' : '' }}"
+                href="{{ $jadwalRoute }}"
+                class="dock-link {{ request()->routeIs('user.jadwal*') ? 'active' : '' }}"
             >
                 <i class="fa-regular fa-calendar-days"></i>
                 <span>Jadwal</span>
@@ -1527,8 +1147,8 @@
 
             <div class="dock-center">
                 <a
-                    href="{{ route('user.monitoring.index') }}"
-                    class="dock-action js-nav-link"
+                    href="{{ $monitoringRoute }}"
+                    class="dock-action"
                     aria-label="Pantau kesehatan"
                 >
                     <i class="fa-solid fa-chart-line"></i>
@@ -1540,16 +1160,16 @@
             </div>
 
             <a
-                href="{{ route('user.riwayat.index') }}"
-                class="dock-link js-nav-link {{ request()->routeIs('user.riwayat*') ? 'active' : '' }}"
+                href="{{ $riwayatRoute }}"
+                class="dock-link {{ request()->routeIs('user.riwayat*') ? 'active' : '' }}"
             >
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>Riwayat</span>
             </a>
 
             <a
-                href="{{ route('user.profile.edit') }}"
-                class="dock-link js-nav-link {{ request()->routeIs('user.profile*') ? 'active' : '' }}"
+                href="{{ $profileRoute }}"
+                class="dock-link {{ request()->routeIs('user.profile*') ? 'active' : '' }}"
             >
                 <i class="fa-regular fa-user"></i>
                 <span>Profil</span>
@@ -1566,36 +1186,13 @@
         return window.innerWidth < 768;
     }
 
-    function applyResponsiveScrollMode() {
-        if (isMobileView()) {
-            document.documentElement.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
-            document.body.style.height = '100%';
-        } else {
-            document.documentElement.style.overflow = '';
-            document.body.style.overflow = '';
-            document.body.style.height = '';
-            document.body.classList.remove('user-lock');
-
-            if (sidebarOverlay && userSidebarWrap) {
-                sidebarOverlay.classList.remove('show');
-                userSidebarWrap.classList.remove('show');
-            }
-        }
-    }
-
     function openUserSidebar() {
-        if (!sidebarOverlay || !userSidebarWrap) {
-            return;
-        }
-
-        if (!isMobileView()) {
+        if (!sidebarOverlay || !userSidebarWrap || !isMobileView()) {
             return;
         }
 
         sidebarOverlay.classList.add('show');
         userSidebarWrap.classList.add('show');
-
         document.body.classList.add('user-lock');
     }
 
@@ -1611,16 +1208,15 @@
         }
 
         document.body.classList.remove('user-lock');
-
-        applyResponsiveScrollMode();
     }
 
     function toggleSidebar() {
         if (userSidebarWrap && userSidebarWrap.classList.contains('show')) {
             closeUserSidebar();
-        } else {
-            openUserSidebar();
+            return;
         }
+
+        openUserSidebar();
     }
 
     function toggleNotif() {
@@ -1643,10 +1239,7 @@
         dropdown.classList.remove('show');
     }
 
-    let __pcUserRouteDelay = null;
-    let __pcUserRouteFallback = null;
-
-    function showUserLoader(label = 'Memuat Halaman') {
+    function showUserLoader(label = 'Keluar Sistem') {
         const loader = document.getElementById('pcUserLoader');
         const labelEl = document.getElementById('pcUserLoaderLabel');
 
@@ -1654,11 +1247,11 @@
             labelEl.textContent = label;
         }
 
-        document.body.classList.add('user-lock');
-
         if (loader) {
             loader.classList.add('show');
         }
+
+        document.body.classList.add('user-lock');
     }
 
     function hideUserLoader() {
@@ -1671,38 +1264,7 @@
         document.body.classList.remove('user-lock');
     }
 
-    function startNavigation(label = 'Memuat Halaman') {
-        clearTimeout(__pcUserRouteDelay);
-        clearTimeout(__pcUserRouteFallback);
-
-        __pcUserRouteDelay = setTimeout(function () {
-            document.body.classList.add('is-navigating');
-            showUserLoader(label);
-        }, 70);
-
-        __pcUserRouteFallback = setTimeout(function () {
-            stopNavigation();
-        }, 4200);
-    }
-
-    function stopNavigation() {
-        clearTimeout(__pcUserRouteDelay);
-        clearTimeout(__pcUserRouteFallback);
-
-        document.body.classList.remove('is-navigating');
-        hideUserLoader();
-        hideUserLoader();
-    }
-
-    function clearStuckState() {
-        const html = document.documentElement;
-
-        document.body.classList.remove('user-lock');
-        document.body.classList.remove('is-navigating');
-
-        html.classList.remove('pc-loader-out');
-        html.classList.remove('pc-content-in');
-
+    function clearFloatingState() {
         closeNotif();
 
         if (sidebarOverlay && userSidebarWrap) {
@@ -1713,32 +1275,15 @@
             }
         }
 
-        applyResponsiveScrollMode();
+        document.body.classList.remove('user-lock');
+        hideUserLoader();
     }
 
-    window.addEventListener('resize', function () {
-        applyResponsiveScrollMode();
-    });
-
-    document.addEventListener('click', function (event) {
-        if (!event.target.closest('#notifArea')) {
-            closeNotif();
-        }
-    });
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            clearStuckState();
-        }
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | TOAST
-    |--------------------------------------------------------------------------
-    */
-
     window.NexusToast = function (title, body, iconHtml = '') {
+        if (typeof Swal === 'undefined') {
+            return;
+        }
+
         Swal.fire({
             html: `
                 <div class="flex items-center gap-4 text-left p-1">
@@ -1759,208 +1304,58 @@
             `,
             position: 'top',
             showConfirmButton: false,
-            timer: 4200,
+            timer: 3800,
             timerProgressBar: true,
             customClass: {
-                popup: 'rounded-[24px] border border-slate-100/70 shadow-[0_20px_50px_-10px_rgba(15,23,42,0.16)] !w-auto min-w-[320px] max-w-[92vw] mt-4 !bg-white/92 !backdrop-blur-xl'
+                popup: 'rounded-[24px] border border-slate-100/70 shadow-[0_20px_50px_-10px_rgba(15,23,42,0.16)] !w-auto min-w-[320px] max-w-[92vw] mt-4 !bg-white/95'
             }
         });
     };
 
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('#notifArea')) {
+            closeNotif();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            clearFloatingState();
+        }
+    });
+
+    window.addEventListener('resize', function () {
+        if (!isMobileView()) {
+            closeUserSidebar();
+        }
+    });
+
+    window.addEventListener('pageshow', function () {
+        hideUserLoader();
+        document.body.classList.remove('user-lock');
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
-        const body = document.body;
-        const html = document.documentElement;
-        const userMain = document.getElementById('userMainScrollArea');
+        try {
+            sessionStorage.removeItem('pc_from_login');
+        } catch (e) {}
 
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
-
-        applyResponsiveScrollMode();
-
-        stopNavigation();
-        body.classList.remove('user-lock');
-
-        /*
-        |--------------------------------------------------------------------------
-        | Stagger Content
-        |--------------------------------------------------------------------------
-        */
-
-        const content = document.querySelector('.user-main-inner');
-
-        if (content) {
-            Array.from(content.children).forEach(function (item, index) {
-                item.style.setProperty('--content-index', index);
-            });
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Stop Scroll Leak Khusus Mobile
-        |--------------------------------------------------------------------------
-        */
-
-        if (userMain) {
-            userMain.addEventListener('wheel', function (event) {
-                if (!isMobileView()) {
-                    return;
-                }
-
-                const delta = event.deltaY;
-                const atTop = userMain.scrollTop <= 0;
-                const atBottom = Math.ceil(userMain.scrollTop + userMain.clientHeight) >= userMain.scrollHeight;
-
-                if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
-                    event.preventDefault();
-                }
-
-                event.stopPropagation();
-            }, { passive: false });
-
-            let touchStartY = 0;
-
-            userMain.addEventListener('touchstart', function (event) {
-                if (!isMobileView()) {
-                    return;
-                }
-
-                if (event.touches.length > 0) {
-                    touchStartY = event.touches[0].clientY;
-                }
-            }, { passive: true });
-
-            userMain.addEventListener('touchmove', function (event) {
-                if (!isMobileView()) {
-                    return;
-                }
-
-                if (event.touches.length === 0) {
-                    return;
-                }
-
-                const touchY = event.touches[0].clientY;
-                const delta = touchStartY - touchY;
-
-                const atTop = userMain.scrollTop <= 0;
-                const atBottom = Math.ceil(userMain.scrollTop + userMain.clientHeight) >= userMain.scrollHeight;
-
-                if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
-                    event.preventDefault();
-                }
-
-                event.stopPropagation();
-            }, { passive: false });
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Animasi dari Login
-        |--------------------------------------------------------------------------
-        */
-
-        if (html.classList.contains('pc-from-login')) {
-            showUserLoader('Membuka Portal');
-            window.scrollTo(0, 0);
-
-            setTimeout(function () {
-                html.classList.add('pc-content-in');
-            }, 420);
-
-            setTimeout(function () {
-                try {
-                    sessionStorage.removeItem('pc_from_login');
-                } catch (e) {}
-
-                html.classList.remove('pc-from-login');
-                html.classList.remove('pc-loader-out');
-                html.classList.remove('pc-content-in');
-                html.classList.add('pc-normal-entry');
-
-                stopNavigation();
-                applyResponsiveScrollMode();
-            }, 950);
-        } else {
-            stopNavigation();
-        }
-
-        setTimeout(function () {
-            stopNavigation();
-            applyResponsiveScrollMode();
-        }, 1600);
-
-        /*
-        |--------------------------------------------------------------------------
-        | Link Loader
-        |--------------------------------------------------------------------------
-        */
-
-        document.querySelectorAll('a[href]').forEach(function (link) {
-            const href = link.getAttribute('href');
-
-            if (!href) {
-                return;
-            }
-
-            const ignored =
-                link.target === '_blank' ||
-                href.startsWith('#') ||
-                href.startsWith('javascript:') ||
-                href.startsWith('mailto:') ||
-                href.startsWith('tel:') ||
-                link.hasAttribute('download');
-
-            if (ignored) {
-                return;
-            }
-
-            link.addEventListener('click', function (event) {
-                if (
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    event.shiftKey ||
-                    event.altKey ||
-                    event.defaultPrevented
-                ) {
-                    return;
-                }
-
-                const currentUrl = window.location.href.split('#')[0];
-                const targetUrl = link.href.split('#')[0];
-
-                if (currentUrl === targetUrl) {
-                    event.preventDefault();
-                    clearStuckState();
-                    return;
-                }
-
-                closeUserSidebar();
-                closeNotif();
-                startNavigation('Memuat Halaman');
-            });
-        });
+        hideUserLoader();
 
         document.querySelectorAll('form').forEach(function (form) {
             form.addEventListener('submit', function () {
-                closeUserSidebar();
-                closeNotif();
-                startNavigation('Memproses Data');
+                const action = (form.getAttribute('action') || '').toLowerCase();
+                const isLogout =
+                    form.classList.contains('js-logout-form') ||
+                    action.includes('logout');
+
+                if (isLogout) {
+                    closeNotif();
+                    closeUserSidebar();
+                    showUserLoader('Keluar Sistem');
+                }
             });
         });
-
-        window.addEventListener('pageshow', function () {
-            clearStuckState();
-        });
-
-        window.addEventListener('beforeunload', function () {
-            body.classList.remove('user-lock');
-        });
-
-        /*
-        |--------------------------------------------------------------------------
-        | Notifikasi
-        |--------------------------------------------------------------------------
-        */
 
         let currentCount = -1;
 
@@ -1977,49 +1372,49 @@
                         'Accept': 'application/json'
                     }
                 })
-                .then(function (response) {
-                    return response.json();
-                })
-                .then(function (data) {
-                    const unreadCount = Number(data.unreadCount || 0);
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        const unreadCount = Number(data.unreadCount || 0);
 
-                    if (unreadCount > 0) {
-                        badge?.classList.remove('hidden');
-                        pulse?.classList.remove('hidden');
+                        if (unreadCount > 0) {
+                            badge?.classList.remove('hidden');
+                            pulse?.classList.remove('hidden');
 
-                        if (status) {
-                            status.innerText = unreadCount + ' Baru';
-                            status.classList.add('is-new');
+                            if (status) {
+                                status.innerText = unreadCount + ' Baru';
+                                status.classList.add('is-new');
+                            }
+                        } else {
+                            badge?.classList.add('hidden');
+                            pulse?.classList.add('hidden');
+
+                            if (status) {
+                                status.innerText = 'Terbaca';
+                                status.classList.remove('is-new');
+                            }
                         }
-                    } else {
-                        badge?.classList.add('hidden');
-                        pulse?.classList.add('hidden');
 
-                        if (status) {
-                            status.innerText = 'Terbaca';
-                            status.classList.remove('is-new');
+                        if (data.html && list) {
+                            list.innerHTML = data.html;
                         }
-                    }
 
-                    if (data.html && list) {
-                        list.innerHTML = data.html;
-                    }
+                        if (currentCount !== -1 && unreadCount > currentCount) {
+                            window.NexusToast(
+                                data.latest_title || 'Notifikasi Baru',
+                                data.latest_body || 'Ada pembaruan informasi.'
+                            );
+                        }
 
-                    if (currentCount !== -1 && unreadCount > currentCount) {
-                        window.NexusToast(
-                            data.latest_title || 'Notifikasi Baru',
-                            data.latest_body || 'Ada pembaruan informasi.'
-                        );
-                    }
-
-                    currentCount = unreadCount;
-                })
-                .catch(function () {});
+                        currentCount = unreadCount;
+                    })
+                    .catch(function () {});
             @endif
         }
 
         syncNotif();
-        setInterval(syncNotif, 20000);
+        setInterval(syncNotif, 45000);
 
         @if(session('success'))
             window.NexusToast(

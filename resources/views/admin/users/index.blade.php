@@ -1,231 +1,1041 @@
 @extends('layouts.admin')
-@section('title', 'Manajemen User Warga')
+
+@section('title', 'Manajemen Akun Warga')
 @section('page-name', 'Data Warga')
+@section('page-title', 'Manajemen Akun Warga')
+
+@php
+    use Illuminate\Support\Str;
+
+    $stats = $stats ?? [
+        'total' => 0,
+        'aktif' => 0,
+        'nonaktif' => 0,
+    ];
+
+    $search = request('search', '');
+    $status = request('status', 'semua');
+    $perPage = request('per_page', 10);
+
+    $totalData = isset($users) && method_exists($users, 'total')
+        ? $users->total()
+        : count($users ?? []);
+
+    $rangeText = isset($users) && method_exists($users, 'firstItem')
+        ? 'Menampilkan ' . (($users->firstItem() ?? 0)) . ' sampai ' . (($users->lastItem() ?? 0)) . ' dari ' . $users->total() . ' akun warga'
+        : 'Menampilkan ' . count($users ?? []) . ' akun warga';
+
+    $getName = function ($user) {
+        return $user->profile?->full_name ?? $user->name ?? 'Warga';
+    };
+
+    $getNik = function ($user) {
+        return $user->nik ?? $user->profile?->nik ?? '-';
+    };
+
+    $getPhone = function ($user) {
+        return $user->profile?->telepon ?? '-';
+    };
+
+    $getGender = function ($user) {
+        $gender = $user->profile?->jenis_kelamin ?? null;
+
+        if ($gender === 'L') {
+            return 'Laki-laki';
+        }
+
+        if ($gender === 'P') {
+            return 'Perempuan';
+        }
+
+        return '-';
+    };
+
+    $getInitial = function ($name) {
+        return Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'W';
+    };
+
+    $statusText = function ($value) {
+        return $value === 'active' ? 'Aktif' : 'Nonaktif';
+    };
+
+    $statusBadge = function ($value) {
+        return $value === 'active'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : 'border-rose-200 bg-rose-50 text-rose-700';
+    };
+
+    $statusDot = function ($value) {
+        return $value === 'active' ? 'bg-emerald-500' : 'bg-rose-500';
+    };
+@endphp
+
+@push('styles')
+<style>
+    html {
+        scroll-behavior: auto !important;
+    }
+
+    html.admin-modal-open,
+    body.admin-modal-open {
+        overflow: hidden !important;
+    }
+
+    .admin-user-page {
+        background:
+            radial-gradient(circle at 8% 6%, rgba(16, 185, 129, .13), transparent 28%),
+            radial-gradient(circle at 96% 4%, rgba(14, 165, 233, .12), transparent 26%),
+            linear-gradient(135deg, #f4fff9 0%, #eef9ff 48%, #f8fafc 100%);
+    }
+
+    .admin-user-grid {
+        background-image:
+            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+        background-size: 30px 30px;
+    }
+
+    .admin-user-glass {
+        background: rgba(255, 255, 255, .86);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .055);
+    }
+
+    .admin-user-soft {
+        background: rgba(248, 250, 252, .72);
+        border: 1px solid rgba(226, 232, 240, .88);
+    }
+
+    .admin-user-field {
+        width: 100%;
+        border-radius: 1rem;
+        border: 1px solid rgba(203, 213, 225, .95);
+        background: rgba(255, 255, 255, .92);
+        padding: .74rem .95rem;
+        font-size: .875rem;
+        font-weight: 800;
+        color: #334155;
+        outline: none;
+        transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    .admin-user-field:focus {
+        border-color: rgba(16, 185, 129, .55);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, .10);
+        background: rgba(255, 255, 255, .98);
+    }
+
+    .admin-user-label {
+        display: block;
+        margin-bottom: .42rem;
+        font-size: .68rem;
+        font-weight: 950;
+        letter-spacing: .13em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .admin-user-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .38rem;
+        border-width: 1px;
+        border-radius: 999px;
+        padding: .38rem .72rem;
+        font-size: .68rem;
+        font-weight: 950;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .admin-user-action {
+        display: inline-flex;
+        min-height: 36px;
+        min-width: 36px;
+        align-items: center;
+        justify-content: center;
+        gap: .42rem;
+        border-radius: .85rem;
+        padding: .5rem .72rem;
+        font-size: .74rem;
+        font-weight: 950;
+        line-height: 1;
+        transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
+        white-space: nowrap;
+    }
+
+    .admin-user-action:hover {
+        transform: translateY(-1px);
+    }
+
+    .admin-password-alert {
+        border: 1px solid rgba(16, 185, 129, .22);
+        background:
+            linear-gradient(135deg, rgba(236, 253, 245, .96), rgba(240, 253, 250, .9)),
+            rgba(255, 255, 255, .9);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, .045);
+    }
+
+    .admin-password-box {
+        border: 1px solid rgba(16, 185, 129, .22);
+        background: rgba(255, 255, 255, .92);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
+    }
+
+    .admin-password-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 1rem;
+        line-height: 1.45;
+        letter-spacing: .01em;
+        word-break: break-all;
+        color: #0f172a;
+    }
+
+    .admin-user-modal-backdrop {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 2147483647 !important;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        padding: 1rem;
+        background: rgba(15, 23, 42, .58);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .admin-user-modal-backdrop.is-open {
+        display: flex !important;
+    }
+
+    .admin-user-modal-card {
+        width: min(100%, 500px);
+        transform: translateY(12px) scale(.97);
+        opacity: 0;
+        border-radius: 1.75rem;
+        border: 1px solid rgba(255, 255, 255, .78);
+        background:
+            radial-gradient(circle at 0% 0%, rgba(16, 185, 129, .14), transparent 34%),
+            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
+            rgba(255, 255, 255, .96);
+        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
+        transition: transform .18s ease, opacity .18s ease;
+    }
+
+    .admin-user-modal-backdrop.is-open .admin-user-modal-card {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+
+    @media (max-width: 640px) {
+        .admin-password-value {
+            font-size: .92rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: .01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+</style>
+@endpush
 
 @section('content')
-<style>
-    .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes popIn { 0% { opacity: 0; transform: scale(0.95) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-    .delay-100 { animation-delay: 0.1s; }
-    .delay-200 { animation-delay: 0.2s; }
-    .delay-300 { animation-delay: 0.3s; }
-</style>
+<div class="admin-user-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+    <div class="pointer-events-none absolute inset-0 admin-user-grid opacity-70"></div>
 
-<div class="max-w-6xl mx-auto space-y-8">
+    <div class="relative z-10 mx-auto max-w-[1280px] space-y-5">
 
-    {{-- Hero Section Premium --}}
-    <div class="bg-gradient-to-br from-blue-600 to-sky-400 rounded-[2.5rem] p-10 relative overflow-hidden shadow-[0_20px_40px_-10px_rgba(59,130,246,0.3)] border border-white/20 flex flex-col items-center justify-center text-center group animate-pop-in">
-        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 24px 24px;"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/10 blur-[80px] rounded-full pointer-events-none transition-all duration-700 group-hover:bg-white/20"></div>
+        <section class="admin-user-glass overflow-hidden rounded-[1.65rem] border border-white/80 p-5">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div class="min-w-0">
+                    <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
+                        <i class="fas fa-users"></i>
+                        Akses Warga
+                    </div>
 
-        <div class="relative z-10">
-            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 text-white text-[11px] font-black px-4 py-1.5 rounded-full mb-4 uppercase tracking-widest shadow-sm">
-                <i class="fas fa-users"></i> Manajemen Data Warga
+                    <h1 class="mt-3 text-2xl font-black tracking-tight text-slate-950">
+                        Manajemen Akun Warga
+                    </h1>
+
+                    <p class="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+                        Kelola akun warga untuk akses monitoring kesehatan, jadwal Posyandu, notifikasi, dan riwayat layanan.
+                    </p>
+                </div>
+
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="rounded-2xl border border-slate-200 bg-white/75 px-4 py-3">
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">
+                            Data Tampil
+                        </p>
+                        <p class="mt-1 text-sm font-black text-slate-900">
+                            {{ number_format($totalData) }} akun
+                        </p>
+                    </div>
+
+                    <a href="{{ route('admin.users.create') }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5">
+                        <i class="fas fa-plus"></i>
+                        Tambah Warga
+                    </a>
+                </div>
             </div>
-            <h2 class="text-3xl md:text-4xl font-black text-white mb-3 font-poppins tracking-tight text-shadow-sm">Daftar Akun Warga</h2>
-            <p class="text-blue-50 text-sm font-medium max-w-lg mx-auto mb-8 leading-relaxed">Kelola seluruh akun warga Posyandu. Gunakan NIK 16 digit yang valid sebagai kredensial utama untuk sinkronisasi rekam medis.</p>
-            
-            <a href="{{ route('admin.users.create') }}" class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-blue-600 font-black px-7 py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 smooth-route">
-                <i class="fas fa-plus"></i> Daftarkan Warga Baru
-            </a>
-        </div>
-    </div>
+        </section>
 
-    {{-- Info Kredensial --}}
-    @if(session('generated_password') || session('reset_password'))
-    <div class="bg-blue-50 border border-blue-200 rounded-[1.5rem] p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-pop-in delay-100">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl shrink-0 shadow-sm border border-blue-200">
-                <i class="fas fa-key"></i>
+        <section class="grid gap-4 md:grid-cols-3">
+            <div class="admin-user-glass rounded-[1.4rem] border border-emerald-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-emerald-700">
+                            Total Warga
+                        </p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">
+                            {{ number_format($stats['total'] ?? 0) }}
+                        </p>
+                        <p class="text-sm font-semibold text-slate-500">
+                            Seluruh akun
+                        </p>
+                    </div>
+
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h4 class="text-blue-800 font-black text-sm mb-1 uppercase tracking-widest">Kredensial Login Tersedia!</h4>
-                <p class="text-xs font-medium text-blue-600">Berikan password ini kepada: <strong class="text-blue-800">{{ session('user_name') ?? session('reset_name') }}</strong> (NIK: {{ session('user_nik') ?? session('reset_nik') }})</p>
+
+            <div class="admin-user-glass rounded-[1.4rem] border border-sky-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-sky-700">
+                            Warga Aktif
+                        </p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">
+                            {{ number_format($stats['aktif'] ?? 0) }}
+                        </p>
+                        <p class="text-sm font-semibold text-slate-500">
+                            Dapat login
+                        </p>
+                    </div>
+
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/20">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="bg-white border border-blue-200 rounded-xl px-5 py-3 flex items-center gap-4 shadow-sm">
-            <code class="text-xl font-mono font-black text-blue-600 tracking-wider" id="passwordText">{{ session('generated_password') ?? session('reset_password') }}</code>
-            <button onclick="copyPassword()" class="text-xs bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-600 border border-blue-100 px-3 py-1.5 rounded-lg font-bold transition-all shadow-sm" title="Copy Password">
-                <i class="fas fa-copy"></i>
-            </button>
-        </div>
-    </div>
-    @endif
 
-    {{-- Mini Stats Cards --}}
-    @if(isset($stats))
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 animate-pop-in delay-100">
-        <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl"><i class="fas fa-users"></i></div>
-            <div>
-                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Warga</div>
-                <div class="text-3xl font-black text-slate-700 font-poppins">{{ $stats['total'] ?? 0 }}</div>
+            <div class="admin-user-glass rounded-[1.4rem] border border-rose-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-rose-700">
+                            Nonaktif
+                        </p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">
+                            {{ number_format($stats['nonaktif'] ?? 0) }}
+                        </p>
+                        <p class="text-sm font-semibold text-slate-500">
+                            Akses dibatasi
+                        </p>
+                    </div>
+
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-lg shadow-rose-500/20">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-2xl"><i class="fas fa-user-check"></i></div>
-            <div>
-                <div class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Akun Aktif</div>
-                <div class="text-3xl font-black text-slate-700 font-poppins">{{ $stats['aktif'] ?? 0 }}</div>
-            </div>
-        </div>
-        <div class="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-            <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-2xl"><i class="fas fa-user-lock"></i></div>
-            <div>
-                <div class="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Nonaktif</div>
-                <div class="text-3xl font-black text-slate-700 font-poppins">{{ $stats['nonaktif'] ?? 0 }}</div>
-            </div>
-        </div>
-    </div>
-    @endif
+        </section>
 
-    {{-- Alert Success --}}
-    @if(session('success') && !session('generated_password') && !session('reset_password'))
-    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-center text-center gap-3 text-emerald-700 font-bold shadow-sm animate-pop-in delay-100">
-        <i class="fas fa-check-circle text-xl"></i> {{ session('success') }}
-    </div>
-    @endif
+        @if(session('success') || session('warning') || $errors->any())
+            <section class="space-y-3">
+                @if(session('success'))
+                    <div class="admin-password-alert rounded-[1.35rem] p-4">
+                        <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:items-center">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
 
-    {{-- ✨ FITUR BARU: FILTER PILLS (TABS KATEGORI) --}}
-    <div class="flex flex-wrap items-center gap-2.5 animate-pop-in delay-200">
-        <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest mr-1"><i class="fas fa-filter"></i> Filter:</span>
-        
-        <a href="{{ route('admin.users.index') }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 {{ !request('kategori') ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600 border border-slate-200' }}">
-            Semua Warga
-        </a>
-        <a href="{{ route('admin.users.index', ['kategori' => 'balita', 'search' => request('search')]) }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 flex items-center gap-2 {{ request('kategori') == 'balita' ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30' : 'bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-600 border border-slate-200' }}">
-            <i class="fas fa-baby text-sm"></i> Orang Tua Balita
-        </a>
-        <a href="{{ route('admin.users.index', ['kategori' => 'remaja', 'search' => request('search')]) }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 flex items-center gap-2 {{ request('kategori') == 'remaja' ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30' : 'bg-white text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200' }}">
-            <i class="fas fa-user-graduate text-sm"></i> Remaja
-        </a>
-        <a href="{{ route('admin.users.index', ['kategori' => 'lansia', 'search' => request('search')]) }}" class="px-5 py-2.5 rounded-full text-xs font-black tracking-wide transition-all duration-300 flex items-center gap-2 {{ request('kategori') == 'lansia' ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30' : 'bg-white text-slate-500 hover:bg-orange-50 hover:text-orange-600 border border-slate-200' }}">
-            <i class="fas fa-wheelchair text-sm"></i> Lansia
-        </a>
-    </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-black leading-6 text-emerald-800">
+                                        {{ session('success') }}
+                                    </p>
 
-    {{-- Data Table --}}
-    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden animate-pop-in delay-300">
-        <div class="px-8 py-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
-            
-            <div class="flex flex-col">
-                <h3 class="text-lg font-black text-slate-800 font-poppins flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm shadow-inner"><i class="fas fa-list"></i></div>
-                    Direktori Warga
-                </h3>
-                @if(request('kategori'))
-                    <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest ml-[52px]">Total: <span class="text-blue-500">{{ $users->total() }}</span> Data {{ ucfirst(request('kategori')) }}</p>
-                @endif
-            </div>
-            
-            <form method="GET" class="flex relative w-full sm:w-auto">
-                <input type="hidden" name="kategori" value="{{ request('kategori') }}">
-                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari NIK / Nama..." class="w-full sm:w-80 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm">
-            </form>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                    <tr class="bg-slate-50/50 border-b border-slate-100 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                        <th class="py-4 px-6 text-left">Informasi Warga</th>
-                        <th class="py-4 px-6">NIK KTP</th>
-                        <th class="py-4 px-6">Kontak / Telp</th>
-                        <th class="py-4 px-6">Status</th>
-                        <th class="py-4 px-6">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm font-medium text-slate-600">
-                    @forelse($users ?? [] as $u)
-                    <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors text-center">
-                        
-                       {{-- Kolom 1: Nama Warga --}}
-<td class="py-4 px-6 text-left">
-    <div class="flex items-center gap-3 w-max">
-        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black shadow-sm shrink-0 border border-blue-200/50">
-            {{ strtoupper(substr($u->profile->full_name ?? $u->name, 0, 1)) }}
-        </div>
-        <div class="flex flex-col justify-center">
-            <div class="font-bold text-slate-800 leading-tight">{{ $u->profile->full_name ?? $u->name }}</div>
-            <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-0.5">Warga Aktif</div>
-        </div>
-    </div>
-</td>
-
-                        {{-- Kolom 2: NIK --}}
-                        <td class="py-4 px-6">
-                            <span class="font-mono text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 tracking-wider">
-                                {{ $u->nik ?? $u->profile?->nik ?? '-' }}
-                            </span>
-                        </td>
-
-                        {{-- Kolom 3: Kontak Telepon --}}
-                        <td class="py-4 px-6 text-slate-500">
-                            {{ $u->profile?->telepon ?? '-' }}
-                        </td>
-
-                        {{-- Kolom 4: Status Akun --}}
-                        <td class="py-4 px-6">
-                            @if($u->status === 'active')
-                                <span class="bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase"><i class="fas fa-check-circle mr-1"></i> Aktif</span>
-                            @else
-                                <span class="bg-rose-50 text-rose-500 border border-rose-100 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase"><i class="fas fa-ban mr-1"></i> Nonaktif</span>
-                            @endif
-                        </td>
-
-                        {{-- Kolom 5: Aksi --}}
-                        <td class="py-4 px-6">
-                            <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('admin.users.show', $u->id) }}" class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-500 hover:text-white flex items-center justify-center transition-all smooth-route" title="Lihat Detail"><i class="fas fa-eye"></i></a>
-                                <a href="{{ route('admin.users.edit', $u->id) }}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all smooth-route" title="Edit Data"><i class="fas fa-edit"></i></a>
-                                
-                                {{-- Tombol Reset --}}
-                                <form action="{{ route('admin.users.reset-password', $u->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" onclick="return confirm('Reset password warga ini ke default?')" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-600 hover:text-white flex items-center justify-center transition-all" title="Reset Password"><i class="fas fa-key"></i></button>
-                                </form>
-
-                                <form action="{{ route('admin.users.destroy', $u->id) }}" method="POST" class="inline">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" onclick="return confirm('Hapus data warga beserta rekam medisnya secara permanen?')" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-all" title="Hapus"><i class="fas fa-trash-alt"></i></button>
-                                </form>
+                                    @if(session('generated_password') || session('reset_password'))
+                                        <p class="mt-1 max-w-2xl text-xs font-semibold leading-5 text-emerald-700">
+                                            Password baru hanya ditampilkan sekali. Salin sekarang sebelum meninggalkan halaman.
+                                        </p>
+                                    @endif
+                                </div>
                             </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="py-16 text-center">
-                            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4 border border-slate-100"><i class="fas fa-users-slash text-3xl opacity-50"></i></div>
-                            <h4 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Pencarian Kosong</h4>
-                            <p class="text-xs font-medium text-slate-400">Sistem tidak dapat menemukan data warga pada kategori ini.</p>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+
+                            @if(session('generated_password') || session('reset_password'))
+                                <div class="admin-password-box rounded-[1.15rem] p-3.5">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-[11px] font-black uppercase tracking-[.1em] text-emerald-700">
+                                                Password Baru
+                                            </p>
+
+                                            <p id="generatedPasswordText" class="admin-password-value mt-1.5 font-black">
+                                                {{ session('generated_password') ?? session('reset_password') }}
+                                            </p>
+
+                                            <p class="mt-2 truncate text-xs font-bold text-slate-500">
+                                                {{ session('user_name') ?? session('reset_name') ?? '-' }}
+                                                @if(session('user_email') || session('reset_email'))
+                                                    <span class="mx-1 text-slate-300">•</span>
+                                                    {{ session('user_email') ?? session('reset_email') }}
+                                                @endif
+                                            </p>
+                                        </div>
+
+                                        <button type="button"
+                                                id="copyGeneratedPassword"
+                                                class="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-100">
+                                            Salin
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
+                @if(session('warning'))
+                    <div class="rounded-[1.35rem] border border-amber-200 bg-amber-50/90 p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-600 shadow-sm">
+                                <i class="fas fa-circle-info"></i>
+                            </div>
+
+                            <p class="text-sm font-black leading-6 text-amber-800">
+                                {{ session('warning') }}
+                            </p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="rounded-[1.35rem] border border-rose-200 bg-rose-50/90 p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-rose-600 shadow-sm">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+
+                            <div>
+                                <p class="text-sm font-black text-rose-800">
+                                    Terjadi kesalahan.
+                                </p>
+
+                                <ul class="mt-2 list-inside list-disc text-sm font-semibold text-rose-700">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </section>
+        @endif
+
+        <section class="admin-user-glass rounded-[1.5rem] border border-white/80 p-4">
+            <form method="GET"
+                  action="{{ route('admin.users.index') }}"
+                  class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_140px_auto_auto] lg:items-end">
+                <div>
+                    <label for="search" class="admin-user-label">Cari Warga</label>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input id="search"
+                               type="search"
+                               name="search"
+                               value="{{ $search }}"
+                               autocomplete="off"
+                               class="admin-user-field pl-11"
+                               placeholder="Cari nama, email, NIK, atau telepon">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="status" class="admin-user-label">Status</label>
+                    <select id="status" name="status" class="admin-user-field">
+                        <option value="semua" @selected($status === 'semua')>Semua</option>
+                        <option value="active" @selected($status === 'active')>Aktif</option>
+                        <option value="inactive" @selected($status === 'inactive')>Nonaktif</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="per_page" class="admin-user-label">Tampil</label>
+                    <select id="per_page" name="per_page" class="admin-user-field">
+                        @foreach([5, 10, 12, 15, 25] as $option)
+                            <option value="{{ $option }}" @selected((int) $perPage === $option)>
+                                {{ $option }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <button type="submit"
+                        class="inline-flex h-[45px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5">
+                    <i class="fas fa-filter"></i>
+                    Filter
+                </button>
+
+                <a href="{{ route('admin.users.index') }}"
+                   class="inline-flex h-[45px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-600 shadow-sm transition hover:bg-slate-50">
+                    <i class="fas fa-rotate-left"></i>
+                    Reset
+                </a>
+            </form>
+        </section>
+
+        <section class="admin-user-glass rounded-[1.5rem] border border-white/80 p-4">
+            <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
+                        Direktori Warga
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
+                        Data Akun Warga
+                    </h2>
+
+                    <p class="mt-1 text-sm font-semibold text-slate-500">
+                        {{ $rangeText }}
+                    </p>
+                </div>
+
+                <span class="inline-flex w-fit items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-[.14em] text-emerald-700">
+                    {{ number_format($totalData) }} Data
+                </span>
+            </div>
+
+            <div class="hidden overflow-hidden rounded-[1.3rem] border border-slate-200 bg-white/85 lg:block">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50/90">
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[.14em] text-slate-400">
+                                Profil Warga
+                            </th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[.14em] text-slate-400">
+                                NIK
+                            </th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[.14em] text-slate-400">
+                                Kontak
+                            </th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[.14em] text-slate-400">
+                                Status
+                            </th>
+                            <th class="px-4 py-3 text-right text-[11px] font-black uppercase tracking-[.14em] text-slate-400">
+                                Aksi
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($users ?? [] as $user)
+                            @php
+                                $name = $getName($user);
+                                $nik = $getNik($user);
+                                $phone = $getPhone($user);
+                                $gender = $getGender($user);
+                            @endphp
+
+                            <tr class="transition hover:bg-emerald-50/35">
+                                <td class="px-4 py-4">
+                                    <div class="flex min-w-0 items-center gap-3">
+                                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-sm font-black text-white shadow-lg shadow-emerald-500/20">
+                                            {{ $getInitial($name) }}
+                                        </div>
+
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-black text-slate-950">
+                                                {{ $name }}
+                                            </p>
+
+                                            <p class="mt-1 truncate text-xs font-bold text-slate-500">
+                                                Warga • {{ $gender }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="px-4 py-4">
+                                    <p class="font-mono text-sm font-black text-slate-700">
+                                        {{ $nik }}
+                                    </p>
+                                </td>
+
+                                <td class="px-4 py-4">
+                                    <p class="max-w-[230px] truncate text-sm font-black text-slate-700">
+                                        {{ $user->email }}
+                                    </p>
+
+                                    <p class="mt-1 text-xs font-bold text-slate-500">
+                                        {{ $phone }}
+                                    </p>
+                                </td>
+
+                                <td class="px-4 py-4">
+                                    <span class="admin-user-chip {{ $statusBadge($user->status) }}">
+                                        <span class="h-2 w-2 rounded-full {{ $statusDot($user->status) }}"></span>
+                                        {{ $statusText($user->status) }}
+                                    </span>
+                                </td>
+
+                                <td class="px-4 py-4">
+                                    <div class="flex justify-end gap-2">
+                                        <a href="{{ route('admin.users.show', $user->id) }}"
+                                           class="admin-user-action border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                                           title="Detail">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        <a href="{{ route('admin.users.edit', $user->id) }}"
+                                           class="admin-user-action border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                                           title="Edit">
+                                            <i class="fas fa-pen"></i>
+                                        </a>
+
+                                        <form action="{{ route('admin.users.generate-password', $user->id) }}"
+                                              method="POST"
+                                              data-admin-action-form
+                                              data-action-type="password"
+                                              data-action-title="Buat password baru?"
+                                              data-action-message="Sistem akan membuat password acak baru untuk akun {{ $name }}. Password lama tidak dapat digunakan lagi."
+                                              data-action-button="Buat Password">
+                                            @csrf
+
+                                            <button type="submit"
+                                                    class="admin-user-action border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                                                    title="Buat Password Baru">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ route('admin.users.destroy', $user->id) }}"
+                                              method="POST"
+                                              data-admin-action-form
+                                              data-action-type="delete"
+                                              data-action-title="Hapus akun warga?"
+                                              data-action-message="Akun {{ $name }} akan dihapus jika belum memiliki data sasaran, pemeriksaan, atau riwayat layanan. Jika sudah memiliki riwayat, sistem akan menolak penghapusan dan menyarankan nonaktifkan akun."
+                                              data-action-button="Hapus Akun">
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button type="submit"
+                                                    class="admin-user-action border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                                    title="Hapus">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-4 py-12 text-center">
+                                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                                        <i class="fas fa-folder-open"></i>
+                                    </div>
+
+                                    <h3 class="mt-4 text-base font-black text-slate-950">
+                                        Belum Ada Data Warga
+                                    </h3>
+
+                                    <p class="mt-2 text-sm font-semibold text-slate-500">
+                                        Tambahkan akun Warga agar akses monitoring kesehatan dapat digunakan.
+                                    </p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="space-y-3 lg:hidden">
+                @forelse($users ?? [] as $user)
+                    @php
+                        $name = $getName($user);
+                        $nik = $getNik($user);
+                        $phone = $getPhone($user);
+                        $gender = $getGender($user);
+                    @endphp
+
+                    <article class="rounded-[1.25rem] border border-slate-200 bg-white/85 p-4 shadow-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-sm font-black text-white shadow-lg shadow-emerald-500/20">
+                                {{ $getInitial($name) }}
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-black text-slate-950">
+                                            {{ $name }}
+                                        </p>
+
+                                        <p class="mt-1 truncate text-xs font-bold text-slate-500">
+                                            Warga • {{ $gender }}
+                                        </p>
+                                    </div>
+
+                                    <span class="admin-user-chip {{ $statusBadge($user->status) }}">
+                                        <span class="h-2 w-2 rounded-full {{ $statusDot($user->status) }}"></span>
+                                        {{ $statusText($user->status) }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                                    <div class="admin-user-soft rounded-2xl p-3">
+                                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">
+                                            NIK
+                                        </p>
+
+                                        <p class="mt-1 font-mono text-sm font-black text-slate-700">
+                                            {{ $nik }}
+                                        </p>
+                                    </div>
+
+                                    <div class="admin-user-soft rounded-2xl p-3">
+                                        <p class="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">
+                                            Kontak
+                                        </p>
+
+                                        <p class="mt-1 truncate text-sm font-black text-slate-700">
+                                            {{ $phone }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <p class="mt-3 truncate text-xs font-bold text-slate-500">
+                                    {{ $user->email }}
+                                </p>
+
+                                <div class="mt-4 grid grid-cols-2 gap-2">
+                                    <a href="{{ route('admin.users.show', $user->id) }}"
+                                       class="admin-user-action border border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
+                                        <i class="fas fa-eye"></i>
+                                        Detail
+                                    </a>
+
+                                    <a href="{{ route('admin.users.edit', $user->id) }}"
+                                       class="admin-user-action border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100">
+                                        <i class="fas fa-pen"></i>
+                                        Edit
+                                    </a>
+
+                                    <form action="{{ route('admin.users.generate-password', $user->id) }}"
+                                          method="POST"
+                                          data-admin-action-form
+                                          data-action-type="password"
+                                          data-action-title="Buat password baru?"
+                                          data-action-message="Sistem akan membuat password acak baru untuk akun {{ $name }}. Password lama tidak dapat digunakan lagi."
+                                          data-action-button="Buat Password">
+                                        @csrf
+
+                                        <button type="submit"
+                                                class="admin-user-action w-full border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">
+                                            <i class="fas fa-key"></i>
+                                            Password
+                                        </button>
+                                    </form>
+
+                                    <form action="{{ route('admin.users.destroy', $user->id) }}"
+                                          method="POST"
+                                          data-admin-action-form
+                                          data-action-type="delete"
+                                          data-action-title="Hapus akun warga?"
+                                          data-action-message="Akun {{ $name }} akan dihapus jika belum memiliki data sasaran, pemeriksaan, atau riwayat layanan. Jika sudah memiliki riwayat, sistem akan menolak penghapusan dan menyarankan nonaktifkan akun."
+                                          data-action-button="Hapus Akun">
+                                        @csrf
+                                        @method('DELETE')
+
+                                        <button type="submit"
+                                                class="admin-user-action w-full border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100">
+                                            <i class="fas fa-trash-alt"></i>
+                                            Hapus
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                @empty
+                    <div class="rounded-[1.25rem] border border-dashed border-emerald-200 bg-emerald-50/70 p-8 text-center">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-600">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+
+                        <h3 class="mt-4 text-base font-black text-slate-950">
+                            Belum Ada Data Warga
+                        </h3>
+
+                        <p class="mt-2 text-sm font-semibold text-slate-500">
+                            Tambahkan akun Warga agar akses monitoring kesehatan dapat digunakan.
+                        </p>
+                    </div>
+                @endforelse
+            </div>
+
+            @if(isset($users) && method_exists($users, 'hasPages') && $users->hasPages())
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-white/75 p-3">
+                    {{ $users->withQueryString()->links() }}
+                </div>
+            @endif
+        </section>
+    </div>
+
+    <div id="adminUserActionModal" class="admin-user-modal-backdrop" aria-hidden="true">
+        <div class="admin-user-modal-card p-6">
+            <div class="flex gap-4">
+                <div id="adminUserActionIconBox" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20">
+                    <i id="adminUserActionIcon" class="fas fa-check-circle text-xl"></i>
+                </div>
+
+                <div class="min-w-0 flex-1">
+                    <p id="adminUserActionEyebrow" class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
+                        Konfirmasi
+                    </p>
+
+                    <h3 id="adminUserActionTitle" class="mt-1 text-lg font-black text-slate-950">
+                        Konfirmasi aksi?
+                    </h3>
+
+                    <p id="adminUserActionMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Pastikan data sudah benar sebelum melanjutkan.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button"
+                        id="adminUserActionCancel"
+                        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+                    Batal
+                </button>
+
+                <button type="button"
+                        id="adminUserActionSubmit"
+                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-400/20 transition hover:-translate-y-0.5">
+                    <i class="fas fa-check"></i>
+                    Lanjutkan
+                </button>
+            </div>
         </div>
     </div>
-    
-    @if(isset($users) && $users->hasPages())
-    <div class="mt-6 flex justify-center pb-8">
-        {{ $users->withQueryString()->links() }}
-    </div>
-    @endif
-
 </div>
+@endsection
 
+@push('scripts')
 <script>
-    function copyPassword() {
-        var passwordText = document.getElementById("passwordText").innerText;
-        navigator.clipboard.writeText(passwordText).then(function() {
-            Swal.fire({
-                toast: true, position: 'top-end', icon: 'success', title: 'Password Disalin!',
-                showConfirmButton: false, timer: 2000, timerProgressBar: true
-            });
-        }, function(err) {
-            console.error('Gagal menyalin text: ', err);
+(function () {
+    'use strict';
+
+    let selectedForm = null;
+
+    const modal = document.querySelector('#adminUserActionModal');
+    const modalTitle = document.querySelector('#adminUserActionTitle');
+    const modalMessage = document.querySelector('#adminUserActionMessage');
+    const modalEyebrow = document.querySelector('#adminUserActionEyebrow');
+    const modalIconBox = document.querySelector('#adminUserActionIconBox');
+    const modalIcon = document.querySelector('#adminUserActionIcon');
+    const modalCancel = document.querySelector('#adminUserActionCancel');
+    const modalSubmit = document.querySelector('#adminUserActionSubmit');
+
+    const passwordText = document.querySelector('#generatedPasswordText');
+    const copyPasswordButton = document.querySelector('#copyGeneratedPassword');
+
+    if (modal && modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    function lockBody() {
+        document.documentElement.classList.add('admin-modal-open');
+        document.body.classList.add('admin-modal-open');
+    }
+
+    function unlockBody() {
+        document.documentElement.classList.remove('admin-modal-open');
+        document.body.classList.remove('admin-modal-open');
+    }
+
+    function setSubmitLoading(text) {
+        if (!modalSubmit) {
+            return;
+        }
+
+        modalSubmit.disabled = true;
+        modalSubmit.classList.add('opacity-70', 'cursor-not-allowed');
+        modalSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + text;
+    }
+
+    function configureDialog(form) {
+        const type = form.dataset.actionType || 'default';
+        const isDelete = type === 'delete';
+        const isPassword = type === 'password';
+
+        modalTitle.textContent = form.dataset.actionTitle || 'Konfirmasi aksi?';
+        modalMessage.textContent = form.dataset.actionMessage || 'Pastikan data sudah benar sebelum melanjutkan.';
+
+        modalIconBox.className = 'flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] text-white shadow-lg';
+
+        modalSubmit.disabled = false;
+        modalSubmit.classList.remove('opacity-70', 'cursor-not-allowed');
+
+        if (isDelete) {
+            modalEyebrow.textContent = 'Konfirmasi Penghapusan';
+            modalEyebrow.className = 'text-[11px] font-black uppercase tracking-[.18em] text-rose-700';
+            modalIconBox.classList.add('bg-gradient-to-br', 'from-rose-500', 'to-orange-500', 'shadow-rose-500/20');
+            modalIcon.className = 'fas fa-triangle-exclamation text-xl';
+            modalSubmit.className = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-400/20 transition hover:-translate-y-0.5';
+            modalSubmit.innerHTML = '<i class="fas fa-trash-alt"></i> ' + (form.dataset.actionButton || 'Hapus Akun');
+            return;
+        }
+
+        if (isPassword) {
+            modalEyebrow.textContent = 'Keamanan Akun';
+            modalEyebrow.className = 'text-[11px] font-black uppercase tracking-[.18em] text-amber-700';
+            modalIconBox.classList.add('bg-gradient-to-br', 'from-amber-500', 'to-orange-500', 'shadow-amber-500/20');
+            modalIcon.className = 'fas fa-key text-xl';
+            modalSubmit.className = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-amber-400/20 transition hover:-translate-y-0.5';
+            modalSubmit.innerHTML = '<i class="fas fa-key"></i> ' + (form.dataset.actionButton || 'Buat Password');
+            return;
+        }
+
+        modalEyebrow.textContent = 'Konfirmasi';
+        modalEyebrow.className = 'text-[11px] font-black uppercase tracking-[.18em] text-emerald-700';
+        modalIconBox.classList.add('bg-gradient-to-br', 'from-emerald-500', 'to-teal-500', 'shadow-emerald-500/20');
+        modalIcon.className = 'fas fa-check-circle text-xl';
+        modalSubmit.className = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-400/20 transition hover:-translate-y-0.5';
+        modalSubmit.innerHTML = '<i class="fas fa-check"></i> ' + (form.dataset.actionButton || 'Lanjutkan');
+    }
+
+    function openDialog(form) {
+        if (!modal) {
+            HTMLFormElement.prototype.submit.call(form);
+            return;
+        }
+
+        selectedForm = form;
+        configureDialog(form);
+
+        lockBody();
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDialog() {
+        selectedForm = null;
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        unlockBody();
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('[data-admin-action-form]');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        openDialog(form);
+    }, true);
+
+    if (modalCancel) {
+        modalCancel.addEventListener('click', closeDialog);
+    }
+
+    if (modal) {
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                closeDialog();
+            }
         });
     }
+
+    if (modalSubmit) {
+        modalSubmit.addEventListener('click', function () {
+            if (!selectedForm) {
+                closeDialog();
+                return;
+            }
+
+            const type = selectedForm.dataset.actionType || 'default';
+
+            if (type === 'delete') {
+                setSubmitLoading('Menghapus...');
+            } else if (type === 'password') {
+                setSubmitLoading('Membuat...');
+            } else {
+                setSubmitLoading('Memproses...');
+            }
+
+            HTMLFormElement.prototype.submit.call(selectedForm);
+        });
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && modal && modal.classList.contains('is-open')) {
+            closeDialog();
+        }
+    });
+
+    if (copyPasswordButton && passwordText) {
+        copyPasswordButton.addEventListener('click', function () {
+            const value = passwordText.textContent.trim();
+
+            if (!value) {
+                return;
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(value).then(function () {
+                    copyPasswordButton.textContent = 'Tersalin';
+                    setTimeout(function () {
+                        copyPasswordButton.textContent = 'Salin';
+                    }, 1400);
+                });
+
+                return;
+            }
+
+            const tempInput = document.createElement('textarea');
+            tempInput.value = value;
+            tempInput.setAttribute('readonly', 'readonly');
+            tempInput.style.position = 'fixed';
+            tempInput.style.left = '-9999px';
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            copyPasswordButton.textContent = 'Tersalin';
+            setTimeout(function () {
+                copyPasswordButton.textContent = 'Salin';
+            }, 1400);
+        });
+    }
+})();
 </script>
-@endsection
+@endpush

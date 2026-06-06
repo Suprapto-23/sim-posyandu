@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Http\Controllers\Admin\UserController      as AdminUser;
 use App\Http\Controllers\Admin\BidanController     as AdminBidan;
 use App\Http\Controllers\Admin\KaderController     as AdminKader;
-use App\Http\Controllers\Admin\SettingController   as AdminSetting;
 
 // Bidan
 use App\Http\Controllers\Bidan\DashboardController as BidanDashboardController;
@@ -81,10 +80,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth','checkstatus','role:a
 
     Route::resource('kaders', AdminKader::class);
     Route::post('kaders/{id}/reset-password', [AdminKader::class, 'resetPassword'])->name('kaders.reset-password');
-
-    Route::get('/settings',                [AdminSetting::class, 'index'])->name('settings.index');
-    Route::put('/settings',                [AdminSetting::class, 'update'])->name('settings.update');
-    Route::put('/settings/change-password',[AdminSetting::class, 'changePassword'])->name('settings.change-password');
 });
 
 // =========================================================================

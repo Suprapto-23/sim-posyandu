@@ -1,294 +1,482 @@
 <?php
-/**
- * PATH   : app/Http/Controllers/Admin/UserController.php
- */
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use App\Models\User;
-use App\Models\Balita;
-use App\Models\Remaja;
-use App\Models\Lansia;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    // ── INDEX ───────────────────────────────────
     public function index(Request $request)
     {
-        $query = User::with('profile')->where('role', 'user');
+        $perPage = (int) $request->input('per_page', 12);
+        $perPage = max(5, min($perPage, 25));
 
-        // 1. Fitur Pencarian
-        if ($search = $request->search) {
+        $search = trim((string) $request->input('search', ''));
+
+        $query = User::query()
+            ->select($this->userColumns())
+            ->with([
+                'profile' => function ($profile) {
+                    $profile->select($this->profileColumns());
+                },
+            ])
+            ->where('role', 'user');
+
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('nik', 'like', "%{$search}%")
-                  ->orWhereHas('profile', fn($p) =>
-                      $p->where('full_name', 'like', "%{$search}%")
-                        ->orWhere('nik', 'like', "%{$search}%")
-                  );
+                if (preg_match('/^[0-9]+$/', $search)) {
+                    if (Schema::hasColumn('users', 'nik')) {
+                        $q->where('nik', 'like', "{$search}%");
+                    }
+
+                    $q->orWhereHas('profile', function ($profile) use ($search) {
+                        if (Schema::hasColumn('profiles', 'nik')) {
+                            $profile->where('nik', 'like', "{$search}%");
+                        }
+
+                        if (Schema::hasColumn('profiles', 'telepon')) {
+                            $profile->orWhere('telepon', 'like', "{$search}%");
+                        }
+                    });
+
+                    return;
+                }
+
+                $q->where('name', 'like', "{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('profile', function ($profile) use ($search) {
+                        if (Schema::hasColumn('profiles', 'full_name')) {
+                            $profile->where('full_name', 'like', "{$search}%")
+                                ->orWhere('full_name', 'like', "%{$search}%");
+                        }
+                    });
             });
         }
-        
-        if ($request->status) $query->where('status', $request->status);
 
-        // 2. FITUR BARU: Filter Kategori Cerdas (Berdasarkan relasi NIK & ID)
-        if ($kat = $request->kategori) {
-            $query->where(function($q) use ($kat) {
-                if ($kat == 'remaja') {
-                    $q->whereIn('nik', Remaja::select('nik')->whereNotNull('nik'))
-                      ->orWhereIn('id', Remaja::select('user_id')->whereNotNull('user_id'));
-                } elseif ($kat == 'lansia') {
-                    $q->whereIn('nik', Lansia::select('nik')->whereNotNull('nik'))
-                      ->orWhereIn('id', Lansia::select('user_id')->whereNotNull('user_id'));
-                } elseif ($kat == 'balita') {
-                    $q->whereIn('nik', Balita::select('nik')->whereNotNull('nik'))
-                      ->orWhereIn('nik', Balita::select('nik_ibu')->whereNotNull('nik_ibu'))
-                      ->orWhereIn('nik', Balita::select('nik_ayah')->whereNotNull('nik_ayah'))
-                      ->orWhereIn('id', Balita::select('user_id')->whereNotNull('user_id'));
-                } 
-            });
+        if ($request->filled('status') && in_array($request->status, ['active', 'inactive'], true)) {
+            $query->where('status', $request->status);
         }
 
-        $users = $query->latest()->paginate($request->per_page ?? 15)->withQueryString();
-        $stats = $this->getStats();
+        $users = $query
+            ->latest('id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $stats = [
+            'total' => User::where('role', 'user')->count(),
+            'aktif' => User::where('role', 'user')->where('status', 'active')->count(),
+            'nonaktif' => User::where('role', 'user')->where('status', 'inactive')->count(),
+        ];
 
         return view('admin.users.index', compact('users', 'stats'));
     }
 
-    // ── CREATE ──────────────────────────────────
     public function create()
     {
         return view('admin.users.create');
     }
 
-    // PATH: app/Http/Controllers/Admin/UserController.php
+    public function store(Request $request)
+    {
+        $validated = $this->validateUserPayload($request);
 
-public function store(Request $request)
-{
-    $request->validate([
-        'full_name'     => 'required|string|max:191',
-        'nik'           => 'required|digits:16|unique:users,nik|unique:profiles,nik',
-        'jenis_kelamin' => 'required|in:L,P',
-        'telepon'       => 'required|string|max:20',
-        'alamat'        => 'required|string',
-        'tempat_lahir'  => 'required|string|max:100',
-        'tanggal_lahir' => 'required|date',
-        'status'        => 'required|in:active,inactive',
-    ], [
-        'nik.digits' => 'NIK harus tepat 16 digit angka.',
-        'nik.unique' => 'NIK ini sudah terdaftar di sistem.',
-    ]);
+        $password = $this->makePassword();
 
-    $password = $this->makePassword();
+        DB::beginTransaction();
 
-    DB::beginTransaction();
-    try {
-        // [LOGIKA BARU]: Buat user TANPA email. NIK menjadi identitas utama.
-        $user = User::create([
-            'name'     => $request->full_name,
-            'email'    => null, // Kosongkan karena warga tidak pakai email
-            'nik'      => $request->nik,
-            'password' => Hash::make($password),
-            'role'     => 'user',
-            'status'   => $request->status,
-        ]);
+        try {
+            $userData = $this->filterColumns('users', [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'nik' => $validated['nik'],
+                'password' => Hash::make($password),
+                'role' => 'user',
+                'status' => $validated['status'] ?? 'active',
+                'must_change_password' => true,
+            ]);
 
-        $user->profile()->create([
-            'user_id'       => $user->id,
-            'full_name'     => $request->full_name,
-            'nik'           => $request->nik,
-            'jenis_kelamin' => $request->jenis_kelamin,
-            'telepon'       => $request->telepon,
-            'alamat'        => $request->alamat,
-            'tempat_lahir'  => $request->tempat_lahir,
-            'tanggal_lahir' => $request->tanggal_lahir,
-        ]);
+            $user = User::create($userData);
 
-        DB::commit();
-    } catch (\Throwable $e) {
-        DB::rollBack();
-        Log::error('UserController::store — ' . $e->getMessage());
-        return back()->withInput()->with('error', 'Gagal memproses data ke database. Pastikan database mengizinkan email kosong.');
+            $this->saveProfile($user->id, $validated, true);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.users.index')
+                ->with('success', 'Akun warga berhasil dibuat.')
+                ->with('generated_password', $password)
+                ->with('reset_password', $password)
+                ->with('user_name', $validated['name'])
+                ->with('reset_name', $validated['name'])
+                ->with('user_email', $validated['email'])
+                ->with('reset_email', $validated['email']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Admin UserController store gagal', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'system' => 'Gagal membuat akun warga. Cek struktur database dan log Laravel.',
+                ]);
+        }
     }
 
-    return redirect()->route('admin.users.index')
-        ->with('success', 'Akun warga berhasil dibuat.')
-        ->with('generated_password', $password)
-        ->with('user_name', $request->full_name)
-        ->with('user_nik', $request->nik);
-}
-
-    // ── SHOW ────────────────────────────────────
     public function show($id)
     {
-        $user       = User::with('profile')->where('role', 'user')->findOrFail($id);
-        $linkedData = $this->detectLinkedPatients($user);
+        $user = User::with([
+                'profile' => function ($profile) {
+                    $profile->select($this->profileColumns());
+                },
+            ])
+            ->where('role', 'user')
+            ->findOrFail($id);
 
-        return view('admin.users.show', compact('user', 'linkedData'));
+        $summary = $this->sasaranSummary($user->id);
+
+        return view('admin.users.show', compact('user', 'summary'));
     }
 
-    // ── EDIT ────────────────────────────────────
     public function edit($id)
     {
-        $user = User::with('profile')->where('role', 'user')->findOrFail($id);
+        $user = User::with([
+                'profile' => function ($profile) {
+                    $profile->select($this->profileColumns());
+                },
+            ])
+            ->where('role', 'user')
+            ->findOrFail($id);
+
         return view('admin.users.edit', compact('user'));
     }
 
-    // ── UPDATE ──────────────────────────────────
     public function update(Request $request, $id)
     {
-        $user = User::with('profile')->where('role', 'user')->findOrFail($id);
-        $profileId = $user->profile?->id;
+        $user = User::with('profile')
+            ->where('role', 'user')
+            ->findOrFail($id);
 
-        $request->validate([
-            'full_name'     => 'required|string|max:191',
-            'nik'           => "required|digits:16|unique:users,nik,{$id}|unique:profiles,nik,{$profileId}",
-            'jenis_kelamin' => 'required|in:L,P',
-            'telepon'       => 'required|string|max:20',
-            'alamat'        => 'required|string',
-            'tempat_lahir'  => 'required|string|max:100',
-            'tanggal_lahir' => 'required|date',
-            'status'        => 'required|in:active,inactive',
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:191'],
+            'jenis_kelamin' => ['required', Rule::in(['L', 'P'])],
+            'telepon' => ['nullable', 'string', 'max:20'],
+            'tempat_lahir' => ['nullable', 'string', 'max:100'],
+            'tanggal_lahir' => ['nullable', 'date'],
+            'alamat' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
         ]);
 
         DB::beginTransaction();
+
         try {
-            $user->update([
-                'name'   => $request->full_name,
-                'nik'    => $request->nik,
-                'status' => $request->status,
-            ]);
+            $user->update($this->filterColumns('users', [
+                'name' => $validated['name'],
+                'status' => $validated['status'] ?? 'active',
+            ]));
 
-            $profileData = [
-                'full_name'     => $request->full_name,
-                'nik'           => $request->nik,
-                'jenis_kelamin' => $request->jenis_kelamin,
-                'telepon'       => $request->telepon,
-                'alamat'        => $request->alamat,
-                'tempat_lahir'  => $request->tempat_lahir,
-                'tanggal_lahir' => $request->tanggal_lahir,
-            ];
+            $validated['nik'] = $user->nik ?? $user->profile?->nik;
+            $validated['email'] = $user->email;
 
-            if ($user->profile) {
-                $user->profile->update($profileData);
-            } else {
-                $user->profile()->create(array_merge($profileData, ['user_id' => $user->id]));
-            }
+            $this->saveProfile($user->id, $validated, false);
 
             DB::commit();
+
+            return redirect()
+                ->route('admin.users.show', $id)
+                ->with('success', 'Data warga berhasil diperbarui.');
         } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->withInput()->with('error', 'Gagal memperbarui data.');
-        }
 
-        return redirect()->route('admin.users.show', $id)
-            ->with('success', 'Data warga berhasil diperbarui.');
+            Log::error('Admin UserController update gagal', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'system' => 'Gagal memperbarui data warga.',
+                ]);
+        }
     }
 
-    // ── DESTROY ─────────────────────────────────
     public function destroy($id)
     {
-        $user = User::where('role', 'user')->findOrFail($id);
+        $user = User::with('profile')
+            ->where('role', 'user')
+            ->findOrFail($id);
+
         $name = $user->profile?->full_name ?? $user->name;
-        $user->delete();
 
-        return redirect()->route('admin.users.index')
-            ->with('success', "Akun warga {$name} berhasil dihapus.");
-    }
+        if ($this->hasOperationalHistory($user->id)) {
+            return back()
+                ->with('warning', "Akun warga {$name} tidak dihapus karena sudah memiliki data sasaran, pemeriksaan, atau riwayat layanan. Nonaktifkan akun jika warga tidak lagi menggunakan sistem.");
+        }
 
-    // ── GENERATE PASSWORD (acak baru) ────────────
-    public function generatePassword($id)
-    {
-        $user     = User::where('role', 'user')->findOrFail($id);
-        $password = $this->makePassword();
-        $user->update(['password' => Hash::make($password)]);
+        DB::beginTransaction();
 
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Password baru berhasil dibuat.')
-            ->with('generated_password', $password)
-            ->with('user_name', $user->profile?->full_name ?? $user->name)
-            ->with('user_nik', $user->nik);
-    }
-
-    // ── RESET PASSWORD (default: 6 digit NIK + "Ps!") ──
-    public function resetPassword($id)
-    {
-        $user     = User::where('role', 'user')->findOrFail($id);
-        $nik      = $user->nik ?? $user->profile?->nik ?? '000000000000000';
-        $password = substr($nik, -6) . 'Ps!';
-        $user->update(['password' => Hash::make($password)]);
-
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Password direset ke default.')
-            ->with('reset_password', $password)
-            ->with('reset_name', $user->profile?->full_name ?? $user->name)
-            ->with('reset_nik', $nik);
-    }
-
-    // ── HELPERS ─────────────────────────────────
-
-    private function getStats(): array
-    {
         try {
-            return [
-                'total'    => User::where('role', 'user')->count(),
-                'aktif'    => User::where('role', 'user')->where('status', 'active')->count(),
-                'nonaktif' => User::where('role', 'user')->where('status', 'inactive')->count(),
-            ];
+            if ($user->profile) {
+                $user->profile->delete();
+            }
+
+            $user->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.users.index')
+                ->with('success', "Akun warga {$name} berhasil dihapus.");
         } catch (\Throwable $e) {
-            return ['total' => 0, 'aktif' => 0, 'nonaktif' => 0];
+            DB::rollBack();
+
+            Log::error('Admin UserController destroy gagal', [
+                'message' => $e->getMessage(),
+                'user_id' => $user->id,
+            ]);
+
+            return back()
+                ->withErrors([
+                    'system' => 'Gagal menghapus akun warga.',
+                ]);
         }
     }
 
-    /**
-     * Deteksi data pasien yang terhubung dengan user berdasarkan:
-     * - user_id langsung
-     * - NIK matching (balita: nik_ibu/nik_ayah, remaja/lansia: nik)
-     */
-    private function detectLinkedPatients(User $user): array
+    public function generatePassword($id)
     {
-        $nik = $user->nik ?? $user->profile?->nik;
+        return $this->makeNewPasswordResponse($id);
+    }
 
-        try {
-            if ($nik) {
-                $balita = Balita::where('user_id', $user->id)
-                    ->orWhere('nik', $nik)
-                    ->orWhere('nik_ibu', $nik)
-                    ->orWhere('nik_ayah', $nik)
-                    ->get();
-            } else {
-                $balita = Balita::where('user_id', $user->id)->get();
+    public function resetPassword($id)
+    {
+        return $this->makeNewPasswordResponse($id);
+    }
+
+    private function makeNewPasswordResponse($id)
+    {
+        $user = User::with('profile')
+            ->where('role', 'user')
+            ->findOrFail($id);
+
+        $password = $this->makePassword();
+
+        $user->update($this->filterColumns('users', [
+            'password' => Hash::make($password),
+            'must_change_password' => true,
+        ]));
+
+        $name = $user->profile?->full_name ?? $user->name;
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'Password baru warga berhasil dibuat.')
+            ->with('generated_password', $password)
+            ->with('reset_password', $password)
+            ->with('user_name', $name)
+            ->with('reset_name', $name)
+            ->with('user_email', $user->email)
+            ->with('reset_email', $user->email);
+    }
+
+    private function validateUserPayload(Request $request): array
+    {
+        $rules = [
+            'name' => ['required', 'string', 'max:191'],
+            'email' => ['required', 'email', 'max:191', 'unique:users,email'],
+            'nik' => ['required', 'digits:16'],
+            'jenis_kelamin' => ['required', Rule::in(['L', 'P'])],
+            'telepon' => ['nullable', 'string', 'max:20'],
+            'tempat_lahir' => ['nullable', 'string', 'max:100'],
+            'tanggal_lahir' => ['nullable', 'date'],
+            'alamat' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ];
+
+        if (Schema::hasColumn('users', 'nik')) {
+            $rules['nik'][] = 'unique:users,nik';
+        }
+
+        if (Schema::hasTable('profiles') && Schema::hasColumn('profiles', 'nik')) {
+            $rules['nik'][] = 'unique:profiles,nik';
+        }
+
+        return $request->validate($rules, [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email ini sudah digunakan.',
+            'nik.required' => 'NIK wajib diisi.',
+            'nik.digits' => 'NIK harus 16 digit angka.',
+            'nik.unique' => 'NIK ini sudah terdaftar.',
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
+        ]);
+    }
+
+    private function userColumns(): array
+    {
+        $columns = ['id'];
+
+        foreach (['name', 'email', 'nik', 'role', 'status', 'created_at', 'updated_at'] as $column) {
+            if (Schema::hasColumn('users', $column)) {
+                $columns[] = $column;
             }
-        } catch (\Throwable $e) { $balita = collect(); }
+        }
 
-        try {
-            $remaja = $nik
-                ? Remaja::where('user_id', $user->id)->orWhere('nik', $nik)->first()
-                : Remaja::where('user_id', $user->id)->first();
-        } catch (\Throwable $e) { $remaja = null; }
+        return $columns;
+    }
 
-        try {
-            $lansia = $nik
-                ? Lansia::where('user_id', $user->id)->orWhere('nik', $nik)->first()
-                : Lansia::where('user_id', $user->id)->first();
-        } catch (\Throwable $e) { $lansia = null; }
+    private function profileColumns(): array
+    {
+        $columns = ['id', 'user_id'];
 
-        
-        return compact('balita', 'remaja', 'lansia');
+        foreach (['full_name', 'nik', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir', 'alamat', 'telepon', 'created_at', 'updated_at'] as $column) {
+            if (Schema::hasColumn('profiles', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return $columns;
+    }
+
+    private function filterColumns(string $table, array $payload): array
+    {
+        $filtered = [];
+
+        foreach ($payload as $column => $value) {
+            if (Schema::hasColumn($table, $column)) {
+                $filtered[$column] = $value;
+            }
+        }
+
+        return $filtered;
+    }
+
+    private function saveProfile(int $userId, array $data, bool $isCreate): void
+    {
+        if (! Schema::hasTable('profiles')) {
+            return;
+        }
+
+        $payload = $this->filterColumns('profiles', [
+            'user_id' => $userId,
+            'full_name' => $data['name'] ?? null,
+            'nik' => $data['nik'] ?? null,
+            'jenis_kelamin' => $data['jenis_kelamin'] ?? null,
+            'telepon' => $data['telepon'] ?? null,
+            'tempat_lahir' => $data['tempat_lahir'] ?? null,
+            'tanggal_lahir' => $data['tanggal_lahir'] ?? null,
+            'alamat' => $data['alamat'] ?? null,
+            'updated_at' => now(),
+        ]);
+
+        if ($isCreate && Schema::hasColumn('profiles', 'created_at')) {
+            $payload['created_at'] = now();
+        }
+
+        DB::table('profiles')->updateOrInsert(
+            ['user_id' => $userId],
+            $payload
+        );
+    }
+
+    private function sasaranSummary(int $userId): array
+    {
+        return [
+            'balita' => $this->countRelated('balitas', $userId),
+            'remaja' => $this->countRelated('remajas', $userId),
+            'lansia' => $this->countRelated('lansias', $userId),
+        ];
+    }
+
+    private function countRelated(string $table, int $userId): int
+    {
+        if (! Schema::hasTable($table)) {
+            return 0;
+        }
+
+        foreach (['user_id', 'warga_id', 'akun_id'] as $column) {
+            if (! Schema::hasColumn($table, $column)) {
+                continue;
+            }
+
+            return DB::table($table)
+                ->where($column, $userId)
+                ->count();
+        }
+
+        return 0;
+    }
+
+    private function hasOperationalHistory(int $userId): bool
+    {
+        $checks = [
+            ['table' => 'balitas', 'columns' => ['user_id', 'warga_id', 'akun_id']],
+            ['table' => 'remajas', 'columns' => ['user_id', 'warga_id', 'akun_id']],
+            ['table' => 'lansias', 'columns' => ['user_id', 'warga_id', 'akun_id']],
+            ['table' => 'pemeriksaans', 'columns' => ['user_id', 'warga_id', 'pasien_id']],
+            ['table' => 'rekam_medis', 'columns' => ['user_id', 'warga_id', 'pasien_id']],
+            ['table' => 'imunisasis', 'columns' => ['user_id', 'warga_id', 'pasien_id']],
+            ['table' => 'notifikasis', 'columns' => ['user_id']],
+        ];
+
+        foreach ($checks as $check) {
+            if (! Schema::hasTable($check['table'])) {
+                continue;
+            }
+
+            foreach ($check['columns'] as $column) {
+                if (! Schema::hasColumn($check['table'], $column)) {
+                    continue;
+                }
+
+                if (DB::table($check['table'])->where($column, $userId)->exists()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function makePassword(): string
     {
-        $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
-        $pass  = '';
+        $lower = 'abcdefghjkmnpqrstuvwxyz';
+        $upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+        $number = '23456789';
+        $symbol = '!@#';
+        $all = $lower . $upper . $number . $symbol;
+
+        $password = [
+            $lower[random_int(0, strlen($lower) - 1)],
+            $upper[random_int(0, strlen($upper) - 1)],
+            $number[random_int(0, strlen($number) - 1)],
+            $symbol[random_int(0, strlen($symbol) - 1)],
+        ];
+
         for ($i = 0; $i < 8; $i++) {
-            $pass .= $chars[random_int(0, strlen($chars) - 1)];
+            $password[] = $all[random_int(0, strlen($all) - 1)];
         }
-        return $pass;
+
+        shuffle($password);
+
+        return implode('', $password);
     }
 }

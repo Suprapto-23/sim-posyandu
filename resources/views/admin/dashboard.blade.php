@@ -1,324 +1,480 @@
 @extends('layouts.admin')
+
 @section('title', 'Dashboard Admin')
-@section('page-name', 'Overview')
+@section('page-name', 'Dashboard')
+@section('page-title', 'Dashboard Admin')
+
+@php
+    use Carbon\Carbon;
+    use Illuminate\Support\Str;
+
+    Carbon::setLocale('id');
+
+    $roleStats = $roleStats ?? [
+        'admin' => 0,
+        'bidan' => 0,
+        'kader' => 0,
+        'user' => 0,
+    ];
+
+    $accountStats = $accountStats ?? [
+        'total' => 0,
+        'aktif' => 0,
+        'nonaktif' => 0,
+    ];
+
+    $sasaranStats = $sasaranStats ?? [
+        'balita' => 0,
+        'remaja' => 0,
+        'lansia' => 0,
+        'total' => 0,
+    ];
+
+    $serviceStats = $serviceStats ?? [
+        'jadwal' => 0,
+        'jadwal_aktif' => 0,
+        'pemeriksaan' => 0,
+        'imunisasi' => 0,
+        'absensi' => 0,
+        'pengukuran' => 0,
+        'laporan' => 0,
+    ];
+
+    $monthlySeries = $monthlySeries ?? [
+        'labels' => [],
+        'akun' => [],
+        'pemeriksaan' => [],
+        'jadwal' => [],
+        'max' => 1,
+    ];
+
+    $formatDate = function ($date) {
+        if (! $date) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($date)->translatedFormat('d M Y');
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    };
+
+    $formatDateTime = function ($date) {
+        if (! $date) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($date)->translatedFormat('d M Y, H:i');
+        } catch (\Throwable $e) {
+            return '-';
+        }
+    };
+
+    $roleLabel = function ($role) {
+        return match ($role) {
+            'admin' => 'Admin',
+            'bidan' => 'Bidan',
+            'kader' => 'Kader',
+            'user' => 'Warga',
+            default => Str::title((string) $role),
+        };
+    };
+
+    $statusLabel = function ($status) {
+        return $status === 'active' ? 'Aktif' : 'Nonaktif';
+    };
+
+    $statusClass = function ($status) {
+        return $status === 'active'
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : 'bg-rose-50 text-rose-700 border-rose-200';
+    };
+
+    $initial = function ($name) {
+        return Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'U';
+    };
+
+    $barHeight = function ($value) use ($monthlySeries) {
+        $max = max((int) ($monthlySeries['max'] ?? 1), 1);
+        $percent = ((int) $value / $max) * 100;
+
+        return max(8, min(100, $percent));
+    };
+@endphp
+
+@push('styles')
+<style>
+    .admin-dashboard-page {
+        background:
+            radial-gradient(circle at 8% 6%, rgba(16, 185, 129, .13), transparent 28%),
+            radial-gradient(circle at 96% 4%, rgba(14, 165, 233, .12), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(245, 158, 11, .08), transparent 30%),
+            linear-gradient(135deg, #f4fff9 0%, #eef9ff 48%, #f8fafc 100%);
+    }
+
+    .admin-dashboard-grid {
+        background-image:
+            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+        background-size: 30px 30px;
+    }
+
+    .admin-dashboard-glass {
+        background: rgba(255, 255, 255, .86);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .055);
+    }
+
+    .admin-dashboard-card {
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .admin-dashboard-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 36px rgba(15, 23, 42, .075);
+    }
+
+    .admin-dashboard-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .38rem;
+        border-width: 1px;
+        border-radius: 999px;
+        padding: .35rem .7rem;
+        font-size: .68rem;
+        font-weight: 950;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .admin-chart-column {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: end;
+        gap: 4px;
+        height: 150px;
+    }
+
+    .admin-chart-bar {
+        min-height: 8px;
+        border-radius: 999px 999px 6px 6px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: .01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+</style>
+@endpush
 
 @section('content')
-<style>
-/* ── SOFT CLEAN & PROFESSIONAL DASHBOARD STYLES ── */
+<div class="admin-dashboard-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
+    <div class="pointer-events-none absolute inset-0 admin-dashboard-grid opacity-70"></div>
 
-.animate-stagger-up { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-@keyframes slideUpFade { 
-    from { opacity: 0; transform: translateY(20px); } 
-    to { opacity: 1; transform: translateY(0); } 
-}
-.delay-100 { animation-delay: 0.1s; }
-.delay-200 { animation-delay: 0.15s; }
-.delay-300 { animation-delay: 0.2s; }
-.delay-400 { animation-delay: 0.25s; }
+    <div class="relative z-10 mx-auto max-w-[1320px] space-y-5">
+        <section class="admin-dashboard-glass overflow-hidden rounded-[1.75rem] border border-white/80 p-5 sm:p-6">
+            <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                <div>
+                    <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
+                        <i class="fas fa-shield-heart"></i>
+                        Ringkasan Sistem
+                    </div>
 
-/* Hero Soft Clean Premium */
-.hero-admin { 
-    background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%); 
-    border-radius: 2.5rem; /* 40px */
-    padding: 3rem; /* 48px */
-    position: relative; 
-    overflow: hidden; 
-    box-shadow: 0 20px 40px -10px rgba(14, 165, 233, 0.25); 
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid rgba(255,255,255,0.2);
-}
-/* Micro-pattern for hero */
-.hero-admin::before { 
-    content: ''; position: absolute; inset: 0; 
-    background-image: radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px);
-    background-size: 24px 24px; pointer-events: none; 
-}
-.hero-txt { position: relative; z-index: 1; }
-.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); color: #fff; font-size: 11px; font-weight: 800; padding: 6px 16px; border-radius: 50px; margin-bottom: 20px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-.hero-title { font-size: 38px; font-weight: 900; color: #fff; line-height: 1.2; margin-bottom: 12px; letter-spacing: -0.5px; font-family: 'Poppins', sans-serif; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-.hero-desc { font-size: 15px; color: rgba(255,255,255,0.95); max-width: 500px; font-weight: 500; line-height: 1.6; }
+                    <h1 class="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+                        Dashboard Admin
+                    </h1>
 
-@keyframes floatSoft {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(2deg); box-shadow: 0 25px 40px -15px rgba(0,0,0,0.15); }
-}
-.animate-float-soft { animation: floatSoft 6s ease-in-out infinite; }
+                    <p class="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
+                        Pantau akun pengguna, data sasaran, dan aktivitas layanan utama PosyanduCare dari satu halaman ringkas.
+                    </p>
+                </div>
 
-/* Section Cards Clean */
-.section-card { background: #fff; border-radius: 2rem; border: 1px solid #f1f5f9; box-shadow: 0 10px 30px rgba(0,0,0,0.02); padding: 32px; height: 100%; display: flex; flex-direction: column; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.section-card:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.04); border-color: #e2e8f0; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #f8fafc; padding-bottom: 16px;}
-.section-title { font-size: 16px; font-weight: 800; color: #334155; font-family: 'Poppins', sans-serif; display: flex; align-items: center; gap: 12px; }
-.section-icon-wrap { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: transform 0.3s; }
-.section-card:hover .section-icon-wrap { transform: scale(1.1) rotate(-5deg); }
+                <div class="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
+                    <a href="{{ route('admin.users.index') }}"
+                       class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition hover:-translate-y-0.5 hover:bg-emerald-100">
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-emerald-700">
+                            Akun Warga
+                        </p>
+                        <p class="mt-1 text-2xl font-black text-slate-950">
+                            {{ number_format($roleStats['user'] ?? 0) }}
+                        </p>
+                    </a>
 
-/* ✨ FITUR BARU: TIMELINE LOGS */
-.timeline-container { position: relative; padding-left: 20px; }
-.timeline-container::before { content: ''; position: absolute; left: 24px; top: 10px; bottom: 10px; width: 2px; background: #f1f5f9; border-radius: 2px; z-index: 0; }
-.log-item { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; padding: 12px 0; transition: all 0.2s; border-radius: 16px; margin-left: -12px; padding-left: 12px; padding-right: 12px; }
-.log-item:hover { background: #f8fafc; transform: translateX(4px); }
-.log-avatar { width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; border: 3px solid #fff; box-sizing: content-box; z-index: 2; }
+                    <a href="{{ route('admin.kaders.index') }}"
+                       class="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 transition hover:-translate-y-0.5 hover:bg-sky-100">
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-sky-700">
+                            Akun Kader
+                        </p>
+                        <p class="mt-1 text-2xl font-black text-slate-950">
+                            {{ number_format($roleStats['kader'] ?? 0) }}
+                        </p>
+                    </a>
+                </div>
+            </div>
+        </section>
 
-@media(max-width: 768px) { 
-    .hero-admin { padding: 32px; flex-direction: column; text-align: center; border-radius: 2rem; } 
-    .hero-title { font-size: 28px; } 
-    .hero-badge { margin: 0 auto 20px auto; }
-    .section-card { padding: 24px; border-radius: 1.5rem; } 
-}
-</style>
+        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-emerald-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-emerald-700">Total Akun</p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($accountStats['total'] ?? 0) }}</p>
+                        <p class="text-sm font-semibold text-slate-500">Semua pengguna sistem</p>
+                    </div>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
 
-<div class="space-y-8">
-    
-    <div class="hero-admin animate-stagger-up">
-        <div class="hero-txt">
-            <div class="hero-badge"><i class="fas fa-check-circle mr-1"></i> Sistem Beroperasi Normal</div>
-            <h1 class="hero-title"><span id="dynamicGreeting">Halo</span>, <span class="text-white">{{ auth()->user()->name }}</span></h1>
-            <p class="hero-desc">Selamat datang di pusat kendali PosyanduCare. Pantau statistik kesehatan dan kelola entitas pengguna dengan antarmuka yang bersih dan profesional.</p>
-        </div>
-        <div class="hidden md:flex items-center justify-center w-40 h-40 bg-white/10 backdrop-blur-md border border-white/30 rounded-[2.5rem] shadow-2xl relative z-10 animate-float-soft">
-            <i class="fas fa-laptop-medical text-6xl text-white drop-shadow-lg"></i>
-        </div>
+            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-sky-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-sky-700">Akun Aktif</p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($accountStats['aktif'] ?? 0) }}</p>
+                        <p class="text-sm font-semibold text-slate-500">Dapat login</p>
+                    </div>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/20">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-amber-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-amber-700">Total Sasaran</p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($sasaranStats['total'] ?? 0) }}</p>
+                        <p class="text-sm font-semibold text-slate-500">Balita, Remaja, Lansia</p>
+                    </div>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
+                        <i class="fas fa-people-group"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-violet-200 p-4">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-violet-700">Pemeriksaan</p>
+                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($serviceStats['pemeriksaan'] ?? 0) }}</p>
+                        <p class="text-sm font-semibold text-slate-500">Data klinis tercatat</p>
+                    </div>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500 text-white shadow-lg shadow-violet-500/20">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)]">
+            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
+                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
+                            Tren 6 Bulan
+                        </p>
+                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
+                            Aktivitas Sistem
+                        </h2>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <span class="admin-dashboard-chip border-emerald-200 bg-emerald-50 text-emerald-700">Akun</span>
+                        <span class="admin-dashboard-chip border-sky-200 bg-sky-50 text-sky-700">Jadwal</span>
+                        <span class="admin-dashboard-chip border-violet-200 bg-violet-50 text-violet-700">Pemeriksaan</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-6 gap-3">
+                    @foreach($monthlySeries['labels'] ?? [] as $index => $label)
+                        <div class="min-w-0">
+                            <div class="admin-chart-column rounded-2xl border border-slate-200 bg-white/70 px-2 py-3">
+                                <div class="admin-chart-bar bg-emerald-500"
+                                     style="height: {{ $barHeight($monthlySeries['akun'][$index] ?? 0) }}%;"></div>
+                                <div class="admin-chart-bar bg-sky-500"
+                                     style="height: {{ $barHeight($monthlySeries['jadwal'][$index] ?? 0) }}%;"></div>
+                                <div class="admin-chart-bar bg-violet-500"
+                                     style="height: {{ $barHeight($monthlySeries['pemeriksaan'][$index] ?? 0) }}%;"></div>
+                            </div>
+
+                            <p class="mt-2 text-center text-xs font-black text-slate-500">
+                                {{ $label }}
+                            </p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
+                <div class="mb-5">
+                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
+                        Sasaran
+                    </p>
+                    <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
+                        Komposisi Data Sasaran
+                    </h2>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="rounded-2xl border border-sky-200 bg-sky-50/80 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="font-black text-sky-800">Balita</span>
+                            <span class="text-2xl font-black text-slate-950">{{ number_format($sasaranStats['balita'] ?? 0) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="font-black text-indigo-800">Remaja</span>
+                            <span class="text-2xl font-black text-slate-950">{{ number_format($sasaranStats['remaja'] ?? 0) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="font-black text-emerald-800">Lansia</span>
+                            <span class="text-2xl font-black text-slate-950">{{ number_format($sasaranStats['lansia'] ?? 0) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid gap-5 xl:grid-cols-2">
+            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
+                <div class="mb-4 flex items-end justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
+                            Akun Terbaru
+                        </p>
+                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
+                            Pengguna Baru
+                        </h2>
+                    </div>
+
+                    <a href="{{ route('admin.users.index') }}"
+                       class="text-xs font-black uppercase tracking-[.12em] text-emerald-700 hover:text-emerald-800">
+                        Kelola
+                    </a>
+                </div>
+
+                <div class="space-y-3">
+                    @forelse($recentUsers ?? [] as $user)
+                        <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/75 p-3">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-sm font-black text-white">
+                                {{ $initial($user->name ?? 'U') }}
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-black text-slate-950">
+                                    {{ $user->name ?? '-' }}
+                                </p>
+                                <p class="truncate text-xs font-bold text-slate-500">
+                                    {{ $user->email ?? '-' }}
+                                </p>
+                            </div>
+
+                            <div class="text-right">
+                                <span class="admin-dashboard-chip {{ $statusClass($user->status ?? 'inactive') }}">
+                                    {{ $statusLabel($user->status ?? 'inactive') }}
+                                </span>
+                                <p class="mt-1 text-xs font-bold text-slate-400">
+                                    {{ $roleLabel($user->role ?? '-') }}
+                                </p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-8 text-center">
+                            <p class="text-sm font-bold text-slate-500">
+                                Belum ada akun terbaru.
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
+                <div class="mb-4 flex items-end justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
+                            Jadwal Terbaru
+                        </p>
+                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
+                            Agenda Posyandu
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    @forelse($recentJadwals ?? [] as $jadwal)
+                        <div class="rounded-2xl border border-slate-200 bg-white/75 p-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-black text-slate-950">
+                                        {{ $jadwal->judul ?? 'Jadwal Posyandu' }}
+                                    </p>
+
+                                    <p class="mt-1 text-xs font-bold text-slate-500">
+                                        {{ $formatDate($jadwal->tanggal ?? null) }}
+                                        @if(! empty($jadwal->lokasi))
+                                            <span class="mx-1 text-slate-300">•</span>
+                                            {{ $jadwal->lokasi }}
+                                        @endif
+                                    </p>
+                                </div>
+
+                                <span class="admin-dashboard-chip border-sky-200 bg-sky-50 text-sky-700">
+                                    {{ Str::title($jadwal->status ?? 'aktif') }}
+                                </span>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-8 text-center">
+                            <p class="text-sm font-bold text-slate-500">
+                                Belum ada jadwal terbaru.
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </section>
+
+        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Jadwal</p>
+                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['jadwal'] ?? 0) }}</p>
+                <p class="text-sm font-semibold text-slate-500">Total agenda</p>
+            </div>
+
+            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Imunisasi</p>
+                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['imunisasi'] ?? 0) }}</p>
+                <p class="text-sm font-semibold text-slate-500">Catatan layanan</p>
+            </div>
+
+            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Absensi</p>
+                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['absensi'] ?? 0) }}</p>
+                <p class="text-sm font-semibold text-slate-500">Agenda tercatat</p>
+            </div>
+
+            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Laporan</p>
+                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['laporan'] ?? 0) }}</p>
+                <p class="text-sm font-semibold text-slate-500">Rekap bulanan</p>
+            </div>
+        </section>
     </div>
-
-    <div>
-        <div class="flex items-center gap-2 mb-4 px-2">
-            <h3 class="text-[13px] font-black text-slate-500 uppercase tracking-widest font-poppins"><i class="fas fa-users-cog mr-2"></i>Entitas Pengguna</h3>
-        </div>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div class="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all relative overflow-hidden group animate-stagger-up delay-100">
-                <i class="fas fa-users absolute -right-2 -bottom-4 text-7xl text-slate-50 opacity-60 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500"></i>
-                <div class="relative z-10 flex justify-between items-start">
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Warga</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_user'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center text-xl group-hover:bg-sky-500 group-hover:text-white transition-colors duration-300"><i class="fas fa-users"></i></div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all relative overflow-hidden group animate-stagger-up delay-200">
-                <i class="fas fa-user-plus absolute -right-2 -bottom-4 text-7xl text-slate-50 opacity-60 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500"></i>
-                <div class="relative z-10 flex justify-between items-start">
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Warga Baru</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $userBaruBulanIni ?? 0 }}</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300"><i class="fas fa-user-plus"></i></div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all relative overflow-hidden group animate-stagger-up delay-300">
-                <i class="fas fa-user-nurse absolute -right-2 -bottom-4 text-7xl text-slate-50 opacity-60 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500"></i>
-                <div class="relative z-10 flex justify-between items-start">
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Akun Kader</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_kader'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center text-xl group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300"><i class="fas fa-user-nurse"></i></div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all relative overflow-hidden group animate-stagger-up delay-400">
-                <i class="fas fa-user-md absolute -right-2 -bottom-4 text-7xl text-slate-50 opacity-60 group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500"></i>
-                <div class="relative z-10 flex justify-between items-start">
-                    <div>
-                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Akun Bidan</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_bidan'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-500 flex items-center justify-center text-xl group-hover:bg-teal-500 group-hover:text-white transition-colors duration-300"><i class="fas fa-user-md"></i></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div>
-        <div class="flex items-center gap-2 mb-4 px-2">
-            <h3 class="text-[13px] font-black text-slate-500 uppercase tracking-widest font-poppins"><i class="fas fa-notes-medical mr-2"></i>Arsip Data Kesehatan</h3>
-        </div>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div class="bg-white rounded-[2rem] border border-sky-50 p-6 shadow-sm hover:shadow-xl hover:shadow-sky-100 hover:-translate-y-1 hover:border-sky-100 transition-all relative overflow-hidden group animate-stagger-up delay-100">
-                <div class="absolute right-0 top-0 w-24 h-24 bg-sky-50 rounded-bl-full -mr-4 -mt-4 opacity-50 transition-transform group-hover:scale-110"></div>
-                <div class="relative z-10 flex justify-between items-center">
-                    <div>
-                        <p class="text-[11px] font-black text-sky-400 uppercase tracking-widest mb-1">Data Balita</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_balita'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-14 h-14 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform"><i class="fas fa-baby"></i></div>
-                </div>
-            </div>
-
-            
-
-            <div class="bg-white rounded-[2rem] border border-indigo-50 p-6 shadow-sm hover:shadow-xl hover:shadow-indigo-100 hover:-translate-y-1 hover:border-indigo-100 transition-all relative overflow-hidden group animate-stagger-up delay-300">
-                <div class="absolute right-0 top-0 w-24 h-24 bg-indigo-50 rounded-bl-full -mr-4 -mt-4 opacity-50 transition-transform group-hover:scale-110"></div>
-                <div class="relative z-10 flex justify-between items-center">
-                    <div>
-                        <p class="text-[11px] font-black text-indigo-400 uppercase tracking-widest mb-1">Remaja</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_remaja'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-14 h-14 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform"><i class="fas fa-user-graduate"></i></div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-[2rem] border border-orange-50 p-6 shadow-sm hover:shadow-xl hover:shadow-orange-100 hover:-translate-y-1 hover:border-orange-100 transition-all relative overflow-hidden group animate-stagger-up delay-400">
-                <div class="absolute right-0 top-0 w-24 h-24 bg-orange-50 rounded-bl-full -mr-4 -mt-4 opacity-50 transition-transform group-hover:scale-110"></div>
-                <div class="relative z-10 flex justify-between items-center">
-                    <div>
-                        <p class="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-1">Lanjut Usia</p>
-                        <h4 class="text-4xl font-black text-slate-700 font-poppins tracking-tight">{{ $stats['total_lansia'] ?? 0 }}</h4>
-                    </div>
-                    <div class="w-14 h-14 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform"><i class="fas fa-wheelchair"></i></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div class="lg:col-span-2 section-card animate-stagger-up delay-200">
-            <div class="section-header">
-                <h3 class="section-title">
-                    <div class="section-icon-wrap bg-sky-50 text-sky-500"><i class="fas fa-chart-area"></i></div>
-                    Tren Registrasi Warga
-                </h3>
-                <span class="px-3 py-1.5 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-lg border border-slate-200 hidden sm:block">7 Bulan Terakhir</span>
-            </div>
-            <div class="relative flex-1 min-h-[280px]">
-                <canvas id="regChart"></canvas>
-            </div>
-        </div>
-
-        <div class="section-card p-0 overflow-hidden animate-stagger-up delay-300">
-            <div class="section-header mx-6 mt-6 mb-2 border-b border-slate-50 pb-4">
-                <h3 class="section-title">
-                    <div class="section-icon-wrap bg-slate-50 text-slate-500"><i class="fas fa-history"></i></div>
-                    Log Sistem Terbaru
-                </h3>
-            </div>
-            <div class="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar timeline-container">
-                @forelse($loginTerbaru ?? [] as $l)
-                <div class="log-item">
-                    @php
-                        $bg = 'bg-slate-100 text-slate-500'; 
-                        if($l->role == 'admin') $bg = 'bg-sky-500 text-white';
-                        if($l->role == 'kader') $bg = 'bg-indigo-400 text-white';
-                        if($l->role == 'bidan') $bg = 'bg-teal-400 text-white';
-                    @endphp
-                    <div class="log-avatar {{ $bg }} shadow-sm">
-                        {{ strtoupper(substr($l->display_name ?? 'U', 0, 1)) }}
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <div class="text-[13px] font-bold text-slate-700 truncate">{{ $l->display_name ?? '-' }}</div>
-                        <div class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">{{ $l->role }}</div>
-                    </div>
-                    
-                    <div class="text-right flex-shrink-0">
-                        @if($l->status === 'success')
-                            <span class="text-emerald-500 text-[11px] font-bold"><i class="fas fa-check-circle"></i></span>
-                        @else
-                            <span class="text-rose-500 text-[11px] font-bold"><i class="fas fa-times-circle"></i></span>
-                        @endif
-                        <div class="text-[9px] font-medium text-slate-400 mt-1">{{ \Carbon\Carbon::parse($l->login_at)->diffForHumans(null, true, true) }}</div>
-                    </div>
-                </div>
-                @empty
-                <div class="text-center py-12 text-slate-300 relative z-10">
-                    <i class="fas fa-server text-4xl mb-3 opacity-50"></i>
-                    <p class="text-xs font-bold uppercase tracking-widest">Tidak ada aktivitas.</p>
-                </div>
-                @endforelse
-            </div>
-        </div>
-        
-    </div>
-
 </div>
 @endsection
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    
-    // ✨ FITUR BARU: Dynamic Greeting based on time
-    const hour = new Date().getHours();
-    let greeting = 'Halo';
-    if (hour >= 5 && hour < 12) greeting = 'Selamat Pagi';
-    else if (hour >= 12 && hour < 15) greeting = 'Selamat Siang';
-    else if (hour >= 15 && hour < 18) greeting = 'Selamat Sore';
-    else greeting = 'Selamat Malam';
-    document.getElementById('dynamicGreeting').innerText = greeting;
-
-    // Konfigurasi Default Chart.js
-    Chart.defaults.font.family = "'Poppins', 'Inter', sans-serif";
-    Chart.defaults.color = '#94a3b8';
-
-    const ctx = document.getElementById('regChart');
-    if(ctx) {
-        const c = ctx.getContext('2d');
-        const gradient = c.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(14, 165, 233, 0.25)'); 
-        gradient.addColorStop(1, 'rgba(14, 165, 233, 0)');
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: {!! json_encode($chartData['labels'] ?? []) !!},
-                datasets: [{
-                    label: 'Warga Terdaftar',
-                    data: {!! json_encode($chartData['userData'] ?? []) !!},
-                    borderColor: '#0ea5e9', 
-                    backgroundColor: gradient,
-                    borderWidth: 3,
-                    tension: 0.4, 
-                    fill: true,
-                    pointRadius: 5, 
-                    pointHoverRadius: 7,
-                    pointBackgroundColor: '#ffffff', 
-                    pointBorderColor: '#0ea5e9',
-                    pointBorderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: { 
-                    legend: { display: false },
-                    tooltip: { 
-                        backgroundColor: '#ffffff', 
-                        titleColor: '#64748b',
-                        bodyColor: '#0f172a',
-                        borderColor: '#e2e8f0',
-                        borderWidth: 1,
-                        padding: 12, 
-                        borderRadius: 12, 
-                        displayColors: false, 
-                        titleFont: { size: 11, family: 'Inter', weight: 'bold' }, 
-                        bodyFont: { size: 15, weight: '900', family: 'Poppins' },
-                        callbacks: {
-                            label: function(context) { return context.parsed.y + ' Warga Baru'; }
-                        }
-                    }
-                },
-                scales: {
-                    y: { 
-                        beginAtZero: true, border: { display: false }, 
-                        grid: { color: '#f8fafc', drawBorder: false }, 
-                        ticks: { stepSize: 1, font: { weight: '600' }, padding: 10 } 
-                    },
-                    x: { 
-                        border: { display: false }, grid: { display: false }, 
-                        ticks: { font: { weight: '600' }, padding: 10 } 
-                    }
-                },
-                interaction: { mode: 'index', intersect: false }
-            }
-        });
-    }
-});
-</script>
-@endpush

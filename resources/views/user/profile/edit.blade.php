@@ -1,238 +1,661 @@
 @extends('layouts.user')
 
-@section('title', 'Pengaturan Profil')
+@section('title', 'Profil Saya')
+@section('page_title', 'Profil Saya')
+
+@php
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Route;
+
+    $user = $user ?? auth()->user();
+    $profile = $profile ?? $user->profile ?? null;
+
+    $profileSummary = $profileSummary ?? [
+        'nik' => $user->nik ?? $profile->nik ?? null,
+        'status_label' => 'Belum Terhubung',
+        'status_tone' => 'amber',
+        'total_sasaran' => 0,
+        'total_balita' => 0,
+        'total_remaja' => 0,
+        'total_lansia' => 0,
+        'peran' => 'Umum',
+    ];
+
+    $connectionCards = $connectionCards ?? [];
+
+    $updateRoute = Route::has('user.profile.update')
+        ? route('user.profile.update')
+        : '#';
+
+    $passwordRoute = Route::has('user.password.update')
+        ? route('user.password.update')
+        : '#';
+
+    $dashboardRoute = Route::has('user.dashboard')
+        ? route('user.dashboard')
+        : '#';
+
+    $monitoringRoute = Route::has('user.monitoring.index')
+        ? route('user.monitoring.index')
+        : '#';
+
+    $birthValue = old('tanggal_lahir');
+
+    if (! $birthValue && filled($profile->tanggal_lahir ?? null)) {
+        try {
+            $birthValue = Carbon::parse($profile->tanggal_lahir)->format('Y-m-d');
+        } catch (Throwable $e) {
+            $birthValue = $profile->tanggal_lahir;
+        }
+    }
+
+    $avatarInitial = strtoupper(mb_substr($user->name ?? 'W', 0, 1));
+
+    $statusClass = ($profileSummary['status_tone'] ?? 'amber') === 'emerald'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : 'border-amber-200 bg-amber-50 text-amber-700';
+
+    $cardTone = function ($tone) {
+        return match ($tone) {
+            'rose' => [
+                'wrap' => 'border-rose-100 bg-rose-50/70 text-rose-800',
+                'icon' => 'border-rose-100 bg-white text-rose-500',
+            ],
+            'sky' => [
+                'wrap' => 'border-sky-100 bg-sky-50/70 text-sky-800',
+                'icon' => 'border-sky-100 bg-white text-sky-500',
+            ],
+            'amber' => [
+                'wrap' => 'border-amber-100 bg-amber-50/70 text-amber-800',
+                'icon' => 'border-amber-100 bg-white text-amber-500',
+            ],
+            default => [
+                'wrap' => 'border-emerald-100 bg-emerald-50/70 text-emerald-800',
+                'icon' => 'border-emerald-100 bg-white text-emerald-500',
+            ],
+        };
+    };
+@endphp
 
 @push('styles')
 <style>
-    .animate-slide-up { opacity: 0; animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    @keyframes slideUpFade { 
-        from { opacity: 0; transform: translateY(30px); } 
-        to { opacity: 1; transform: translateY(0); } 
+    .profile-page {
+        background:
+            radial-gradient(circle at 10% 10%, rgba(16,185,129,.16), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(14,165,233,.12), transparent 26%),
+            radial-gradient(circle at 78% 88%, rgba(245,158,11,.10), transparent 28%),
+            linear-gradient(135deg,#f8fafc 0%,#ecfdf5 48%,#eff6ff 100%);
+    }
+
+    .profile-enter {
+        opacity: 0;
+        animation: profileEnter .36s cubic-bezier(.16,1,.3,1) forwards;
+    }
+
+    .profile-enter-delay {
+        opacity: 0;
+        animation: profileEnter .36s cubic-bezier(.16,1,.3,1) .08s forwards;
+    }
+
+    @keyframes profileEnter {
+        from {
+            opacity: 0;
+            transform: translateY(12px) scale(.99);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .profile-glass {
+        border: 1px solid rgba(255,255,255,.78);
+        background: rgba(255,255,255,.72);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 16px 46px rgba(15,23,42,.06);
+    }
+
+    .profile-card {
+        border: 1px solid rgba(226,232,240,.82);
+        background: rgba(255,255,255,.76);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 10px 28px rgba(15,23,42,.045);
+    }
+
+    .identity-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(16,185,129,.18);
+        background:
+            linear-gradient(135deg, rgba(6,78,59,.96), rgba(6,95,70,.94) 48%, rgba(15,118,110,.94)),
+            radial-gradient(circle at 20% 20%, rgba(255,255,255,.20), transparent 26%);
+        box-shadow: 0 22px 52px rgba(6,78,59,.18);
+    }
+
+    .identity-card::before {
+        content: "";
+        position: absolute;
+        inset: -80px auto auto -80px;
+        width: 210px;
+        height: 210px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.10);
+    }
+
+    .identity-card::after {
+        content: "";
+        position: absolute;
+        right: -70px;
+        bottom: -95px;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: rgba(251,191,36,.16);
+    }
+
+    .profile-input {
+        height: 48px;
+        width: 100%;
+        border-radius: 18px;
+        border: 1px solid rgba(203,213,225,.78);
+        background: rgba(255,255,255,.78);
+        padding: 0 16px;
+        font-size: 14px;
+        font-weight: 800;
+        color: rgb(51,65,85);
+        outline: none;
+        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    .profile-input:focus {
+        border-color: rgba(16,185,129,.46);
+        background: rgba(255,255,255,.92);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.10);
+    }
+
+    .password-meter {
+        height: 7px;
+        width: 100%;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(226,232,240,.95);
+    }
+
+    .password-meter span {
+        display: block;
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #f59e0b, #10b981);
+        transition: width .2s ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .profile-enter,
+        .profile-enter-delay {
+            animation: none;
+            opacity: 1;
+        }
     }
 </style>
 @endpush
 
 @section('content')
-@php $userAuth = auth()->user(); @endphp
-<div class="max-w-6xl mx-auto pb-32 px-4 md:px-8 font-poppins mobile-padding-bottom">
-    
-    {{-- 1. HEADER --}}
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 md:mb-10 animate-slide-up">
-        <div class="max-w-2xl">
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-[0.15em] mb-4 border border-slate-200 shadow-sm">
-                <i class="fas fa-user-shield"></i> Pengaturan & Keamanan
-            </div>
-            <h1 class="text-2xl md:text-4xl font-black text-slate-800 tracking-tight leading-tight mb-2">Data Profil Anda ⚙️</h1>
-            <p class="text-[13px] md:text-sm font-medium text-slate-500 leading-relaxed">
-                Kelola informasi pribadi, NIK, dan keamanan akun Anda. Pastikan data selaras dengan KTP untuk sinkronisasi rekam medis otomatis.
-            </p>
-        </div>
-    </div>
+<div class="profile-page -mx-4 -my-4 min-h-[calc(100vh-96px)] px-4 py-5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+    <div class="mx-auto max-w-7xl space-y-5">
 
-    {{-- 2. ALERTS --}}
-    @if(empty($userAuth->nik) && empty($userAuth->profile->nik))
-        <div class="mb-8 bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 rounded-[2rem] p-6 md:p-8 flex gap-5 items-start shadow-sm relative overflow-hidden animate-slide-up" style="animation-delay: 0.1s;">
-            <div class="absolute -right-10 -top-10 w-48 h-48 bg-rose-200 rounded-full blur-3xl pointer-events-none opacity-50"></div>
-            <div class="w-14 h-14 bg-white text-rose-500 rounded-[1.2rem] flex items-center justify-center shrink-0 shadow-sm border border-rose-100 z-10">
-                <i class="fas fa-lock text-2xl animate-pulse"></i>
-            </div>
-            <div class="z-10 flex-1">
-                <h3 class="text-lg font-black text-rose-800 tracking-tight">Akses Rekam Medis Terkunci!</h3>
-                <p class="text-[13px] font-medium text-rose-700 mt-1.5 leading-relaxed max-w-3xl">Anda belum memasukkan Nomor Induk Kependudukan (NIK). Silakan lengkapi formulir di bawah ini agar sistem dapat menyinkronkan data KMS Balita, Lansia, dan riwayat kesehatan keluarga Anda dari Posyandu.</p>
-            </div>
-        </div>
-    @endif
+        <section class="profile-enter grid grid-cols-1 gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+            <div class="identity-card rounded-[32px] p-6 text-white">
+                <div class="relative z-10">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/90">
+                                Kartu Profil Warga
+                            </p>
 
-    @if(session('status') === 'profile-updated' || session('success'))
-        <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 4000)" class="mb-8 bg-emerald-50 border border-emerald-200 rounded-[1.5rem] p-5 flex gap-4 items-center shadow-sm animate-slide-up" style="animation-delay: 0.1s;">
-            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm shrink-0">
-                <i class="fas fa-check"></i>
-            </div>
-            <p class="text-[14px] font-black text-emerald-800">{{ session('success') ?? 'Data profil berhasil diperbarui dan disinkronkan!' }}</p>
-        </div>
-    @endif
-
-    {{-- 3. MAIN GRID FORM --}}
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-        
-        {{-- KOLOM KIRI (Profil & Identitas) - 8 Kolom --}}
-        <div class="lg:col-span-8 space-y-6 md:space-y-8 animate-slide-up" style="animation-delay: 0.2s;">
-            
-            <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.03)] overflow-hidden">
-                {{-- Header Form --}}
-                <div class="px-6 md:px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[1.2rem] bg-gradient-to-tr from-teal-400 to-emerald-500 text-white flex items-center justify-center shadow-lg shadow-teal-500/30">
-                        <i class="fas fa-id-card text-lg"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-black text-slate-800 tracking-tight">Informasi Identitas</h3>
-                        <p class="text-[11px] font-medium text-slate-400 mt-0.5">Biodata utama dan kunci sinkronisasi Posyandu</p>
-                    </div>
-                </div>
-
-                {{-- Body Form --}}
-                <div class="p-6 md:p-8">
-                  <form method="post" action="{{ route('user.profile.update') }}" class="space-y-6 md:space-y-8">
-                        @csrf
-                        @method('patch')
-
-                        {{-- NIK (Highlight Khusus) --}}
-                        <div class="bg-teal-50/40 border border-teal-100 rounded-[1.8rem] p-5 md:p-6 relative overflow-hidden group hover:border-teal-300 transition-colors">
-                            <div class="absolute right-0 top-0 bottom-0 w-1.5 bg-teal-500 group-hover:w-2 transition-all"></div>
-                            <label for="nik" class="block text-[10px] font-black text-teal-700 uppercase tracking-[0.15em] mb-2 flex items-center gap-2">
-                                <i class="fas fa-fingerprint text-teal-500"></i> Nomor Induk Kependudukan (NIK) <span class="text-rose-500">*</span>
-                            </label>
-                            <input id="nik" name="nik" type="text" 
-                                class="w-full px-5 py-3.5 bg-white border border-teal-200 rounded-[1.2rem] text-[14px] font-black text-slate-800 focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all placeholder:text-slate-300 shadow-sm" 
-                                placeholder="Masukkan 16 Digit NIK KTP Anda" 
-                                value="{{ old('nik', $userAuth->nik ?? ($userAuth->profile->nik ?? '')) }}" required maxlength="16">
-                            <p class="text-[10px] font-bold text-teal-600/70 mt-2"><i class="fas fa-info-circle mr-1"></i> Digunakan otomatis untuk menarik data kesehatan anak dan orang tua.</p>
-                            @error('nik') <p class="text-[11px] text-rose-500 mt-2 font-bold px-2"><i class="fas fa-exclamation-triangle mr-1"></i> {{ $message }}</p> @enderror
+                            <h1 class="mt-3 text-3xl font-black tracking-tight">
+                                Profil Saya
+                            </h1>
                         </div>
 
-                        {{-- Grid Input Standard --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                            
-                            {{-- Nama Lengkap (Mengisi 2 Kolom karena email dihapus) --}}
-                            <div class="md:col-span-2">
-                                <label for="name" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Nama Sesuai KTP</label>
-                                <input id="name" name="name" type="text" 
-                                    class="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[1.2rem] text-[13px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all" 
-                                    value="{{ old('name', $userAuth->profile->full_name ?? $userAuth->name) }}" required>
-                                @error('name') <p class="text-[11px] text-rose-500 mt-1 font-bold">{{ $message }}</p> @enderror
+                        <div class="flex h-14 w-14 items-center justify-center rounded-[22px] border border-white/20 bg-white/16 text-2xl font-black shadow-inner backdrop-blur-xl">
+                            {{ $avatarInitial }}
+                        </div>
+                    </div>
+
+                    <div class="mt-8 rounded-[26px] border border-white/18 bg-white/12 p-5 backdrop-blur-xl">
+                        <p class="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-100/80">
+                            Nama Warga
+                        </p>
+
+                        <p class="mt-2 text-2xl font-black leading-tight">
+                            {{ $user->name ?? 'Warga Posyandu' }}
+                        </p>
+
+                        <div class="mt-5 grid grid-cols-1 gap-3">
+                            <div class="rounded-[20px] border border-white/16 bg-white/10 px-4 py-3">
+                                <p class="text-[9px] font-black uppercase tracking-[0.20em] text-emerald-100/70">NIK Aktif</p>
+                                <p class="mt-1 break-all text-sm font-black text-white">
+                                    {{ $profileSummary['nik'] ?: 'Belum diisi' }}
+                                </p>
                             </div>
 
-                            {{-- Tempat Lahir --}}
-                            <div>
-                                <label for="tempat_lahir" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Tempat Lahir</label>
-                                <input id="tempat_lahir" name="tempat_lahir" type="text" 
-                                    class="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[1.2rem] text-[13px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all" 
-                                    value="{{ old('tempat_lahir', $userAuth->profile->tempat_lahir ?? '') }}">
-                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="rounded-[20px] border border-white/16 bg-white/10 px-4 py-3">
+                                    <p class="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-100/70">Status</p>
+                                    <p class="mt-1 text-sm font-black text-white">
+                                        {{ $profileSummary['status_label'] }}
+                                    </p>
+                                </div>
 
-                            {{-- Tanggal Lahir --}}
-                            <div>
-                                <label for="tanggal_lahir" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Tanggal Lahir</label>
-                                <input id="tanggal_lahir" name="tanggal_lahir" type="date" 
-                                    class="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[1.2rem] text-[13px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all cursor-text" 
-                                    value="{{ old('tanggal_lahir', $userAuth->profile->tanggal_lahir ?? '') }}">
-                            </div>
-
-                            {{-- Jenis Kelamin --}}
-                            <div>
-                                <label for="jenis_kelamin" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Jenis Kelamin</label>
-                                <div class="relative">
-                                    <select id="jenis_kelamin" name="jenis_kelamin" class="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[1.2rem] text-[13px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all appearance-none cursor-pointer">
-                                        <option value="L" {{ old('jenis_kelamin', $userAuth->profile->jenis_kelamin ?? '') == 'L' ? 'selected' : '' }}>Laki-laki</option>
-                                        <option value="P" {{ old('jenis_kelamin', $userAuth->profile->jenis_kelamin ?? '') == 'P' ? 'selected' : '' }}>Perempuan</option>
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
-                                        <i class="fas fa-chevron-down text-[10px]"></i>
-                                    </div>
+                                <div class="rounded-[20px] border border-white/16 bg-white/10 px-4 py-3">
+                                    <p class="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-100/70">Peran</p>
+                                    <p class="mt-1 truncate text-sm font-black text-white">
+                                        {{ $profileSummary['peran'] ?: 'Umum' }}
+                                    </p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            {{-- Telepon --}}
-                            <div>
-                                <label for="telepon" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">No. WhatsApp Aktif</label>
-                                <input id="telepon" name="telepon" type="text" 
-                                    class="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[1.2rem] text-[13px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all" 
-                                    value="{{ old('telepon', $userAuth->profile->telepon ?? '') }}" placeholder="Contoh: 08123456789">
+                    <a href="{{ $monitoringRoute }}"
+                       class="smooth-route mt-5 inline-flex h-12 w-full items-center justify-center rounded-[20px] border border-white/20 bg-white px-5 text-xs font-black uppercase tracking-[0.14em] text-emerald-700 shadow-[0_14px_30px_rgba(0,0,0,.10)] transition hover:bg-emerald-50">
+                        Buka Monitoring Kesehatan
+                    </a>
+                </div>
+            </div>
+
+            <div class="profile-glass rounded-[32px] p-5 sm:p-6">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <span class="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.18em] {{ $statusClass }}">
+                            <span class="h-2 w-2 rounded-full {{ ($profileSummary['status_tone'] ?? 'amber') === 'emerald' ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
+                            {{ $profileSummary['status_label'] }}
+                        </span>
+
+                        <h2 class="mt-4 text-3xl font-black tracking-tight text-slate-800 sm:text-4xl">
+                            Pusat Identitas Akun
+                        </h2>
+
+                        <p class="mt-2 max-w-3xl text-sm font-semibold leading-7 text-slate-600">
+                            NIK menjadi kunci sinkronisasi data keluarga. Kalau NIK salah, halaman monitoring ikut tersesat seperti kurir yang cuma diberi petunjuk “rumahnya dekat pohon”.
+                        </p>
+                    </div>
+
+                    <div class="rounded-[26px] border border-emerald-100 bg-white/72 px-5 py-4 shadow-sm">
+                        <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Total Terhubung
+                        </p>
+
+                        <p class="mt-1 text-4xl font-black text-emerald-700">
+                            {{ $profileSummary['total_sasaran'] }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    @foreach($connectionCards as $item)
+                        @php $tone = $cardTone($item['tone'] ?? 'emerald'); @endphp
+
+                        <div class="rounded-[24px] border p-4 {{ $tone['wrap'] }}">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
+                                        {{ $item['label'] }}
+                                    </p>
+
+                                    <p class="mt-1 text-3xl font-black">
+                                        {{ $item['value'] }}
+                                    </p>
+
+                                    <p class="mt-1 text-xs font-bold opacity-70">
+                                        {{ $item['caption'] }}
+                                    </p>
+                                </div>
+
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border text-base {{ $tone['icon'] }}">
+                                    <i class="fas {{ $item['icon'] }}"></i>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+
+        @if(session('success') || session('error') || $errors->any())
+            <section class="profile-enter-delay rounded-[24px] border p-4 shadow-sm backdrop-blur-xl {{ session('error') || $errors->any() ? 'border-rose-200 bg-rose-50/85 text-rose-800' : 'border-emerald-200 bg-emerald-50/85 text-emerald-800' }}">
+                <p class="text-sm font-black">
+                    {{ session('error') ?: (session('success') ?: 'Terdapat data yang perlu diperbaiki.') }}
+                </p>
+
+                @if($errors->any())
+                    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm font-semibold">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </section>
+        @endif
+
+        <section class="profile-enter-delay grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <form action="{{ $updateRoute }}" method="POST" class="profile-card overflow-hidden rounded-[32px]">
+                @csrf
+                @method('PATCH')
+
+                <div class="border-b border-emerald-100/80 bg-gradient-to-r from-white/88 via-emerald-50/76 to-sky-50/62 px-5 py-4">
+                    <p class="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-700">
+                        Data Identitas
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-black text-slate-800">
+                        Kelola Informasi Warga
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            NIK
+                        </label>
+
+                        <input type="text"
+                               name="nik"
+                               value="{{ old('nik', $user->nik ?? $profile->nik ?? '') }}"
+                               maxlength="16"
+                               inputmode="numeric"
+                               autocomplete="off"
+                               class="profile-input mt-2"
+                               placeholder="Masukkan 16 digit NIK">
+
+                        <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                            NIK dipakai untuk menghubungkan akun dengan data Balita, Remaja, atau Lansia.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Nama Lengkap
+                        </label>
+
+                        <input type="text"
+                               name="name"
+                               value="{{ old('name', $user->name ?? $profile->full_name ?? '') }}"
+                               class="profile-input mt-2"
+                               placeholder="Nama lengkap warga">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Jenis Kelamin
+                        </label>
+
+                        <select name="jenis_kelamin" class="profile-input mt-2">
+                            <option value="">Pilih jenis kelamin</option>
+                            <option value="L" @selected(old('jenis_kelamin', $profile->jenis_kelamin ?? '') === 'L')>Laki-laki</option>
+                            <option value="P" @selected(old('jenis_kelamin', $profile->jenis_kelamin ?? '') === 'P')>Perempuan</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Tempat Lahir
+                        </label>
+
+                        <input type="text"
+                               name="tempat_lahir"
+                               value="{{ old('tempat_lahir', $profile->tempat_lahir ?? '') }}"
+                               class="profile-input mt-2"
+                               placeholder="Contoh: Pekalongan">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Tanggal Lahir
+                        </label>
+
+                        <input type="date"
+                               name="tanggal_lahir"
+                               value="{{ $birthValue }}"
+                               class="profile-input mt-2">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            No. WhatsApp
+                        </label>
+
+                        <input type="text"
+                               name="telepon"
+                               value="{{ old('telepon', $profile->telepon ?? '') }}"
+                               class="profile-input mt-2"
+                               placeholder="Contoh: 089922773355">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Status Akun
+                        </label>
+
+                        <div class="mt-2 flex h-12 items-center rounded-[18px] border border-emerald-100 bg-emerald-50/70 px-4 text-sm font-black text-emerald-700">
+                            Portal Warga Aktif
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                            Alamat
+                        </label>
+
+                        <textarea name="alamat"
+                                  rows="4"
+                                  class="mt-2 w-full rounded-[18px] border border-slate-200 bg-white/78 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10"
+                                  placeholder="Alamat domisili lengkap">{{ old('alamat', $profile->alamat ?? '') }}</textarea>
+                    </div>
+
+                    <div class="sm:col-span-2 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-xs font-semibold leading-5 text-slate-500">
+                            Perubahan NIK dapat memengaruhi data yang tampil pada halaman monitoring.
+                        </p>
+
+                        <button type="submit"
+                                class="inline-flex h-12 items-center justify-center rounded-[20px] bg-emerald-600 px-6 text-xs font-black uppercase tracking-[0.14em] text-white shadow-[0_12px_26px_rgba(16,185,129,.22)] transition hover:bg-emerald-700">
+                            Simpan Profil
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <aside class="space-y-5">
+                <form action="{{ $passwordRoute }}" method="POST" class="profile-card overflow-hidden rounded-[32px]">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="border-b border-amber-100/80 bg-gradient-to-r from-white/88 via-amber-50/78 to-emerald-50/62 px-5 py-4">
+                        <p class="text-[10px] font-black uppercase tracking-[0.20em] text-amber-700">
+                            Security Vault
+                        </p>
+
+                        <h2 class="mt-1 text-xl font-black text-slate-800">
+                            Ubah Kata Sandi
+                        </h2>
+
+                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                            Gunakan minimal 8 karakter, mengandung huruf dan angka.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 p-5">
+                        <div>
+                            <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                                Kata Sandi Saat Ini
+                            </label>
+
+                            <div class="relative mt-2">
+                                <input type="password"
+                                       name="current_password"
+                                       class="profile-input pr-12 password-field"
+                                       autocomplete="current-password">
+
+                                <button type="button"
+                                        class="toggle-password absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             </div>
                         </div>
 
-                        {{-- Alamat Lengkap --}}
                         <div>
-                            <label for="alamat" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Alamat Domisili Lengkap</label>
-                            <textarea id="alamat" name="alamat" rows="3" 
-                                class="w-full px-5 py-4 bg-slate-50/50 border border-slate-200 rounded-[1.2rem] text-[13px] font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-400 transition-all resize-none">{{ old('alamat', $userAuth->profile->alamat ?? '') }}</textarea>
+                            <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                                Kata Sandi Baru
+                            </label>
+
+                            <div class="relative mt-2">
+                                <input type="password"
+                                       name="password"
+                                       id="newPasswordInput"
+                                       class="profile-input pr-12 password-field"
+                                       autocomplete="new-password">
+
+                                <button type="button"
+                                        class="toggle-password absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="password-meter">
+                                    <span id="passwordMeterBar"></span>
+                                </div>
+
+                                <p id="passwordMeterText" class="mt-2 text-xs font-bold text-slate-500">
+                                    Kekuatan sandi belum dinilai.
+                                </p>
+                            </div>
                         </div>
 
-                        {{-- Action Button --}}
-                        <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <p class="text-[10px] font-medium text-slate-400 text-center sm:text-left"><i class="fas fa-shield-alt text-teal-500 mr-1"></i> Data Anda dienkripsi secara aman.</p>
-                            <button type="submit" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white text-[11px] font-black uppercase tracking-[0.15em] rounded-[1.2rem] transition-all duration-300 shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 active:scale-95 flex items-center justify-center gap-2">
-                                <i class="fas fa-save text-[13px]"></i> Simpan Profil
-                            </button>
+                        <div>
+                            <label class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                                Konfirmasi Kata Sandi
+                            </label>
+
+                            <div class="relative mt-2">
+                                <input type="password"
+                                       name="password_confirmation"
+                                       class="profile-input pr-12 password-field"
+                                       autocomplete="new-password">
+
+                                <button type="button"
+                                        class="toggle-password absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
-                    </form>
-                </div>
-            </div>
 
-        </div>
-
-        {{-- KOLOM KANAN (Keamanan & Bantuan) - 4 Kolom --}}
-        <div class="lg:col-span-4 space-y-6 md:space-y-8 animate-slide-up" style="animation-delay: 0.3s;">
-            
-            {{-- Form Keamanan Sandi --}}
-            <div class="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.03)] overflow-hidden">
-                <div class="px-6 py-6 border-b border-slate-100 bg-slate-50/50 flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-[1.2rem] bg-gradient-to-tr from-indigo-500 to-sky-400 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                        <i class="fas fa-key text-lg"></i>
+                        <button type="submit"
+                                class="inline-flex h-12 w-full items-center justify-center rounded-[20px] bg-amber-500 px-6 text-xs font-black uppercase tracking-[0.14em] text-amber-950 shadow-[0_12px_26px_rgba(245,158,11,.22)] transition hover:bg-amber-400">
+                            Perbarui Sandi
+                        </button>
                     </div>
-                    <div>
-                        <h3 class="text-base font-black text-slate-800 tracking-tight">Ubah Sandi</h3>
-                        <p class="text-[11px] font-medium text-slate-400 mt-0.5">Keamanan akun login</p>
-                    </div>
-                </div>
+                </form>
 
-                <div class="p-6">
-                    <form method="post" action="{{ route('user.password.update') }}" class="space-y-5">
-                        @csrf
-                        @method('put')
-
-                        <div>
-                            <label for="current_password" class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Sandi Saat Ini</label>
-                            <input id="current_password" name="current_password" type="password" 
-                                class="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] font-medium focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all">
-                            @error('current_password', 'updatePassword') <p class="text-[10px] text-rose-500 mt-1.5 font-bold px-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label for="password" class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Sandi Baru</label>
-                            <input id="password" name="password" type="password" 
-                                class="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] font-medium focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all">
-                            @error('password', 'updatePassword') <p class="text-[10px] text-rose-500 mt-1.5 font-bold px-1">{{ $message }}</p> @enderror
-                        </div>
-
-                        <div>
-                            <label for="password_confirmation" class="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5 px-1">Konfirmasi Sandi Baru</label>
-                            <input id="password_confirmation" name="password_confirmation" type="password" 
-                                class="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-[13px] font-medium focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-400 transition-all">
-                        </div>
-
-                        <div class="pt-5 mt-2 border-t border-slate-100">
-                            <button type="submit" class="w-full py-3.5 bg-slate-800 text-white text-[10px] font-black uppercase tracking-[0.15em] rounded-[1rem] hover:bg-slate-900 transition-colors shadow-lg shadow-slate-200 active:scale-95">
-                                Perbarui Sandi
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {{-- Widget Bantuan Tanpa Chat Konseling --}}
-            <div class="bg-gradient-to-br from-sky-500 to-indigo-600 rounded-[2rem] md:rounded-[2.5rem] p-8 text-white shadow-[0_15px_40px_-10px_rgba(99,102,241,0.4)] relative overflow-hidden group">
-                {{-- Decorative Shapes --}}
-                <div class="absolute -right-6 -top-6 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
-                <i class="fas fa-bullhorn absolute -right-6 -bottom-6 text-[8rem] text-white opacity-[0.07] group-hover:rotate-12 transition-transform duration-500"></i>
-                
-                <div class="relative z-10">
-                    <div class="w-12 h-12 bg-white/20 backdrop-blur-md rounded-[1rem] flex items-center justify-center text-xl border border-white/30 mb-5">
-                        <i class="fas fa-info-circle"></i>
-                    </div>
-                    <h3 class="text-xl font-black tracking-tight mb-2 font-poppins">Pusat Informasi</h3>
-                    <p class="text-[12px] font-medium text-sky-50 leading-relaxed">
-                        Jika NIK sudah benar namun rekam medis tidak muncul, atau ada data yang tidak sesuai, silakan lapor secara langsung kepada Kader atau Bidan saat kunjungan Posyandu berikutnya.
+                <section class="profile-card rounded-[32px] p-5">
+                    <p class="text-[10px] font-black uppercase tracking-[0.20em] text-sky-700">
+                        Bantuan Sinkronisasi
                     </p>
-                </div>
-            </div>
 
-        </div>
+                    <h2 class="mt-2 text-xl font-black text-slate-800">
+                        Data tidak muncul?
+                    </h2>
+
+                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                        Jika NIK sudah benar tetapi data kesehatan belum tampil, hubungi Kader untuk sinkronisasi data sasaran.
+                    </p>
+
+                    <a href="{{ $dashboardRoute }}"
+                       class="smooth-route mt-4 inline-flex h-11 w-full items-center justify-center rounded-[18px] border border-sky-100 bg-white/82 px-5 text-xs font-black uppercase tracking-[0.12em] text-sky-700 transition hover:bg-sky-50">
+                        Kembali ke Dashboard
+                    </a>
+                </section>
+            </aside>
+        </section>
     </div>
 </div>
-
-{{-- Memastikan Alpine.js dimuat untuk penutupan alert --}}
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-@endpush
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const nikInput = document.querySelector('input[name="nik"]');
+
+        if (nikInput) {
+            nikInput.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 16);
+            });
+        }
+
+        document.querySelectorAll('.toggle-password').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const input = this.parentElement.querySelector('.password-field');
+                const icon = this.querySelector('i');
+
+                if (! input) {
+                    return;
+                }
+
+                const visible = input.getAttribute('type') === 'text';
+
+                input.setAttribute('type', visible ? 'password' : 'text');
+
+                if (icon) {
+                    icon.classList.toggle('fa-eye', visible);
+                    icon.classList.toggle('fa-eye-slash', ! visible);
+                }
+            });
+        });
+
+        const passwordInput = document.getElementById('newPasswordInput');
+        const meterBar = document.getElementById('passwordMeterBar');
+        const meterText = document.getElementById('passwordMeterText');
+
+        if (passwordInput && meterBar && meterText) {
+            passwordInput.addEventListener('input', function () {
+                const value = this.value;
+                let score = 0;
+
+                if (value.length >= 8) score++;
+                if (/[A-Za-z]/.test(value)) score++;
+                if (/[0-9]/.test(value)) score++;
+                if (/[^A-Za-z0-9]/.test(value)) score++;
+
+                const width = [0, 25, 50, 75, 100][score];
+
+                meterBar.style.width = width + '%';
+
+                if (! value) {
+                    meterText.textContent = 'Kekuatan sandi belum dinilai.';
+                    return;
+                }
+
+                if (score <= 1) {
+                    meterText.textContent = 'Sandi masih lemah.';
+                    return;
+                }
+
+                if (score === 2) {
+                    meterText.textContent = 'Sandi cukup, tapi masih bisa dibuat lebih kuat.';
+                    return;
+                }
+
+                if (score === 3) {
+                    meterText.textContent = 'Sandi sudah kuat.';
+                    return;
+                }
+
+                meterText.textContent = 'Sandi sangat kuat.';
+            });
+        }
+    });
+</script>
+@endpush

@@ -18,32 +18,47 @@ class BidanController extends Controller
         $perPage = (int) $request->input('per_page', 12);
         $perPage = max(5, min($perPage, 25));
 
+        $search = trim((string) $request->input('search', ''));
+
         $query = User::query()
             ->select('id', 'name', 'email', 'nik', 'role', 'status', 'created_at')
             ->with([
                 'profile:id,user_id,full_name,nik,jenis_kelamin,tempat_lahir,tanggal_lahir,alamat,telepon',
-                'bidan:id,user_id,jabatan,no_str,no_sip,lokasi_praktik'
+                'bidan:id,user_id,jabatan,no_str,no_sip,lokasi_praktik',
             ])
             ->where('role', 'bidan');
 
-        if ($search = trim((string) $request->input('search'))) {
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                if (preg_match('/^[0-9]+$/', $search)) {
+                    $q->where('nik', 'like', "{$search}%")
+                        ->orWhereHas('profile', function ($p) use ($search) {
+                            $p->where('nik', 'like', "{$search}%")
+                                ->orWhere('telepon', 'like', "{$search}%");
+                        });
+
+                    return;
+                }
+
+                $q->where('name', 'like', "{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('nik', 'like', "%{$search}%")
                     ->orWhereHas('profile', function ($p) use ($search) {
-                        $p->where('full_name', 'like', "%{$search}%")
-                            ->orWhere('nik', 'like', "%{$search}%")
-                            ->orWhere('telepon', 'like', "%{$search}%");
+                        $p->where('full_name', 'like', "{$search}%")
+                            ->orWhere('full_name', 'like', "%{$search}%");
                     });
             });
         }
 
-        if ($request->filled('status')) {
+        if ($request->filled('status') && in_array($request->status, ['active', 'inactive'], true)) {
             $query->where('status', $request->status);
         }
 
-        $bidans = $query->latest('id')->paginate($perPage)->withQueryString();
+        $bidans = $query
+            ->latest('id')
+            ->paginate($perPage)
+            ->withQueryString();
 
         $stats = [
             'total' => User::where('role', 'bidan')->count(),
@@ -71,7 +86,6 @@ class BidanController extends Controller
             'tanggal_lahir' => ['required', 'date'],
             'alamat' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
-
             'jabatan' => ['nullable', 'string', 'max:191'],
             'no_str' => ['nullable', 'string', 'max:191'],
             'no_sip' => ['nullable', 'string', 'max:191'],
@@ -79,6 +93,7 @@ class BidanController extends Controller
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
             'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Email ini sudah digunakan.',
             'nik.required' => 'NIK wajib diisi.',
             'nik.digits' => 'NIK harus 16 digit angka.',
@@ -126,12 +141,15 @@ class BidanController extends Controller
                 ->route('admin.bidans.index')
                 ->with('success', 'Akun bidan berhasil dibuat.')
                 ->with('generated_password', $password)
+                ->with('reset_password', $password)
                 ->with('user_name', $validated['name'])
-                ->with('user_email', $validated['email']);
+                ->with('reset_name', $validated['name'])
+                ->with('user_email', $validated['email'])
+                ->with('reset_email', $validated['email']);
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            Log::error('BidanController::store gagal', [
+            Log::error('Admin BidanController store gagal', [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
@@ -139,7 +157,9 @@ class BidanController extends Controller
 
             return back()
                 ->withInput()
-                ->withErrors(['system' => 'Gagal membuat akun bidan. Cek struktur database dan log Laravel.']);
+                ->withErrors([
+                    'system' => 'Gagal membuat akun bidan. Cek struktur database dan log Laravel.',
+                ]);
         }
     }
 
@@ -175,11 +195,14 @@ class BidanController extends Controller
             'tanggal_lahir' => ['required', 'date'],
             'alamat' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
-
             'jabatan' => ['nullable', 'string', 'max:191'],
             'no_str' => ['nullable', 'string', 'max:191'],
             'no_sip' => ['nullable', 'string', 'max:191'],
             'lokasi_praktik' => ['nullable', 'string', 'max:191'],
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'jenis_kelamin.required' => 'Jenis kelamin wajib dipilih.',
+            'tanggal_lahir.required' => 'Tanggal lahir wajib diisi.',
         ]);
 
         DB::beginTransaction();
@@ -218,7 +241,7 @@ class BidanController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            Log::error('BidanController::update gagal', [
+            Log::error('Admin BidanController update gagal', [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
@@ -226,14 +249,24 @@ class BidanController extends Controller
 
             return back()
                 ->withInput()
-                ->withErrors(['system' => 'Gagal memperbarui data bidan.']);
+                ->withErrors([
+                    'system' => 'Gagal memperbarui data bidan.',
+                ]);
         }
     }
 
     public function destroy($id)
     {
-        $bidan = User::where('role', 'bidan')->findOrFail($id);
+        $bidan = User::with(['profile', 'bidan'])
+            ->where('role', 'bidan')
+            ->findOrFail($id);
+
         $name = $bidan->profile?->full_name ?? $bidan->name;
+
+        if ($this->hasOperationalHistory($bidan->id)) {
+            return back()
+                ->with('warning', "Akun bidan {$name} tidak dihapus karena sudah memiliki riwayat operasional. Nonaktifkan akun jika bidan tidak lagi bertugas.");
+        }
 
         DB::beginTransaction();
 
@@ -242,7 +275,10 @@ class BidanController extends Controller
                 DB::table('bidans')->where('user_id', $bidan->id)->delete();
             }
 
-            $bidan->profile()?->delete();
+            if ($bidan->profile) {
+                $bidan->profile->delete();
+            }
+
             $bidan->delete();
 
             DB::commit();
@@ -253,11 +289,15 @@ class BidanController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            Log::error('BidanController::destroy gagal', [
+            Log::error('Admin BidanController destroy gagal', [
                 'message' => $e->getMessage(),
+                'user_id' => $bidan->id,
             ]);
 
-            return back()->withErrors(['system' => 'Gagal menghapus data bidan.']);
+            return back()
+                ->withErrors([
+                    'system' => 'Gagal menghapus data bidan.',
+                ]);
         }
     }
 
@@ -267,24 +307,34 @@ class BidanController extends Controller
             ->where('role', 'bidan')
             ->findOrFail($id);
 
-        $nik = $bidan->profile?->nik ?? $bidan->nik ?? '0000000000000000';
-        $password = substr($nik, -6) . 'Bdn!';
+        $password = $this->makePassword();
 
-        $bidan->update([
+        $updateData = [
             'password' => Hash::make($password),
-        ]);
+        ];
+
+        if (Schema::hasColumn('users', 'must_change_password')) {
+            $updateData['must_change_password'] = true;
+        }
+
+        $bidan->update($updateData);
+
+        $name = $bidan->profile?->full_name ?? $bidan->name;
 
         return redirect()
             ->route('admin.bidans.index')
-            ->with('success', 'Password bidan berhasil direset.')
+            ->with('success', 'Password baru bidan berhasil dibuat.')
+            ->with('generated_password', $password)
             ->with('reset_password', $password)
-            ->with('reset_name', $bidan->profile?->full_name ?? $bidan->name)
+            ->with('user_name', $name)
+            ->with('reset_name', $name)
+            ->with('user_email', $bidan->email)
             ->with('reset_email', $bidan->email);
     }
 
     private function saveBidanDetail(int $userId, array $data): void
     {
-        if (!Schema::hasTable('bidans')) {
+        if (! Schema::hasTable('bidans')) {
             return;
         }
 
@@ -310,9 +360,11 @@ class BidanController extends Controller
             $payload['updated_at'] = now();
         }
 
-        $exists = DB::table('bidans')->where('user_id', $userId)->exists();
+        $exists = DB::table('bidans')
+            ->where('user_id', $userId)
+            ->exists();
 
-        if (!$exists && Schema::hasColumn('bidans', 'created_at')) {
+        if (! $exists && Schema::hasColumn('bidans', 'created_at')) {
             $payload['created_at'] = now();
         }
 
@@ -322,15 +374,60 @@ class BidanController extends Controller
         );
     }
 
-    private function makePassword(): string
+    private function hasOperationalHistory(int $userId): bool
     {
-        $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#';
-        $password = '';
+        $checks = [
+            ['table' => 'pemeriksaans', 'columns' => ['bidan_id', 'created_by', 'updated_by']],
+            ['table' => 'imunisasis', 'columns' => ['bidan_id', 'petugas_id', 'created_by', 'updated_by']],
+            ['table' => 'jadwals', 'columns' => ['bidan_id', 'created_by', 'updated_by']],
+            ['table' => 'rekam_medis', 'columns' => ['bidan_id', 'created_by', 'updated_by']],
+            ['table' => 'notifikasis', 'columns' => ['user_id']],
+        ];
 
-        for ($i = 0; $i < 8; $i++) {
-            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        foreach ($checks as $check) {
+            if (! Schema::hasTable($check['table'])) {
+                continue;
+            }
+
+            foreach ($check['columns'] as $column) {
+                if (! Schema::hasColumn($check['table'], $column)) {
+                    continue;
+                }
+
+                $exists = DB::table($check['table'])
+                    ->where($column, $userId)
+                    ->exists();
+
+                if ($exists) {
+                    return true;
+                }
+            }
         }
 
-        return $password;
+        return false;
+    }
+
+    private function makePassword(): string
+    {
+        $lower = 'abcdefghjkmnpqrstuvwxyz';
+        $upper = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+        $number = '23456789';
+        $symbol = '!@#';
+        $all = $lower . $upper . $number . $symbol;
+
+        $password = [
+            $lower[random_int(0, strlen($lower) - 1)],
+            $upper[random_int(0, strlen($upper) - 1)],
+            $number[random_int(0, strlen($number) - 1)],
+            $symbol[random_int(0, strlen($symbol) - 1)],
+        ];
+
+        for ($i = 0; $i < 8; $i++) {
+            $password[] = $all[random_int(0, strlen($all) - 1)];
+        }
+
+        shuffle($password);
+
+        return implode('', $password);
     }
 }

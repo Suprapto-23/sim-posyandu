@@ -1,34 +1,54 @@
 @php
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Route;
     use Illuminate\Support\Str;
 
     $route = request()->route()?->getName() ?? '';
 
     $userName = Auth::user()->name ?? 'Warga Posyandu';
-    $initial = strtoupper(substr($userName, 0, 1));
+    $initial = strtoupper(substr(trim($userName), 0, 1)) ?: 'W';
 
-    $isDashboard  = $route === 'user.dashboard';
-    $isJadwal     = Str::startsWith($route, 'user.jadwal');
+    $routeTo = function (string $name, array $params = []) {
+        return Route::has($name) ? route($name, $params) : '#';
+    };
 
-    $isMonitoring = Str::startsWith($route, 'user.monitoring') ||
-                    Str::startsWith($route, 'user.balita') ||
-                    Str::startsWith($route, 'user.remaja') ||
-                    Str::startsWith($route, 'user.lansia') ||
+    $isDashboard = $route === 'user.dashboard';
 
-    $isRiwayat    = Str::startsWith($route, 'user.riwayat');
-    $isNotifikasi = Str::startsWith($route, 'user.notifikasi') || Str::startsWith($route, 'notifikasi');
-    $isProfile    = Str::startsWith($route, 'user.profile');
+    $isJadwal = Str::startsWith($route, [
+        'user.jadwal',
+    ]);
+
+    $isRiwayat = Str::startsWith($route, [
+        'user.riwayat',
+    ]);
+
+    $isMonitoring = Str::startsWith($route, [
+        'user.monitoring',
+        'user.balita',
+        'user.remaja',
+        'user.lansia',
+    ]);
+
+    $isNotifikasi = Str::startsWith($route, [
+        'user.notifikasi',
+        'notifikasi',
+    ]);
+
+    $isProfile = Str::startsWith($route, [
+        'user.profile',
+    ]);
 
     $mainMenus = [
         [
             'label' => 'Beranda',
             'icon' => 'fa-house',
-            'route' => route('user.dashboard'),
+            'route' => $routeTo('user.dashboard'),
             'active' => $isDashboard,
         ],
         [
             'label' => 'Agenda Posyandu',
             'icon' => 'fa-calendar-days',
-            'route' => route('user.jadwal.index'),
+            'route' => $routeTo('user.jadwal.index'),
             'active' => $isJadwal,
         ],
     ];
@@ -37,13 +57,13 @@
         [
             'label' => 'Pantau Kesehatan',
             'icon' => 'fa-heart-pulse',
-            'route' => route('user.monitoring.index'),
+            'route' => $routeTo('user.monitoring.index'),
             'active' => $isMonitoring,
         ],
         [
             'label' => 'Riwayat Terpadu',
             'icon' => 'fa-notes-medical',
-            'route' => route('user.riwayat.index'),
+            'route' => $routeTo('user.riwayat.index'),
             'active' => $isRiwayat,
         ],
     ];
@@ -52,7 +72,7 @@
         [
             'label' => 'Pesan Bidan',
             'icon' => 'fa-bell',
-            'route' => route('user.notifikasi.index'),
+            'route' => $routeTo('user.notifikasi.index'),
             'active' => $isNotifikasi,
         ],
     ];

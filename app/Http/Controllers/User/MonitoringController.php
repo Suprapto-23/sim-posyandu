@@ -3,73 +3,80 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Traits\DetectsUserPeran; // Tambahkan Trait
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\User\Concerns\ResolvesUserHealthContext;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 class MonitoringController extends Controller
 {
-    use DetectsUserPeran; // Aktifkan Trait
+    use ResolvesUserHealthContext;
 
-    /**
-     * Menampilkan Dasbor Monitoring Kesehatan Terpadu Warga.
-     * Terintegrasi dengan Trait agar membaca seluruh relasi keluarga (NIK Ayah/Ibu)
-     */
-    public function index()
+    public function index(): View
     {
         try {
-            $user = Auth::user();
-            
-            // 1. Gunakan Trait Cerdas untuk mendapatkan SEMUA relasi demografi pengguna ini
-            $ctx = $this->getUserContext($user);
+            $context = $this->getUserContext(auth()->user());
 
-            // 2. Ambil data yang sudah dikumpulkan oleh Trait dan muat relasi rekam medisnya (Eager Loading)
-            $balitas = $ctx['balitas']->load([
-                'kunjungans' => function($query) {
-                    $query->latest('tanggal_kunjungan');
-                },
-                'kunjungans.pemeriksaan',
-                'pemeriksaan_terakhir'
+            $balitas = $this->loadMonitoringRelations($context['balitas']);
+            $remajas = $this->loadMonitoringRelations($context['remajas']);
+            $lansias = $this->loadMonitoringRelations($context['lansias']);
+
+            $counts = [
+                'total' => $balitas->count() + $remajas->count() + $lansias->count(),
+                'balita' => $balitas->count(),
+                'remaja' => $remajas->count(),
+                'lansia' => $lansias->count(),
+            ];
+
+            return view('user.monitoring.index', [
+                'context' => $context,
+                'balitas' => $balitas,
+                'remajas' => $remajas,
+                'lansias' => $lansias,
+                'counts' => $counts,
+                'hasData' => $counts['total'] > 0,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('User monitoring index error', [
+                'message' => $e->getMessage(),
             ]);
 
-            $remajas = collect();
-            if ($ctx['remaja']) {
-                $remajas->push($ctx['remaja']->load([
-                    'kunjungans' => function($query) { $query->latest('tanggal_kunjungan'); },
-                    'kunjungans.pemeriksaan',
-                    'pemeriksaan_terakhir'
-                ]));
-            }
-
-           
-
-            $lansias = collect();
-            if ($ctx['lansia']) {
-                $lansias->push($ctx['lansia']->load([
-                    'kunjungans' => function($query) { $query->latest('tanggal_kunjungan'); },
-                    'kunjungans.pemeriksaan',
-                    'pemeriksaan_terakhir'
-                ]));
-            }
-
-            // 3. FLAG KETERSEDIAAN DATA (Untuk UI Empty State)
-            $hasData = $balitas->isNotEmpty() || $remajas->isNotEmpty() || $lansias->isNotEmpty();
-
-            return view('user.monitoring.index', compact(
-                'balitas', 
-                'remajas', 
-                'lansias',
-                'hasData'
-            ));
-
-        } catch (\Exception $e) {
-            // Catat error secara diam-diam
-            Log::error('Error pada MonitoringController@index: ' . $e->getMessage());
-            
             return redirect()
                 ->route('user.dashboard')
-                ->with('error', 'Sistem sedang memproses pembaruan. Gagal memuat data pemantauan saat ini.');
+                ->with('error', 'Data pemantauan kesehatan belum dapat dimuat. Silakan coba kembali.');
         }
+    }
+
+    private function loadMonitoringRelations(Collection $items): Collection
+    {
+        return $items->map(function ($item) {
+            try {
+                $relations = [];
+
+                if (method_exists($item, 'pemeriksaan_terakhir')) {
+                    $relations[] = 'pemeriksaan_terakhir';
+                }
+
+                if (method_exists($item, 'kunjungans')) {
+                    $relations['kunjungans'] = fn ($query) => $query
+                        ->latest('tanggal_kunjungan')
+                        ->limit(5);
+
+                    $relations[] = 'kunjungans.pemeriksaan';
+                }
+
+                if (! empty($relations)) {
+                    $item->loadMissing($relations);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Monitoring relation load skipped', [
+                    'model' => get_class($item),
+                    'id' => $item->id ?? null,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+
+            return $item;
+        });
     }
 }

@@ -700,7 +700,7 @@
         });
     </script>
 
-@stack('scripts')
 @stack('modals')
+@stack('scripts')
 </body>
 </html>

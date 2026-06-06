@@ -1,127 +1,247 @@
 <?php
-/**
- * PATH   : app/Http/Controllers/Admin/DashboardController.php
- * FUNGSI : Dashboard utama admin — statistik, grafik, jadwal, login activity
- */
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use App\Models\User;
-use App\Models\Balita;
-use App\Models\Remaja;
-use App\Models\Lansia;
-use App\Models\JadwalPosyandu;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $stats            = $this->buildStats();
-        $jadwalHariIni    = $this->getJadwalHariIni();
-        $jadwalMendatang  = $this->getJadwalMendatang();
-        $loginTerbaru     = $this->getLoginTerbaru();
-        $chartData        = $this->getChartData();
-        $userBaruBulanIni = $this->getUserBaruBulanIni();
-        
+        $roleStats = [
+            'admin' => $this->countUsersByRole('admin'),
+            'bidan' => $this->countUsersByRole('bidan'),
+            'kader' => $this->countUsersByRole('kader'),
+            'user' => $this->countUsersByRole('user'),
+        ];
+
+        $accountStats = [
+            'total' => $this->countTable('users'),
+            'aktif' => $this->countUsersByStatus('active'),
+            'nonaktif' => $this->countUsersByStatus('inactive'),
+        ];
+
+        $sasaranStats = [
+            'balita' => $this->countTable('balitas'),
+            'remaja' => $this->countTable('remajas'),
+            'lansia' => $this->countTable('lansias'),
+            'total' => $this->countTable('balitas') + $this->countTable('remajas') + $this->countTable('lansias'),
+        ];
+
+        $serviceStats = [
+            'jadwal' => $this->countTable('jadwals'),
+            'jadwal_aktif' => $this->countByColumnValue('jadwals', 'status', 'aktif'),
+            'pemeriksaan' => $this->countTable('pemeriksaans'),
+            'imunisasi' => $this->countTable('imunisasis'),
+            'absensi' => $this->countTable('absensi_posyandus'),
+            'pengukuran' => $this->countFirstAvailableTable(['pengukuran_fisiks', 'pengukurans']),
+            'laporan' => $this->countFirstAvailableTable(['laporan_bulanans', 'laporans']),
+        ];
+
+        $monthlySeries = $this->monthlySeries();
+
+        $recentUsers = $this->recentUsers();
+
+        $recentJadwals = $this->recentRows('jadwals', [
+            'id',
+            'judul',
+            'tanggal',
+            'waktu_mulai',
+            'waktu_selesai',
+            'lokasi',
+            'kategori',
+            'target_peserta',
+            'status',
+            'created_at',
+        ]);
+
+        $recentPemeriksaans = $this->recentRows('pemeriksaans', [
+            'id',
+            'nama',
+            'pasien_nama',
+            'pasien_type',
+            'pasien_id',
+            'status',
+            'created_at',
+            'updated_at',
+        ], 5);
 
         return view('admin.dashboard', compact(
-            'stats', 'jadwalHariIni', 'jadwalMendatang',
-            'loginTerbaru', 'chartData', 'userBaruBulanIni'
+            'roleStats',
+            'accountStats',
+            'sasaranStats',
+            'serviceStats',
+            'monthlySeries',
+            'recentUsers',
+            'recentJadwals',
+            'recentPemeriksaans'
         ));
     }
 
-    // ── Statistik utama ─────────────────────────
-    private function buildStats(): array
+    private function countUsersByRole(string $role): int
     {
-        try {
-            return [
-                'total_user'    => User::where('role', 'user')->count(),
-                'user_aktif'    => User::where('role', 'user')->where('status', 'active')->count(),
-                'user_nonaktif' => User::where('role', 'user')->where('status', 'inactive')->count(),
-                'total_kader'   => User::where('role', 'kader')->count(),
-                'total_bidan'   => User::where('role', 'bidan')->count(),
-                'total_balita'  => Balita::count(),
-                'total_remaja'  => Remaja::count(),
-                'total_lansia'  => Lansia::count(),
-            ];
-        } catch (\Throwable $e) {
-            Log::warning('AdminDashboard::buildStats — ' . $e->getMessage());
-            return array_fill_keys([
-                'total_user','user_aktif','user_nonaktif',
-                'total_kader','total_bidan',
-                'total_balita','total_remaja','total_lansia',
-            ], 0);
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'role')) {
+            return 0;
         }
+
+        return User::where('role', $role)->count();
     }
 
-    // ── Jadwal hari ini ─────────────────────────
-    private function getJadwalHariIni()
+    private function countUsersByStatus(string $status): int
     {
-        try {
-            return JadwalPosyandu::whereDate('tanggal', today())
-                ->where('status', 'aktif')->get();
-        } catch (\Throwable $e) { return collect(); }
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'status')) {
+            return 0;
+        }
+
+        return User::where('status', $status)->count();
     }
 
-    // ── Jadwal mendatang (maks 5) ───────────────
-    private function getJadwalMendatang()
+    private function countTable(string $table): int
     {
-        try {
-            return JadwalPosyandu::whereDate('tanggal', '>', today())
-                ->where('status', 'aktif')
-                ->orderBy('tanggal')->take(5)->get();
-        } catch (\Throwable $e) { return collect(); }
+        if (! Schema::hasTable($table)) {
+            return 0;
+        }
+
+        return DB::table($table)->count();
     }
 
-    // ── Login terbaru ───────────────────────────
-    private function getLoginTerbaru()
+    private function countByColumnValue(string $table, string $column, string $value): int
     {
-        try {
-            return DB::table('login_logs')
-                ->join('users', 'login_logs.user_id', '=', 'users.id')
-                ->leftJoin('profiles', 'users.id', '=', 'profiles.user_id')
-                ->select(
-                    'users.role',
-                    'users.email',
-                    DB::raw('COALESCE(profiles.full_name, users.name) as display_name'),
-                    'login_logs.login_at',
-                    'login_logs.status',
-                    'login_logs.ip_address'
-                )
-                ->orderByDesc('login_logs.login_at')
-                ->limit(8)->get();
-        } catch (\Throwable $e) { return collect(); }
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            return 0;
+        }
+
+        return DB::table($table)
+            ->where($column, $value)
+            ->count();
     }
 
-    // ── Chart: user baru 7 bulan ────────────────
-    private function getChartData(): array
+    private function countFirstAvailableTable(array $tables): int
     {
-        try {
-            $labels = []; $data = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $m = now()->subMonths($i);
-                $labels[] = $m->translatedFormat('M Y');
-                $data[]   = User::where('role', 'user')
-                    ->whereYear('created_at', $m->year)
-                    ->whereMonth('created_at', $m->month)->count();
+        foreach ($tables as $table) {
+            if (Schema::hasTable($table)) {
+                return DB::table($table)->count();
             }
-            return ['labels' => $labels, 'userData' => $data];
-        } catch (\Throwable $e) {
-            return ['labels' => [], 'userData' => []];
         }
+
+        return 0;
     }
 
-    // ── User baru bulan ini ─────────────────────
-    private function getUserBaruBulanIni(): int
+    private function recentUsers(int $limit = 6)
     {
-        try {
-            return User::where('role', 'user')
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)->count();
-        } catch (\Throwable $e) { return 0; }
+        if (! Schema::hasTable('users')) {
+            return collect();
+        }
+
+        $query = User::query()
+            ->select($this->existingColumns('users', [
+                'id',
+                'name',
+                'email',
+                'nik',
+                'role',
+                'status',
+                'created_at',
+            ]));
+
+        if (Schema::hasColumn('users', 'role')) {
+            $query->whereIn('role', ['bidan', 'kader', 'user']);
+        }
+
+        if (Schema::hasColumn('users', 'created_at')) {
+            $query->latest('created_at');
+        } else {
+            $query->latest('id');
+        }
+
+        return $query->limit($limit)->get();
+    }
+
+    private function recentRows(string $table, array $columns, int $limit = 6)
+    {
+        if (! Schema::hasTable($table)) {
+            return collect();
+        }
+
+        $selectedColumns = $this->existingColumns($table, $columns);
+
+        if (empty($selectedColumns)) {
+            return collect();
+        }
+
+        $query = DB::table($table)->select($selectedColumns);
+
+        if (Schema::hasColumn($table, 'created_at')) {
+            $query->latest('created_at');
+        } else {
+            $query->latest('id');
+        }
+
+        return $query->limit($limit)->get();
+    }
+
+    private function monthlySeries(): array
+    {
+        $months = collect(range(5, 0))
+            ->map(function ($index) {
+                $date = now()->subMonths($index)->startOfMonth();
+
+                return [
+                    'key' => $date->format('Y-m'),
+                    'label' => Carbon::parse($date)->translatedFormat('M'),
+                    'start' => $date->copy()->startOfMonth(),
+                    'end' => $date->copy()->endOfMonth(),
+                ];
+            });
+
+        $akun = [];
+        $pemeriksaan = [];
+        $jadwal = [];
+
+        foreach ($months as $month) {
+            $akun[] = $this->countMonthly('users', 'created_at', $month['start'], $month['end']);
+            $pemeriksaan[] = $this->countMonthly('pemeriksaans', 'created_at', $month['start'], $month['end']);
+
+            if (Schema::hasTable('jadwals') && Schema::hasColumn('jadwals', 'tanggal')) {
+                $jadwal[] = $this->countMonthly('jadwals', 'tanggal', $month['start'], $month['end']);
+            } else {
+                $jadwal[] = $this->countMonthly('jadwals', 'created_at', $month['start'], $month['end']);
+            }
+        }
+
+        return [
+            'labels' => $months->pluck('label')->values()->all(),
+            'akun' => $akun,
+            'pemeriksaan' => $pemeriksaan,
+            'jadwal' => $jadwal,
+            'max' => max(array_merge($akun, $pemeriksaan, $jadwal, [1])),
+        ];
+    }
+
+    private function countMonthly(string $table, string $column, Carbon $start, Carbon $end): int
+    {
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            return 0;
+        }
+
+        return DB::table($table)
+            ->whereBetween($column, [$start, $end])
+            ->count();
+    }
+
+    private function existingColumns(string $table, array $columns): array
+    {
+        if (! Schema::hasTable($table)) {
+            return [];
+        }
+
+        return collect($columns)
+            ->filter(fn ($column) => Schema::hasColumn($table, $column))
+            ->values()
+            ->all();
     }
 }

@@ -45,6 +45,15 @@
 
 @push('styles')
 <style>
+    html {
+        scroll-behavior: auto !important;
+    }
+
+    html.pc-modal-open,
+    body.pc-modal-open {
+        overflow: hidden !important;
+    }
+
     .laporan-page {
         font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
         position: relative;
@@ -58,65 +67,68 @@
         z-index: -1;
         pointer-events: none;
         background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
+            radial-gradient(circle at 8% 8%, rgba(16, 185, 129, .13), transparent 28%),
+            radial-gradient(circle at 92% 12%, rgba(245, 158, 11, .10), transparent 26%),
+            radial-gradient(circle at 50% 100%, rgba(14, 165, 233, .08), transparent 32%),
             linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
     }
 
     .glass-panel {
-        border: 1px solid rgba(255,255,255,.78);
-        background: rgba(255,255,255,.64);
+        border: 1px solid rgba(255, 255, 255, .78);
+        background: rgba(255, 255, 255, .64);
         backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15, 23, 42, .06);
     }
 
     .hero-panel {
-        border: 1px solid rgba(167,243,208,.72);
+        border: 1px solid rgba(167, 243, 208, .72);
         background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
-            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
+            radial-gradient(circle at 12% 18%, rgba(16, 185, 129, .16), transparent 32%),
+            radial-gradient(circle at 88% 16%, rgba(245, 158, 11, .13), transparent 32%),
+            linear-gradient(135deg, rgba(255, 255, 255, .72), rgba(236, 253, 245, .70));
         backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 18px 42px rgba(15, 23, 42, .06);
     }
 
     .input-premium {
-        border: 1px solid rgba(226,232,240,.9);
-        background: rgba(255,255,255,.72);
+        border: 1px solid rgba(226, 232, 240, .9);
+        background: rgba(255, 255, 255, .72);
         outline: none;
-        transition: all .3s ease-in-out;
+        transition: all .25s ease-in-out;
     }
 
     .input-premium:focus {
-        border-color: rgba(16,185,129,.42);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-        background: rgba(255,255,255,.86);
+        border-color: rgba(16, 185, 129, .42);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, .08);
+        background: rgba(255, 255, 255, .86);
     }
 
     .report-card {
-        border: 1px solid rgba(226,232,240,.78);
-        background: rgba(255,255,255,.58);
+        border: 1px solid rgba(226, 232, 240, .78);
+        background: rgba(255, 255, 255, .58);
         backdrop-filter: blur(14px);
-        transition: all .3s ease-in-out;
+        -webkit-backdrop-filter: blur(14px);
+        transition: all .25s ease-in-out;
     }
 
     .report-card:hover {
         transform: translateY(-2px);
-        border-color: rgba(16,185,129,.24);
-        box-shadow: 0 18px 34px rgba(15,23,42,.055);
+        border-color: rgba(16, 185, 129, .24);
+        box-shadow: 0 18px 34px rgba(15, 23, 42, .055);
     }
 
     .report-card.active {
-        border-color: rgba(16,185,129,.42);
-        background: rgba(236,253,245,.86);
-        box-shadow: 0 14px 32px rgba(5,150,105,.08);
+        border-color: rgba(16, 185, 129, .42);
+        background: rgba(236, 253, 245, .86);
+        box-shadow: 0 14px 32px rgba(5, 150, 105, .08);
     }
 
     .preview-frame-shell {
-        border: 1px solid rgba(226,232,240,.86);
-        background: rgba(248,250,252,.72);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+        border: 1px solid rgba(226, 232, 240, .86);
+        background: rgba(248, 250, 252, .72);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72);
     }
 
     .pdf-frame {
@@ -128,15 +140,56 @@
 
     .preview-empty {
         min-height: 300px;
-        border: 1px dashed rgba(148,163,184,.55);
+        border: 1px dashed rgba(148, 163, 184, .55);
         background:
-            radial-gradient(circle at 20% 20%, rgba(16,185,129,.08), transparent 30%),
-            radial-gradient(circle at 80% 10%, rgba(245,158,11,.08), transparent 28%),
-            rgba(248,250,252,.72);
+            radial-gradient(circle at 20% 20%, rgba(16, 185, 129, .08), transparent 30%),
+            radial-gradient(circle at 80% 10%, rgba(245, 158, 11, .08), transparent 28%),
+            rgba(248, 250, 252, .72);
     }
 
     .fade-in {
         animation: fadeInUp .35s ease-in-out both;
+    }
+
+    .pc-laporan-modal-backdrop {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 2147483647 !important;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        margin: 0 !important;
+        padding: 1rem;
+        background: rgba(15, 23, 42, .58);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .pc-laporan-modal-backdrop.is-open {
+        display: flex !important;
+    }
+
+    .pc-laporan-modal-card {
+        width: min(100%, 480px);
+        transform: translateY(12px) scale(.97);
+        opacity: 0;
+        border-radius: 1.75rem;
+        border: 1px solid rgba(255, 255, 255, .78);
+        background:
+            radial-gradient(circle at 0% 0%, rgba(245, 158, 11, .14), transparent 34%),
+            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
+            rgba(255, 255, 255, .96);
+        padding: 1.5rem;
+        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
+        transition: transform .18s ease, opacity .18s ease;
+    }
+
+    .pc-laporan-modal-backdrop.is-open .pc-laporan-modal-card {
+        transform: translateY(0) scale(1);
+        opacity: 1;
     }
 
     @keyframes fadeInUp {
@@ -144,6 +197,7 @@
             opacity: 0;
             transform: translateY(10px);
         }
+
         to {
             opacity: 1;
             transform: translateY(0);
@@ -155,12 +209,20 @@
             height: 640px;
         }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: .01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
 </style>
 @endpush
 
 @section('content')
 <div class="laporan-page space-y-5">
-
     {{-- HERO --}}
     <section class="hero-panel rounded-[30px] p-5 sm:p-6">
         <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -180,7 +242,10 @@
             </div>
 
             <div class="rounded-[24px] border border-white/70 bg-white/50 p-4 backdrop-blur-md">
-                <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">Tanggal Hari Ini</p>
+                <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">
+                    Tanggal Hari Ini
+                </p>
+
                 <p class="mt-1 text-sm font-black text-slate-900">
                     {{ now('Asia/Jakarta')->translatedFormat('d F Y') }}
                 </p>
@@ -219,7 +284,10 @@
     <form method="GET" action="{{ route('kader.laporan.generate') }}" id="laporanForm" class="space-y-5">
         <section class="glass-panel rounded-[30px] p-4 sm:p-5">
             <div class="mb-5">
-                <h2 class="text-lg font-black text-slate-900">Pilih Jenis Laporan</h2>
+                <h2 class="text-lg font-black text-slate-900">
+                    Pilih Jenis Laporan
+                </h2>
+
                 <p class="mt-1 text-xs font-bold text-slate-400">
                     Laporan dibagi menjadi 3 sasaran utama agar formatnya jelas dan tidak berlebihan.
                 </p>
@@ -268,7 +336,10 @@
 
         <section class="glass-panel rounded-[30px] p-4 sm:p-5">
             <div class="mb-5">
-                <h2 class="text-lg font-black text-slate-900">Filter Periode Pemeriksaan</h2>
+                <h2 class="text-lg font-black text-slate-900">
+                    Filter Periode Pemeriksaan
+                </h2>
+
                 <p class="mt-1 text-xs font-bold text-slate-400">
                     Periode digunakan untuk menampilkan data pemeriksaan yang sudah berjalan pada rentang tanggal tertentu.
                 </p>
@@ -276,9 +347,10 @@
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto]">
                 <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                    <label for="tanggal_awal" class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
                         Tanggal Awal
                     </label>
+
                     <input
                         type="date"
                         name="tanggal_awal"
@@ -289,9 +361,10 @@
                 </div>
 
                 <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
+                    <label for="tanggal_akhir" class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
                         Tanggal Akhir
                     </label>
+
                     <input
                         type="date"
                         name="tanggal_akhir"
@@ -302,9 +375,11 @@
                 </div>
 
                 <div class="flex items-end">
-                    <button type="submit"
-                            id="previewSubmitBtn"
-                            class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700 lg:w-auto">
+                    <button
+                        type="submit"
+                        id="previewSubmitBtn"
+                        class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700 lg:w-auto"
+                    >
                         <i class="fa-solid fa-eye"></i>
                         Preview Laporan
                     </button>
@@ -319,7 +394,10 @@
                 </div>
 
                 <div>
-                    <h3 class="text-sm font-black text-amber-800">Catatan Format</h3>
+                    <h3 class="text-sm font-black text-amber-800">
+                        Catatan Format
+                    </h3>
+
                     <p class="mt-1 text-xs font-bold leading-5 text-amber-700">
                         Laporan ditampilkan sebagai preview PDF terlebih dahulu agar isi dan periode dapat dicek sebelum diunduh. Absensi tidak dibuat sebagai laporan terpisah. Imunisasi masuk ke laporan Balita.
                     </p>
@@ -347,20 +425,24 @@
             </div>
 
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
-                <a href="#"
-                   id="openPdfBtn"
-                   target="_blank"
-                   rel="noopener"
-                   class="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-100 bg-sky-50/80 px-5 py-3 text-sm font-black text-sky-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-sky-100/80">
+                <a
+                    href="#"
+                    id="openPdfBtn"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-100 bg-sky-50/80 px-5 py-3 text-sm font-black text-sky-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-sky-100/80"
+                >
                     <i class="fa-solid fa-up-right-from-square"></i>
                     Buka Tab Baru
                 </a>
 
-                <a href="#"
-                   id="downloadPdfBtn"
-                   target="_blank"
-                   rel="noopener"
-                   class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
+                <a
+                    href="#"
+                    id="downloadPdfBtn"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700"
+                >
                     <i class="fa-solid fa-download"></i>
                     Unduh PDF
                 </a>
@@ -388,20 +470,55 @@
                 id="pdfPreviewFrame"
                 src=""
                 class="pdf-frame"
-                title="Preview PDF Laporan">
-            </iframe>
+                title="Preview PDF Laporan"
+            ></iframe>
         </div>
     </section>
-
 </div>
 @endsection
+
+@push('modals')
+<div id="laporanNoticeModal" class="pc-laporan-modal-backdrop" aria-hidden="true">
+    <div class="pc-laporan-modal-card">
+        <div class="flex gap-4">
+            <div id="laporanNoticeIconBox" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20">
+                <i id="laporanNoticeIcon" class="fa-solid fa-circle-info text-xl"></i>
+            </div>
+
+            <div class="min-w-0 flex-1">
+                <p id="laporanNoticeEyebrow" class="text-[11px] font-black uppercase tracking-[.18em] text-amber-700">
+                    Informasi
+                </p>
+
+                <h3 id="laporanNoticeTitle" class="mt-1 text-lg font-black text-slate-950">
+                    Perlu perhatian
+                </h3>
+
+                <p id="laporanNoticeMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                    Periksa kembali input laporan.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end">
+            <button
+                type="button"
+                id="laporanNoticeClose"
+                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5"
+            >
+                <i class="fa-solid fa-check"></i>
+                Mengerti
+            </button>
+        </div>
+    </div>
+</div>
+@endpush
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var cards = document.querySelectorAll('[data-report-card]');
     var radios = document.querySelectorAll('.report-radio');
-
     var form = document.getElementById('laporanForm');
     var previewSection = document.getElementById('previewSection');
     var iframe = document.getElementById('pdfPreviewFrame');
@@ -411,6 +528,52 @@ document.addEventListener('DOMContentLoaded', function () {
     var previewFrameWrap = document.getElementById('previewFrameWrap');
     var previewInfoText = document.getElementById('previewInfoText');
     var submitBtn = document.getElementById('previewSubmitBtn');
+    var noticeModal = document.getElementById('laporanNoticeModal');
+    var noticeClose = document.getElementById('laporanNoticeClose');
+    var noticeTitle = document.getElementById('laporanNoticeTitle');
+    var noticeMessage = document.getElementById('laporanNoticeMessage');
+
+    if (noticeModal && noticeModal.parentElement !== document.body) {
+        document.body.appendChild(noticeModal);
+    }
+
+    function lockBody() {
+        document.documentElement.classList.add('pc-modal-open');
+        document.body.classList.add('pc-modal-open');
+    }
+
+    function unlockBody() {
+        document.documentElement.classList.remove('pc-modal-open');
+        document.body.classList.remove('pc-modal-open');
+    }
+
+    function openLaporanNotice(title, message) {
+        if (!noticeModal) {
+            return;
+        }
+
+        if (noticeTitle) {
+            noticeTitle.textContent = title || 'Perlu perhatian';
+        }
+
+        if (noticeMessage) {
+            noticeMessage.textContent = message || 'Periksa kembali input laporan.';
+        }
+
+        lockBody();
+        noticeModal.classList.add('is-open');
+        noticeModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeLaporanNotice() {
+        if (!noticeModal) {
+            return;
+        }
+
+        noticeModal.classList.remove('is-open');
+        noticeModal.setAttribute('aria-hidden', 'true');
+        unlockBody();
+    }
 
     function getSelectedReportLabel() {
         var selected = document.querySelector('.report-radio:checked');
@@ -443,8 +606,36 @@ document.addEventListener('DOMContentLoaded', function () {
         return form.action + '?' + params.toString();
     }
 
+    function resetPreviewButton() {
+        if (!submitBtn) {
+            return;
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        submitBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview Laporan';
+    }
+
     radios.forEach(function (radio) {
         radio.addEventListener('change', updateCards);
+    });
+
+    if (noticeClose) {
+        noticeClose.addEventListener('click', closeLaporanNotice);
+    }
+
+    if (noticeModal) {
+        noticeModal.addEventListener('click', function (event) {
+            if (event.target === noticeModal) {
+                closeLaporanNotice();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && noticeModal && noticeModal.classList.contains('is-open')) {
+            closeLaporanNotice();
+        }
     });
 
     if (form && previewSection && iframe && downloadBtn && openPdfBtn) {
@@ -454,8 +645,21 @@ document.addEventListener('DOMContentLoaded', function () {
             var tanggalAwal = document.getElementById('tanggal_awal');
             var tanggalAkhir = document.getElementById('tanggal_akhir');
 
-            if (tanggalAwal && tanggalAkhir && tanggalAwal.value && tanggalAkhir.value && tanggalAkhir.value < tanggalAwal.value) {
-                alert('Tanggal akhir tidak boleh lebih awal dari tanggal awal.');
+            if (!tanggalAwal || !tanggalAkhir || !tanggalAwal.value || !tanggalAkhir.value) {
+                openLaporanNotice(
+                    'Tanggal belum lengkap',
+                    'Isi tanggal awal dan tanggal akhir terlebih dahulu sebelum membuat preview laporan.'
+                );
+
+                return;
+            }
+
+            if (tanggalAkhir.value < tanggalAwal.value) {
+                openLaporanNotice(
+                    'Tanggal tidak valid',
+                    'Tanggal akhir tidak boleh lebih awal dari tanggal awal.'
+                );
+
                 return;
             }
 
@@ -467,23 +671,30 @@ document.addEventListener('DOMContentLoaded', function () {
             downloadBtn.href = downloadUrl;
             openPdfBtn.href = previewUrl;
 
-            previewInfoText.textContent = reportLabel + ' sedang ditampilkan dalam format PDF. Periksa isi laporan sebelum mengunduh.';
+            if (previewInfoText) {
+                previewInfoText.textContent = reportLabel + ' sedang ditampilkan dalam format PDF. Periksa isi laporan sebelum mengunduh.';
+            }
 
             previewSection.classList.remove('hidden');
             previewSection.classList.add('fade-in');
 
-            previewLoading.classList.add('hidden');
-            previewFrameWrap.classList.remove('hidden');
+            if (previewLoading) {
+                previewLoading.classList.add('hidden');
+            }
 
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Membuat Preview...';
+            if (previewFrameWrap) {
+                previewFrameWrap.classList.remove('hidden');
+            }
 
-            setTimeout(function () {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-                submitBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview Laporan';
-            }, 1200);
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+                submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Membuat Preview...';
+
+                setTimeout(function () {
+                    resetPreviewButton();
+                }, 1200);
+            }
 
             setTimeout(function () {
                 previewSection.scrollIntoView({
