@@ -1,110 +1,194 @@
 <?php
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\ChangePasswordController;
+
 use App\Http\Controllers\HomeController;
 
-// Admin
-use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
-use App\Http\Controllers\Admin\UserController      as AdminUser;
-use App\Http\Controllers\Admin\BidanController     as AdminBidan;
-use App\Http\Controllers\Admin\KaderController     as AdminKader;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\ChangePasswordController;
 
-// Bidan
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\BidanController as AdminBidanController;
+use App\Http\Controllers\Admin\KaderController as AdminKaderController;
+
 use App\Http\Controllers\Bidan\DashboardController as BidanDashboardController;
 use App\Http\Controllers\Bidan\PemeriksaanController as BidanPemeriksaanController;
 use App\Http\Controllers\Bidan\ImunisasiController as BidanImunisasiController;
-use App\Http\Controllers\Bidan\RekamMedisController as BidanRekamMedisController;
 use App\Http\Controllers\Bidan\JadwalController as BidanJadwalController;
+use App\Http\Controllers\Bidan\RekamMedisController as BidanRekamMedisController;
 use App\Http\Controllers\Bidan\NotifikasiController as BidanNotifikasiController;
 
-// Kader
-use App\Http\Controllers\Kader\DashboardController   as KaderDashboard;
-use App\Http\Controllers\Kader\BalitaController;
-use App\Http\Controllers\Kader\RemajaController;
-use App\Http\Controllers\Kader\LansiaController;
-use App\Http\Controllers\Kader\PemeriksaanController;
-use App\Http\Controllers\Kader\ImunisasiController;
-use App\Http\Controllers\Kader\KunjunganController;
-use App\Http\Controllers\Kader\LaporanController;
-use App\Http\Controllers\Kader\JadwalController;
-use App\Http\Controllers\Kader\ImportController;
-use App\Http\Controllers\Kader\ProfileController    as KaderProfile;
-use App\Http\Controllers\Kader\NotifikasiController as KaderNotifikasi;
-use App\Http\Controllers\Kader\AbsensiController; 
+use App\Http\Controllers\Kader\DashboardController as KaderDashboardController;
+use App\Http\Controllers\Kader\BalitaController as KaderBalitaController;
+use App\Http\Controllers\Kader\RemajaController as KaderRemajaController;
+use App\Http\Controllers\Kader\LansiaController as KaderLansiaController;
+use App\Http\Controllers\Kader\PemeriksaanController as KaderPemeriksaanController;
+use App\Http\Controllers\Kader\AbsensiController as KaderAbsensiController;
+use App\Http\Controllers\Kader\KunjunganController as KaderKunjunganController;
+use App\Http\Controllers\Kader\ImunisasiController as KaderImunisasiController;
+use App\Http\Controllers\Kader\JadwalController as KaderJadwalController;
+use App\Http\Controllers\Kader\LaporanController as KaderLaporanController;
+use App\Http\Controllers\Kader\NotifikasiController as KaderNotifikasiController;
+use App\Http\Controllers\Kader\ImportController as KaderImportController;
+use App\Http\Controllers\Kader\ProfileController as KaderProfileController;
 
-// User (Warga)
-use App\Http\Controllers\User\DashboardController   as UserDashboard;
-use App\Http\Controllers\User\BalitaController      as UserBalita;
-use App\Http\Controllers\User\RemajaController      as UserRemaja;
-use App\Http\Controllers\User\LansiaController      as UserLansia;
-use App\Http\Controllers\User\JadwalController      as UserJadwal;
-use App\Http\Controllers\User\ProfileController     as UserProfile;
-use App\Http\Controllers\User\NotifikasiController  as UserNotifikasi;
-use App\Http\Controllers\User\RiwayatController;
+use App\Http\Controllers\User\DashboardController as UserDashboardController;
+use App\Http\Controllers\User\MonitoringController as UserMonitoringController;
+use App\Http\Controllers\User\BalitaController as UserBalitaController;
+use App\Http\Controllers\User\RemajaController as UserRemajaController;
+use App\Http\Controllers\User\LansiaController as UserLansiaController;
+use App\Http\Controllers\User\JadwalController as UserJadwalController;
+use App\Http\Controllers\User\RiwayatController as UserRiwayatController;
+use App\Http\Controllers\User\NotifikasiController as UserNotifikasiController;
+use App\Http\Controllers\User\ProfileController as UserProfileController;
 
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 
-
-// ==================== ROOT ====================
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('home') : redirect()->route('login');
+    if (! Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    return match (Auth::user()->role) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'bidan' => redirect()->route('bidan.dashboard'),
+        'kader' => redirect()->route('kader.dashboard'),
+        'user' => redirect()->route('user.dashboard'),
+        default => redirect()->route('login'),
+    };
 });
 
-// ==================== AUTH ====================
-Route::get('/login',  [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.post');
-Route::post('/logout',[LoginController::class, 'logout'])->name('logout');
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout.get');
+Route::get('/home', [HomeController::class, 'index'])
+    ->middleware('auth')
+    ->name('home');
 
-// ==================== GLOBAL ====================
-Route::middleware('auth')->group(function () {
-    Route::get('/home', [HomeController::class, 'index'])->name('home');
-    Route::get('/password/change',  [ChangePasswordController::class, 'showChangeForm'])->name('password.change');
-    Route::post('/password/change', [ChangePasswordController::class, 'change'])->name('password.change.post');
-    Route::get('/profile',          [UserProfile::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile',        [UserProfile::class, 'update'])->name('profile.update');
+/*
+|--------------------------------------------------------------------------
+| Authentication Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/login', [LoginController::class, 'showLoginForm'])
+    ->name('login');
+
+Route::post('/login', [LoginController::class, 'login'])
+    ->name('login.post');
+
+Route::post('/logout', [LoginController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| Global Authenticated Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth', 'checkstatus'])->group(function () {
+    Route::get('/password/change', [ChangePasswordController::class, 'showChangeForm'])
+        ->name('password.change');
+
+    Route::post('/password/change', [ChangePasswordController::class, 'change'])
+        ->name('password.change.post');
+
+    Route::get('/profile', [UserProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [UserProfileController::class, 'update'])
+        ->name('profile.update');
 });
 
-// ==================== ADMIN ====================
-Route::prefix('admin')->name('admin.')->middleware(['auth','checkstatus','role:admin'])->group(function () {
-    Route::get('/', fn() => redirect()->route('admin.dashboard'));
-    Route::get('/dashboard', [AdminDashboard::class, 'index'])->name('dashboard');
+/*
+|--------------------------------------------------------------------------
+| Admin Routes
+|--------------------------------------------------------------------------
+|
+| Admin fokus pada pengelolaan akun sistem:
+| - Akun Warga/User
+| - Akun Bidan
+| - Akun Kader
+| - Dashboard ringkasan sistem
+|
+*/
 
-    Route::resource('users', AdminUser::class);
-    Route::post('users/{id}/generate-password', [AdminUser::class, 'generatePassword'])->name('users.generate-password');
-    Route::post('users/{id}/reset-password',    [AdminUser::class, 'resetPassword'])->name('users.reset-password');
-
-    Route::resource('bidans', AdminBidan::class);
-    Route::post('bidans/{id}/reset-password', [AdminBidan::class, 'resetPassword'])->name('bidans.reset-password');
-
-    Route::resource('kaders', AdminKader::class);
-    Route::post('kaders/{id}/reset-password', [AdminKader::class, 'resetPassword'])->name('kaders.reset-password');
-});
-
-// =========================================================================
-// ROUTE UTAMA KHUSUS ROLE: BIDAN
-// =========================================================================
-// Final fitur Bidan:
-// 1. Dashboard
-// 2. Pemeriksaan Klinis
-// 3. Imunisasi Balita
-// 4. Rekam Medis
-// 5. Kelola Jadwal
-// 6. Notifikasi
-// =========================================================================
-
-Route::prefix('bidan')
-    ->name('bidan.')
-    ->middleware(['auth', 'checkstatus', 'role:bidan'])
+Route::middleware(['auth', 'checkstatus', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
     ->group(function () {
+        Route::get('/', fn () => redirect()->route('admin.dashboard'))
+            ->name('home');
 
-        // ---------------------------------------------------------------
-        // DASHBOARD BIDAN
-        // ---------------------------------------------------------------
-        Route::get('/', function () {
-            return redirect()->route('bidan.dashboard');
-        })->name('home');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+            ->name('dashboard');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Kelola Akun Warga/User
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post('/users/{id}/generate-password', [AdminUserController::class, 'generatePassword'])
+            ->whereNumber('id')
+            ->name('users.generate-password');
+
+        Route::post('/users/{id}/reset-password', [AdminUserController::class, 'resetPassword'])
+            ->whereNumber('id')
+            ->name('users.reset-password');
+
+        Route::resource('users', AdminUserController::class);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Kelola Akun Bidan
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post('/bidans/{id}/reset-password', [AdminBidanController::class, 'resetPassword'])
+            ->whereNumber('id')
+            ->name('bidans.reset-password');
+
+        Route::resource('bidans', AdminBidanController::class);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Kelola Akun Kader
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post('/kaders/{id}/reset-password', [AdminKaderController::class, 'resetPassword'])
+            ->whereNumber('id')
+            ->name('kaders.reset-password');
+
+        Route::resource('kaders', AdminKaderController::class);
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Bidan Routes
+|--------------------------------------------------------------------------
+|
+| Bidan fokus pada:
+| - Pemeriksaan klinis lanjutan
+| - Validasi pemeriksaan
+| - Jadwal Posyandu
+| - Imunisasi
+| - Rekam medis
+| - Notifikasi
+|
+*/
+
+Route::middleware(['auth', 'checkstatus', 'role:bidan'])
+    ->prefix('bidan')
+    ->name('bidan.')
+    ->group(function () {
+        Route::get('/', fn () => redirect()->route('bidan.dashboard'))
+            ->name('home');
 
         Route::get('/dashboard', [BidanDashboardController::class, 'index'])
             ->name('dashboard');
@@ -112,384 +196,434 @@ Route::prefix('bidan')
         Route::get('/dashboard/trend', [BidanDashboardController::class, 'trend'])
             ->name('dashboard.trend');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Bidan Pemeriksaan Klinis
+        |--------------------------------------------------------------------------
+        */
 
-        // ---------------------------------------------------------------
-        // PEMERIKSAAN KLINIS
-        // ---------------------------------------------------------------
-        // Bidan meninjau, melihat detail, dan memvalidasi data pemeriksaan.
-        // Input pemeriksaan awal tetap dari Kader.
-        Route::prefix('pemeriksaan')
-    ->name('pemeriksaan.')
-    ->group(function () {
-        Route::get('/', [BidanPemeriksaanController::class, 'index'])
-            ->name('index');
+        Route::get('/pemeriksaan', [BidanPemeriksaanController::class, 'index'])
+            ->name('pemeriksaan.index');
 
-        Route::get('/validasi/{id}', [BidanPemeriksaanController::class, 'validasi'])
+        Route::get('/pemeriksaan/validasi/{id}', [BidanPemeriksaanController::class, 'validasi'])
             ->whereNumber('id')
-            ->name('validasi');
+            ->name('pemeriksaan.validasi');
 
-        Route::put('/validasi/{id}', [BidanPemeriksaanController::class, 'simpanValidasi'])
+        Route::put('/pemeriksaan/validasi/{id}', [BidanPemeriksaanController::class, 'simpanValidasi'])
             ->whereNumber('id')
-            ->name('simpan-validasi');
+            ->name('pemeriksaan.simpan-validasi');
 
-        Route::put('/{id}/verifikasi', [BidanPemeriksaanController::class, 'verifikasi'])
+        Route::get('/pemeriksaan/{id}', [BidanPemeriksaanController::class, 'show'])
             ->whereNumber('id')
-            ->name('verifikasi');
+            ->name('pemeriksaan.show');
 
-        Route::get('/{id}', [BidanPemeriksaanController::class, 'show'])
+        Route::put('/pemeriksaan/{id}/verifikasi', [BidanPemeriksaanController::class, 'verifikasi'])
             ->whereNumber('id')
-            ->name('show');
+            ->name('pemeriksaan.verifikasi');
 
-        Route::delete('/{id}', [BidanPemeriksaanController::class, 'destroy'])
+        Route::delete('/pemeriksaan/{id}', [BidanPemeriksaanController::class, 'destroy'])
             ->whereNumber('id')
-            ->name('destroy');
-    });
+            ->name('pemeriksaan.destroy');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Bidan Imunisasi
+        |--------------------------------------------------------------------------
+        */
 
-        // ---------------------------------------------------------------
-        // IMUNISASI BALITA
-        // ---------------------------------------------------------------
-        Route::prefix('imunisasi')
-            ->name('imunisasi.')
-            ->group(function () {
-                Route::get('/', [BidanImunisasiController::class, 'index'])
-                    ->name('index');
+        Route::get('/imunisasi', [BidanImunisasiController::class, 'index'])
+            ->name('imunisasi.index');
 
-                Route::get('/create', [BidanImunisasiController::class, 'create'])
-                    ->name('create');
+        Route::get('/imunisasi/create', [BidanImunisasiController::class, 'create'])
+            ->name('imunisasi.create');
 
-                Route::post('/', [BidanImunisasiController::class, 'store'])
-                    ->name('store');
+        Route::post('/imunisasi', [BidanImunisasiController::class, 'store'])
+            ->name('imunisasi.store');
 
-                Route::get('/{id}', [BidanImunisasiController::class, 'show'])
-                    ->name('show');
+        Route::get('/imunisasi/{id}', [BidanImunisasiController::class, 'show'])
+            ->whereNumber('id')
+            ->name('imunisasi.show');
 
-                Route::get('/{id}/edit', [BidanImunisasiController::class, 'edit'])
-                    ->name('edit');
+        Route::get('/imunisasi/{id}/edit', [BidanImunisasiController::class, 'edit'])
+            ->whereNumber('id')
+            ->name('imunisasi.edit');
 
-                Route::put('/{id}', [BidanImunisasiController::class, 'update'])
-                    ->name('update');
+        Route::put('/imunisasi/{id}', [BidanImunisasiController::class, 'update'])
+            ->whereNumber('id')
+            ->name('imunisasi.update');
 
-                Route::delete('/{id}', [BidanImunisasiController::class, 'destroy'])
-                    ->name('destroy');
-            });
+        Route::delete('/imunisasi/{id}', [BidanImunisasiController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('imunisasi.destroy');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Bidan Jadwal Posyandu
+        |--------------------------------------------------------------------------
+        */
 
-        // ---------------------------------------------------------------
-        // REKAM MEDIS
-        // ---------------------------------------------------------------
-        Route::prefix('rekam-medis')
-            ->name('rekam-medis.')
-            ->group(function () {
-                Route::get('/', [BidanRekamMedisController::class, 'index'])
-                    ->name('index');
-
-                Route::get('/show/{pasien_type}/{pasien_id}', [BidanRekamMedisController::class, 'show'])
-                    ->name('show');
-            });
-
-
-        // ---------------------------------------------------------------
-        // KELOLA JADWAL POSYANDU
-        // ---------------------------------------------------------------
         Route::resource('jadwal', BidanJadwalController::class);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Bidan Rekam Medis
+        |--------------------------------------------------------------------------
+        */
 
-        // ---------------------------------------------------------------
-        // NOTIFIKASI BIDAN
-        // ---------------------------------------------------------------
-        Route::prefix('notifikasi')
-            ->name('notifikasi.')
-            ->group(function () {
-                Route::get('/', [BidanNotifikasiController::class, 'index'])
-                    ->name('index');
+        Route::get('/rekam-medis', [BidanRekamMedisController::class, 'index'])
+            ->name('rekam-medis.index');
 
-                Route::get('/fetch', [BidanNotifikasiController::class, 'fetchRecent'])
-                    ->name('fetch');
+        Route::get('/rekam-medis/show/{pasien_type}/{pasien_id}', [BidanRekamMedisController::class, 'show'])
+            ->whereNumber('pasien_id')
+            ->name('rekam-medis.show');
 
-                Route::post('/mark-all-read', [BidanNotifikasiController::class, 'markAllRead'])
-                    ->name('markall');
-            });
+        /*
+        |--------------------------------------------------------------------------
+        | Bidan Notifikasi
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/notifikasi', [BidanNotifikasiController::class, 'index'])
+            ->name('notifikasi.index');
+
+        Route::get('/notifikasi/fetch', [BidanNotifikasiController::class, 'fetchRecent'])
+            ->name('notifikasi.fetch');
+
+        Route::post('/notifikasi/mark-all-read', [BidanNotifikasiController::class, 'markAllRead'])
+            ->name('notifikasi.markall');
     });
 
-// =========================================================================
-// AKSES KADER
-// =========================================================================
-Route::prefix('kader')
+/*
+|--------------------------------------------------------------------------
+| Kader Routes
+|--------------------------------------------------------------------------
+|
+| Kader fokus pada:
+| - Data sasaran Balita, Remaja, Lansia
+| - Absensi Posyandu
+| - Pemeriksaan awal atau pengukuran fisik
+| - Jadwal read-only
+| - Imunisasi read-only
+| - Laporan bulanan
+| - Notifikasi
+|
+| Catatan penting:
+| Sistem final hanya memakai tiga sasaran: Balita, Remaja, Lansia.
+| Jangan menambahkan modul Bayi atau Ibu Hamil sebagai entitas terpisah.
+|
+*/
+
+Route::middleware(['auth', 'checkstatus', 'role:kader'])
+    ->prefix('kader')
     ->name('kader.')
-    ->middleware(['auth', 'checkstatus', 'role:kader'])
     ->group(function () {
+        Route::get('/', fn () => redirect()->route('kader.dashboard'))
+            ->name('home');
 
-        /*
-        |--------------------------------------------------------------------------
-        | Redirect Dasar Kader
-        |--------------------------------------------------------------------------
-        | Jika user membuka /kader langsung, arahkan ke dashboard.
-        */
-        Route::get('/', fn () => redirect()->route('kader.dashboard'));
-
-        /*
-        |--------------------------------------------------------------------------
-        | Dashboard Kader
-        |--------------------------------------------------------------------------
-        */
-        Route::get('/dashboard', [KaderDashboard::class, 'index'])
+        Route::get('/dashboard', [KaderDashboardController::class, 'index'])
             ->name('dashboard');
-            Route::get('/dashboard/trend', [KaderDashboard::class, 'trend'])
-    ->name('dashboard.trend');
+
+        Route::get('/dashboard/trend', [KaderDashboardController::class, 'trend'])
+            ->name('dashboard.trend');
 
         /*
         |--------------------------------------------------------------------------
-        | Data Sasaran Kader
+        | Kader Data Sasaran: Balita
         |--------------------------------------------------------------------------
-        | Data sasaran final hanya Balita, Remaja, dan Lansia.
-        | Jangan tambahkan Bayi atau Ibu Hamil lagi, nanti project balik jadi museum revisi.
         */
-        Route::prefix('data')
-            ->name('data.')
-            ->group(function () {
 
-                // Data Balita
-                Route::delete('balita/bulk-delete', [BalitaController::class, 'bulkDelete'])
-                    ->name('balita.bulk-delete');
+        Route::delete('/data/balita/bulk-delete', [KaderBalitaController::class, 'bulkDelete'])
+            ->name('data.balita.bulk-delete');
 
-                Route::post('balita/{id}/sync', [BalitaController::class, 'syncUser'])
-                    ->whereNumber('id')
-                    ->name('balita.sync');
+        Route::resource('/data/balita', KaderBalitaController::class)
+            ->names('data.balita');
 
-                Route::resource('balita', BalitaController::class);
-
-                // Data Remaja
-                Route::delete('remaja/bulk-delete', [RemajaController::class, 'bulkDelete'])
-                    ->name('remaja.bulk-delete');
-
-                Route::post('remaja/{id}/sync', [RemajaController::class, 'syncUser'])
-                    ->whereNumber('id')
-                    ->name('remaja.sync');
-
-                Route::resource('remaja', RemajaController::class);
-
-                // Data Lansia
-                Route::delete('lansia/bulk-delete', [LansiaController::class, 'bulkDelete'])
-                    ->name('lansia.bulk-delete');
-
-                Route::post('lansia/{id}/sync', [LansiaController::class, 'syncUser'])
-                    ->whereNumber('id')
-                    ->name('lansia.sync');
-
-                Route::resource('lansia', LansiaController::class);
-            });
+        Route::post('/data/balita/{id}/sync', [KaderBalitaController::class, 'syncUser'])
+            ->whereNumber('id')
+            ->name('data.balita.sync');
 
         /*
         |--------------------------------------------------------------------------
-        | Pengukuran Fisik / Pemeriksaan Awal oleh Kader
+        | Kader Data Sasaran: Remaja
         |--------------------------------------------------------------------------
         */
-        Route::get('pemeriksaan/api/pasien', [PemeriksaanController::class, 'getPasienApi'])
+
+        Route::delete('/data/remaja/bulk-delete', [KaderRemajaController::class, 'bulkDelete'])
+            ->name('data.remaja.bulk-delete');
+
+        Route::resource('/data/remaja', KaderRemajaController::class)
+            ->names('data.remaja');
+
+        Route::post('/data/remaja/{id}/sync', [KaderRemajaController::class, 'syncUser'])
+            ->whereNumber('id')
+            ->name('data.remaja.sync');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kader Data Sasaran: Lansia
+        |--------------------------------------------------------------------------
+        */
+
+        Route::delete('/data/lansia/bulk-delete', [KaderLansiaController::class, 'bulkDelete'])
+            ->name('data.lansia.bulk-delete');
+
+        Route::resource('/data/lansia', KaderLansiaController::class)
+            ->names('data.lansia');
+
+        Route::post('/data/lansia/{id}/sync', [KaderLansiaController::class, 'syncUser'])
+            ->whereNumber('id')
+            ->name('data.lansia.sync');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kader Absensi Posyandu
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/absensi', [KaderAbsensiController::class, 'index'])
+            ->name('absensi.index');
+
+        Route::post('/absensi', [KaderAbsensiController::class, 'store'])
+            ->name('absensi.store');
+
+        Route::get('/absensi/berhasil/tersimpan', [KaderAbsensiController::class, 'success'])
+            ->name('absensi.success');
+
+        Route::get('/absensi/riwayat', [KaderAbsensiController::class, 'riwayat'])
+            ->name('absensi.riwayat');
+
+        Route::get('/absensi/{id}', [KaderAbsensiController::class, 'show'])
+            ->whereNumber('id')
+            ->name('absensi.show');
+
+        Route::delete('/absensi/{id}', [KaderAbsensiController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('absensi.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kader Pemeriksaan Awal
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/pemeriksaan/api/pasien', [KaderPemeriksaanController::class, 'getPasienApi'])
             ->name('pemeriksaan.api');
 
-        Route::resource('pemeriksaan', PemeriksaanController::class);
+        Route::resource('/pemeriksaan', KaderPemeriksaanController::class)
+            ->parameters([
+                'pemeriksaan' => 'pemeriksaan',
+            ]);
 
         /*
         |--------------------------------------------------------------------------
-        | Absensi Posyandu
+        | Kader Kunjungan
         |--------------------------------------------------------------------------
         */
-        Route::prefix('absensi')
-            ->name('absensi.')
-            ->group(function () {
 
-                Route::get('/', [AbsensiController::class, 'index'])
-                    ->name('index');
+        Route::get('/kunjungan', [KaderKunjunganController::class, 'index'])
+            ->name('kunjungan.index');
 
-                Route::post('/', [AbsensiController::class, 'store'])
-                    ->name('store');
+        Route::get('/kunjungan/{kunjungan}', [KaderKunjunganController::class, 'show'])
+            ->name('kunjungan.show');
 
-                Route::get('/berhasil/tersimpan', [AbsensiController::class, 'success'])
-                    ->name('success');
-
-                Route::get('/riwayat', [AbsensiController::class, 'riwayat'])
-                    ->name('riwayat');
-
-                Route::get('/{id}', [AbsensiController::class, 'show'])
-                    ->whereNumber('id')
-                    ->name('show');
-
-                Route::delete('/{id}', [AbsensiController::class, 'destroy'])
-                    ->whereNumber('id')
-                    ->name('destroy');
-            });
+        Route::delete('/kunjungan/{kunjungan}', [KaderKunjunganController::class, 'destroy'])
+            ->name('kunjungan.destroy');
 
         /*
         |--------------------------------------------------------------------------
-        | Kunjungan
+        | Kader Jadwal dan Imunisasi Read-Only
         |--------------------------------------------------------------------------
-        | Kader hanya diberi akses terbatas.
         */
-        Route::resource('kunjungan', KunjunganController::class)
-            ->except(['create', 'store', 'edit', 'update']);
+
+        Route::get('/jadwal', [KaderJadwalController::class, 'index'])
+            ->name('jadwal.index');
+
+        Route::get('/jadwal/{jadwal}', [KaderJadwalController::class, 'show'])
+            ->name('jadwal.show');
+
+        Route::get('/imunisasi', [KaderImunisasiController::class, 'index'])
+            ->name('imunisasi.index');
+
+        Route::get('/imunisasi/{imunisasi}', [KaderImunisasiController::class, 'show'])
+            ->name('imunisasi.show');
 
         /*
         |--------------------------------------------------------------------------
-        | Imunisasi
-        |--------------------------------------------------------------------------
-        | Untuk Kader dibuat read-only.
-        */
-        Route::resource('imunisasi', ImunisasiController::class)
-            ->only(['index', 'show']);
-
-        /*
-        |--------------------------------------------------------------------------
-        | Jadwal Posyandu
-        |--------------------------------------------------------------------------
-        | Jadwal dikelola Bidan, Kader hanya melihat.
-        */
-        Route::prefix('jadwal')
-            ->name('jadwal.')
-            ->group(function () {
-
-                Route::get('/', [JadwalController::class, 'index'])
-                    ->name('index');
-
-                Route::get('/{jadwal}', [JadwalController::class, 'show'])
-                    ->whereNumber('jadwal')
-                    ->name('show');
-            });
-
-        /*
-        |--------------------------------------------------------------------------
-        | Import Data Warga
+        | Kader Laporan Bulanan
         |--------------------------------------------------------------------------
         */
-        Route::prefix('import')
-            ->name('import.')
-            ->group(function () {
 
-                Route::get('/', [ImportController::class, 'index'])
-                    ->name('index');
-
-                Route::get('/create', [ImportController::class, 'create'])
-                    ->name('create');
-
-                Route::post('/', [ImportController::class, 'store'])
-                    ->name('store');
-
-                Route::get('/history', [ImportController::class, 'history'])
-                    ->name('history');
-
-                Route::get('/template/{type}', [ImportController::class, 'downloadTemplate'])
-                    ->name('template');
-
-                Route::get('/{id}', [ImportController::class, 'show'])
-                    ->whereNumber('id')
-                    ->name('show');
-
-                Route::delete('/{id}', [ImportController::class, 'destroy'])
-                    ->whereNumber('id')
-                    ->name('destroy');
-            });
-
-        /*
-        |--------------------------------------------------------------------------
-        | Laporan Bulanan Kader
-        |--------------------------------------------------------------------------
-        */
-        Route::get('laporan', [LaporanController::class, 'index'])
+        Route::get('/laporan', [KaderLaporanController::class, 'index'])
             ->name('laporan.index');
 
-        Route::match(['get', 'post'], 'laporan/generate', [LaporanController::class, 'generate'])
+        Route::match(['get', 'post'], '/laporan/generate', [KaderLaporanController::class, 'generate'])
             ->name('laporan.generate');
 
         /*
         |--------------------------------------------------------------------------
-        | Profil Kader
+        | Kader Import Data
         |--------------------------------------------------------------------------
         */
-        Route::prefix('profile')
-            ->name('profile.')
-            ->group(function () {
 
-                Route::get('/', [KaderProfile::class, 'index'])
-                    ->name('index');
+        Route::get('/import', [KaderImportController::class, 'index'])
+            ->name('import.index');
 
-                Route::put('/update', [KaderProfile::class, 'update'])
-                    ->name('update');
+        Route::get('/import/create', [KaderImportController::class, 'create'])
+            ->name('import.create');
 
-                Route::get('/password', [KaderProfile::class, 'password'])
-                    ->name('password');
+        Route::post('/import', [KaderImportController::class, 'store'])
+            ->name('import.store');
 
-                Route::put('/password', [KaderProfile::class, 'updatePassword'])
-                    ->name('update-password');
-            });
+        Route::get('/import/history', [KaderImportController::class, 'history'])
+            ->name('import.history');
+
+        Route::get('/import/template/{type}', [KaderImportController::class, 'downloadTemplate'])
+            ->name('import.template');
+
+        Route::get('/import/{id}', [KaderImportController::class, 'show'])
+            ->whereNumber('id')
+            ->name('import.show');
+
+        Route::delete('/import/{id}', [KaderImportController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('import.destroy');
 
         /*
         |--------------------------------------------------------------------------
-        | Notifikasi Kader
+        | Kader Notifikasi
         |--------------------------------------------------------------------------
         */
-        Route::prefix('notifikasi')
-            ->name('notifikasi.')
-            ->group(function () {
 
-                Route::get('/', [KaderNotifikasi::class, 'index'])
-                    ->name('index');
+        Route::get('/notifikasi', [KaderNotifikasiController::class, 'index'])
+            ->name('notifikasi.index');
 
-                Route::post('/read-all', [KaderNotifikasi::class, 'markAllRead'])
-                    ->name('markAllRead');
+        Route::get('/notifikasi/fetch', [KaderNotifikasiController::class, 'fetchRecent'])
+            ->name('notifikasi.fetch');
 
-                Route::post('/{id}/read', [KaderNotifikasi::class, 'markAsRead'])
-                    ->whereNumber('id')
-                    ->name('read');
+        Route::post('/notifikasi/read-all', [KaderNotifikasiController::class, 'markAllRead'])
+            ->name('notifikasi.markAllRead');
 
-                Route::delete('/{id}', [KaderNotifikasi::class, 'destroy'])
-                    ->whereNumber('id')
-                    ->name('destroy');
+        Route::post('/notifikasi/{id}/read', [KaderNotifikasiController::class, 'markAsRead'])
+            ->whereNumber('id')
+            ->name('notifikasi.read');
 
-                Route::get('/fetch', [KaderNotifikasi::class, 'fetchRecent'])
-                    ->name('fetch');
-            });
+        Route::delete('/notifikasi/{id}', [KaderNotifikasiController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('notifikasi.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kader Profil
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/profile', [KaderProfileController::class, 'index'])
+            ->name('profile.index');
+
+        Route::put('/profile/update', [KaderProfileController::class, 'update'])
+            ->name('profile.update');
+
+        Route::get('/profile/password', [KaderProfileController::class, 'password'])
+            ->name('profile.password');
+
+        Route::put('/profile/password', [KaderProfileController::class, 'updatePassword'])
+            ->name('profile.update-password');
     });
-    
-// ==================== USER (WARGA) ====================
-Route::prefix('user')->name('user.')->middleware(['auth','checkstatus','role:user'])->group(function () {
-    
-    // Redirect rute dasar ke Dashboard
-    Route::get('/', fn() => redirect()->route('user.dashboard'));
- 
-    // ── 1. Beranda / Dashboard ──────────────────────────────────────────
-    Route::get('/dashboard', [UserDashboard::class, 'index'])->name('dashboard');
-    Route::get('/stats', [UserDashboard::class, 'getStats'])->name('stats');
- 
-    // ── 2. Jadwal Posyandu ──────────────────────────────────────────────
-    Route::get('/jadwal', [UserJadwal::class, 'index'])->name('jadwal.index');
 
-    // ── 3. Pantau Kesehatan (Monitoring Terpadu) ────────────────────────
-    Route::get('/monitoring', [\App\Http\Controllers\User\MonitoringController::class, 'index'])->name('monitoring.index');
- 
-    // ── 4. Buku Kesehatan Digital (Detail per Demografi) ────────────────
-    Route::get('/balita/{id}/show', [UserBalita::class, 'show'])->name('balita.show');
-    
-    // [TAMBAHAN BARU] Rute untuk melengkapi sistem monitoring
-    Route::get('/remaja/{id}/show', [\App\Http\Controllers\User\RemajaController::class, 'show'])->name('remaja.show');
-    Route::get('/lansia/{id}/show', [\App\Http\Controllers\User\LansiaController::class, 'show'])->name('lansia.show');
-     
- 
-    // ── 5. Riwayat Rekam Medis Terpadu ──────────────────────────────────
-    Route::get('/riwayat', [RiwayatController::class, 'index'])->name('riwayat.index');
- 
-    // ── 6. Notifikasi / Pesan Bidan ─────────────────────────────────────
-    Route::prefix('notifikasi')->name('notifikasi.')->group(function () {
-        Route::get('/',              [UserNotifikasi::class, 'index'])->name('index');
-        Route::get('/fetch',         [UserNotifikasi::class, 'fetchRecent'])->name('fetch');
-        Route::post('/mark-all-read',[UserNotifikasi::class, 'markAllRead'])->name('markall');
-        Route::post('/{id}/read',    [UserNotifikasi::class, 'markRead'])->name('read');
+/*
+|--------------------------------------------------------------------------
+| User atau Warga Routes
+|--------------------------------------------------------------------------
+|
+| User/Warga fokus pada:
+| - Monitoring kesehatan anggota keluarga
+| - Jadwal Posyandu
+| - Riwayat pemeriksaan
+| - Notifikasi
+| - Profil akun
+|
+*/
+
+Route::middleware(['auth', 'checkstatus', 'role:user'])
+    ->prefix('user')
+    ->name('user.')
+    ->group(function () {
+        Route::get('/', fn () => redirect()->route('user.dashboard'))
+            ->name('home');
+
+        Route::get('/dashboard', [UserDashboardController::class, 'index'])
+            ->name('dashboard');
+
+        Route::get('/stats', [UserDashboardController::class, 'getStats'])
+            ->name('stats');
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Monitoring Kesehatan
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/monitoring', [UserMonitoringController::class, 'index'])
+            ->name('monitoring.index');
+
+        Route::get('/balita/{id}/show', [UserBalitaController::class, 'show'])
+            ->whereNumber('id')
+            ->name('balita.show');
+
+        Route::get('/remaja/{id}/show', [UserRemajaController::class, 'show'])
+            ->whereNumber('id')
+            ->name('remaja.show');
+
+        Route::get('/lansia/{id}/show', [UserLansiaController::class, 'show'])
+            ->whereNumber('id')
+            ->name('lansia.show');
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Jadwal dan Riwayat
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/jadwal', [UserJadwalController::class, 'index'])
+            ->name('jadwal.index');
+
+        Route::get('/riwayat', [UserRiwayatController::class, 'index'])
+            ->name('riwayat.index');
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Notifikasi
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/notifikasi', [UserNotifikasiController::class, 'index'])
+            ->name('notifikasi.index');
+
+        Route::get('/notifikasi/fetch', [UserNotifikasiController::class, 'fetchRecent'])
+            ->name('notifikasi.fetch');
+
+        Route::post('/notifikasi/mark-all-read', [UserNotifikasiController::class, 'markAllRead'])
+            ->name('notifikasi.markall');
+
+        Route::post('/notifikasi/{id}/read', [UserNotifikasiController::class, 'markRead'])
+            ->whereNumber('id')
+            ->name('notifikasi.read');
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Profil
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/profile', [UserProfileController::class, 'edit'])
+            ->name('profile.edit');
+
+        Route::patch('/profile', [UserProfileController::class, 'update'])
+            ->name('profile.update');
+
+        Route::get('/profile/password', fn () => redirect()->route('user.profile.edit'))
+            ->name('password.edit');
+
+        Route::put('/profile/password', [UserProfileController::class, 'updatePassword'])
+            ->name('password.update');
     });
- 
-    // ── 7. Profil & Keamanan ────────────────────────────────────────────
-    Route::get('/profile', [\App\Http\Controllers\User\ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [\App\Http\Controllers\User\ProfileController::class, 'update'])->name('profile.update');
-    Route::put('/profile/password', [\App\Http\Controllers\User\ProfileController::class, 'updatePassword'])->name('password.update');
-    
-    // Fallback URL jika user me-refresh halaman ganti sandi
-    Route::get('/profile/password', fn() => redirect()->route('user.profile.edit'));
-});

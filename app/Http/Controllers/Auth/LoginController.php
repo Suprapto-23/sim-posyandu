@@ -4,15 +4,17 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoginLog;
+use App\Models\Profile;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
-    /* ─────────────────────────────────────────
-     |  SHOW FORM
-     ───────────────────────────────────────── */
+    /**
+     * Menampilkan halaman login.
+     */
     public function showLoginForm()
     {
         if (Auth::check()) {
@@ -22,96 +24,111 @@ class LoginController extends Controller
         return view('auth.login');
     }
 
-    /* ─────────────────────────────────────────
-     |  PROCESS LOGIN
-     ───────────────────────────────────────── */
+    /**
+     * Proses login.
+     *
+     * Identitas login yang didukung:
+     * - Email untuk Admin, Bidan, Kader, atau User
+     * - NIK 16 digit untuk User/Warga
+     *
+     * Catatan:
+     * - Field input "username" tetap dibaca agar form lama tidak error.
+     * - Namun sistem tidak lagi mencari kolom username di database.
+     */
     public function login(Request $request)
-{
-    // Ambil identitas login dari beberapa kemungkinan nama input.
-    // Ini bikin controller tahan banting kalau form pakai name="login", "email", atau "username".
-    $identifier = $request->input('login')
-        ?? $request->input('email')
-        ?? $request->input('username')
-        ?? $request->input('identifier');
+    {
+        $identifier = $request->input('login')
+            ?? $request->input('email')
+            ?? $request->input('username')
+            ?? $request->input('identifier');
 
-    $request->merge([
-        'login' => trim((string) $identifier),
-    ]);
+        $login = trim((string) $identifier);
 
-    $request->validate([
-        'login'    => 'required|string',
-        'password' => 'required|string',
-    ], [
-        'login.required'    => 'Email atau username wajib diisi.',
-        'password.required' => 'Password wajib diisi.',
-    ]);
+        $request->merge([
+            'login' => $login,
+        ]);
 
-    // 1. Validasi format identitas
-    $loginType = $this->getLoginType($request->login);
+        $request->validate(
+            [
+                'login' => ['required', 'string', 'max:191'],
+                'password' => ['required', 'string'],
+            ],
+            [
+                'login.required' => 'Email atau NIK wajib diisi.',
+                'password.required' => 'Password wajib diisi.',
+            ]
+        );
 
-    if (! $loginType) {
-        return back()->withErrors([
-            'login' => 'Format tidak valid. Gunakan email, username, atau NIK 16 digit angka.',
-        ])->withInput($request->only('login'));
+        $loginType = $this->getLoginType($login);
+
+        if (! $loginType) {
+            return back()
+                ->withErrors([
+                    'login' => 'Format tidak valid. Gunakan email atau NIK 16 digit angka.',
+                ])
+                ->withInput($request->only('login'));
+        }
+
+        $user = $this->findUserByLogin($login, $loginType);
+
+        if (! $user) {
+            return back()
+                ->withErrors([
+                    'login' => 'Akun tidak ditemukan. Identitas yang Anda masukkan belum terdaftar di sistem.',
+                ])
+                ->withInput($request->only('login'));
+        }
+
+        if (($user->status ?? null) !== 'active') {
+            return back()
+                ->withErrors([
+                    'login' => 'Akun Anda tidak aktif. Hubungi admin Posyandu untuk mengaktifkan akun.',
+                ])
+                ->withInput($request->only('login'));
+        }
+
+        if (! Hash::check($request->password, $user->password)) {
+            $this->writeLoginLog($user->id, $request, 'failed');
+
+            return back()
+                ->withErrors([
+                    'password' => 'Password salah.',
+                ])
+                ->withInput($request->only('login'));
+        }
+
+        Auth::login($user, $request->boolean('remember'));
+
+        $request->session()->regenerate();
+        $request->session()->put('login_role', $user->role);
+        $request->session()->put('login_user_id', $user->id);
+        $request->session()->save();
+
+        $this->writeLoginLog($user->id, $request, 'success');
+        $this->updateLastLogin($user);
+
+        return redirect()->to($this->getRedirectUrl($user->role));
     }
 
-    // 2. Cari user di database
-    $user = $this->findUserByLogin($request->login, $loginType);
-
-    if (! $user) {
-        return back()->withErrors([
-            'login' => 'Akun tidak ditemukan. Identitas yang Anda masukkan belum terdaftar di sistem.',
-        ])->withInput($request->only('login'));
-    }
-
-    // 3. Cek status akun
-    if ($user->status !== 'active') {
-        return back()->withErrors([
-            'login' => 'Akun Anda tidak aktif. Hubungi admin Posyandu untuk mengaktifkan akun.',
-        ])->withInput($request->only('login'));
-    }
-
-    // 4. Verifikasi password
-    if (! Hash::check($request->password, $user->password)) {
-        $this->writeLoginLog($user->id, $request, 'failed');
-
-        return back()->withErrors([
-            'password' => 'Password salah.',
-        ])->withInput($request->only('login'));
-    }
-
-    // 5. Login berhasil
-    Auth::login($user, $request->boolean('remember'));
-
-    $request->session()->regenerate();
-    $request->session()->put('login_role', $user->role);
-    $request->session()->put('login_user_id', $user->id);
-    $request->session()->save();
-
-    $this->writeLoginLog($user->id, $request, 'success');
-    $this->updateLastLogin($user);
-
-    return redirect()->to($this->getRedirectUrl($user->role));
-}
-
-    /* ─────────────────────────────────────────
-     |  LOGOUT
-     ───────────────────────────────────────── */
+    /**
+     * Logout akun.
+     */
     public function logout(Request $request)
     {
         Auth::logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect('/login')->with('info', 'Anda telah berhasil keluar dari sistem.');
     }
 
-    /* ─────────────────────────────────────────
-     |  PRIVATE HELPERS
-     ───────────────────────────────────────── */
-
     /**
-     * Deteksi tipe login: email | nik | username | null
+     * Deteksi tipe login.
+     *
+     * Hanya mendukung:
+     * - email
+     * - nik 16 digit
      */
     private function getLoginType(string $login): ?string
     {
@@ -123,43 +140,47 @@ class LoginController extends Controller
             return 'nik';
         }
 
-        if (preg_match('/^[a-zA-Z0-9_]{3,}$/', $login)) {
-            return 'username';
-        }
-
         return null;
     }
 
     /**
-     * Cari user berdasarkan tipe identitas.
+     * Cari user berdasarkan email atau NIK.
      */
-    private function findUserByLogin(string $login, string $loginType)
+    private function findUserByLogin(string $login, string $loginType): ?User
     {
         return match ($loginType) {
-            'email'    => \App\Models\User::where('email', $login)->first(),
-            'username' => \App\Models\User::where('username', $login)->first(),
-            'nik'      => $this->findUserByNik($login),
-            default    => null,
+            'email' => User::where('email', $login)->first(),
+            'nik' => $this->findUserByNik($login),
+            default => null,
         };
     }
 
     /**
-     * Cari user via NIK — di tabel users dulu, lalu di profiles.
+     * Cari user berdasarkan NIK.
+     *
+     * Urutan:
+     * 1. Cek kolom nik di tabel users.
+     * 2. Jika tidak ada, cek tabel profiles.
      */
-    private function findUserByNik(string $nik)
+    private function findUserByNik(string $nik): ?User
     {
-        $user = \App\Models\User::where('nik', $nik)->first();
+        $user = User::where('nik', $nik)->first();
 
-        if (! $user) {
-            $profile = \App\Models\Profile::where('nik', $nik)->first();
-            $user    = $profile?->user;
+        if ($user) {
+            return $user;
         }
 
-        return $user;
+        try {
+            $profile = Profile::where('nik', $nik)->first();
+
+            return $profile?->user;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
-     * Redirect URL setelah login berhasil.
+     * URL redirect setelah login berhasil.
      */
     private function getRedirectUrl(string $role): string
     {
@@ -167,13 +188,13 @@ class LoginController extends Controller
             'admin' => '/admin/dashboard',
             'bidan' => '/bidan/dashboard',
             'kader' => '/kader/dashboard',
-            'user'  => '/user/dashboard',
+            'user' => '/user/dashboard',
             default => '/home',
         };
     }
 
     /**
-     * Redirect response (untuk user yang sudah login).
+     * Redirect user yang sudah login.
      */
     private function redirectBasedOnRole(string $role)
     {
@@ -181,42 +202,48 @@ class LoginController extends Controller
             'admin' => redirect()->route('admin.dashboard'),
             'bidan' => redirect()->route('bidan.dashboard'),
             'kader' => redirect()->route('kader.dashboard'),
-            'user'  => redirect()->route('user.dashboard'),
+            'user' => redirect()->route('user.dashboard'),
             default => redirect('/home'),
         };
     }
 
     /**
-     * Tulis log login (gagal maupun sukses).
+     * Simpan log login.
+     *
+     * Jika tabel atau model log bermasalah, proses login tetap berjalan.
      */
     private function writeLoginLog(int $userId, Request $request, string $status): void
-{
-    try {
-        if (! class_exists(\App\Models\LoginLog::class)) {
-            return;
-        }
-
-        \App\Models\LoginLog::create([
-            'user_id'    => $userId,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'login_at'   => now(),
-            'status'     => $status,
-        ]);
-    } catch (\Throwable $e) {
-        // Silent, jangan ganggu proses login
-    }
-}
-
-    /**
-     * Perbarui kolom last_login_at.
-     */
-    private function updateLastLogin($user): void
     {
         try {
-            $user->update(['last_login_at' => now()]);
-        } catch (\Exception) {
-            // Silent
+            if (! class_exists(LoginLog::class)) {
+                return;
+            }
+
+            LoginLog::create([
+                'user_id' => $userId,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'login_at' => now(),
+                'status' => $status,
+            ]);
+        } catch (\Throwable $e) {
+            // Jangan ganggu proses login hanya karena log gagal tersimpan.
+        }
+    }
+
+    /**
+     * Update waktu login terakhir.
+     *
+     * Jika kolom last_login_at tidak tersedia, login tetap aman.
+     */
+    private function updateLastLogin(User $user): void
+    {
+        try {
+            $user->forceFill([
+                'last_login_at' => now(),
+            ])->save();
+        } catch (\Throwable $e) {
+            // Silent agar login tidak gagal karena kolom opsional.
         }
     }
 }
