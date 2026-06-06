@@ -218,7 +218,16 @@
     {{-- Brand (desktop only) --}}
     <section class="brand-side anim-l" aria-hidden="true">
         <div class="brand-content">
-            <img src="{{ asset('img/logo.png') }}" alt="Logo PosyanduCare" class="brand-logo" width="390" height="160" loading="eager">
+            <img 
+    src="{{ asset('img/logo.webp') }}" 
+    alt="Logo PosyanduCare" 
+    class="brand-logo"
+    width="390" 
+    height="160"
+    loading="eager"
+    fetchpriority="high"
+    decoding="async"
+>
             <h2 class="brand-title">Sehat Bersama, Tumbuh Setiap Generasi</h2>
             <div class="brand-divider">
                 <span class="bdl l"></span><span class="bdd"></span><span class="bdl r"></span>
@@ -241,7 +250,15 @@
             <div class="card-inner">
 
                 <div class="mobile-brand">
-                    <img src="{{ asset('img/logo.png') }}" alt="Logo PosyanduCare" width="156" height="70" loading="eager">
+                    <img 
+    src="{{ asset('img/logo.webp') }}" 
+    alt="Logo PosyanduCare"
+    width="156" 
+    height="70"
+    loading="eager"
+    fetchpriority="high"
+    decoding="async"
+>
                 </div>
 
                 <div class="login-header">

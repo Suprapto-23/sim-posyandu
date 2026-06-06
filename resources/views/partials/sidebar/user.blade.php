@@ -703,7 +703,7 @@
         <div class="pc-user-logo-wrap">
             <a href="{{ route('user.dashboard') }}" class="js-nav-link pc-user-logo-link">
                 <img
-                    src="{{ asset('img/logo.png') }}"
+                    src="{{ asset('img/logo.webp') }}"
                     alt="Logo PosyanduCare"
                     class="pc-user-logo"
                 >

@@ -379,10 +379,10 @@
     {{-- LOGO --}}
     <div class="pc-logo-area">
         <a href="{{ route('admin.dashboard') }}" class="pc-logo-link">
-            <img src="{{ asset('img/logo.png') }}"
+            <img src="{{ asset('img/logo.webp') }}"
                  alt="Logo PosyanduCare"
                  class="pc-logo"
-                 onerror="this.src='{{ asset('public/img/logo.png') }}'">
+                 onerror="this.src='{{ asset('public/img/logo.webp') }}'">
         </a>
     </div>
 

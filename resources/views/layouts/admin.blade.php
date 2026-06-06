@@ -24,8 +24,8 @@
         })();
     </script>
 
-    <link rel="icon" type="image/png" href="{{ asset('img/logo.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('img/logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('img/logo.webp') }}">
+    <link rel="apple-touch-icon" href="{{ asset('img/logo.webp') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

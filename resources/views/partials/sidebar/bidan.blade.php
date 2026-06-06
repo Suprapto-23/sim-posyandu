@@ -400,7 +400,7 @@
         <div class="pc-bidan-logo-wrap">
             <a href="{{ route('bidan.dashboard') }}" class="pc-bidan-logo-link">
                 <img
-                    src="{{ asset('img/logo.png') }}"
+                    src="{{ asset('img/logo.webp') }}"
                     alt="Logo PosyanduCare"
                     class="pc-bidan-logo"
                 >

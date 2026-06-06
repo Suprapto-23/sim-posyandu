@@ -35,7 +35,7 @@
     <!-- Header Sidebar -->
     <div class="side-head">
         <a href="{{ $to('kader.dashboard') }}" class="side-logo" title="Dashboard Kader" @click="if (window.innerWidth < 1024) $dispatch('close-sidebar')">
-            <img src="{{ asset('img/logo.png') }}" alt="Logo PosyanduCare">
+            <img src="{{ asset('img/logo.webp') }}" alt="Logo PosyanduCare">
         </a>
         <button type="button" class="side-close" @click="$dispatch('close-sidebar')" aria-label="Tutup sidebar">
             <i class="fa-solid fa-xmark"></i>
