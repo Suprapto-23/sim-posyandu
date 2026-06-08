@@ -1,480 +1,604 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard Admin')
+@section('title', 'Dashboard Analytics | Executive Control')
 @section('page-name', 'Dashboard')
-@section('page-title', 'Dashboard Admin')
+@section('page-title', 'Dashboard Analytics')
 
 @php
     use Carbon\Carbon;
     use Illuminate\Support\Str;
 
-    Carbon::setLocale('id');
+    $adminName = auth()->user()->name ?? 'Admin';
 
-    $roleStats = $roleStats ?? [
-        'admin' => 0,
-        'bidan' => 0,
-        'kader' => 0,
-        'user' => 0,
-    ];
+    $roleStats = $roleStats ?? ['admin' => 0, 'bidan' => 0, 'kader' => 0, 'user' => 0];
+    $accountStats = $accountStats ?? ['total' => 0, 'aktif' => 0, 'nonaktif' => 0];
+    $sasaranStats = $sasaranStats ?? ['balita' => 0, 'remaja' => 0, 'lansia' => 0, 'total' => 0];
 
-    $accountStats = $accountStats ?? [
-        'total' => 0,
-        'aktif' => 0,
-        'nonaktif' => 0,
-    ];
+    $monthlySeries = $monthlySeries ?? [];
+    $chartLabels = array_values($monthlySeries['labels'] ?? []);
 
-    $sasaranStats = $sasaranStats ?? [
-        'balita' => 0,
-        'remaja' => 0,
-        'lansia' => 0,
-        'total' => 0,
-    ];
+    if (empty($chartLabels)) {
+        $chartLabels = collect(range(5, 0))
+            ->map(fn ($i) => Carbon::now()->subMonths($i)->translatedFormat('M'))
+            ->values()
+            ->all();
+    }
 
-    $serviceStats = $serviceStats ?? [
-        'jadwal' => 0,
-        'jadwal_aktif' => 0,
-        'pemeriksaan' => 0,
-        'imunisasi' => 0,
-        'absensi' => 0,
-        'pengukuran' => 0,
-        'laporan' => 0,
-    ];
+    $chartCount = count($chartLabels);
 
-    $monthlySeries = $monthlySeries ?? [
-        'labels' => [],
-        'akun' => [],
-        'pemeriksaan' => [],
-        'jadwal' => [],
-        'max' => 1,
-    ];
-
-    $formatDate = function ($date) {
-        if (! $date) {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
+    $normalizeSeries = function (string $key) use ($monthlySeries, $chartCount) {
+        $data = array_values($monthlySeries[$key] ?? []);
+        return array_pad(array_slice($data, 0, $chartCount), $chartCount, 0);
     };
 
-    $formatDateTime = function ($date) {
-        if (! $date) {
-            return '-';
-        }
+    $chartBidan = $normalizeSeries('bidan');
+    $chartKader = $normalizeSeries('kader');
+    $chartBalita = $normalizeSeries('balita');
+    $chartRemaja = $normalizeSeries('remaja');
+    $chartLansia = $normalizeSeries('lansia');
+    $chartMax = max(array_merge($chartBidan, $chartKader, $chartBalita, $chartRemaja, $chartLansia, [1]));
 
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y, H:i');
-        } catch (\Throwable $e) {
-            return '-';
-        }
+    $formatDate = fn ($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y, H:i') : '-';
+
+    $roleBadgeClasses = fn ($role) => match ($role) {
+        'admin' => 'bg-slate-900 text-white border-slate-950',
+        'bidan' => 'bg-amber-50 text-amber-700 border-amber-200/60 shadow-sm',
+        'kader' => 'bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-sm',
+        'user' => 'bg-sky-50 text-sky-700 border-sky-200/60 shadow-sm',
+        default => 'bg-slate-50 text-slate-600 border-slate-200',
     };
 
-    $roleLabel = function ($role) {
-        return match ($role) {
-            'admin' => 'Admin',
-            'bidan' => 'Bidan',
-            'kader' => 'Kader',
-            'user' => 'Warga',
-            default => Str::title((string) $role),
-        };
+    $roleLabel = fn ($role) => match ($role) {
+        'admin' => 'Administrator',
+        'bidan' => 'Bidan Desa',
+        'kader' => 'Kader Posyandu',
+        'user' => 'Warga',
+        default => Str::title((string) $role),
     };
 
-    $statusLabel = function ($status) {
-        return $status === 'active' ? 'Aktif' : 'Nonaktif';
-    };
+    $statusLabel = fn ($status) => $status === 'active' ? 'Aktif' : 'Nonaktif';
+    $statusClass = fn ($status) => $status === 'active' ? 'bg-emerald-500' : 'bg-slate-300';
+    $initial = fn ($name) => Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'U';
+    $barHeight = fn ($value) => max(2, min(100, (((int) $value / $chartMax) * 100)));
 
-    $statusClass = function ($status) {
-        return $status === 'active'
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            : 'bg-rose-50 text-rose-700 border-rose-200';
-    };
-
-    $initial = function ($name) {
-        return Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'U';
-    };
-
-    $barHeight = function ($value) use ($monthlySeries) {
-        $max = max((int) ($monthlySeries['max'] ?? 1), 1);
-        $percent = ((int) $value / $max) * 100;
-
-        return max(8, min(100, $percent));
-    };
+    $sasaranTotal = max(1, $sasaranStats['total'] ?? 1);
+    $balitaPercent = (($sasaranStats['balita'] ?? 0) / $sasaranTotal) * 100;
+    $remajaPercent = (($sasaranStats['remaja'] ?? 0) / $sasaranTotal) * 100;
+    $lansiaPercent = (($sasaranStats['lansia'] ?? 0) / $sasaranTotal) * 100;
 @endphp
 
 @push('styles')
 <style>
-    .admin-dashboard-page {
-        background:
-            radial-gradient(circle at 8% 6%, rgba(16, 185, 129, .13), transparent 28%),
-            radial-gradient(circle at 96% 4%, rgba(14, 165, 233, .12), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(245, 158, 11, .08), transparent 30%),
-            linear-gradient(135deg, #f4fff9 0%, #eef9ff 48%, #f8fafc 100%);
+    body { background-color: #F8FAFC; }
+
+    .nexus-animate-up {
+        animation: nexusFadeUp .5s cubic-bezier(.16, 1, .3, 1) forwards;
+        opacity: 0;
     }
 
-    .admin-dashboard-grid {
-        background-image:
-            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
-        background-size: 30px 30px;
+    @keyframes nexusFadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
-    .admin-dashboard-glass {
-        background: rgba(255, 255, 255, .86);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        box-shadow: 0 18px 45px rgba(15, 23, 42, .055);
+    .d-1 { animation-delay: 70ms; }
+    .d-2 { animation-delay: 120ms; }
+    .d-3 { animation-delay: 170ms; }
+
+    .executive-header {
+        position: relative;
+        overflow: hidden;
+        border-radius: 24px;
+        padding: 34px 42px;
+        background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 48%, #10b981 100%);
+        border: 1px solid rgba(255,255,255,.22);
+        box-shadow: 0 24px 55px -24px rgba(14,165,233,.65);
     }
 
-    .admin-dashboard-card {
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    .executive-header::after {
+        content: "";
+        position: absolute;
+        right: -70px;
+        top: -80px;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.16);
+        filter: blur(55px);
+        pointer-events: none;
     }
 
-    .admin-dashboard-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 16px 36px rgba(15, 23, 42, .075);
+    .executive-mesh {
+        position: absolute;
+        inset: 0;
+        opacity: .16;
+        pointer-events: none;
+        background-image: radial-gradient(rgba(255,255,255,.55) 1px, transparent 1px);
+        background-size: 24px 24px;
     }
 
-    .admin-dashboard-chip {
+    .executive-content {
+        position: relative;
+        z-index: 2;
+        max-width: 850px;
+    }
+
+    .executive-chip,
+    .clock-chip {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        gap: .38rem;
-        border-width: 1px;
+        gap: 8px;
+        height: 30px;
+        padding: 0 14px;
         border-radius: 999px;
-        padding: .35rem .7rem;
-        font-size: .68rem;
-        font-weight: 950;
-        letter-spacing: .06em;
-        text-transform: uppercase;
+        border: 1px solid rgba(255,255,255,.26);
+        background: rgba(255,255,255,.16);
+        color: rgba(255,255,255,.94);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+        backdrop-filter: blur(12px);
+        font-weight: 900;
         white-space: nowrap;
     }
 
-    .admin-chart-column {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        align-items: end;
-        gap: 4px;
-        height: 150px;
+    .executive-chip {
+        font-size: 10px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
     }
 
-    .admin-chart-bar {
-        min-height: 8px;
-        border-radius: 999px 999px 6px 6px;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+    .clock-chip {
+        font-size: 11px;
+        font-weight: 800;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        * {
-            animation-duration: .01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: .01ms !important;
-            scroll-behavior: auto !important;
+    .executive-chip i,
+    .clock-chip i {
+        color: #ffffff !important;
+        opacity: .92;
+    }
+
+    .executive-title {
+        margin: 22px 0 0;
+        color: #ffffff;
+        font-size: clamp(30px, 3.6vw, 48px);
+        font-weight: 900;
+        line-height: 1.08;
+        letter-spacing: -.045em;
+        text-shadow: 0 8px 22px rgba(15,23,42,.12);
+        font-family: "Poppins", sans-serif;
+    }
+
+    .executive-desc {
+        margin-top: 16px;
+        max-width: 780px;
+        color: rgba(255,255,255,.90);
+        font-size: 15px;
+        font-weight: 650;
+        line-height: 1.75;
+    }
+
+    .premium-glass-card {
+        background: rgba(255,255,255,.95);
+        backdrop-filter: blur(16px);
+        border-radius: 24px;
+        box-shadow: 0 4px 25px -10px rgba(15,23,42,.05);
+        transition: all .22s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    .premium-glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px -8px rgba(15,23,42,.08);
+    }
+
+    .chart-panel {
+        position: relative;
+        height: 220px;
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        padding-bottom: 4px;
+        border-bottom: 2px solid #E2E8F0;
+    }
+
+    .chart-grid-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background-color: rgba(226,232,240,.8);
+        z-index: 0;
+    }
+
+    .chart-bar-column {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 3px;
+        z-index: 10;
+    }
+
+    .bar-pill {
+        width: 8px;
+        border-radius: 3px 3px 0 0;
+        transition: all .28s cubic-bezier(.16, 1, .3, 1);
+    }
+
+    .bar-pill:hover {
+        filter: brightness(1.12);
+        transform: scaleY(1.05);
+        transform-origin: bottom;
+    }
+
+    .premium-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .premium-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .premium-scrollbar::-webkit-scrollbar-thumb { background-color: #E2E8F0; border-radius: 10px; }
+    .premium-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #CBD5E1; }
+
+    @media (min-width: 1024px) {
+        .bar-pill { width: 10px; }
+        .chart-bar-column { gap: 4px; }
+    }
+
+    @media (max-width: 768px) {
+        .executive-header {
+            padding: 28px 24px;
+            border-radius: 22px;
+        }
+
+        .executive-title {
+            margin-top: 18px;
+            font-size: 30px;
+        }
+
+        .executive-desc {
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .clock-chip {
+            margin-top: 8px;
         }
     }
 </style>
 @endpush
 
 @section('content')
-<div class="admin-dashboard-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
-    <div class="pointer-events-none absolute inset-0 admin-dashboard-grid opacity-70"></div>
+<div class="px-4 py-6 sm:px-6 lg:px-8 max-w-[1360px] mx-auto space-y-6">
 
-    <div class="relative z-10 mx-auto max-w-[1320px] space-y-5">
-        <section class="admin-dashboard-glass overflow-hidden rounded-[1.75rem] border border-white/80 p-5 sm:p-6">
-            <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+    <div class="executive-header nexus-animate-up">
+        <div class="executive-mesh"></div>
+        <div class="absolute -right-12 -bottom-12 w-72 h-72 bg-emerald-500/10 rounded-full filter blur-[80px] pointer-events-none"></div>
+
+        <div class="executive-content">
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="executive-chip">
+                    <i class="fas fa-crown"></i>
+                    Mode Administrator
+                </span>
+
+                <span id="realtime-clock" class="clock-chip">
+                    <i class="far fa-clock"></i>
+                    Memuat waktu...
+                </span>
+            </div>
+
+            <h1 class="executive-title">
+                <span id="dynamic-greeting">Halo</span>, {{ $adminName }}!
+                <span id="dynamic-emoji">👋</span>
+            </h1>
+
+            <p class="executive-desc">
+                Pusat Kendali Akses & Pengguna PosyanduCare. Pantau secara menyeluruh statistik pendaftaran akun warga,
+                verifikasi hak akses tenaga kesehatan, serta analisis demografi pengguna.
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-5 nexus-animate-up d-1">
+
+        <div class="premium-glass-card p-5 flex flex-col justify-start group">
+            <div class="w-12 h-12 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+                <i class="fas fa-users"></i>
+            </div>
+            <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Akun Warga</p>
+            <h3 class="text-3xl font-black text-slate-800 tracking-tight mt-1">{{ number_format($roleStats['user'] ?? 0) }}</h3>
+        </div>
+
+        <div class="premium-glass-card p-5 flex flex-col justify-start group">
+            <div class="w-12 h-12 rounded-[14px] bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+                <i class="fas fa-user-nurse"></i>
+            </div>
+            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Akun Kader</p>
+            <h3 class="text-3xl font-black text-slate-800 tracking-tight mt-1">{{ number_format($roleStats['kader'] ?? 0) }}</h3>
+        </div>
+
+        <div class="premium-glass-card p-5 flex flex-col justify-start group">
+            <div class="w-12 h-12 rounded-[14px] bg-amber-50 text-amber-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+                <i class="fas fa-user-md"></i>
+            </div>
+            <p class="text-[10px] font-black text-amber-600 uppercase tracking-widest">Akun Bidan</p>
+            <h3 class="text-3xl font-black text-slate-800 tracking-tight mt-1">{{ number_format($roleStats['bidan'] ?? 0) }}</h3>
+        </div>
+
+        <div class="premium-glass-card p-5 flex flex-col justify-start group">
+            <div class="w-12 h-12 rounded-[14px] bg-emerald-500 text-white flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/30">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Terverifikasi</p>
+            <h3 class="text-3xl font-black text-slate-800 tracking-tight mt-1">{{ number_format($accountStats['aktif'] ?? 0) }}</h3>
+        </div>
+
+        <div class="premium-glass-card p-5 flex flex-col justify-start group">
+            <div class="w-12 h-12 rounded-[14px] bg-rose-50 text-rose-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+                <i class="fas fa-user-lock"></i>
+            </div>
+            <p class="text-[10px] font-black text-rose-500 uppercase tracking-widest">Nonaktif</p>
+            <h3 class="text-3xl font-black text-slate-800 tracking-tight mt-1">{{ number_format($accountStats['nonaktif'] ?? 0) }}</h3>
+        </div>
+
+        <div class="premium-glass-card p-5 flex flex-col justify-start group">
+            <div class="w-12 h-12 rounded-[14px] bg-sky-50 text-sky-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+                <i class="fas fa-users"></i>
+            </div>
+            <p class="text-[10px] font-black text-sky-600 uppercase tracking-widest">Total Sasaran</p>
+            <h3 class="text-3xl font-black text-slate-800 tracking-tight mt-1">{{ number_format($sasaranStats['total'] ?? 0) }}</h3>
+        </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 nexus-animate-up d-2">
+
+        <div class="premium-glass-card p-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div>
-                    <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
-                        <i class="fas fa-shield-heart"></i>
-                        Ringkasan Sistem
-                    </div>
-
-                    <h1 class="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                        Dashboard Admin
-                    </h1>
-
-                    <p class="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
-                        Pantau akun pengguna, data sasaran, dan aktivitas layanan utama PosyanduCare dari satu halaman ringkas.
+                    <h2 class="text-lg font-black text-slate-800 tracking-tight">Tren Pertumbuhan Pengguna</h2>
+                    <p class="text-xs font-semibold text-slate-400 mt-1">
+                        Komparasi data registrasi per peran dalam 6 bulan terakhir.
                     </p>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-2 xl:min-w-[360px]">
-                    <a href="{{ route('admin.users.index') }}"
-                       class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition hover:-translate-y-0.5 hover:bg-emerald-100">
-                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-emerald-700">
-                            Akun Warga
-                        </p>
-                        <p class="mt-1 text-2xl font-black text-slate-950">
-                            {{ number_format($roleStats['user'] ?? 0) }}
-                        </p>
-                    </a>
-
-                    <a href="{{ route('admin.kaders.index') }}"
-                       class="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 transition hover:-translate-y-0.5 hover:bg-sky-100">
-                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-sky-700">
-                            Akun Kader
-                        </p>
-                        <p class="mt-1 text-2xl font-black text-slate-950">
-                            {{ number_format($roleStats['kader'] ?? 0) }}
-                        </p>
-                    </a>
-                </div>
-            </div>
-        </section>
-
-        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-emerald-200 p-4">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-emerald-700">Total Akun</p>
-                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($accountStats['total'] ?? 0) }}</p>
-                        <p class="text-sm font-semibold text-slate-500">Semua pengguna sistem</p>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
-                        <i class="fas fa-users"></i>
-                    </div>
+                <div class="flex flex-wrap items-center gap-3 bg-slate-50/80 rounded-2xl px-4 py-2 border border-slate-100 shadow-sm">
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-amber-400"></div> Bidan</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Kader</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-sky-400"></div> Balita</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-blue-600"></div> Remaja</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-teal-500"></div> Lansia</span>
                 </div>
             </div>
 
-            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-sky-200 p-4">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-sky-700">Akun Aktif</p>
-                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($accountStats['aktif'] ?? 0) }}</p>
-                        <p class="text-sm font-semibold text-slate-500">Dapat login</p>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/20">
-                        <i class="fas fa-user-check"></i>
-                    </div>
-                </div>
-            </div>
+            <div class="chart-panel">
+                <div class="chart-grid-line" style="bottom: 25%"></div>
+                <div class="chart-grid-line" style="bottom: 50%"></div>
+                <div class="chart-grid-line" style="bottom: 75%"></div>
+                <div class="chart-grid-line" style="bottom: 100%"></div>
 
-            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-amber-200 p-4">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-amber-700">Total Sasaran</p>
-                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($sasaranStats['total'] ?? 0) }}</p>
-                        <p class="text-sm font-semibold text-slate-500">Balita, Remaja, Lansia</p>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
-                        <i class="fas fa-people-group"></i>
-                    </div>
-                </div>
-            </div>
+                @foreach($chartLabels as $index => $label)
+                    @php
+                        $tooltipPosition = 'left-1/2 -translate-x-1/2';
+                        if ($loop->first) $tooltipPosition = 'left-0 translate-x-0';
+                        elseif ($loop->last) $tooltipPosition = 'right-0 translate-x-0';
+                    @endphp
 
-            <div class="admin-dashboard-card admin-dashboard-glass rounded-[1.4rem] border border-violet-200 p-4">
-                <div class="flex items-center justify-between gap-4">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.15em] text-violet-700">Pemeriksaan</p>
-                        <p class="mt-1 text-3xl font-black text-slate-950">{{ number_format($serviceStats['pemeriksaan'] ?? 0) }}</p>
-                        <p class="text-sm font-semibold text-slate-500">Data klinis tercatat</p>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500 text-white shadow-lg shadow-violet-500/20">
-                        <i class="fas fa-stethoscope"></i>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)]">
-            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
-                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Tren 6 Bulan
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Aktivitas Sistem
-                        </h2>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                        <span class="admin-dashboard-chip border-emerald-200 bg-emerald-50 text-emerald-700">Akun</span>
-                        <span class="admin-dashboard-chip border-sky-200 bg-sky-50 text-sky-700">Jadwal</span>
-                        <span class="admin-dashboard-chip border-violet-200 bg-violet-50 text-violet-700">Pemeriksaan</span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-6 gap-3">
-                    @foreach($monthlySeries['labels'] ?? [] as $index => $label)
-                        <div class="min-w-0">
-                            <div class="admin-chart-column rounded-2xl border border-slate-200 bg-white/70 px-2 py-3">
-                                <div class="admin-chart-bar bg-emerald-500"
-                                     style="height: {{ $barHeight($monthlySeries['akun'][$index] ?? 0) }}%;"></div>
-                                <div class="admin-chart-bar bg-sky-500"
-                                     style="height: {{ $barHeight($monthlySeries['jadwal'][$index] ?? 0) }}%;"></div>
-                                <div class="admin-chart-bar bg-violet-500"
-                                     style="height: {{ $barHeight($monthlySeries['pemeriksaan'][$index] ?? 0) }}%;"></div>
+                    <div class="chart-bar-column group relative">
+                        <div class="absolute -top-24 {{ $tooltipPosition }} opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white border border-slate-100 text-slate-700 text-[10px] py-2.5 px-3.5 rounded-xl font-black z-30 shadow-[0_10px_25px_rgba(0,0,0,0.15)] pointer-events-none text-left min-w-[170px]">
+                            <span class="text-slate-400 border-b border-slate-100 pb-1.5 mb-1.5 block">{{ $label }}</span>
+                            <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
+                                <div><span class="text-amber-500 mr-1">■</span> Bidan: {{ $chartBidan[$index] ?? 0 }}</div>
+                                <div><span class="text-emerald-500 mr-1">■</span> Kader: {{ $chartKader[$index] ?? 0 }}</div>
+                                <div><span class="text-sky-500 mr-1">■</span> Balita: {{ $chartBalita[$index] ?? 0 }}</div>
+                                <div><span class="text-blue-600 mr-1">■</span> Remaja: {{ $chartRemaja[$index] ?? 0 }}</div>
+                                <div class="col-span-2 pt-0.5"><span class="text-teal-500 mr-1">■</span> Lansia: {{ $chartLansia[$index] ?? 0 }}</div>
                             </div>
-
-                            <p class="mt-2 text-center text-xs font-black text-slate-500">
-                                {{ $label }}
-                            </p>
                         </div>
-                    @endforeach
-                </div>
+
+                        <div class="bar-pill bg-gradient-to-t from-amber-500 to-amber-300" style="height: {{ $barHeight($chartBidan[$index] ?? 0) }}%;"></div>
+                        <div class="bar-pill bg-gradient-to-t from-emerald-600 to-emerald-400" style="height: {{ $barHeight($chartKader[$index] ?? 0) }}%;"></div>
+                        <div class="bar-pill bg-gradient-to-t from-sky-500 to-sky-300" style="height: {{ $barHeight($chartBalita[$index] ?? 0) }}%;"></div>
+                        <div class="bar-pill bg-gradient-to-t from-blue-700 to-blue-500" style="height: {{ $barHeight($chartRemaja[$index] ?? 0) }}%;"></div>
+                        <div class="bar-pill bg-gradient-to-t from-teal-600 to-teal-400" style="height: {{ $barHeight($chartLansia[$index] ?? 0) }}%;"></div>
+                    </div>
+                @endforeach
             </div>
 
-            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
-                <div class="mb-5">
-                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                        Sasaran
-                    </p>
-                    <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                        Komposisi Data Sasaran
-                    </h2>
+            <div class="flex justify-between items-center mt-3 px-1">
+                @foreach($chartLabels as $label)
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex-1 text-center">{{ $label }}</div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="premium-glass-card p-8 flex flex-col">
+            <div class="mb-6">
+                <h2 class="text-lg font-black text-slate-800 tracking-tight">Kategori Demografi</h2>
+                <p class="text-xs font-semibold text-slate-400 mt-1">Penyebaran sasaran posyandu aktif</p>
+            </div>
+
+            <div class="flex-1 space-y-6 flex flex-col justify-center">
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="font-bold text-slate-600 text-sm flex items-center gap-2">
+                            <i class="fas fa-child text-sky-500"></i>
+                            Balita
+                        </span>
+                        <span class="font-black text-slate-800 text-lg">
+                            {{ number_format($sasaranStats['balita'] ?? 0) }}
+                            <span class="text-[10px] text-slate-400">Jiwa</span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-100/80 rounded-full h-2">
+                        <div class="bg-sky-500 h-full rounded-full" style="width: {{ $balitaPercent }}%"></div>
+                    </div>
                 </div>
 
-                <div class="space-y-3">
-                    <div class="rounded-2xl border border-sky-200 bg-sky-50/80 p-4">
-                        <div class="flex items-center justify-between">
-                            <span class="font-black text-sky-800">Balita</span>
-                            <span class="text-2xl font-black text-slate-950">{{ number_format($sasaranStats['balita'] ?? 0) }}</span>
-                        </div>
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="font-bold text-slate-600 text-sm flex items-center gap-2">
+                            <i class="fas fa-user-graduate text-blue-600"></i>
+                            Remaja
+                        </span>
+                        <span class="font-black text-slate-800 text-lg">
+                            {{ number_format($sasaranStats['remaja'] ?? 0) }}
+                            <span class="text-[10px] text-slate-400">Jiwa</span>
+                        </span>
                     </div>
-
-                    <div class="rounded-2xl border border-indigo-200 bg-indigo-50/80 p-4">
-                        <div class="flex items-center justify-between">
-                            <span class="font-black text-indigo-800">Remaja</span>
-                            <span class="text-2xl font-black text-slate-950">{{ number_format($sasaranStats['remaja'] ?? 0) }}</span>
-                        </div>
+                    <div class="w-full bg-slate-100/80 rounded-full h-2">
+                        <div class="bg-blue-600 h-full rounded-full" style="width: {{ $remajaPercent }}%"></div>
                     </div>
+                </div>
 
-                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4">
-                        <div class="flex items-center justify-between">
-                            <span class="font-black text-emerald-800">Lansia</span>
-                            <span class="text-2xl font-black text-slate-950">{{ number_format($sasaranStats['lansia'] ?? 0) }}</span>
-                        </div>
+                <div>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="font-bold text-slate-600 text-sm flex items-center gap-2">
+                            <i class="fas fa-person-cane text-teal-500"></i>
+                            Lansia
+                        </span>
+                        <span class="font-black text-slate-800 text-lg">
+                            {{ number_format($sasaranStats['lansia'] ?? 0) }}
+                            <span class="text-[10px] text-slate-400">Jiwa</span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-100/80 rounded-full h-2">
+                        <div class="bg-teal-500 h-full rounded-full" style="width: {{ $lansiaPercent }}%"></div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <section class="grid gap-5 xl:grid-cols-2">
-            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
-                <div class="mb-4 flex items-end justify-between gap-3">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Akun Terbaru
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Pengguna Baru
-                        </h2>
-                    </div>
+    </div>
 
-                    <a href="{{ route('admin.users.index') }}"
-                       class="text-xs font-black uppercase tracking-[.12em] text-emerald-700 hover:text-emerald-800">
-                        Kelola
-                    </a>
-                </div>
+    <div class="premium-glass-card flex flex-col h-[450px] nexus-animate-up d-3">
+        <div class="p-6 md:p-8 border-b border-slate-100/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-black text-slate-800 tracking-tight">Log Registrasi Akun Baru</h2>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    Pemantauan masuknya entitas bidan, kader, dan warga
+                </p>
+            </div>
 
-                <div class="space-y-3">
+            <a href="{{ route('admin.users.index') }}" class="text-[10px] font-black text-white hover:bg-emerald-700 uppercase tracking-widest bg-emerald-600 px-5 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center gap-2">
+                Kelola Akses <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="flex-1 overflow-auto premium-scrollbar p-0">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                    <tr class="bg-slate-50/50">
+                        <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Profil Pengguna</th>
+                        <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Kontak</th>
+                        <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Peran Akses</th>
+                        <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Status</th>
+                        <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Waktu Daftar</th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-slate-100/50">
                     @forelse($recentUsers ?? [] as $user)
-                        <div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/75 p-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-sm font-black text-white">
-                                {{ $initial($user->name ?? 'U') }}
-                            </div>
+                        <tr class="hover:bg-slate-50/50 transition-colors group">
+                            <td class="py-4 px-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 font-black flex items-center justify-center shrink-0 shadow-inner text-sm group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                                        {{ $initial($user->name ?? 'U') }}
+                                    </div>
 
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-black text-slate-950">
-                                    {{ $user->name ?? '-' }}
-                                </p>
-                                <p class="truncate text-xs font-bold text-slate-500">
-                                    {{ $user->email ?? '-' }}
-                                </p>
-                            </div>
+                                    <p class="text-sm font-black text-slate-800">{{ $user->name ?? '-' }}</p>
+                                </div>
+                            </td>
 
-                            <div class="text-right">
-                                <span class="admin-dashboard-chip {{ $statusClass($user->status ?? 'inactive') }}">
-                                    {{ $statusLabel($user->status ?? 'inactive') }}
+                            <td class="py-4 px-6">
+                                <p class="text-xs font-semibold text-slate-500">{{ $user->email ?? '-' }}</p>
+                            </td>
+
+                            <td class="py-4 px-6">
+                                <span class="px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-md border {{ $roleBadgeClasses($user->role ?? 'user') }}">
+                                    {{ $roleLabel($user->role ?? 'user') }}
                                 </span>
-                                <p class="mt-1 text-xs font-bold text-slate-400">
-                                    {{ $roleLabel($user->role ?? '-') }}
-                                </p>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-8 text-center">
-                            <p class="text-sm font-bold text-slate-500">
-                                Belum ada akun terbaru.
-                            </p>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
+                            </td>
 
-            <div class="admin-dashboard-glass rounded-[1.5rem] border border-white/80 p-5">
-                <div class="mb-4 flex items-end justify-between gap-3">
-                    <div>
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Jadwal Terbaru
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Agenda Posyandu
-                        </h2>
-                    </div>
-                </div>
-
-                <div class="space-y-3">
-                    @forelse($recentJadwals ?? [] as $jadwal)
-                        <div class="rounded-2xl border border-slate-200 bg-white/75 p-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="truncate text-sm font-black text-slate-950">
-                                        {{ $jadwal->judul ?? 'Jadwal Posyandu' }}
-                                    </p>
-
-                                    <p class="mt-1 text-xs font-bold text-slate-500">
-                                        {{ $formatDate($jadwal->tanggal ?? null) }}
-                                        @if(! empty($jadwal->lokasi))
-                                            <span class="mx-1 text-slate-300">•</span>
-                                            {{ $jadwal->lokasi }}
-                                        @endif
+                            <td class="py-4 px-6">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full {{ $statusClass($user->status ?? 'inactive') }}"></span>
+                                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        {{ $statusLabel($user->status ?? 'inactive') }}
                                     </p>
                                 </div>
+                            </td>
 
-                                <span class="admin-dashboard-chip border-sky-200 bg-sky-50 text-sky-700">
-                                    {{ Str::title($jadwal->status ?? 'aktif') }}
-                                </span>
-                            </div>
-                        </div>
+                            <td class="py-4 px-6">
+                                <p class="text-xs font-semibold text-slate-400">
+                                    {{ $formatDate($user->created_at ?? null) }}
+                                </p>
+                            </td>
+                        </tr>
                     @empty
-                        <div class="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-8 text-center">
-                            <p class="text-sm font-bold text-slate-500">
-                                Belum ada jadwal terbaru.
-                            </p>
-                        </div>
+                        <tr>
+                            <td colspan="5" class="py-16 text-center">
+                                <div class="flex flex-col items-center justify-center text-slate-400 opacity-60">
+                                    <i class="fas fa-user-shield text-3xl mb-3"></i>
+                                    <p class="text-xs font-bold uppercase tracking-widest mt-2">
+                                        Belum ada registrasi baru
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
-                </div>
-            </div>
-        </section>
-
-        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
-                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Jadwal</p>
-                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['jadwal'] ?? 0) }}</p>
-                <p class="text-sm font-semibold text-slate-500">Total agenda</p>
-            </div>
-
-            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
-                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Imunisasi</p>
-                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['imunisasi'] ?? 0) }}</p>
-                <p class="text-sm font-semibold text-slate-500">Catatan layanan</p>
-            </div>
-
-            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
-                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Absensi</p>
-                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['absensi'] ?? 0) }}</p>
-                <p class="text-sm font-semibold text-slate-500">Agenda tercatat</p>
-            </div>
-
-            <div class="rounded-[1.4rem] border border-white/80 bg-white/75 p-4 shadow-sm">
-                <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">Laporan</p>
-                <p class="mt-1 text-2xl font-black text-slate-950">{{ number_format($serviceStats['laporan'] ?? 0) }}</p>
-                <p class="text-sm font-semibold text-slate-500">Rekap bulanan</p>
-            </div>
-        </section>
+                </tbody>
+            </table>
+        </div>
     </div>
+
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const clockEl = document.getElementById('realtime-clock');
+    const greetingEl = document.getElementById('dynamic-greeting');
+    const emojiEl = document.getElementById('dynamic-emoji');
+
+    function updateClockAndGreeting() {
+        const now = new Date();
+
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+        const dayName = days[now.getDay()];
+        const date = String(now.getDate()).padStart(2, '0');
+        const month = months[now.getMonth()];
+        const year = now.getFullYear();
+
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        if (clockEl) {
+            clockEl.innerHTML = `<i class="far fa-clock"></i> ${dayName}, ${date} ${month} ${year} • ${hours}:${minutes}:${seconds} WIB`;
+        }
+
+        const h = now.getHours();
+        let greeting = 'Selamat Malam';
+        let emoji = '🌙';
+
+        if (h >= 5 && h < 11) {
+            greeting = 'Selamat Pagi';
+            emoji = '🌅';
+        } else if (h >= 11 && h < 15) {
+            greeting = 'Selamat Siang';
+            emoji = '☀️';
+        } else if (h >= 15 && h < 18) {
+            greeting = 'Selamat Sore';
+            emoji = '🌇';
+        }
+
+        if (greetingEl) greetingEl.innerText = greeting;
+        if (emojiEl) emojiEl.innerText = emoji;
+    }
+
+    updateClockAndGreeting();
+    setInterval(updateClockAndGreeting, 1000);
+});
+</script>
+@endpush

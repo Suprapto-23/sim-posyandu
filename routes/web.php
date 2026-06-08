@@ -309,7 +309,6 @@ Route::middleware(['auth', 'checkstatus', 'role:bidan'])
 |
 | Catatan penting:
 | Sistem final hanya memakai tiga sasaran: Balita, Remaja, Lansia.
-| Jangan menambahkan modul Bayi atau Ibu Hamil sebagai entitas terpisah.
 |
 */
 
@@ -435,11 +434,10 @@ Route::middleware(['auth', 'checkstatus', 'role:kader'])
         |--------------------------------------------------------------------------
         */
 
-        Route::get('/jadwal', [KaderJadwalController::class, 'index'])
-            ->name('jadwal.index');
-
-        Route::get('/jadwal/{jadwal}', [KaderJadwalController::class, 'show'])
-            ->name('jadwal.show');
+        Route::get('/jadwal', [KaderJadwalController::class, 'index'])->name('jadwal.index');
+        Route::get('/jadwal/live', [KaderJadwalController::class, 'live'])->name('jadwal.live');
+        Route::get('/jadwal/{jadwal}/live', [KaderJadwalController::class, 'liveShow'])->name('jadwal.live-show');
+        Route::get('/jadwal/{jadwal}', [KaderJadwalController::class, 'show'])->name('jadwal.show');
 
         Route::get('/imunisasi', [KaderImunisasiController::class, 'index'])
             ->name('imunisasi.index');

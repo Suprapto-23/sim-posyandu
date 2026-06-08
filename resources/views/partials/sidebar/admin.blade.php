@@ -1,487 +1,429 @@
 @php
-    $route = request()->route()?->getName() ?? '';
-    $adminName = Auth::user()->name ?? 'Administrator';
+    $admin = auth()->user();
+    $adminName = $admin->name ?? 'Administrator';
     $initial = strtoupper(substr($adminName, 0, 1));
 
-    $menusUtama = [
-        [
-            'label' => 'Dashboard',
-            'icon' => 'fa-house',
-            'route' => route('admin.dashboard'),
-            'active' => request()->routeIs('admin.dashboard') || request()->routeIs('admin.'),
-            'badge' => 0,
-        ],
-    ];
-
-    $menusAkun = [
-        [
-            'label' => 'Kelola Warga',
-            'icon' => 'fa-users',
-            'route' => route('admin.users.index'),
-            'active' => request()->routeIs('admin.users.*'),
-            'badge' => 0,
-        ],
-        [
-            'label' => 'Kelola Bidan',
-            'icon' => 'fa-user-doctor',
-            'route' => route('admin.bidans.index'),
-            'active' => request()->routeIs('admin.bidans.*'),
-            'badge' => 0,
-        ],
-        [
-            'label' => 'Kelola Kader',
-            'icon' => 'fa-user-nurse',
-            'route' => route('admin.kaders.index'),
-            'active' => request()->routeIs('admin.kaders.*'),
-            'badge' => 0,
-        ],
-    ];
+    $isDashboard = request()->routeIs('admin.dashboard');
+    $isUsers = request()->routeIs('admin.users.*');
+    $isBidans = request()->routeIs('admin.bidans.*');
+    $isKaders = request()->routeIs('admin.kaders.*');
 @endphp
 
 <style>
     .pc-sidebar {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }
+
+    .pc-sidebar::-webkit-scrollbar,
+    .pc-sidebar *::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
+
+    .side-shell {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
         position: relative;
-        width: 100%;
-        height: calc(100dvh - 28px);
-        padding: 24px 18px 18px;
-        border-radius: 28px;
-        overflow-x: hidden;
-        overflow-y: auto;
-        background:
-            radial-gradient(circle at 50% 0%, rgba(236, 253, 245, .70), transparent 34%),
-            linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(248, 255, 252, .94));
-        border: 1px solid rgba(226, 232, 240, .75);
-        box-shadow: 0 18px 52px rgba(15, 23, 42, .07);
-        scrollbar-width: thin;
+        overflow: hidden;
     }
 
-    .pc-sidebar::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .pc-sidebar::-webkit-scrollbar-thumb {
-        background: rgba(16, 185, 129, .22);
-        border-radius: 999px;
-    }
-
-    .pc-logo-area {
-        position: relative;
-        z-index: 3;
+    .side-logo {
         display: flex;
         justify-content: center;
-        margin-bottom: 22px;
-    }
-
-    .pc-logo-link {
-        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        text-decoration: none;
+        padding: 18px 16px 20px;
+        margin-bottom: 16px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,255,252,.88));
+        border: 1px solid rgba(226,232,240,.78);
+        box-shadow: 0 16px 34px rgba(15,23,42,.055);
     }
 
-    .pc-logo {
-        width: 154px;
-        max-width: 78%;
-        max-height: 88px;
+    .side-logo img {
+        width: 152px;
+        max-width: 86%;
+        max-height: 82px;
         object-fit: contain;
         display: block;
-        filter: drop-shadow(0 8px 16px rgba(15, 23, 42, .07));
+        filter: drop-shadow(0 8px 15px rgba(15,23,42,.08));
     }
 
-    .pc-user-card {
-        position: relative;
-        z-index: 3;
-        display: flex;
+    .side-user {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr);
         align-items: center;
-        gap: 13px;
-        padding: 14px;
-        margin-bottom: 24px;
-        border-radius: 22px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, .88), rgba(248, 255, 252, .78));
-        border: 1px solid rgba(209, 250, 229, .92);
-        box-shadow: 0 12px 28px rgba(15, 23, 42, .048), inset 0 1px 0 rgba(255, 255, 255, .95);
+        gap: 14px;
+        padding: 16px;
+        margin: 0 2px 24px;
+        border-radius: 24px;
+        background:
+            radial-gradient(circle at 18% 22%, rgba(16,185,129,.14), transparent 34%),
+            linear-gradient(135deg, rgba(255,255,255,.94), rgba(240,253,250,.82));
+        border: 1px solid rgba(16,185,129,.20);
+        box-shadow:
+            0 16px 34px rgba(15,23,42,.055),
+            inset 0 1px 0 rgba(255,255,255,.96);
     }
 
-    .pc-avatar {
-        width: 52px;
-        height: 52px;
-        flex-shrink: 0;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #10b981 0%, #34d399 45%, #f59e0b 100%);
+    .side-avatar {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
         color: #fff;
+        font-size: 21px;
         font-weight: 900;
-        font-size: 18px;
-        box-shadow: 0 10px 20px rgba(16, 185, 129, .16), inset 0 1px 0 rgba(255, 255, 255, .22);
+        background: linear-gradient(135deg, #22c55e 0%, #10b981 50%, #f59e0b 100%);
+        box-shadow:
+            0 14px 26px rgba(16,185,129,.22),
+            inset 0 1px 0 rgba(255,255,255,.25);
     }
 
-    .pc-user-info {
-        flex: 1;
+    .side-user-meta {
         min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
-    .pc-user-info h4 {
+    .side-user-name {
+        width: 100%;
+        max-width: 148px;
         margin: 0;
         color: #064e3b;
-        font-size: 13.5px;
+        font-size: 14px;
         font-weight: 900;
-        line-height: 1.2;
+        line-height: 1.15;
+        letter-spacing: -.02em;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .pc-user-info p {
-        margin: 3px 0 6px;
+    .side-user-role {
+        margin: 4px 0 8px;
         color: #64748b;
-        font-size: 11px;
-        font-weight: 700;
+        font-size: 11.5px;
+        font-weight: 800;
+        line-height: 1;
     }
 
-    .pc-online {
+    .side-status {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        padding: 3px 8px;
+        gap: 7px;
+        min-height: 28px;
+        padding: 6px 11px;
         border-radius: 999px;
-        background: #ecfdf5;
-        color: #059669;
-        font-size: 10px;
-        font-weight: 800;
+        background: rgba(236,253,245,.96);
+        border: 1px solid rgba(16,185,129,.13);
+        color: #047857;
+        font-size: 10.5px;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
     }
 
-    .pc-online span {
-        width: 6px;
-        height: 6px;
+    .side-status-dot {
+        width: 7px;
+        height: 7px;
         border-radius: 999px;
         background: #10b981;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, .11);
+        box-shadow: 0 0 0 4px rgba(16,185,129,.12);
+        flex-shrink: 0;
     }
 
-    .pc-menu-group {
-        position: relative;
-        z-index: 3;
+    .side-group {
         margin-bottom: 22px;
+        position: relative;
+        z-index: 2;
     }
 
-    .pc-menu-title {
-        margin: 0 0 10px;
-        padding-left: 4px;
+    .side-title {
+        margin: 0 0 10px 6px;
         color: #64748b;
-        font-size: 10px;
+        font-size: 10.5px;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: .08em;
+        letter-spacing: .10em;
     }
 
-    .pc-menu-list {
+    .side-menu {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 6px;
     }
 
-    .pc-menu-item {
+    .side-link,
+    .side-logout {
         position: relative;
         width: 100%;
-        min-height: 42px;
+        min-height: 46px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 10px 13px;
+        gap: 13px;
+        padding: 11px 14px;
         border: 0;
-        border-radius: 13px;
+        border-radius: 15px;
         background: transparent;
         color: #334155;
         text-decoration: none;
-        font-size: 12.5px;
-        font-weight: 800;
-        cursor: pointer;
-        transition: background .14s ease, color .14s ease, transform .14s ease;
-    }
-
-    .pc-menu-item:hover {
-        background: rgba(236, 253, 245, .90);
-        color: #047857;
-        transform: translateX(3px);
-    }
-
-    .pc-menu-item.active {
-        background: linear-gradient(90deg, rgba(236, 253, 245, .98), rgba(255, 255, 255, .80));
-        color: #047857;
+        font-size: 13px;
         font-weight: 900;
-        box-shadow: 0 8px 20px rgba(16, 185, 129, .07), inset 0 1px 0 rgba(255, 255, 255, .90);
+        cursor: pointer;
+        transition: background .10s ease, color .10s ease, transform .10s ease;
     }
 
-    .pc-menu-item.active::before {
+    .side-link:hover,
+    .side-link.active {
+        background: linear-gradient(90deg, rgba(236,253,245,.98), rgba(255,255,255,.86));
+        color: #047857;
+    }
+
+    .side-link:hover {
+        transform: translateX(2px);
+    }
+
+    .side-link.active {
+        box-shadow:
+            0 10px 22px rgba(16,185,129,.07),
+            inset 0 1px 0 rgba(255,255,255,.90);
+    }
+
+    .side-link.active::before {
         content: "";
         position: absolute;
         left: 0;
-        top: 9px;
-        bottom: 9px;
+        top: 10px;
+        bottom: 10px;
         width: 4px;
         border-radius: 999px;
         background: linear-gradient(180deg, #10b981, #059669);
     }
 
-    .pc-menu-icon {
+    .side-icon {
         width: 22px;
-        flex-shrink: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         color: #64748b;
-        font-size: 13px;
-        transition: color .14s ease;
+        font-size: 14px;
+        flex-shrink: 0;
+        transition: color .10s ease;
     }
 
-    .pc-menu-item:hover .pc-menu-icon,
-    .pc-menu-item.active .pc-menu-icon {
+    .side-link:hover .side-icon,
+    .side-link.active .side-icon {
         color: #059669;
     }
 
-    .pc-menu-text {
-        flex: 1;
+    .side-text {
         min-width: 0;
-        text-align: left;
+        flex: 1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        text-align: left;
     }
 
-    .pc-menu-badge {
-        min-width: 22px;
-        height: 22px;
-        padding: 0 7px;
-        border-radius: 999px;
-        background: #d1fae5;
-        color: #059669;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        font-weight: 900;
-    }
-
-    .pc-logout-form {
-        margin: 0;
-        padding: 0;
-    }
-
-    .pc-logout,
-    .pc-logout .pc-menu-icon {
+    .side-logout {
         color: #ef4444;
     }
 
-    .pc-logout:hover {
+    .side-logout .side-icon {
+        color: #ef4444;
+    }
+
+    .side-logout:hover {
         background: #fff1f2;
         color: #dc2626;
     }
 
-    .pc-sidebar-deco {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 128px;
+    .side-logout:hover .side-icon {
+        color: #dc2626;
+    }
+
+    .side-bottom {
+        margin-top: auto;
+        height: 96px;
+        position: relative;
         pointer-events: none;
         overflow: hidden;
-        z-index: 1;
+        opacity: .82;
     }
 
-    .pc-wave {
+    .side-bottom::before {
+        content: "";
         position: absolute;
-        left: -20%;
-        width: 140%;
+        left: -30px;
+        right: -30px;
+        bottom: -56px;
+        height: 108px;
         border-radius: 50% 50% 0 0;
+        background:
+            radial-gradient(circle at 72% 18%, rgba(16,185,129,.26), transparent 18%),
+            linear-gradient(160deg, rgba(16,185,129,.14), rgba(14,165,233,.08));
     }
 
-    .pc-wave-1 {
-        bottom: -60px;
-        height: 112px;
-        background: rgba(16, 185, 129, .13);
-    }
-
-    .pc-wave-2 {
-        bottom: -76px;
-        height: 126px;
-        background: rgba(5, 150, 105, .11);
-    }
-
-    .pc-wave-3 {
-        bottom: -92px;
-        height: 132px;
-        background: rgba(20, 184, 166, .09);
-    }
-
-    .pc-plant {
+    .side-bottom::after {
+        content: "";
         position: absolute;
-        right: 16px;
-        bottom: 22px;
-        width: 76px;
-        height: 76px;
-    }
-
-    .pc-stem {
-        position: absolute;
-        left: 36px;
-        bottom: 0;
-        width: 3px;
-        height: 58px;
-        border-radius: 999px;
-        background: rgba(4, 120, 87, .32);
-        transform: rotate(18deg);
-        transform-origin: bottom;
-    }
-
-    .pc-leaf {
-        position: absolute;
-        width: 38px;
-        height: 20px;
-        border-radius: 100% 0 100% 0;
-        background: linear-gradient(135deg, rgba(4, 120, 87, .62), rgba(16, 185, 129, .20));
-        transform-origin: bottom left;
-    }
-
-    .pc-leaf-1 {
-        right: 22px;
-        bottom: 28px;
-        transform: rotate(-34deg);
-    }
-
-    .pc-leaf-2 {
         right: 38px;
-        bottom: 42px;
-        transform: rotate(-8deg) scale(.9);
+        bottom: 18px;
+        width: 72px;
+        height: 52px;
+        border-radius: 80% 0 80% 0;
+        background: rgba(16,185,129,.32);
+        transform: rotate(-18deg);
     }
 
-    .pc-leaf-3 {
-        right: 8px;
-        bottom: 44px;
-        transform: rotate(28deg) scale(.86);
-    }
+    @media (max-height: 720px) {
+        .side-logo {
+            padding: 14px 14px 16px;
+            margin-bottom: 12px;
+        }
 
-    .pc-leaf-4 {
-        right: 30px;
-        bottom: 14px;
-        transform: rotate(46deg) scale(.72);
+        .side-logo img {
+            width: 132px;
+        }
+
+        .side-user {
+            padding: 13px;
+            margin-bottom: 18px;
+        }
+
+        .side-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 18px;
+            font-size: 19px;
+        }
+
+        .side-group {
+            margin-bottom: 16px;
+        }
+
+        .side-link,
+        .side-logout {
+            min-height: 42px;
+            padding: 9px 13px;
+        }
+
+        .side-bottom {
+            height: 58px;
+        }
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .pc-menu-item {
-            transition: none;
+        .side-link,
+        .side-logout,
+        .side-icon {
+            transition: none !important;
         }
     }
 </style>
 
-<div class="pc-sidebar">
-    {{-- LOGO --}}
-    <div class="pc-logo-area">
-        <a href="{{ route('admin.dashboard') }}" class="pc-logo-link">
-            <img src="{{ asset('img/logo.webp') }}"
-                 alt="Logo PosyanduCare"
-                 class="pc-logo"
-                 onerror="this.src='{{ asset('public/img/logo.webp') }}'">
+<div class="side-shell">
+
+    <div class="side-logo">
+        <a href="{{ route('admin.dashboard') }}" aria-label="Dashboard Admin">
+            <img
+                src="{{ asset('img/logo.webp') }}"
+                alt="Logo PosyanduCare"
+                onerror="this.src='{{ asset('img/logo.png') }}'"
+            >
         </a>
     </div>
 
-    {{-- USER CARD --}}
-    <div class="pc-user-card">
-        <div class="pc-avatar">
+    <div class="side-user">
+        <div class="side-avatar">
             {{ $initial }}
         </div>
 
-        <div class="pc-user-info">
-            <h4>{{ $adminName }}</h4>
-            <p>Administrator</p>
+        <div class="side-user-meta">
+            <h4 class="side-user-name" title="{{ $adminName }}">
+                {{ $adminName }}
+            </h4>
 
-            <div class="pc-online">
-                <span></span>
-                Akses Admin Aktif
+            <div class="side-user-role">
+                Administrator
+            </div>
+
+            <div class="side-status">
+                <span class="side-status-dot"></span>
+                <span>Akses Admin Aktif</span>
             </div>
         </div>
     </div>
 
-    {{-- SCROLL MENU --}}
-    <div class="pc-menu-group">
-        <div class="pc-menu-title">Menu Utama</div>
+    <div class="side-group">
+        <div class="side-title">Menu Utama</div>
 
-        <div class="pc-menu-list">
-            @foreach($menusUtama as $menu)
-                <a href="{{ $menu['route'] }}"
-                   class="pc-menu-item {{ $menu['active'] ? 'active' : '' }}">
-                    <span class="pc-menu-icon">
-                        <i class="fa-solid {{ $menu['icon'] }}"></i>
-                    </span>
-
-                    <span class="pc-menu-text">
-                        {{ $menu['label'] }}
-                    </span>
-
-                    @if(!empty($menu['badge']) && $menu['badge'] > 0)
-                        <span class="pc-menu-badge">{{ $menu['badge'] }}</span>
-                    @endif
-                </a>
-            @endforeach
+        <div class="side-menu">
+            <a href="{{ route('admin.dashboard') }}"
+               class="side-link {{ $isDashboard ? 'active' : '' }}">
+                <span class="side-icon">
+                    <i class="fa-solid fa-house"></i>
+                </span>
+                <span class="side-text">Dashboard</span>
+            </a>
         </div>
     </div>
 
-    <div class="pc-menu-group">
-        <div class="pc-menu-title">Manajemen Akun</div>
+    <div class="side-group">
+        <div class="side-title">Manajemen Akun</div>
 
-        <div class="pc-menu-list">
-            @foreach($menusAkun as $menu)
-                <a href="{{ $menu['route'] }}"
-                   class="pc-menu-item {{ $menu['active'] ? 'active' : '' }}">
-                    <span class="pc-menu-icon">
-                        <i class="fa-solid {{ $menu['icon'] }}"></i>
-                    </span>
+        <div class="side-menu">
+            <a href="{{ route('admin.users.index') }}"
+               class="side-link {{ $isUsers ? 'active' : '' }}">
+                <span class="side-icon">
+                    <i class="fa-solid fa-users"></i>
+                </span>
+                <span class="side-text">Kelola Warga</span>
+            </a>
 
-                    <span class="pc-menu-text">
-                        {{ $menu['label'] }}
-                    </span>
+            <a href="{{ route('admin.bidans.index') }}"
+               class="side-link {{ $isBidans ? 'active' : '' }}">
+                <span class="side-icon">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </span>
+                <span class="side-text">Kelola Bidan</span>
+            </a>
 
-                    @if(!empty($menu['badge']) && $menu['badge'] > 0)
-                        <span class="pc-menu-badge">{{ $menu['badge'] }}</span>
-                    @endif
-                </a>
-            @endforeach
+            <a href="{{ route('admin.kaders.index') }}"
+               class="side-link {{ $isKaders ? 'active' : '' }}">
+                <span class="side-icon">
+                    <i class="fa-solid fa-user-nurse"></i>
+                </span>
+                <span class="side-text">Kelola Kader</span>
+            </a>
         </div>
     </div>
 
-    <div class="pc-menu-group">
-        <div class="pc-menu-title">Sesi Akun</div>
+    <div class="side-group">
+        <div class="side-title">Sesi Akun</div>
 
-        <div class="pc-menu-list">
-            <form method="POST" action="{{ route('logout') }}" class="pc-logout-form js-logout-form">
+        <div class="side-menu">
+            <form method="POST" action="{{ route('logout') }}" class="js-logout-form">
                 @csrf
 
-                <button type="submit" class="pc-menu-item pc-logout">
-                    <span class="pc-menu-icon">
+                <button type="submit" class="side-logout">
+                    <span class="side-icon">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </span>
-
-                    <span class="pc-menu-text">
-                        Keluar
-                    </span>
+                    <span class="side-text">Keluar</span>
                 </button>
             </form>
         </div>
     </div>
 
-    {{-- DEKORASI --}}
-    <div class="pc-sidebar-deco">
-        <div class="pc-wave pc-wave-1"></div>
-        <div class="pc-wave pc-wave-2"></div>
-        <div class="pc-wave pc-wave-3"></div>
-
-        <div class="pc-plant">
-            <span class="pc-stem"></span>
-            <span class="pc-leaf pc-leaf-1"></span>
-            <span class="pc-leaf pc-leaf-2"></span>
-            <span class="pc-leaf pc-leaf-3"></span>
-            <span class="pc-leaf pc-leaf-4"></span>
-        </div>
-    </div>
+    <div class="side-bottom"></div>
 </div>

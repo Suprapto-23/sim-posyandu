@@ -354,11 +354,7 @@ class PemeriksaanController extends Controller
                         ? $kunjungan->imunisasis()->exists()
                         : false;
 
-                    $hasVitamin = method_exists($kunjungan, 'vitamins')
-                        ? $kunjungan->vitamins()->exists()
-                        : false;
-
-                    if (!$hasPemeriksaanLain && !$hasImunisasi && !$hasVitamin) {
+                    if (!$hasPemeriksaanLain && !$hasImunisasi) {
                         $kunjungan->delete();
                     }
                 }

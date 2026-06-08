@@ -46,10 +46,6 @@ class Kunjungan extends Model
         return $this->hasMany(Imunisasi::class);
     }
 
-    public function vitamins()
-    {
-        return $this->hasMany(Vitamin::class);
-    }
 
     
 

@@ -415,7 +415,7 @@ class KaderController extends Controller
             ['table' => 'balitas', 'columns' => ['created_by', 'updated_by', 'kader_id']],
             ['table' => 'remajas', 'columns' => ['created_by', 'updated_by', 'kader_id']],
             ['table' => 'lansias', 'columns' => ['created_by', 'updated_by', 'kader_id']],
-            ['table' => 'absensi_posyandus', 'columns' => ['created_by', 'updated_by', 'kader_id']],
+            ['table' => 'absensi_posyandu', 'columns' => ['dicatat_oleh']],
             ['table' => 'absensi_details', 'columns' => ['created_by', 'updated_by', 'kader_id']],
             ['table' => 'pengukurans', 'columns' => ['created_by', 'updated_by', 'kader_id']],
             ['table' => 'pengukuran_fisiks', 'columns' => ['created_by', 'updated_by', 'kader_id']],
