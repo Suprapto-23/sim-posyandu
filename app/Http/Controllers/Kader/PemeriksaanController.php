@@ -11,8 +11,8 @@ use App\Models\Remaja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 class PemeriksaanController extends Controller
 {
@@ -20,59 +20,55 @@ class PemeriksaanController extends Controller
 
     private array $reviewedStatuses = [
         'verified',
-        'terverifikasi',
-        'approved',
-        'valid',
         'tervalidasi',
-        'sudah_ditinjau',
+        'approved',
+        'disetujui',
     ];
 
-    private array $needFixStatuses = [
+    private array $revisionStatuses = [
         'ditolak',
+        'revisi',
+        'perlu_revisi',
         'rejected',
-        'direvisi',
-        'perlu_perbaikan',
+        'dikembalikan',
     ];
 
     public function index(Request $request)
     {
-        $kategori = $request->get('kategori', '');
-        $search = $request->get('search', '');
-        $status = $request->get('status', '');
+        $kategori = $request->get('kategori');
+        $status = $request->get('status');
+        $search = trim((string) $request->get('search'));
 
-        $query = Pemeriksaan::with(['kunjungan.pasien', 'kunjungan.petugas', 'verifikator'])
+        $query = Pemeriksaan::with([
+                'kunjungan.pasien',
+                'kunjungan.petugas',
+                'pemeriksa',
+                'verifikator',
+            ])
             ->whereIn('kategori_pasien', $this->kategoriAktif)
             ->latest('tanggal_periksa')
-            ->latest('created_at');
+            ->latest('id');
 
-        if (!empty($kategori) && in_array($kategori, $this->kategoriAktif, true)) {
+        if (in_array($kategori, $this->kategoriAktif, true)) {
             $query->where('kategori_pasien', $kategori);
         }
 
-        if (!empty($status)) {
+        if ($status) {
             $this->applyStatusFilter($query, $status);
         }
 
-        if (!empty($search)) {
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->whereHas('kunjungan', function ($kunjunganQ) use ($search) {
-                    $kunjunganQ->whereHasMorph(
+                $q->whereHas('kunjungan', function ($kunjungan) use ($search) {
+                    $kunjungan->whereHasMorph(
                         'pasien',
                         [Balita::class, Remaja::class, Lansia::class],
-                        function ($morphQ) use ($search) {
-                            $morphQ->where('nama_lengkap', 'like', "%{$search}%")
+                        function ($pasien) use ($search) {
+                            $pasien->where('nama_lengkap', 'like', "%{$search}%")
                                 ->orWhere('nik', 'like', "%{$search}%");
                         }
                     );
                 });
-
-                if (Schema::hasColumn('pemeriksaans', 'nama_pasien')) {
-                    $q->orWhere('nama_pasien', 'like', "%{$search}%");
-                }
-
-                if (Schema::hasColumn('pemeriksaans', 'nik_pasien')) {
-                    $q->orWhere('nik_pasien', 'like', "%{$search}%");
-                }
             });
         }
 
@@ -81,8 +77,8 @@ class PemeriksaanController extends Controller
         return view('kader.pemeriksaan.index', compact(
             'pemeriksaans',
             'kategori',
-            'search',
-            'status'
+            'status',
+            'search'
         ));
     }
 
@@ -104,200 +100,105 @@ class PemeriksaanController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validatePemeriksaan($request);
-
+        $validated = $this->validatedData($request);
         $kategori = $validated['kategori_pasien'];
-        $pasienId = $validated['pasien_id'];
+        $pasienId = (int) $validated['pasien_id'];
 
-        if (!$this->isValidPasien($kategori, $pasienId)) {
+        if (!$this->pasienExists($kategori, $pasienId)) {
             return back()
                 ->withInput()
-                ->with('error', 'Data sasaran tidak valid. Pilih pasien dari kategori yang benar.');
+                ->with('error', 'Data sasaran tidak valid.');
         }
 
-        $imt = $this->calculateImt(
-            $validated['berat_badan'] ?? null,
-            $validated['tinggi_badan'] ?? null,
-            $kategori
-        );
-
-        DB::beginTransaction();
-
         try {
-            $kunjungan = Kunjungan::create($this->buildKunjunganPayload($validated));
+            $this->guardRequiredColumns($validated);
 
-            $payload = [
-    'kunjungan_id' => $kunjungan->id,
-    'pasien_id' => $pasienId,
-    'kategori_pasien' => $kategori,
-    'tanggal_periksa' => $validated['tanggal_periksa'],
+            DB::transaction(function () use ($validated, $kategori, $pasienId) {
+                $kunjungan = $this->createKunjungan($validated);
 
-    'berat_badan' => $validated['berat_badan'] ?? null,
-    'tinggi_badan' => $validated['tinggi_badan'] ?? null,
-    'suhu_tubuh' => $validated['suhu_tubuh'] ?? null,
-    'imt' => $imt,
+                $payload = $this->pemeriksaanPayload(
+                    validated: $validated,
+                    kategori: $kategori,
+                    pasienId: $pasienId,
+                    kunjunganId: $kunjungan->id
+                );
 
-    'lingkar_kepala' => $validated['lingkar_kepala'] ?? null,
-    'lingkar_lengan' => $validated['lingkar_lengan'] ?? null,
-    'lingkar_perut' => $validated['lingkar_perut'] ?? null,
-
-    'tekanan_darah' => $validated['tekanan_darah'] ?? null,
-    'gula_darah' => $validated['gula_darah'] ?? null,
-    'kolesterol' => $validated['kolesterol'] ?? null,
-    'asam_urat' => $validated['asam_urat'] ?? null,
-    'hemoglobin' => $validated['hemoglobin'] ?? null,
-    'tingkat_kemandirian' => $validated['tingkat_kemandirian'] ?? null,
-
-    'keluhan' => $validated['keluhan'] ?? null,
-    'catatan_kader' => $validated['catatan_kader'] ?? null,
-
-    'status_verifikasi' => 'pending',
-    'created_by' => Auth::id(),
-];
-
-            $payload = $this->filterColumns('pemeriksaans', $payload);
-
-            Pemeriksaan::create($payload);
-
-            DB::commit();
+                $this->storeModel(new Pemeriksaan(), $payload);
+            });
 
             return redirect()
                 ->route('kader.pemeriksaan.index')
                 ->with('success', 'Pengukuran fisik berhasil disimpan dan menunggu review Bidan.');
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            Log::error('PEMERIKSAAN_STORE_ERROR', [
-                'message' => $e->getMessage(),
-                'user_id' => Auth::id(),
-                'kategori' => $kategori,
-            ]);
-
             return back()
                 ->withInput()
-                ->with('error', 'Gagal menyimpan pengukuran fisik: ' . $e->getMessage());
+                ->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
         }
     }
 
-    public function show($id)
+    public function show(Pemeriksaan $pemeriksaan)
     {
-        $pemeriksaan = Pemeriksaan::with([
+        $pemeriksaan->load([
             'kunjungan.pasien',
             'kunjungan.petugas',
+            'pemeriksa',
             'verifikator',
-        ])->findOrFail($id);
+        ]);
 
         return view('kader.pemeriksaan.show', compact('pemeriksaan'));
     }
 
-    public function edit($id)
+    public function edit(Pemeriksaan $pemeriksaan)
     {
-        $pemeriksaan = Pemeriksaan::with('kunjungan.pasien')->findOrFail($id);
-
         if ($this->isReviewed($pemeriksaan->status_verifikasi)) {
-            return back()->with(
-                'error',
-                'Data sudah ditinjau Bidan dan tidak dapat diubah oleh Kader.'
-            );
+            return back()->with('error', 'Data sudah ditinjau Bidan dan tidak dapat diubah.');
         }
+
+        $pemeriksaan->load(['kunjungan.pasien', 'pemeriksa']);
 
         return view('kader.pemeriksaan.edit', compact('pemeriksaan'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Pemeriksaan $pemeriksaan)
     {
-        $pemeriksaan = Pemeriksaan::with('kunjungan')->findOrFail($id);
-
         if ($this->isReviewed($pemeriksaan->status_verifikasi)) {
-            return $this->errorResponse(
-                $request,
-                'Data sudah ditinjau Bidan dan tidak dapat diubah oleh Kader.'
-            );
+            return $this->failed($request, 'Data sudah ditinjau Bidan dan tidak dapat diubah.');
         }
-
-        $validated = $this->validatePemeriksaan($request, false, $pemeriksaan->kategori_pasien);
 
         $kategori = $pemeriksaan->kategori_pasien;
 
-        $imt = $this->calculateImt(
-            $validated['berat_badan'] ?? null,
-            $validated['tinggi_badan'] ?? null,
-            $kategori
-        );
+        if (!in_array($kategori, $this->kategoriAktif, true)) {
+            return $this->failed($request, 'Kategori pemeriksaan tidak valid.');
+        }
 
-        DB::beginTransaction();
+        $validated = $this->validatedData($request, false, $kategori);
 
         try {
-            $payload = [
-    'tanggal_periksa' => $validated['tanggal_periksa'],
+            $this->guardRequiredColumns($validated);
 
-    'berat_badan' => $validated['berat_badan'] ?? null,
-    'tinggi_badan' => $validated['tinggi_badan'] ?? null,
-    'suhu_tubuh' => $validated['suhu_tubuh'] ?? null,
-    'imt' => $imt,
-
-    'lingkar_kepala' => $validated['lingkar_kepala'] ?? null,
-    'lingkar_lengan' => $validated['lingkar_lengan'] ?? null,
-    'lingkar_perut' => $validated['lingkar_perut'] ?? null,
-
-    'tekanan_darah' => $validated['tekanan_darah'] ?? null,
-    'gula_darah' => $validated['gula_darah'] ?? null,
-    'kolesterol' => $validated['kolesterol'] ?? null,
-    'asam_urat' => $validated['asam_urat'] ?? null,
-    'hemoglobin' => $validated['hemoglobin'] ?? null,
-    'tingkat_kemandirian' => $validated['tingkat_kemandirian'] ?? null,
-
-    'keluhan' => $validated['keluhan'] ?? null,
-    'catatan_kader' => $validated['catatan_kader'] ?? null,
-];
-
-            /*
-             * Kalau data sebelumnya dikembalikan oleh Bidan,
-             * setelah Kader memperbaiki, status otomatis balik ke Menunggu Review.
-             * Ini alur paling waras. Sistem tidak boleh dendam ke data.
-             */
-            if ($this->needFix($pemeriksaan->status_verifikasi)) {
-                $payload['status_verifikasi'] = 'pending';
-
-                foreach (['catatan_validasi', 'catatan_bidan', 'catatan_review'] as $column) {
-                    if (Schema::hasColumn('pemeriksaans', $column)) {
-                        $payload[$column] = null;
-                    }
-                }
-
-                foreach (['verified_by', 'divalidasi_oleh', 'reviewed_by'] as $column) {
-                    if (Schema::hasColumn('pemeriksaans', $column)) {
-                        $payload[$column] = null;
-                    }
-                }
-
-                foreach (['verified_at', 'tanggal_validasi', 'reviewed_at'] as $column) {
-                    if (Schema::hasColumn('pemeriksaans', $column)) {
-                        $payload[$column] = null;
-                    }
-                }
-            }
-
-            $payload = $this->filterColumns('pemeriksaans', $payload);
-
-            $pemeriksaan->update($payload);
-
-            if ($pemeriksaan->kunjungan) {
-                $kunjunganPayload = [
-                    'tanggal_kunjungan' => $validated['tanggal_periksa'],
-                    'keluhan' => $validated['keluhan'] ?? null,
-                ];
-
-                $pemeriksaan->kunjungan->update(
-                    $this->filterColumns('kunjungans', $kunjunganPayload)
+            DB::transaction(function () use ($validated, $kategori, $pemeriksaan) {
+                $payload = $this->pemeriksaanPayload(
+                    validated: $validated,
+                    kategori: $kategori,
+                    pasienId: (int) $pemeriksaan->pasien_id
                 );
-            }
 
-            DB::commit();
+                if ($this->needsRevision($pemeriksaan->status_verifikasi)) {
+                    $payload['status_verifikasi'] = 'pending';
+                    $payload = array_merge($payload, $this->resetReviewPayload());
+                }
 
-            $message = $this->needFix($pemeriksaan->getOriginal('status_verifikasi'))
-                ? 'Pengukuran berhasil diperbaiki dan kembali menunggu review Bidan.'
-                : 'Pengukuran fisik berhasil diperbarui.';
+                $this->storeModel($pemeriksaan, $payload);
+
+                if ($pemeriksaan->kunjungan) {
+                    $this->storeModel($pemeriksaan->kunjungan, [
+                        'tanggal_kunjungan' => $validated['tanggal_periksa'],
+                        'keluhan' => $validated['keluhan'] ?? null,
+                    ]);
+                }
+            });
+
+            $message = 'Pengukuran fisik berhasil diperbarui.';
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -311,235 +212,217 @@ class PemeriksaanController extends Controller
                 ->route('kader.pemeriksaan.index')
                 ->with('success', $message);
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            Log::error('PEMERIKSAAN_UPDATE_ERROR', [
-                'message' => $e->getMessage(),
-                'pemeriksaan_id' => $id,
-                'user_id' => Auth::id(),
-            ]);
-
-            return $this->errorResponse(
-                $request,
-                'Gagal memperbarui pengukuran fisik: ' . $e->getMessage()
-            );
+            return $this->failed($request, 'Gagal memperbarui data: ' . $e->getMessage());
         }
     }
 
-    public function destroy($id)
+    public function destroy(Pemeriksaan $pemeriksaan)
     {
-        DB::beginTransaction();
+        if ($this->isReviewed($pemeriksaan->status_verifikasi)) {
+            return back()->with('error', 'Data sudah ditinjau Bidan dan tidak dapat dihapus.');
+        }
 
-        try {
-            $pemeriksaan = Pemeriksaan::findOrFail($id);
-
-            if ($this->isReviewed($pemeriksaan->status_verifikasi)) {
-                return back()->with(
-                    'error',
-                    'Data sudah ditinjau Bidan dan tidak dapat dihapus oleh Kader.'
-                );
-            }
-
-            $kunjunganId = $pemeriksaan->kunjungan_id;
+        DB::transaction(function () use ($pemeriksaan) {
+            $kunjungan = $pemeriksaan->kunjungan;
 
             $pemeriksaan->delete();
 
-            if ($kunjunganId) {
-                $kunjungan = Kunjungan::find($kunjunganId);
+            if ($kunjungan && !$kunjungan->pemeriksaan()->exists()) {
+                $hasImunisasi = method_exists($kunjungan, 'imunisasis')
+                    ? $kunjungan->imunisasis()->exists()
+                    : false;
 
-                if ($kunjungan) {
-                    $hasPemeriksaanLain = $kunjungan->pemeriksaan()->exists();
-
-                    $hasImunisasi = method_exists($kunjungan, 'imunisasis')
-                        ? $kunjungan->imunisasis()->exists()
-                        : false;
-
-                    if (!$hasPemeriksaanLain && !$hasImunisasi) {
-                        $kunjungan->delete();
-                    }
+                if (!$hasImunisasi) {
+                    $kunjungan->delete();
                 }
             }
+        });
 
-            DB::commit();
-
-            return redirect()
-                ->route('kader.pemeriksaan.index')
-                ->with('success', 'Data pengukuran fisik berhasil dihapus.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            Log::error('PEMERIKSAAN_DELETE_ERROR', [
-                'message' => $e->getMessage(),
-                'pemeriksaan_id' => $id,
-                'user_id' => Auth::id(),
-            ]);
-
-            return back()->with('error', 'Gagal menghapus data pengukuran fisik.');
-        }
+        return redirect()
+            ->route('kader.pemeriksaan.index')
+            ->with('success', 'Data pengukuran fisik berhasil dihapus.');
     }
 
     public function getPasienApi(Request $request)
     {
         $kategori = $request->get('kategori');
 
-        try {
-            if (!in_array($kategori, $this->kategoriAktif, true)) {
-                return response()->json([
-                    'status' => 'error',
-                    'data' => [],
-                    'message' => 'Kategori tidak valid.',
-                ], 422);
-            }
-
-            $modelClass = $this->mapPasienModel($kategori);
-            $model = new $modelClass();
-            $table = $model->getTable();
-
-            $select = ['id'];
-
-            foreach (['nama_lengkap', 'nik', 'jenis_kelamin', 'tanggal_lahir'] as $column) {
-                if (Schema::hasColumn($table, $column)) {
-                    $select[] = $column;
-                }
-            }
-
-            $data = $modelClass::query()
-                ->select($select)
-                ->orderBy(Schema::hasColumn($table, 'nama_lengkap') ? 'nama_lengkap' : 'id')
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'nama' => $item->nama_lengkap ?? 'Tanpa Nama',
-                        'nik' => $item->nik ?? '-',
-                        'jenis_kelamin' => $item->jenis_kelamin ?? null,
-                        'tanggal_lahir' => $item->tanggal_lahir ?? null,
-                    ];
-                });
-
-            return response()->json([
-                'status' => 'success',
-                'data' => $data,
-                'message' => 'Data sasaran berhasil dimuat.',
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('API_PASIEN_FETCH_ERROR', [
-                'message' => $e->getMessage(),
-                'kategori' => $kategori,
-            ]);
-
+        if (!in_array($kategori, $this->kategoriAktif, true)) {
             return response()->json([
                 'status' => 'error',
                 'data' => [],
-                'message' => 'Sistem gagal memuat data sasaran.',
-            ], 500);
+                'message' => 'Kategori tidak valid.',
+            ], 422);
+        }
+
+        $model = $this->pasienModel($kategori);
+        $table = (new $model())->getTable();
+
+        $columns = collect(['id', 'nama_lengkap', 'nik', 'jenis_kelamin', 'tanggal_lahir'])
+            ->filter(fn ($column) => Schema::hasColumn($table, $column))
+            ->values()
+            ->all();
+
+        $data = $model::select($columns)
+            ->orderBy(Schema::hasColumn($table, 'nama_lengkap') ? 'nama_lengkap' : 'id')
+            ->get()
+            ->map(fn ($item) => [
+                'id' => $item->id,
+                'nama' => $item->nama_lengkap ?? 'Tanpa Nama',
+                'nik' => $item->nik ?? '-',
+                'jenis_kelamin' => $item->jenis_kelamin ?? null,
+                'tanggal_lahir' => $item->tanggal_lahir ?? null,
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+        ]);
+    }
+
+    private function validatedData(Request $request, bool $isStore = true, ?string $kategoriExisting = null): array
+    {
+        $kategori = $isStore ? $request->input('kategori_pasien') : $kategoriExisting;
+
+        $rules = [
+            'tanggal_periksa' => 'required|date|before_or_equal:today',
+            'berat_badan' => 'required|numeric|min:0.1|max:300',
+            'tinggi_badan' => 'required|numeric|min:10|max:250',
+            'suhu_tubuh' => 'nullable|numeric|min:30|max:45',
+            'lingkar_kepala' => 'nullable|numeric|min:10|max:100',
+            'lingkar_lengan' => 'nullable|numeric|min:5|max:100',
+            'lingkar_perut' => 'nullable|numeric|min:20|max:200',
+            'tekanan_darah' => ['nullable', 'string', 'max:20', 'regex:/^[0-9]{2,3}\/[0-9]{2,3}$/'],
+            'denyut_nadi' => 'nullable|integer|min:20|max:250',
+            'respirasi' => 'nullable|integer|min:5|max:80',
+            'gula_darah' => 'nullable|numeric|min:10|max:1000',
+            'kolesterol' => 'nullable|integer|min:10|max:1000',
+            'asam_urat' => 'nullable|numeric|min:1|max:30',
+            'hemoglobin' => 'nullable|numeric|min:1|max:30',
+            'tingkat_kemandirian' => 'nullable|in:mandiri,bantuan_sebagian,bantuan_penuh',
+            'keluhan' => 'nullable|string|max:1000',
+            'catatan_kader' => 'nullable|string|max:1000',
+        ];
+
+        if ($isStore) {
+            $rules['pasien_id'] = 'required|integer';
+            $rules['kategori_pasien'] = 'required|in:balita,remaja,lansia';
+        }
+
+        if ($kategori === 'balita') {
+            $rules['lingkar_kepala'] = 'required|numeric|min:10|max:100';
+            $rules['lingkar_lengan'] = 'required|numeric|min:5|max:100';
+        }
+
+        if ($kategori === 'remaja') {
+            $rules['lingkar_lengan'] = 'required|numeric|min:5|max:100';
+            $rules['lingkar_perut'] = 'required|numeric|min:20|max:200';
+            $rules['tekanan_darah'] = ['required', 'string', 'max:20', 'regex:/^[0-9]{2,3}\/[0-9]{2,3}$/'];
+        }
+
+        if ($kategori === 'lansia') {
+            $rules['lingkar_perut'] = 'required|numeric|min:20|max:200';
+            $rules['tekanan_darah'] = ['required', 'string', 'max:20', 'regex:/^[0-9]{2,3}\/[0-9]{2,3}$/'];
+            $rules['tingkat_kemandirian'] = 'required|in:mandiri,bantuan_sebagian,bantuan_penuh';
+        }
+
+        return $request->validate($rules, [
+            'pasien_id.required' => 'Sasaran wajib dipilih.',
+            'kategori_pasien.required' => 'Kategori sasaran wajib dipilih.',
+            'tanggal_periksa.required' => 'Tanggal pengukuran wajib diisi.',
+            'berat_badan.required' => 'Berat badan wajib diisi.',
+            'tinggi_badan.required' => 'Tinggi badan wajib diisi.',
+            'lingkar_kepala.required' => 'Lingkar kepala wajib diisi untuk Balita.',
+            'lingkar_lengan.required' => 'LiLA wajib diisi untuk kategori ini.',
+            'lingkar_perut.required' => 'Lingkar perut wajib diisi untuk kategori ini.',
+            'tekanan_darah.required' => 'Tekanan darah wajib diisi untuk kategori ini.',
+            'tekanan_darah.regex' => 'Format tekanan darah harus seperti 120/80.',
+            'tingkat_kemandirian.required' => 'Tingkat kemandirian wajib dipilih untuk Lansia.',
+        ]);
+    }
+
+    private function pemeriksaanPayload(array $validated, string $kategori, int $pasienId, ?int $kunjunganId = null): array
+    {
+        $payload = [
+            'kunjungan_id' => $kunjunganId,
+            'pasien_id' => $pasienId,
+            'kategori_pasien' => $kategori,
+            'tanggal_periksa' => $validated['tanggal_periksa'],
+            'berat_badan' => $validated['berat_badan'] ?? null,
+            'tinggi_badan' => $validated['tinggi_badan'] ?? null,
+            'imt' => $this->hitungImt($validated['berat_badan'] ?? null, $validated['tinggi_badan'] ?? null, $kategori),
+            'suhu_tubuh' => $validated['suhu_tubuh'] ?? null,
+            'lingkar_kepala' => $validated['lingkar_kepala'] ?? null,
+            'lingkar_lengan' => $validated['lingkar_lengan'] ?? null,
+            'lingkar_perut' => $validated['lingkar_perut'] ?? null,
+            'tekanan_darah' => $validated['tekanan_darah'] ?? null,
+            'denyut_nadi' => $validated['denyut_nadi'] ?? null,
+            'respirasi' => $validated['respirasi'] ?? null,
+            'gula_darah' => $validated['gula_darah'] ?? null,
+            'kolesterol' => $validated['kolesterol'] ?? null,
+            'asam_urat' => $validated['asam_urat'] ?? null,
+            'hemoglobin' => $validated['hemoglobin'] ?? null,
+            'tingkat_kemandirian' => $validated['tingkat_kemandirian'] ?? null,
+            'keluhan' => $validated['keluhan'] ?? null,
+            'catatan_kader' => $validated['catatan_kader'] ?? null,
+            'pemeriksa_id' => Auth::id(),
+            'status_verifikasi' => 'pending',
+        ];
+
+        if (Schema::hasColumn('pemeriksaans', 'created_by')) {
+            $payload['created_by'] = Auth::id();
+        }
+
+        return $payload;
+    }
+
+    private function createKunjungan(array $validated): Kunjungan
+    {
+        $payload = [
+            'pasien_id' => $validated['pasien_id'],
+            'pasien_type' => $this->pasienModel($validated['kategori_pasien']),
+            'tanggal_kunjungan' => $validated['tanggal_periksa'],
+            'jenis_kunjungan' => 'pemeriksaan',
+            'keluhan' => $validated['keluhan'] ?? null,
+            'petugas_id' => Auth::id(),
+        ];
+
+        return tap(new Kunjungan(), fn ($model) => $this->storeModel($model, $payload));
+    }
+
+    private function storeModel($model, array $payload): void
+    {
+        foreach ($payload as $column => $value) {
+            if ($value !== null && Schema::hasColumn($model->getTable(), $column)) {
+                $model->{$column} = $value;
+            }
+        }
+
+        $model->save();
+    }
+
+    private function guardRequiredColumns(array $validated): void
+    {
+        $required = ['pasien_id', 'kategori_pasien', 'tanggal_periksa', 'pemeriksa_id', 'berat_badan', 'tinggi_badan'];
+        $filledFields = ['lingkar_perut', 'catatan_kader', 'hemoglobin', 'gula_darah', 'kolesterol', 'asam_urat'];
+
+        $missing = collect($required)
+            ->merge(collect($filledFields)->filter(fn ($field) => filled($validated[$field] ?? null)))
+            ->reject(fn ($field) => Schema::hasColumn('pemeriksaans', $field))
+            ->values()
+            ->all();
+
+        if ($missing) {
+            throw new RuntimeException('Kolom pemeriksaans belum tersedia: ' . implode(', ', $missing));
         }
     }
-
-    private function validatePemeriksaan(Request $request, bool $isStore = true, ?string $kategoriFromExisting = null): array
-{
-    $kategori = $isStore
-        ? $request->input('kategori_pasien')
-        : $kategoriFromExisting;
-
-    $rules = [
-        'tanggal_periksa' => 'required|date|before_or_equal:today',
-
-        // Parameter dasar wajib untuk semua kategori
-        'berat_badan' => 'required|numeric|min:0.1|max:300',
-        'tinggi_badan' => 'required|numeric|min:10|max:250',
-
-        // Parameter tambahan umum
-        'suhu_tubuh' => 'nullable|numeric|min:30|max:45',
-        'lingkar_kepala' => 'nullable|numeric|min:10|max:100',
-        'lingkar_lengan' => 'nullable|numeric|min:5|max:100',
-        'lingkar_perut' => 'nullable|numeric|min:20|max:200',
-
-        'tekanan_darah' => [
-            'nullable',
-            'string',
-            'max:20',
-            'regex:/^[0-9]{2,3}\/[0-9]{2,3}$/',
-        ],
-
-        'gula_darah' => 'nullable|numeric|min:10|max:1000',
-        'kolesterol' => 'nullable|integer|min:10|max:1000',
-        'asam_urat' => 'nullable|numeric|min:1|max:30',
-        'hemoglobin' => 'nullable|numeric|min:1|max:30',
-        'tingkat_kemandirian' => 'nullable|string|in:mandiri,bantuan_sebagian,bantuan_penuh',
-
-        'keluhan' => 'nullable|string|max:1000',
-        'catatan_kader' => 'nullable|string|max:1000',
-    ];
-
-    if ($isStore) {
-        $rules['pasien_id'] = 'required|integer';
-        $rules['kategori_pasien'] = 'required|in:balita,remaja,lansia';
-    }
-
-    if ($kategori === 'balita') {
-        $rules['lingkar_kepala'] = 'required|numeric|min:10|max:100';
-        $rules['lingkar_lengan'] = 'required|numeric|min:5|max:100';
-    }
-
-    if ($kategori === 'remaja') {
-        $rules['lingkar_lengan'] = 'required|numeric|min:5|max:100';
-        $rules['lingkar_perut'] = 'required|numeric|min:20|max:200';
-        $rules['tekanan_darah'] = [
-            'required',
-            'string',
-            'max:20',
-            'regex:/^[0-9]{2,3}\/[0-9]{2,3}$/',
-        ];
-    }
-
-    if ($kategori === 'lansia') {
-        $rules['lingkar_perut'] = 'required|numeric|min:20|max:200';
-        $rules['tekanan_darah'] = [
-            'required',
-            'string',
-            'max:20',
-            'regex:/^[0-9]{2,3}\/[0-9]{2,3}$/',
-        ];
-        $rules['tingkat_kemandirian'] = 'required|string|in:mandiri,bantuan_sebagian,bantuan_penuh';
-    }
-
-    return $request->validate($rules, [
-        'pasien_id.required' => 'Warga wajib dipilih terlebih dahulu.',
-        'kategori_pasien.required' => 'Kategori sasaran wajib dipilih.',
-        'kategori_pasien.in' => 'Kategori sasaran tidak valid.',
-
-        'tanggal_periksa.required' => 'Tanggal pengukuran wajib diisi.',
-        'tanggal_periksa.before_or_equal' => 'Tanggal pengukuran tidak boleh melebihi hari ini.',
-
-        'berat_badan.required' => 'Berat badan wajib diisi.',
-        'berat_badan.numeric' => 'Berat badan harus berupa angka.',
-        'berat_badan.min' => 'Berat badan tidak valid.',
-
-        'tinggi_badan.required' => 'Tinggi atau panjang badan wajib diisi.',
-        'tinggi_badan.numeric' => 'Tinggi atau panjang badan harus berupa angka.',
-        'tinggi_badan.min' => 'Tinggi atau panjang badan tidak valid.',
-
-        'lingkar_kepala.required' => 'Lingkar kepala wajib diisi untuk kategori Balita / Anak.',
-        'lingkar_lengan.required' => 'LiLA wajib diisi untuk kategori ini.',
-        'lingkar_perut.required' => 'Lingkar perut wajib diisi untuk kategori ini.',
-
-        'tekanan_darah.required' => 'Tekanan darah wajib diisi untuk kategori ini.',
-        'tekanan_darah.regex' => 'Format tekanan darah harus seperti 120/80.',
-
-        'tingkat_kemandirian.required' => 'Tingkat kemandirian wajib dipilih untuk kategori Lansia.',
-        'tingkat_kemandirian.in' => 'Tingkat kemandirian tidak valid.',
-    ]);
-}
 
     private function applyStatusFilter($query, string $status): void
     {
         if ($status === 'pending') {
             $query->where(function ($q) {
                 $q->whereNull('status_verifikasi')
-                    ->orWhere('status_verifikasi', 'pending')
-                    ->orWhere('status_verifikasi', 'menunggu')
-                    ->orWhere('status_verifikasi', 'menunggu_review');
+                    ->orWhereIn('status_verifikasi', ['pending', 'menunggu', 'menunggu_review']);
             });
 
             return;
@@ -547,45 +430,28 @@ class PemeriksaanController extends Controller
 
         if ($status === 'verified') {
             $query->whereIn('status_verifikasi', $this->reviewedStatuses);
-
             return;
         }
 
         if ($status === 'ditolak') {
-            $query->whereIn('status_verifikasi', $this->needFixStatuses);
-
+            $query->whereIn('status_verifikasi', $this->revisionStatuses);
             return;
         }
 
         $query->where('status_verifikasi', $status);
     }
 
-    private function buildKunjunganPayload(array $validated): array
+    private function resetReviewPayload(): array
     {
-        $payload = [
-            'pasien_id' => $validated['pasien_id'],
-            'pasien_type' => $this->mapPasienType($validated['kategori_pasien']),
-            'tanggal_kunjungan' => $validated['tanggal_periksa'],
-            'keluhan' => $validated['keluhan'] ?? null,
-            'jenis_kunjungan' => 'pemeriksaan',
+        return [
+            'verified_by' => null,
+            'verified_at' => null,
+            'catatan_validasi' => null,
+            'catatan_bidan' => null,
         ];
-
-        if (Schema::hasColumn('kunjungans', 'pemeriksa_id')) {
-            $payload['pemeriksa_id'] = Auth::id();
-        }
-
-        if (Schema::hasColumn('kunjungans', 'petugas_id')) {
-            $payload['petugas_id'] = Auth::id();
-        }
-
-        if (Schema::hasColumn('kunjungans', 'created_by')) {
-            $payload['created_by'] = Auth::id();
-        }
-
-        return $this->filterColumns('kunjungans', $payload);
     }
 
-    private function mapPasienType(string $kategori): string
+    private function pasienModel(string $kategori): string
     {
         return match ($kategori) {
             'balita' => Balita::class,
@@ -595,40 +461,20 @@ class PemeriksaanController extends Controller
         };
     }
 
-    private function mapPasienModel(string $kategori): string
+    private function pasienExists(string $kategori, int $id): bool
     {
-        return match ($kategori) {
-            'balita' => Balita::class,
-            'remaja' => Remaja::class,
-            'lansia' => Lansia::class,
-            default => Balita::class,
-        };
+        return $this->pasienModel($kategori)::whereKey($id)->exists();
     }
 
-    private function isValidPasien(string $kategori, int|string $pasienId): bool
+    private function hitungImt($berat, $tinggi, string $kategori): ?float
     {
-        $modelClass = $this->mapPasienModel($kategori);
-
-        return $modelClass::whereKey($pasienId)->exists();
-    }
-
-    private function calculateImt($beratBadan, $tinggiBadan, string $kategori): ?float
-    {
-        if ($kategori === 'balita') {
+        if ($kategori === 'balita' || !$berat || !$tinggi) {
             return null;
         }
 
-        if (!$beratBadan || !$tinggiBadan) {
-            return null;
-        }
+        $meter = ((float) $tinggi) / 100;
 
-        $tinggiMeter = ((float) $tinggiBadan) / 100;
-
-        if ($tinggiMeter <= 0) {
-            return null;
-        }
-
-        return round(((float) $beratBadan) / ($tinggiMeter * $tinggiMeter), 2);
+        return $meter > 0 ? round(((float) $berat) / ($meter * $meter), 2) : null;
     }
 
     private function isReviewed(?string $status): bool
@@ -636,21 +482,12 @@ class PemeriksaanController extends Controller
         return in_array(strtolower($status ?? 'pending'), $this->reviewedStatuses, true);
     }
 
-    private function needFix(?string $status): bool
+    private function needsRevision(?string $status): bool
     {
-        return in_array(strtolower($status ?? 'pending'), $this->needFixStatuses, true);
+        return in_array(strtolower($status ?? 'pending'), $this->revisionStatuses, true);
     }
 
-    private function filterColumns(string $table, array $payload): array
-    {
-        return collect($payload)
-            ->filter(function ($value, $column) use ($table) {
-                return Schema::hasColumn($table, $column);
-            })
-            ->toArray();
-    }
-
-    private function errorResponse(Request $request, string $message)
+    private function failed(Request $request, string $message)
     {
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -659,8 +496,6 @@ class PemeriksaanController extends Controller
             ], 422);
         }
 
-        return back()
-            ->withInput()
-            ->with('error', $message);
+        return back()->withInput()->with('error', $message);
     }
 }

@@ -1,711 +1,360 @@
 @extends('layouts.kader')
 
-@section('title', 'Laporan Kader')
+@section('title', 'Pusat Laporan Posyandu')
 @section('page-name', 'Laporan Kader')
 
+@section('content')
 @php
-    $reportCards = [
-        [
-            'type' => 'balita',
-            'title' => 'Laporan Balita',
-            'desc' => 'Pemeriksaan Balita, status gizi, dan imunisasi terakhir.',
-            'icon' => 'fa-child-reaching',
-            'tone' => 'sky',
-            'count' => $stats['balita'] ?? 0,
-            'check' => $stats['pemeriksaan_balita_bulan_ini'] ?? 0,
+    $tahun = $totalTahunan['tahun'] ?? now('Asia/Jakarta')->year;
+
+    $kategori = [
+        'balita' => [
+            'label' => 'Balita',
+            'total' => $totalTahunan['balita'] ?? 0,
+            'desc' => 'Pertumbuhan dan gizi',
+            'pill' => 'bg-sky-50 text-sky-700 ring-sky-200',
+            'active' => 'bg-sky-600 text-white shadow-sky-200',
+            'muted' => 'text-sky-600',
+            'bg' => 'from-sky-500 to-cyan-500',
         ],
-        [
-            'type' => 'remaja',
-            'title' => 'Laporan Remaja',
-            'desc' => 'Pemeriksaan Remaja, BB, TB, IMT, TD, dan GDS bila tersedia.',
-            'icon' => 'fa-user-graduate',
-            'tone' => 'emerald',
-            'count' => $stats['remaja'] ?? 0,
-            'check' => $stats['pemeriksaan_remaja_bulan_ini'] ?? 0,
+        'remaja' => [
+            'label' => 'Remaja',
+            'total' => $totalTahunan['remaja'] ?? 0,
+            'desc' => 'Pengukuran dasar',
+            'pill' => 'bg-violet-50 text-violet-700 ring-violet-200',
+            'active' => 'bg-violet-600 text-white shadow-violet-200',
+            'muted' => 'text-violet-600',
+            'bg' => 'from-violet-500 to-indigo-500',
         ],
-        [
-            'type' => 'lansia',
-            'title' => 'Laporan Lansia',
-            'desc' => 'Pemeriksaan Lansia, kemandirian, tensi, gula, kolesterol, dan asam urat.',
-            'icon' => 'fa-person-cane',
-            'tone' => 'amber',
-            'count' => $stats['lansia'] ?? 0,
-            'check' => $stats['pemeriksaan_lansia_bulan_ini'] ?? 0,
+        'lansia' => [
+            'label' => 'Lansia',
+            'total' => $totalTahunan['lansia'] ?? 0,
+            'desc' => 'Kesehatan lansia',
+            'pill' => 'bg-amber-50 text-amber-700 ring-amber-200',
+            'active' => 'bg-amber-500 text-white shadow-amber-200',
+            'muted' => 'text-amber-600',
+            'bg' => 'from-amber-500 to-orange-500',
         ],
     ];
 
-    $toneClass = function ($tone) {
-        return match($tone) {
-            'sky' => 'bg-sky-50 text-sky-700 border-sky-100',
-            'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
-            default => 'bg-emerald-50 text-emerald-700 border-emerald-100',
-        };
-    };
+    $totalSemua = collect($kategori)->sum('total');
 @endphp
 
-@push('styles')
-<style>
-    html {
-        scroll-behavior: auto !important;
-    }
-
-    html.pc-modal-open,
-    body.pc-modal-open {
-        overflow: hidden !important;
-    }
-
-    .laporan-page {
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        position: relative;
-        isolation: isolate;
-    }
-
-    .laporan-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16, 185, 129, .13), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245, 158, 11, .10), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(14, 165, 233, .08), transparent 32%),
-            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
-    }
-
-    .glass-panel {
-        border: 1px solid rgba(255, 255, 255, .78);
-        background: rgba(255, 255, 255, .64);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15, 23, 42, .06);
-    }
-
-    .hero-panel {
-        border: 1px solid rgba(167, 243, 208, .72);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16, 185, 129, .16), transparent 32%),
-            radial-gradient(circle at 88% 16%, rgba(245, 158, 11, .13), transparent 32%),
-            linear-gradient(135deg, rgba(255, 255, 255, .72), rgba(236, 253, 245, .70));
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15, 23, 42, .06);
-    }
-
-    .input-premium {
-        border: 1px solid rgba(226, 232, 240, .9);
-        background: rgba(255, 255, 255, .72);
-        outline: none;
-        transition: all .25s ease-in-out;
-    }
-
-    .input-premium:focus {
-        border-color: rgba(16, 185, 129, .42);
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, .08);
-        background: rgba(255, 255, 255, .86);
-    }
-
-    .report-card {
-        border: 1px solid rgba(226, 232, 240, .78);
-        background: rgba(255, 255, 255, .58);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        transition: all .25s ease-in-out;
-    }
-
-    .report-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(16, 185, 129, .24);
-        box-shadow: 0 18px 34px rgba(15, 23, 42, .055);
-    }
-
-    .report-card.active {
-        border-color: rgba(16, 185, 129, .42);
-        background: rgba(236, 253, 245, .86);
-        box-shadow: 0 14px 32px rgba(5, 150, 105, .08);
-    }
-
-    .preview-frame-shell {
-        border: 1px solid rgba(226, 232, 240, .86);
-        background: rgba(248, 250, 252, .72);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72);
-    }
-
-    .pdf-frame {
-        width: 100%;
-        height: 820px;
-        border: 0;
-        background: #f8fafc;
-    }
-
-    .preview-empty {
-        min-height: 300px;
-        border: 1px dashed rgba(148, 163, 184, .55);
-        background:
-            radial-gradient(circle at 20% 20%, rgba(16, 185, 129, .08), transparent 30%),
-            radial-gradient(circle at 80% 10%, rgba(245, 158, 11, .08), transparent 28%),
-            rgba(248, 250, 252, .72);
-    }
-
-    .fade-in {
-        animation: fadeInUp .35s ease-in-out both;
-    }
-
-    .pc-laporan-modal-backdrop {
-        position: fixed !important;
-        inset: 0 !important;
-        z-index: 2147483647 !important;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        margin: 0 !important;
-        padding: 1rem;
-        background: rgba(15, 23, 42, .58);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-    }
-
-    .pc-laporan-modal-backdrop.is-open {
-        display: flex !important;
-    }
-
-    .pc-laporan-modal-card {
-        width: min(100%, 480px);
-        transform: translateY(12px) scale(.97);
-        opacity: 0;
-        border-radius: 1.75rem;
-        border: 1px solid rgba(255, 255, 255, .78);
-        background:
-            radial-gradient(circle at 0% 0%, rgba(245, 158, 11, .14), transparent 34%),
-            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
-            rgba(255, 255, 255, .96);
-        padding: 1.5rem;
-        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
-        transition: transform .18s ease, opacity .18s ease;
-    }
-
-    .pc-laporan-modal-backdrop.is-open .pc-laporan-modal-card {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
+<div
+    x-data="{
+        activeTab: 'balita',
+        yearType: 'balita',
+        kategori: @js($kategori),
+        get activeMeta() {
+            return this.kategori[this.activeTab] ?? this.kategori.balita
+        },
+        count(row) {
+            return Number(row?.data?.[this.activeTab] ?? 0)
+        },
+        statusClass(status) {
+            return status === 'Bulan Berjalan'
+                ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                : 'bg-slate-100 text-slate-600 ring-slate-200'
+        },
+        statusDotClass(status) {
+            return status === 'Bulan Berjalan' ? 'bg-emerald-500' : 'bg-slate-400'
+        },
+        metricWrapClass(total) {
+            return total > 0
+                ? 'border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50'
+                : 'border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50'
+        },
+        metricNumberClass(total) {
+            return total > 0 ? 'text-emerald-700' : 'text-slate-900'
+        },
+        progressWidth(total) {
+            if (total <= 0) return '12%'
+            return Math.min(100, 22 + (total * 18)) + '%'
+        },
+        periodIconClass(status) {
+            return status === 'Bulan Berjalan'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                : 'border-slate-200 bg-slate-50 text-slate-500'
         }
+    }"
+    class="relative min-h-[85vh] overflow-hidden bg-gradient-to-br from-emerald-50/80 via-slate-50 to-sky-50 px-4 py-8 sm:px-6 lg:px-8"
+>
+    <div class="pointer-events-none absolute -top-24 right-10 h-72 w-72 rounded-full bg-emerald-300/25 blur-3xl"></div>
+    <div class="pointer-events-none absolute left-8 top-72 h-80 w-80 rounded-full bg-sky-300/20 blur-3xl"></div>
+    <div class="pointer-events-none absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-teal-300/20 blur-3xl"></div>
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    <div class="relative mx-auto max-w-7xl space-y-7">
 
-    @media (max-width: 768px) {
-        .pdf-frame {
-            height: 640px;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        * {
-            animation-duration: .01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: .01ms !important;
-            scroll-behavior: auto !important;
-        }
-    }
-</style>
-@endpush
-
-@section('content')
-<div class="laporan-page space-y-5">
-    {{-- HERO --}}
-    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
-        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-file-lines"></i>
-                    Laporan Kader
+        {{-- Hero --}}
+        <section class="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 p-[1px] shadow-2xl shadow-sky-200/70">
+            <div class="relative overflow-hidden rounded-[1.95rem] bg-white/75 px-6 py-7 backdrop-blur-2xl sm:px-8 lg:px-10">
+                <div class="absolute inset-0 opacity-60">
+                    <div class="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/70 blur-3xl"></div>
+                    <div class="absolute bottom-0 left-1/2 h-60 w-60 rounded-full bg-emerald-200/50 blur-3xl"></div>
                 </div>
 
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Laporan Pemeriksaan Posyandu
-                </h1>
-
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Buat laporan pemeriksaan berdasarkan sasaran utama: Balita, Remaja, dan Lansia. Laporan ditampilkan dalam format PDF agar siap dicek, dicetak, atau diunduh.
-                </p>
-            </div>
-
-            <div class="rounded-[24px] border border-white/70 bg-white/50 p-4 backdrop-blur-md">
-                <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">
-                    Tanggal Hari Ini
-                </p>
-
-                <p class="mt-1 text-sm font-black text-slate-900">
-                    {{ now('Asia/Jakarta')->translatedFormat('d F Y') }}
-                </p>
-            </div>
-        </div>
-    </section>
-
-    {{-- STATS --}}
-    <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        @foreach($reportCards as $card)
-            <div class="glass-panel rounded-[24px] p-4">
-                <div class="flex items-start justify-between gap-3">
+                <div class="relative grid gap-7 lg:grid-cols-[1.25fr_.75fr] lg:items-center">
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-[.13em] text-slate-400">
-                            {{ str_replace('Laporan ', '', $card['title']) }}
-                        </p>
-
-                        <h2 class="mt-2 text-3xl font-black text-slate-900">
-                            {{ $card['count'] }}
-                        </h2>
-
-                        <p class="mt-1 text-xs font-bold text-slate-400">
-                            {{ $card['check'] }} pemeriksaan bulan ini
-                        </p>
-                    </div>
-
-                    <div class="grid h-12 w-12 place-items-center rounded-2xl border {{ $toneClass($card['tone']) }}">
-                        <i class="fa-solid {{ $card['icon'] }}"></i>
-                    </div>
-                </div>
-            </div>
-        @endforeach
-    </section>
-
-    {{-- FORM --}}
-    <form method="GET" action="{{ route('kader.laporan.generate') }}" id="laporanForm" class="space-y-5">
-        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-            <div class="mb-5">
-                <h2 class="text-lg font-black text-slate-900">
-                    Pilih Jenis Laporan
-                </h2>
-
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Laporan dibagi menjadi 3 sasaran utama agar formatnya jelas dan tidak berlebihan.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                @foreach($reportCards as $card)
-                    <label class="report-card cursor-pointer rounded-[24px] p-4" data-report-card="{{ $card['type'] }}">
-                        <input
-                            type="radio"
-                            name="jenis_laporan"
-                            value="{{ $card['type'] }}"
-                            class="sr-only report-radio"
-                            {{ $loop->first ? 'checked' : '' }}
-                        >
-
-                        <div class="flex items-start gap-3">
-                            <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border {{ $toneClass($card['tone']) }}">
-                                <i class="fa-solid {{ $card['icon'] }}"></i>
-                            </div>
-
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-black text-slate-900">
-                                    {{ $card['title'] }}
-                                </h3>
-
-                                <p class="mt-1 text-xs font-bold leading-5 text-slate-400">
-                                    {{ $card['desc'] }}
-                                </p>
-
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    <span class="rounded-full border border-slate-100 bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-slate-500">
-                                        {{ $card['count'] }} Sasaran
-                                    </span>
-
-                                    <span class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[.08em] text-emerald-700">
-                                        {{ $card['check'] }} Pemeriksaan
-                                    </span>
-                                </div>
-                            </div>
+                        <div class="mb-5 inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700 ring-1 ring-emerald-200">
+                            <span class="relative flex h-2.5 w-2.5">
+                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70"></span>
+                                <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                            </span>
+                            Arsip Laporan Kader
                         </div>
-                    </label>
-                @endforeach
-            </div>
-        </section>
 
-        <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-            <div class="mb-5">
-                <h2 class="text-lg font-black text-slate-900">
-                    Filter Periode Pemeriksaan
-                </h2>
+                        <h1 class="max-w-3xl text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                            Pusat Laporan Pemeriksaan Posyandu
+                        </h1>
 
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Periode digunakan untuk menampilkan data pemeriksaan yang sudah berjalan pada rentang tanggal tertentu.
-                </p>
-            </div>
+                        <p class="mt-4 max-w-2xl text-sm font-semibold leading-7 text-slate-600">
+                            Kelola pratinjau dan unduhan laporan Balita, Remaja, serta Lansia berdasarkan periode bulanan maupun tahunan dengan tampilan yang lebih rapi, profesional, dan nyaman dibaca.
+                        </p>
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto]">
-                <div>
-                    <label for="tanggal_awal" class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tanggal Awal
-                    </label>
+                        <div class="mt-6 flex flex-wrap gap-3">
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-xs font-extrabold text-slate-700 ring-1 ring-slate-200">
+                                <svg class="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                                    <path d="M16 2v4M8 2v4M3 10h18"></path>
+                                </svg>
+                                Tahun {{ $tahun }}
+                            </span>
 
-                    <input
-                        type="date"
-                        name="tanggal_awal"
-                        id="tanggal_awal"
-                        value="{{ now('Asia/Jakarta')->startOfMonth()->toDateString() }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700"
-                    >
-                </div>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-xs font-extrabold text-slate-700 ring-1 ring-slate-200">
+                                <svg class="h-4 w-4 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <ellipse cx="12" cy="5" rx="8" ry="3"></ellipse>
+                                    <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"></path>
+                                    <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path>
+                                </svg>
+                                {{ number_format($totalSemua, 0, ',', '.') }} total pemeriksaan
+                            </span>
+                        </div>
+                    </div>
 
-                <div>
-                    <label for="tanggal_akhir" class="mb-2 block text-xs font-black uppercase tracking-[.12em] text-slate-400">
-                        Tanggal Akhir
-                    </label>
+                    <form action="{{ route('kader.laporan.preview') }}" method="POST" class="bg-white rounded-2xl shadow-sm ring-1 ring-black/[0.06] hover:shadow-md transition-shadow p-5">
+    @csrf
 
-                    <input
-                        type="date"
-                        name="tanggal_akhir"
-                        id="tanggal_akhir"
-                        value="{{ now('Asia/Jakarta')->toDateString() }}"
-                        class="input-premium h-12 w-full rounded-2xl px-4 text-sm font-bold text-slate-700"
-                    >
-                </div>
+    <select name="jenis_laporan" x-model="yearType" class="border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 transition-all w-full bg-white/90 px-4 py-3 text-sm font-bold text-slate-700 outline-none">
+        @foreach($kategori as $key => $item)
+            <option value="{{ $key }}">{{ $item['label'] }}</option>
+        @endforeach
+    </select>
 
-                <div class="flex items-end">
-                    <button
-                        type="submit"
-                        id="previewSubmitBtn"
-                        class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700 lg:w-auto"
-                    >
-                        <i class="fa-solid fa-eye"></i>
-                        Preview Laporan
-                    </button>
+    <input type="hidden" name="periode_tahun" value="{{ $tahun }}">
+
+    <button type="submit" name="mode" value="download" class="bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm hover:shadow-emerald-200 hover:shadow-md active:scale-95 transition-all inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-extrabold text-white">
+        Unduh
+    </button>
+</form>
                 </div>
             </div>
         </section>
 
-        <section class="rounded-[26px] border border-amber-100 bg-amber-50/70 p-4">
-            <div class="flex items-start gap-3">
-                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-amber-700">
-                    <i class="fa-solid fa-circle-info"></i>
-                </div>
-
+        {{-- Rekap Bulanan --}}
+        <section class="bg-white rounded-2xl shadow-sm ring-1 ring-black/[0.06] hover:shadow-md transition-shadow p-5 sm:p-6">
+            <div class="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
                 <div>
-                    <h3 class="text-sm font-black text-amber-800">
-                        Catatan Format
-                    </h3>
+                    <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-extrabold text-emerald-700 ring-1 ring-emerald-200">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        Arsip Bulanan
+                    </div>
 
-                    <p class="mt-1 text-xs font-bold leading-5 text-amber-700">
-                        Laporan ditampilkan sebagai preview PDF terlebih dahulu agar isi dan periode dapat dicek sebelum diunduh. Absensi tidak dibuat sebagai laporan terpisah. Imunisasi masuk ke laporan Balita.
+                    <h2 class="mt-3 text-2xl font-black tracking-tight text-slate-950">
+                        Rekap Pemeriksaan <span x-text="activeMeta.label"></span>
+                    </h2>
+
+                    <p class="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-500">
+                        Pilih kategori laporan, lalu buka pratinjau atau unduh PDF resmi sesuai periode pemeriksaan.
                     </p>
                 </div>
+
+                <div class="flex flex-wrap gap-2 rounded-2xl bg-slate-100/90 p-2 ring-1 ring-slate-200">
+                    @foreach($kategori as $key => $item)
+                        <button
+                            type="button"
+                            @click="activeTab = '{{ $key }}'"
+                            class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition-all active:scale-95"
+                            :class="activeTab === '{{ $key }}'
+                                ? '{{ $item['active'] }} shadow-md'
+                                : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 hover:text-slate-900'"
+                        >
+                            <span class="grid h-5 w-5 place-items-center">
+                                @if($key === 'balita')
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                        <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+                                    </svg>
+                                @elseif($key === 'remaja')
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M22 12h-4"></path>
+                                        <path d="M6 12H2"></path>
+                                        <path d="M12 6V2"></path>
+                                        <path d="M12 22v-4"></path>
+                                        <circle cx="12" cy="12" r="4"></circle>
+                                    </svg>
+                                @else
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 21s-7-4.6-9.5-9A5.7 5.7 0 0 1 12 4.2 5.7 5.7 0 0 1 21.5 12C19 16.4 12 21 12 21Z"></path>
+                                    </svg>
+                                @endif
+                            </span>
+
+                            <span>{{ $item['label'] }}</span>
+
+                            <span
+                                class="rounded-full px-2 py-0.5 text-[11px] font-black"
+                                :class="activeTab === '{{ $key }}' ? 'bg-white/20 text-white' : '{{ $item['pill'] }} ring-1'"
+                            >
+                                {{ number_format($item['total'], 0, ',', '.') }}
+                            </span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="mb-4 hidden grid-cols-12 gap-4 rounded-2xl bg-slate-50 px-5 py-4 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500 ring-1 ring-slate-200 lg:grid">
+                <div class="col-span-5">Periode Pemeriksaan</div>
+                <div class="col-span-3">Jumlah Data</div>
+                <div class="col-span-4 text-right">Aksi Laporan</div>
+            </div>
+
+            <div class="space-y-4">
+                @forelse($riwayatBulanan as $row)
+                    <div class="bg-white rounded-2xl shadow-sm ring-1 ring-black/[0.06] hover:shadow-md transition-shadow p-4 sm:p-5">
+                        <div class="grid gap-4 xl:grid-cols-[1.2fr_.85fr_.8fr] xl:items-center">
+
+                            {{-- Periode --}}
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border"
+                                    :class="periodIconClass('{{ $row['status'] ?? 'Selesai' }}')"
+                                >
+                                    <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="4" width="18" height="18" rx="3"></rect>
+                                        <path d="M16 2v4M8 2v4M3 10h18"></path>
+                                    </svg>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <h3 class="text-xl font-black tracking-tight text-slate-950">
+                                            {{ $row['bulan'] }}
+                                        </h3>
+
+                                        <span
+                                            class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold ring-1"
+                                            :class="statusClass('{{ $row['status'] ?? 'Selesai' }}')"
+                                        >
+                                            <span
+                                                class="h-2 w-2 rounded-full"
+                                                :class="statusDotClass('{{ $row['status'] ?? 'Selesai' }}')"
+                                            ></span>
+                                            {{ $row['status'] ?? 'Selesai' }}
+                                        </span>
+                                    </div>
+
+                                    <p class="mt-2 text-sm font-medium text-slate-500">
+                                        Arsip laporan bulanan untuk kategori <span class="font-bold text-slate-700" x-text="activeMeta.label"></span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {{-- Jumlah --}}
+                            <div>
+                                <div
+                                    class="rounded-[1.4rem] border px-4 py-4 transition-all"
+                                    :class="metricWrapClass(count(@js($row)))"
+                                >
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="min-w-0">
+                                            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                                Jumlah Data
+                                            </p>
+
+                                            <div class="mt-2 flex items-end gap-3">
+                                                <span
+                                                    class="text-4xl font-black leading-none"
+                                                    :class="metricNumberClass(count(@js($row)))"
+                                                    x-text="count(@js($row))"
+                                                ></span>
+
+                                                <div class="pb-1">
+                                                    <p class="text-sm font-black text-slate-700">Pemeriksaan</p>
+                                                    <p class="text-xs font-semibold text-slate-400">periode ini</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl"
+                                            :class="count(@js($row)) > 0
+                                                ? 'bg-white text-emerald-600 ring-1 ring-emerald-200'
+                                                : 'bg-white text-slate-400 ring-1 ring-slate-200'"
+                                        >
+                                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M9 12h6"></path>
+                                                <path d="M9 16h6"></path>
+                                                <path d="M9 8h6"></path>
+                                                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4">
+                                        <div class="h-2.5 overflow-hidden rounded-full bg-white/80 ring-1 ring-black/[0.04]">
+                                            <div
+                                                class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300"
+                                                :style="`width:${progressWidth(count(@js($row)))} `"
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Aksi --}}
+                            <div>
+                                <form action="{{ route('kader.laporan.preview') }}" method="POST" class="flex flex-wrap justify-start gap-2 sm:justify-end">
+    @csrf
+
+    <input type="hidden" name="jenis_laporan" :value="activeTab">
+    <input type="hidden" name="periode_bulan" value="{{ $row['periode'] }}">
+
+    <button
+        type="submit"
+        name="mode"
+        value="preview"
+        class="inline-flex h-11 min-w-[130px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+        title="Lihat Pratinjau"
+    >
+        Pratinjau
+    </button>
+
+    <button
+        type="submit"
+        name="mode"
+        value="download"
+        class="bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm hover:shadow-emerald-200 hover:shadow-md active:scale-95 transition-all inline-flex h-11 min-w-[112px] items-center justify-center gap-2 px-4 text-sm font-black text-white"
+        title="Unduh PDF"
+    >
+        PDF
+    </button>
+</form>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+                        <div class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white text-slate-500 ring-1 ring-slate-200">
+                            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path>
+                            </svg>
+                        </div>
+                        <p class="mt-4 text-sm font-black text-slate-800">Belum ada arsip laporan</p>
+                        <p class="mt-1 text-xs font-medium text-slate-500">Data bulanan akan tampil setelah pemeriksaan tersedia.</p>
+                    </div>
+                @endforelse
             </div>
         </section>
-    </form>
-
-    {{-- PREVIEW PDF --}}
-    <section id="previewSection" class="glass-panel hidden rounded-[30px] p-4 sm:p-5">
-        <div class="mb-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-                <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-file-pdf"></i>
-                    Preview PDF
-                </div>
-
-                <h2 class="text-lg font-black text-slate-900">
-                    Preview Laporan
-                </h2>
-
-                <p id="previewInfoText" class="mt-1 text-xs font-bold text-slate-400">
-                    Periksa isi laporan terlebih dahulu sebelum mengunduh.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
-                <a
-                    href="#"
-                    id="openPdfBtn"
-                    target="_blank"
-                    rel="noopener"
-                    class="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-100 bg-sky-50/80 px-5 py-3 text-sm font-black text-sky-700 transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-sky-100/80"
-                >
-                    <i class="fa-solid fa-up-right-from-square"></i>
-                    Buka Tab Baru
-                </a>
-
-                <a
-                    href="#"
-                    id="downloadPdfBtn"
-                    target="_blank"
-                    rel="noopener"
-                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700"
-                >
-                    <i class="fa-solid fa-download"></i>
-                    Unduh PDF
-                </a>
-            </div>
-        </div>
-
-        <div id="previewLoading" class="preview-empty grid place-items-center rounded-[24px] p-8 text-center">
-            <div>
-                <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl bg-emerald-50 text-emerald-700">
-                    <i class="fa-solid fa-file-pdf text-xl"></i>
-                </div>
-
-                <h3 class="text-base font-black text-slate-900">
-                    Preview laporan belum dibuat
-                </h3>
-
-                <p class="mx-auto mt-2 max-w-md text-sm font-bold leading-6 text-slate-400">
-                    Pilih jenis laporan dan periode, lalu klik Preview Laporan. PDF akan muncul di area ini.
-                </p>
-            </div>
-        </div>
-
-        <div id="previewFrameWrap" class="preview-frame-shell hidden overflow-hidden rounded-[24px]">
-            <iframe
-                id="pdfPreviewFrame"
-                src=""
-                class="pdf-frame"
-                title="Preview PDF Laporan"
-            ></iframe>
-        </div>
-    </section>
-</div>
-@endsection
-
-@push('modals')
-<div id="laporanNoticeModal" class="pc-laporan-modal-backdrop" aria-hidden="true">
-    <div class="pc-laporan-modal-card">
-        <div class="flex gap-4">
-            <div id="laporanNoticeIconBox" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20">
-                <i id="laporanNoticeIcon" class="fa-solid fa-circle-info text-xl"></i>
-            </div>
-
-            <div class="min-w-0 flex-1">
-                <p id="laporanNoticeEyebrow" class="text-[11px] font-black uppercase tracking-[.18em] text-amber-700">
-                    Informasi
-                </p>
-
-                <h3 id="laporanNoticeTitle" class="mt-1 text-lg font-black text-slate-950">
-                    Perlu perhatian
-                </h3>
-
-                <p id="laporanNoticeMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                    Periksa kembali input laporan.
-                </p>
-            </div>
-        </div>
-
-        <div class="mt-6 flex justify-end">
-            <button
-                type="button"
-                id="laporanNoticeClose"
-                class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5"
-            >
-                <i class="fa-solid fa-check"></i>
-                Mengerti
-            </button>
-        </div>
     </div>
 </div>
-@endpush
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    var cards = document.querySelectorAll('[data-report-card]');
-    var radios = document.querySelectorAll('.report-radio');
-    var form = document.getElementById('laporanForm');
-    var previewSection = document.getElementById('previewSection');
-    var iframe = document.getElementById('pdfPreviewFrame');
-    var downloadBtn = document.getElementById('downloadPdfBtn');
-    var openPdfBtn = document.getElementById('openPdfBtn');
-    var previewLoading = document.getElementById('previewLoading');
-    var previewFrameWrap = document.getElementById('previewFrameWrap');
-    var previewInfoText = document.getElementById('previewInfoText');
-    var submitBtn = document.getElementById('previewSubmitBtn');
-    var noticeModal = document.getElementById('laporanNoticeModal');
-    var noticeClose = document.getElementById('laporanNoticeClose');
-    var noticeTitle = document.getElementById('laporanNoticeTitle');
-    var noticeMessage = document.getElementById('laporanNoticeMessage');
-
-    if (noticeModal && noticeModal.parentElement !== document.body) {
-        document.body.appendChild(noticeModal);
-    }
-
-    function lockBody() {
-        document.documentElement.classList.add('pc-modal-open');
-        document.body.classList.add('pc-modal-open');
-    }
-
-    function unlockBody() {
-        document.documentElement.classList.remove('pc-modal-open');
-        document.body.classList.remove('pc-modal-open');
-    }
-
-    function openLaporanNotice(title, message) {
-        if (!noticeModal) {
-            return;
-        }
-
-        if (noticeTitle) {
-            noticeTitle.textContent = title || 'Perlu perhatian';
-        }
-
-        if (noticeMessage) {
-            noticeMessage.textContent = message || 'Periksa kembali input laporan.';
-        }
-
-        lockBody();
-        noticeModal.classList.add('is-open');
-        noticeModal.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeLaporanNotice() {
-        if (!noticeModal) {
-            return;
-        }
-
-        noticeModal.classList.remove('is-open');
-        noticeModal.setAttribute('aria-hidden', 'true');
-        unlockBody();
-    }
-
-    function getSelectedReportLabel() {
-        var selected = document.querySelector('.report-radio:checked');
-
-        if (!selected) {
-            return 'Laporan';
-        }
-
-        var selectedCard = document.querySelector('[data-report-card="' + selected.value + '"]');
-        var title = selectedCard ? selectedCard.querySelector('h3') : null;
-
-        return title ? title.textContent.trim() : 'Laporan';
-    }
-
-    function updateCards() {
-        var selected = document.querySelector('.report-radio:checked');
-        var selectedValue = selected ? selected.value : null;
-
-        cards.forEach(function (card) {
-            card.classList.toggle('active', card.dataset.reportCard === selectedValue);
-        });
-    }
-
-    function buildUrl(mode) {
-        var formData = new FormData(form);
-        var params = new URLSearchParams(formData);
-
-        params.set('mode', mode);
-
-        return form.action + '?' + params.toString();
-    }
-
-    function resetPreviewButton() {
-        if (!submitBtn) {
-            return;
-        }
-
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
-        submitBtn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview Laporan';
-    }
-
-    radios.forEach(function (radio) {
-        radio.addEventListener('change', updateCards);
-    });
-
-    if (noticeClose) {
-        noticeClose.addEventListener('click', closeLaporanNotice);
-    }
-
-    if (noticeModal) {
-        noticeModal.addEventListener('click', function (event) {
-            if (event.target === noticeModal) {
-                closeLaporanNotice();
-            }
-        });
-    }
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && noticeModal && noticeModal.classList.contains('is-open')) {
-            closeLaporanNotice();
-        }
-    });
-
-    if (form && previewSection && iframe && downloadBtn && openPdfBtn) {
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            var tanggalAwal = document.getElementById('tanggal_awal');
-            var tanggalAkhir = document.getElementById('tanggal_akhir');
-
-            if (!tanggalAwal || !tanggalAkhir || !tanggalAwal.value || !tanggalAkhir.value) {
-                openLaporanNotice(
-                    'Tanggal belum lengkap',
-                    'Isi tanggal awal dan tanggal akhir terlebih dahulu sebelum membuat preview laporan.'
-                );
-
-                return;
-            }
-
-            if (tanggalAkhir.value < tanggalAwal.value) {
-                openLaporanNotice(
-                    'Tanggal tidak valid',
-                    'Tanggal akhir tidak boleh lebih awal dari tanggal awal.'
-                );
-
-                return;
-            }
-
-            var previewUrl = buildUrl('preview');
-            var downloadUrl = buildUrl('download');
-            var reportLabel = getSelectedReportLabel();
-
-            iframe.src = previewUrl + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-            downloadBtn.href = downloadUrl;
-            openPdfBtn.href = previewUrl;
-
-            if (previewInfoText) {
-                previewInfoText.textContent = reportLabel + ' sedang ditampilkan dalam format PDF. Periksa isi laporan sebelum mengunduh.';
-            }
-
-            previewSection.classList.remove('hidden');
-            previewSection.classList.add('fade-in');
-
-            if (previewLoading) {
-                previewLoading.classList.add('hidden');
-            }
-
-            if (previewFrameWrap) {
-                previewFrameWrap.classList.remove('hidden');
-            }
-
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-                submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Membuat Preview...';
-
-                setTimeout(function () {
-                    resetPreviewButton();
-                }, 1200);
-            }
-
-            setTimeout(function () {
-                previewSection.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }, 150);
-        });
-    }
-
-    updateCards();
-});
-</script>
-@endpush
+@endsection

@@ -2,39 +2,82 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 
 class Pemeriksaan extends Model
 {
     use HasFactory;
 
-    protected $table = 'pemeriksaans';
+    protected $fillable = [
+        'kunjungan_id',
+        'pasien_id',
+        'kategori_pasien',
+        'tanggal_periksa',
 
-    protected $guarded = ['id'];
+        'pemeriksa_id',
+        'created_by',
 
-    protected $appends = [
-        'nama_pasien',
-        'nik_pasien',
-        'status_verifikasi_text',
-        'status_verifikasi_badge',
+        'berat_badan',
+        'tinggi_badan',
+        'imt',
+        'lingkar_kepala',
+        'lingkar_lengan',
+        'lingkar_perut',
+
+        'suhu_tubuh',
+        'tekanan_darah',
+        'denyut_nadi',
+        'respirasi',
+
+        'gula_darah',
+        'kolesterol',
+        'asam_urat',
+        'hemoglobin',
+
+        'tingkat_kemandirian',
+        'keluhan',
+        'diagnosa',
+        'tindakan',
+        'catatan',
+        'catatan_kader',
+        'catatan_validasi',
+        'catatan_bidan',
+        'rekomendasi',
+
+        'status_verifikasi',
+        'verified_by',
+        'verified_at',
+        'user_id_verifikator',
     ];
 
     protected $casts = [
         'tanggal_periksa' => 'date',
         'verified_at' => 'datetime',
+
         'berat_badan' => 'float',
         'tinggi_badan' => 'float',
-        'suhu_tubuh' => 'float',
+        'imt' => 'float',
         'lingkar_kepala' => 'float',
         'lingkar_lengan' => 'float',
         'lingkar_perut' => 'float',
-        'imt' => 'float',
+
+        'suhu_tubuh' => 'float',
+        'denyut_nadi' => 'integer',
+        'respirasi' => 'integer',
+
         'gula_darah' => 'float',
         'kolesterol' => 'float',
         'asam_urat' => 'float',
+        'hemoglobin' => 'float',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi Utama
+    |--------------------------------------------------------------------------
+    */
 
     public function kunjungan()
     {
@@ -42,6 +85,11 @@ class Pemeriksaan extends Model
     }
 
     public function pemeriksa()
+    {
+        return $this->belongsTo(User::class, 'pemeriksa_id');
+    }
+
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
@@ -56,99 +104,154 @@ class Pemeriksaan extends Model
         return $this->belongsTo(User::class, 'user_id_verifikator');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi Sasaran
+    |--------------------------------------------------------------------------
+    | Struktur final memakai pasien_id + kategori_pasien.
+    | Relasi ini dipakai sebagai fallback jika kunjungan.pasien belum tersedia.
+    */
+
     public function balita()
     {
-        return $this->belongsTo(Balita::class, 'balita_id');
+        return $this->belongsTo(Balita::class, 'pasien_id');
     }
 
     public function remaja()
     {
-        return $this->belongsTo(Remaja::class, 'remaja_id');
+        return $this->belongsTo(Remaja::class, 'pasien_id');
     }
 
     public function lansia()
     {
-        return $this->belongsTo(Lansia::class, 'lansia_id');
+        return $this->belongsTo(Lansia::class, 'pasien_id');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Data Pasien
+    |--------------------------------------------------------------------------
+    */
+
+    public function getPasienDataAttribute()
+    {
+        if ($this->kunjungan?->pasien) {
+            return $this->kunjungan->pasien;
+        }
+
+        return match ($this->kategori_pasien) {
+            'balita' => $this->balita,
+            'remaja' => $this->remaja,
+            'lansia' => $this->lansia,
+            default => null,
+        };
     }
 
     public function getNamaPasienAttribute(): string
     {
-        $pasienPolymorphic = $this->kunjungan?->pasien;
-
-        if ($pasienPolymorphic) {
-            return $pasienPolymorphic->nama_lengkap ?? 'Pasien Tidak Diketahui';
-        }
-
-        if ($this->balita) {
-            return $this->balita->nama_lengkap ?? 'Balita Tidak Diketahui';
-        }
-
-        if ($this->remaja) {
-            return $this->remaja->nama_lengkap ?? 'Remaja Tidak Diketahui';
-        }
-
-        if ($this->lansia) {
-            return $this->lansia->nama_lengkap ?? 'Lansia Tidak Diketahui';
-        }
-
-        return 'Warga Tidak Diketahui';
+        return $this->pasien_data?->nama_lengkap
+            ?? $this->pasien_data?->nama
+            ?? 'Warga Tidak Diketahui';
     }
 
     public function getNikPasienAttribute(): string
     {
-        $pasienPolymorphic = $this->kunjungan?->pasien;
-
-        if ($pasienPolymorphic) {
-            return $pasienPolymorphic->nik ?? '-';
-        }
-
-        if ($this->balita) {
-            return $this->balita->nik ?? '-';
-        }
-
-        if ($this->remaja) {
-            return $this->remaja->nik ?? '-';
-        }
-
-        if ($this->lansia) {
-            return $this->lansia->nik ?? '-';
-        }
-
-        return '-';
+        return $this->pasien_data?->nik ?? '-';
     }
+
+    public function getJenisKelaminPasienAttribute(): string
+    {
+        return $this->pasien_data?->jenis_kelamin ?? '-';
+    }
+
+    public function getTanggalLahirPasienAttribute()
+    {
+        return $this->pasien_data?->tanggal_lahir;
+    }
+
+    public function getNamaPemeriksaAttribute(): string
+    {
+        return $this->pemeriksa?->name
+            ?? $this->pemeriksa?->nama
+            ?? $this->creator?->name
+            ?? '-';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Status
+    |--------------------------------------------------------------------------
+    */
 
     public function getStatusVerifikasiTextAttribute(): string
     {
-        return match ($this->status_verifikasi) {
-            'tervalidasi', 'verified', 'approved' => 'Tervalidasi Bidan',
-            'ditolak', 'rejected' => 'Revisi / Ditolak',
+        return match ($this->normalized_status) {
+            'verified' => 'Tervalidasi Bidan',
+            'revision' => 'Perlu Revisi',
             default => 'Menunggu Validasi',
         };
     }
 
     public function getStatusVerifikasiBadgeAttribute(): string
     {
-        return match ($this->status_verifikasi) {
-            'tervalidasi', 'verified', 'approved' => 'emerald',
-            'ditolak', 'rejected' => 'rose',
+        return match ($this->normalized_status) {
+            'verified' => 'emerald',
+            'revision' => 'rose',
             default => 'amber',
         };
     }
 
+    public function getNormalizedStatusAttribute(): string
+    {
+        $status = strtolower($this->status_verifikasi ?? 'pending');
+
+        return match (true) {
+            in_array($status, ['verified', 'tervalidasi', 'approved', 'disetujui'], true) => 'verified',
+            in_array($status, ['ditolak', 'rejected', 'revisi', 'perlu_revisi', 'dikembalikan'], true) => 'revision',
+            default => 'pending',
+        };
+    }
+
+    public function getIsVerifiedAttribute(): bool
+    {
+        return $this->normalized_status === 'verified';
+    }
+
+    public function getNeedsRevisionAttribute(): bool
+    {
+        return $this->normalized_status === 'revision';
+    }
+
+    public function getIsPendingAttribute(): bool
+    {
+        return $this->normalized_status === 'pending';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scope
+    |--------------------------------------------------------------------------
+    */
+
     public function scopePending($query)
     {
         return $query->where(function ($q) {
-            $q->where('status_verifikasi', 'pending')
-                ->orWhereNull('status_verifikasi');
+            $q->whereNull('status_verifikasi')
+                ->orWhereIn('status_verifikasi', [
+                    'pending',
+                    'menunggu',
+                    'menunggu_review',
+                ]);
         });
     }
 
     public function scopeVerified($query)
     {
         return $query->whereIn('status_verifikasi', [
-            'tervalidasi',
             'verified',
+            'tervalidasi',
             'approved',
+            'disetujui',
         ]);
     }
 
@@ -157,17 +260,30 @@ class Pemeriksaan extends Model
         return $query->whereIn('status_verifikasi', [
             'ditolak',
             'rejected',
+            'revisi',
+            'perlu_revisi',
+            'dikembalikan',
         ]);
     }
 
-    public function scopeKategori($query, $kategori)
+    public function scopeKategori($query, ?string $kategori)
     {
+        if (!$kategori) {
+            return $query;
+        }
+
         return $query->where('kategori_pasien', $kategori);
     }
 
     public function scopeBulanIni($query)
     {
-        return $query->whereMonth('tanggal_periksa', Carbon::now()->month)
+        return $query
+            ->whereMonth('tanggal_periksa', Carbon::now()->month)
             ->whereYear('tanggal_periksa', Carbon::now()->year);
+    }
+
+    public function scopeTahunIni($query)
+    {
+        return $query->whereYear('tanggal_periksa', Carbon::now()->year);
     }
 }

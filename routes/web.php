@@ -91,11 +91,7 @@ Route::post('/logout', [LoginController::class, 'logout'])
 */
 
 Route::middleware(['auth', 'checkstatus'])->group(function () {
-    Route::get('/password/change', [ChangePasswordController::class, 'showChangeForm'])
-        ->name('password.change');
-
-    Route::post('/password/change', [ChangePasswordController::class, 'change'])
-        ->name('password.change.post');
+    
 
     Route::get('/profile', [UserProfileController::class, 'edit'])
         ->name('profile.edit');
@@ -454,8 +450,8 @@ Route::middleware(['auth', 'checkstatus', 'role:kader'])
         Route::get('/laporan', [KaderLaporanController::class, 'index'])
             ->name('laporan.index');
 
-        Route::match(['get', 'post'], '/laporan/generate', [KaderLaporanController::class, 'generate'])
-            ->name('laporan.generate');
+        Route::match(['get', 'post'], '/laporan/preview', [KaderLaporanController::class, 'preview'])
+            ->name('laporan.preview');
 
         /*
         |--------------------------------------------------------------------------

@@ -1,38 +1,47 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th style="width: 26px;">No</th>
-            <th style="width: 105px;">Nama Lansia</th>
-            <th style="width: 65px;">Usia</th>
-            <th style="width: 85px;">Kemandirian</th>
-            <th style="width: 42px;">BB</th>
-            <th style="width: 42px;">TB</th>
-            <th style="width: 40px;">IMT</th>
-            <th style="width: 42px;">LP</th>
-            <th style="width: 50px;">TD</th>
-            <th style="width: 42px;">GDS</th>
-            <th style="width: 60px;">Kolesterol</th>
-            <th style="width: 55px;">Asam Urat</th>
-            <th>Riwayat / Keluhan</th>
+            <th style="width: 4%;">No</th>
+            <th style="width: 7%;">Tgl</th>
+            <th style="width: 13%;">Nama Lansia</th>
+            <th style="width: 7%;">Usia</th>
+            <th style="width: 9%;">Kemandirian</th>
+            <th style="width: 5%;">BB</th>
+            <th style="width: 5%;">TB</th>
+            <th style="width: 5%;">IMT</th>
+            <th style="width: 5%;">LP</th>
+            <th style="width: 7%;">TD</th>
+            <th style="width: 6%;">GDS</th>
+            <th style="width: 6%;">Koles</th>
+            <th style="width: 6%;">Asam Urat</th>
+            <th style="width: 15%;">Riwayat / Keluhan</th>
         </tr>
     </thead>
+
     <tbody>
-        @foreach($rows as $row)
+        @forelse($rows as $row)
             <tr>
-                <td class="center">{{ $row['no'] }}</td>
-                <td class="bold">{{ $row['nama'] }}</td>
-                <td>{{ $row['usia'] }}</td>
-                <td>{{ $row['kemandirian'] }}</td>
-                <td class="center">{{ $row['bb'] }}</td>
-                <td class="center">{{ $row['tb'] }}</td>
-                <td class="center">{{ $row['imt'] }}</td>
-                <td class="center">{{ $row['lp'] }}</td>
-                <td class="center">{{ $row['td'] }}</td>
-                <td class="center">{{ $row['gds'] }}</td>
-                <td class="center">{{ $row['kolesterol'] }}</td>
-                <td class="center">{{ $row['asam_urat'] }}</td>
-                <td>{{ $row['riwayat_keluhan'] }}</td>
+                <td class="text-center">{{ $row['no'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['tanggal'] ?? '-' }}</td>
+                <td class="font-bold">{{ $row['nama'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['usia'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['kemandirian'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['bb'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['tb'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['imt'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['lp'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['td'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['gds'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['kolesterol'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['asam_urat'] ?? '-' }}</td>
+                <td>{{ $row['riwayat_keluhan'] ?? '-' }}</td>
             </tr>
-        @endforeach
+        @empty
+            <tr>
+                <td colspan="14" class="text-center">
+                    Tidak ada data pemeriksaan Lansia pada periode ini.
+                </td>
+            </tr>
+        @endforelse
     </tbody>
 </table>

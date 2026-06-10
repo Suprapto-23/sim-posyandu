@@ -2,11 +2,12 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>{{ $title ?? 'Laporan Pemeriksaan Posyandu' }}</title>
+    <title>Laporan Pemeriksaan {{ ucfirst($jenis_laporan) }}</title>
 
     <style>
         @page {
-            margin: 18px 22px 22px 22px;
+            size: A4 landscape;
+            margin: 18px 22px;
         }
 
         * {
@@ -14,117 +15,75 @@
         }
 
         body {
-            margin: 0;
-            font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 10px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9px;
             color: #111827;
-            line-height: 1.45;
+            line-height: 1.35;
+            margin: 0;
         }
 
         .kop {
             text-align: center;
             border-bottom: 2px solid #111827;
-            padding-bottom: 8px;
-            margin-bottom: 4px;
-        }
-
-        .kop .instansi {
-            font-size: 13px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
-
-        .kop .nama-posyandu {
-            font-size: 17px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 2px;
-        }
-
-        .kop .alamat {
-            font-size: 9.5px;
-            font-style: italic;
-            color: #374151;
-            margin-top: 3px;
-        }
-
-        .garis-tipis {
-            border-bottom: 1px solid #111827;
+            padding-bottom: 7px;
             margin-bottom: 12px;
+        }
+
+        .kop h1 {
+            margin: 0 0 3px;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+        }
+
+        .kop p {
+            margin: 0;
+            font-size: 9px;
+            color: #374151;
         }
 
         .judul {
             text-align: center;
-            margin: 12px 0 10px;
+            margin-bottom: 12px;
         }
 
-        .judul h1 {
+        .judul h2 {
+            margin: 0 0 4px;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+        }
+
+        .judul p {
             margin: 0;
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: .4px;
+            color: #059669;
+            font-size: 9px;
+            font-weight: 700;
         }
 
-        .judul .subjudul {
-            margin-top: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
+        .meta {
+            width: 100%;
+            margin-bottom: 8px;
+            border-collapse: collapse;
+        }
+
+        .meta td {
+            padding: 0 0 3px;
+            border: none;
+            font-size: 8.5px;
             color: #374151;
         }
 
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 8px 0 12px;
-        }
-
-        .info-table td {
-            padding: 3px 0;
-            font-size: 9.5px;
-            vertical-align: top;
-        }
-
-        .info-table .label {
-            width: 95px;
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .info-table .separator {
-            width: 10px;
-            text-align: center;
-        }
-
-        .info-table .right-label {
-            width: 95px;
-            font-weight: bold;
-            color: #111827;
-            padding-left: 30px;
-        }
-
-        .section-title {
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            margin: 12px 0 7px;
-            color: #111827;
-        }
-
-        .date-label {
-            font-size: 10px;
-            font-weight: bold;
-            margin: 10px 0 5px;
+        .meta .right {
+            text-align: right;
         }
 
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            table-layout: fixed;
             page-break-inside: auto;
         }
 
@@ -137,226 +96,138 @@
             page-break-after: auto;
         }
 
+        table.data-table th,
+        table.data-table td {
+            border: 1px solid #6b7280;
+            padding: 4px 3px;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
         table.data-table th {
-            border: 1px solid #4b5563;
             background: #e5e7eb;
             color: #111827;
-            padding: 5px 4px;
             font-size: 7.5px;
-            font-weight: bold;
+            font-weight: 800;
             text-align: center;
             text-transform: uppercase;
-            vertical-align: middle;
         }
 
         table.data-table td {
-            border: 1px solid #4b5563;
-            padding: 5px 4px;
             font-size: 8px;
-            vertical-align: top;
         }
 
-        table.data-table td.center {
+        .text-center {
             text-align: center;
         }
 
-        table.data-table td.bold {
-            font-weight: bold;
+        .text-left {
+            text-align: left;
+        }
+
+        .font-bold {
+            font-weight: 700;
         }
 
         .empty {
-            border: 1px solid #6b7280;
-            padding: 18px;
+            margin-top: 16px;
+            padding: 28px 16px;
+            border: 1px dashed #9ca3af;
             text-align: center;
-            font-size: 10px;
-            font-weight: bold;
-            color: #374151;
-            margin-top: 8px;
-        }
-
-        .notes {
-            margin-top: 12px;
-            font-size: 8.5px;
-            color: #374151;
-        }
-
-        .notes-title {
-            font-weight: bold;
-            margin-bottom: 3px;
-            text-transform: uppercase;
-        }
-
-        .notes ul {
-            margin: 0;
-            padding-left: 14px;
-        }
-
-        .notes li {
-            margin-bottom: 2px;
-        }
-
-        .signature-table {
-            width: 100%;
-            margin-top: 28px;
-            border-collapse: collapse;
-            page-break-inside: avoid;
-        }
-
-        .signature-table td {
-            width: 50%;
-            text-align: center;
-            vertical-align: top;
-            font-size: 10px;
-            padding: 0 20px;
-        }
-
-        .signature-space {
-            height: 62px;
-        }
-
-        .signature-name {
-            font-weight: bold;
-            text-decoration: underline;
-        }
-
-        .nip {
-            margin-top: 2px;
-            font-size: 9px;
+            color: #6b7280;
+            font-weight: 700;
         }
 
         .footer {
-            position: fixed;
-            bottom: -8px;
-            left: 0;
-            right: 0;
-            font-size: 7.5px;
-            color: #6b7280;
-            text-align: center;
+            width: 100%;
+            margin-top: 28px;
+            page-break-inside: avoid;
         }
 
-        .page-number:after {
-            content: counter(page);
+        .ttd {
+            width: 230px;
+            float: right;
+            text-align: center;
+            color: #111827;
+        }
+
+        .ttd .date {
+            margin: 0 0 46px;
+        }
+
+        .ttd .name {
+            margin: 0;
+            padding-bottom: 2px;
+            border-bottom: 1px solid #111827;
+            font-weight: 800;
+        }
+
+        .ttd .role {
+            margin: 3px 0 0;
+            color: #4b5563;
+            font-size: 8px;
+        }
+
+        .notes {
+            margin-top: 10px;
+            color: #4b5563;
+            font-size: 8px;
+        }
+
+        .notes span {
+            display: inline-block;
+            margin-right: 10px;
         }
     </style>
 </head>
+
 <body>
-    @php
-        \Carbon\Carbon::setLocale('id');
-
-        $totalRows = 0;
-
-        foreach (($groups ?? []) as $group) {
-            $totalRows += count($group['rows'] ?? []);
-        }
-
-        $tanggalCetak = isset($dicetak_pada)
-            ? $dicetak_pada->translatedFormat('d F Y')
-            : now('Asia/Jakarta')->translatedFormat('d F Y');
-
-        $waktuCetak = isset($dicetak_pada)
-            ? $dicetak_pada->translatedFormat('d F Y H:i') . ' WIB'
-            : now('Asia/Jakarta')->translatedFormat('d F Y H:i') . ' WIB';
-
-        $namaPosyandu = $posyandu['nama'] ?? 'Posyandu Desa Bantar Kulon';
-        $alamatPosyandu = $posyandu['alamat'] ?? 'Desa Bantar Kulon, Kecamatan Lebakbarang, Kabupaten Pekalongan';
-    @endphp
-
     <div class="kop">
-        <div class="instansi">Pemerintah Kabupaten Pekalongan</div>
-        <div class="nama-posyandu">{{ $namaPosyandu }}</div>
-        <div class="alamat">{{ $alamatPosyandu }}</div>
+        <h1>{{ $posyandu['nama'] ?? 'Posyandu Desa Bantarkulon' }}</h1>
+        <p>{{ $posyandu['alamat'] ?? '-' }} | Telepon: {{ $posyandu['telepon'] ?? '-' }}</p>
     </div>
-    <div class="garis-tipis"></div>
 
     <div class="judul">
-        <h1>{{ $title ?? 'Laporan Pemeriksaan Posyandu' }}</h1>
-        <div class="subjudul">
-            Periode {{ $periode['label'] ?? '-' }}
-        </div>
+        <h2>Laporan Pemeriksaan {{ ucfirst($jenis_laporan) }}</h2>
+        <p>Periode: {{ $periode['label'] ?? '-' }}</p>
     </div>
 
-    <table class="info-table">
+    <table class="meta">
         <tr>
-            <td class="label">Jenis Laporan</td>
-            <td class="separator">:</td>
-            <td>{{ $label ?? '-' }}</td>
-
-            <td class="right-label">Dibuat Tanggal</td>
-            <td class="separator">:</td>
-            <td>{{ $tanggalCetak }}</td>
-        </tr>
-        <tr>
-            <td class="label">Total Data</td>
-            <td class="separator">:</td>
-            <td>{{ $totalRows }} data pemeriksaan</td>
-
-            <td class="right-label">Dicetak Oleh</td>
-            <td class="separator">:</td>
-            <td>{{ $dicetak_oleh ?? 'Kader Posyandu' }}</td>
-        </tr>
-        <tr>
-            <td class="label">Waktu Cetak</td>
-            <td class="separator">:</td>
-            <td>{{ $waktuCetak }}</td>
-
-            <td class="right-label">Sistem</td>
-            <td class="separator">:</td>
-            <td>PosyanduCare</td>
+            <td>
+                Total Pemeriksaan:
+                <strong>{{ collect($summary ?? [])->firstWhere('label', 'Pemeriksaan')['value'] ?? count($rows ?? []) }}</strong>
+                data
+            </td>
+            <td class="right">
+                Dicetak: {{ isset($dicetak_pada) ? $dicetak_pada->translatedFormat('d F Y') : '-' }}
+            </td>
         </tr>
     </table>
 
-    <div class="section-title">Data Pemeriksaan</div>
+    @if(isset($rows) && count($rows) > 0)
+        @include("kader.laporan.templates.tables.{$jenis_laporan}", ['rows' => $rows])
 
-    @if(!empty($groups) && count($groups))
-        @foreach($groups as $group)
-            <div class="date-label">
-                Tanggal Pemeriksaan: {{ $group['date_label'] ?? '-' }}
-                <span style="font-weight: normal;">({{ count($group['rows'] ?? []) }} data)</span>
+        @if(!empty($notes))
+            <div class="notes">
+                @foreach($notes as $note)
+                    <span>{{ $note }}</span>
+                @endforeach
             </div>
-
-            @include('kader.laporan.templates.tables.' . $jenis_laporan, [
-                'rows' => $group['rows'] ?? []
-            ])
-        @endforeach
+        @endif
     @else
         <div class="empty">
-            Tidak ada data pemeriksaan pada periode laporan yang dipilih.
+            Tidak ada rekapitulasi data pada periode ini.
         </div>
     @endif
-
-    @if(!empty($notes))
-        <div class="notes">
-            <div class="notes-title">Keterangan</div>
-            <ul>
-                @foreach($notes as $note)
-                    <li>{{ $note }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <table class="signature-table">
-        <tr>
-            <td>
-                <div>Mengetahui,</div>
-                <div>Kepala Desa Bantar Kulon</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
-                <div class="nip">NIP. ........................................</div>
-            </td>
-
-            <td>
-                <div>Bantar Kulon, {{ $tanggalCetak }}</div>
-                <div>Kader Posyandu</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">( {{ $dicetak_oleh ?? 'Kader Posyandu' }} )</div>
-                <div class="nip">NIP. ........................................</div>
-            </td>
-        </tr>
-    </table>
 
     <div class="footer">
-        Dokumen ini dihasilkan otomatis oleh sistem PosyanduCare | Halaman <span class="page-number"></span>
+        <div class="ttd">
+            <p class="date">Dicetak pada, {{ isset($dicetak_pada) ? $dicetak_pada->translatedFormat('d F Y') : '-' }}</p>
+            <p class="name">{{ $dicetak_oleh ?? 'Kader Posyandu' }}</p>
+            <p class="role">Otoritas Kader Posyandu</p>
+        </div>
     </div>
 </body>
 </html>

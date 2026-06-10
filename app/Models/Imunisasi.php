@@ -5,68 +5,86 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Imunisasi extends Model
 {
+    use HasFactory;
+
     protected $table = 'imunisasis';
 
     protected $fillable = [
         'kunjungan_id',
         'jenis_imunisasi',
         'vaksin',
-        'dosis',
-        'tanggal_imunisasi',
         'batch_number',
-        'expiry_date',
-        'penyelenggara',
+        'tanggal_imunisasi',
         'catatan',
     ];
 
     protected $casts = [
         'tanggal_imunisasi' => 'date',
-        'expiry_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi
+    |--------------------------------------------------------------------------
+    */
 
     public function kunjungan(): BelongsTo
     {
         return $this->belongsTo(Kunjungan::class, 'kunjungan_id');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Penerima & Petugas
+    |--------------------------------------------------------------------------
+    */
+
+    public function getPenerimaAttribute()
+    {
+        return $this->kunjungan?->pasien;
+    }
+
     public function getNamaPenerimaAttribute(): string
     {
-        return $this->kunjungan?->pasien?->nama_lengkap
-            ?? $this->kunjungan?->pasien?->nama
+        return $this->penerima?->nama_lengkap
+            ?? $this->penerima?->nama
             ?? 'Data sasaran tidak ditemukan';
     }
 
     public function getNikPenerimaAttribute(): string
     {
-        return $this->kunjungan?->pasien?->nik ?? '-';
+        return $this->penerima?->nik ?? '-';
     }
 
     public function getNamaPetugasAttribute(): string
     {
         return $this->kunjungan?->petugas?->name
             ?? $this->kunjungan?->petugas?->nama
-            ?? 'Bidan';
+            ?? 'Petugas tidak diketahui';
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Kategori Sasaran
+    |--------------------------------------------------------------------------
+    */
 
     public function getKategoriKeyAttribute(): string
     {
         $type = $this->kunjungan?->pasien_type;
 
-        if (! $type) {
-            return 'umum';
-        }
-
-        return match (strtolower(class_basename($type))) {
-            'balita' => 'balita',
-            'remaja' => 'remaja',
-            'lansia' => 'lansia',
-            default => strtolower((string) $type),
+        return match (true) {
+            $type === Balita::class || str_contains(strtolower((string) $type), 'balita') => 'balita',
+            $type === Remaja::class || str_contains(strtolower((string) $type), 'remaja') => 'remaja',
+            $type === Lansia::class || str_contains(strtolower((string) $type), 'lansia') => 'lansia',
+            default => 'sasaran',
         };
     }
 
@@ -118,9 +136,15 @@ class Imunisasi extends Model
         };
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Label Imunisasi
+    |--------------------------------------------------------------------------
+    */
+
     public function getTanggalLabelAttribute(): string
     {
-        if (! $this->tanggal_imunisasi) {
+        if (!$this->tanggal_imunisasi) {
             return '-';
         }
 
@@ -131,7 +155,7 @@ class Imunisasi extends Model
 
     public function getTanggalLengkapLabelAttribute(): string
     {
-        if (! $this->tanggal_imunisasi) {
+        if (!$this->tanggal_imunisasi) {
             return '-';
         }
 
@@ -142,7 +166,7 @@ class Imunisasi extends Model
 
     public function getJamLabelAttribute(): string
     {
-        if (! $this->created_at) {
+        if (!$this->created_at) {
             return '-';
         }
 
@@ -161,34 +185,9 @@ class Imunisasi extends Model
         return $this->jenis_imunisasi ?: '-';
     }
 
-    public function getDosisLabelAttribute(): string
-    {
-        if ($this->dosis === null || $this->dosis === '') {
-            return '-';
-        }
-
-        return 'Dosis ' . $this->dosis;
-    }
-
     public function getBatchLabelAttribute(): string
     {
         return $this->batch_number ?: '-';
-    }
-
-    public function getExpiryLabelAttribute(): string
-    {
-        if (! $this->expiry_date) {
-            return '-';
-        }
-
-        return Carbon::parse($this->expiry_date)
-            ->locale('id')
-            ->translatedFormat('d F Y');
-    }
-
-    public function getPenyelenggaraLabelAttribute(): string
-    {
-        return $this->penyelenggara ?: 'Posyandu / Puskesmas';
     }
 
     public function getCatatanLabelAttribute(): string
@@ -200,17 +199,17 @@ class Imunisasi extends Model
     {
         $text = strtolower(($this->jenis_imunisasi ?? '') . ' ' . ($this->vaksin ?? ''));
 
-        if (
-            str_contains($text, 'bcg') ||
-            str_contains($text, 'polio') ||
-            str_contains($text, 'dpt') ||
-            str_contains($text, 'hepatitis') ||
-            str_contains($text, 'hib') ||
-            str_contains($text, 'campak') ||
-            str_contains($text, 'mr') ||
-            str_contains($text, 'pcv') ||
-            str_contains($text, 'rotavirus')
-        ) {
+        $dasar = str_contains($text, 'bcg')
+            || str_contains($text, 'polio')
+            || str_contains($text, 'dpt')
+            || str_contains($text, 'hepatitis')
+            || str_contains($text, 'hib')
+            || str_contains($text, 'campak')
+            || str_contains($text, 'mr')
+            || str_contains($text, 'pcv')
+            || str_contains($text, 'rotavirus');
+
+        if ($dasar) {
             return [
                 'label' => 'Imunisasi Dasar',
                 'icon' => 'fa-syringe',
@@ -229,6 +228,12 @@ class Imunisasi extends Model
         ];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Scope
+    |--------------------------------------------------------------------------
+    */
+
     public function scopeBulanIni(Builder $query): Builder
     {
         return $query
@@ -236,12 +241,82 @@ class Imunisasi extends Model
             ->whereYear('tanggal_imunisasi', now()->year);
     }
 
+    public function scopeTahunIni(Builder $query): Builder
+    {
+        return $query->whereYear('tanggal_imunisasi', now()->year);
+    }
+
+    public function scopePeriode(Builder $query, ?string $start, ?string $end): Builder
+    {
+        if ($start) {
+            $query->whereDate('tanggal_imunisasi', '>=', $start);
+        }
+
+        if ($end) {
+            $query->whereDate('tanggal_imunisasi', '<=', $end);
+        }
+
+        return $query;
+    }
+
+    public function scopeKategori(Builder $query, string $kategori): Builder
+    {
+        $model = match ($kategori) {
+            'balita' => Balita::class,
+            'remaja' => Remaja::class,
+            'lansia' => Lansia::class,
+            default => null,
+        };
+
+        if (!$model) {
+            return $query;
+        }
+
+        return $query->whereHas('kunjungan', function (Builder $q) use ($model, $kategori) {
+            $q->where('pasien_type', $model)
+                ->orWhere('pasien_type', $kategori)
+                ->orWhere('pasien_type', 'like', '%' . class_basename($model) . '%');
+        });
+    }
+
     public function scopeTargetBalita(Builder $query): Builder
     {
-        return $query->whereHas('kunjungan', function (Builder $q) {
-            $q->where('pasien_type', Balita::class)
-                ->orWhere('pasien_type', 'like', '%Balita%')
-                ->orWhere('pasien_type', 'balita');
+        return $query->kategori('balita');
+    }
+
+    public function scopeTargetRemaja(Builder $query): Builder
+    {
+        return $query->kategori('remaja');
+    }
+
+    public function scopeTargetLansia(Builder $query): Builder
+    {
+        return $query->kategori('lansia');
+    }
+
+    public function scopeSearch(Builder $query, ?string $keyword): Builder
+    {
+        $keyword = trim((string) $keyword);
+
+        if ($keyword === '') {
+            return $query;
+        }
+
+        return $query->where(function (Builder $q) use ($keyword) {
+            $q->where('jenis_imunisasi', 'like', "%{$keyword}%")
+                ->orWhere('vaksin', 'like', "%{$keyword}%")
+                ->orWhere('batch_number', 'like', "%{$keyword}%")
+                ->orWhereHas('kunjungan.pasien', function (Builder $pasien) use ($keyword) {
+                    $pasien->where('nama_lengkap', 'like', "%{$keyword}%")
+                        ->orWhere('nik', 'like', "%{$keyword}%");
+                });
         });
+    }
+
+    public function scopeTerbaru(Builder $query): Builder
+    {
+        return $query
+            ->latest('tanggal_imunisasi')
+            ->latest('id');
     }
 }

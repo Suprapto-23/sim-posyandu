@@ -13,7 +13,6 @@ return array(
     'App\\Http\\Controllers\\Admin\\DashboardController' => $baseDir . '/app/Http/Controllers/Admin/DashboardController.php',
     'App\\Http\\Controllers\\Admin\\KaderController' => $baseDir . '/app/Http/Controllers/Admin/KaderController.php',
     'App\\Http\\Controllers\\Admin\\UserController' => $baseDir . '/app/Http/Controllers/Admin/UserController.php',
-    'App\\Http\\Controllers\\Auth\\ChangePasswordController' => $baseDir . '/app/Http/Controllers/Auth/ChangePasswordController.php',
     'App\\Http\\Controllers\\Auth\\LoginController' => $baseDir . '/app/Http/Controllers/Auth/LoginController.php',
     'App\\Http\\Controllers\\Bidan\\DashboardController' => $baseDir . '/app/Http/Controllers/Bidan/DashboardController.php',
     'App\\Http\\Controllers\\Bidan\\ImunisasiController' => $baseDir . '/app/Http/Controllers/Bidan/ImunisasiController.php',

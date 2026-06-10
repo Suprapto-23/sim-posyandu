@@ -730,7 +730,6 @@ class ComposerStaticInitf48744ccc027f7be3b7533035da1f7b1
         'App\\Http\\Controllers\\Admin\\DashboardController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/DashboardController.php',
         'App\\Http\\Controllers\\Admin\\KaderController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/KaderController.php',
         'App\\Http\\Controllers\\Admin\\UserController' => __DIR__ . '/../..' . '/app/Http/Controllers/Admin/UserController.php',
-        'App\\Http\\Controllers\\Auth\\ChangePasswordController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/ChangePasswordController.php',
         'App\\Http\\Controllers\\Auth\\LoginController' => __DIR__ . '/../..' . '/app/Http/Controllers/Auth/LoginController.php',
         'App\\Http\\Controllers\\Bidan\\DashboardController' => __DIR__ . '/../..' . '/app/Http/Controllers/Bidan/DashboardController.php',
         'App\\Http\\Controllers\\Bidan\\ImunisasiController' => __DIR__ . '/../..' . '/app/Http/Controllers/Bidan/ImunisasiController.php',

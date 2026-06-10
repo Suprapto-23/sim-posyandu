@@ -2,90 +2,269 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class Remaja extends Model
 {
     use HasFactory;
 
+    protected $table = 'remajas';
+
     protected $fillable = [
-        'user_id', 'kode_remaja', 'nik', 'nama_lengkap', 'tempat_lahir',
-        'tanggal_lahir', 'jenis_kelamin', 'golongan_darah', 'sekolah',
-        'kelas', 'nama_ortu', 'telepon_ortu', 'alamat', 'created_by'
+        'user_id',
+        'nik',
+        'nama_lengkap',
+        'jenis_kelamin',
+        'tanggal_lahir',
+        'tempat_lahir',
+        'alamat',
+        'nama_orang_tua',
+        'no_hp',
+        'status',
+        'created_by',
     ];
 
     protected $casts = [
         'tanggal_lahir' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    // ── VIRTUAL ATTRIBUTES (LOGIKA CERDAS REMAJA) ────────────────
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi Akun & Petugas
+    |--------------------------------------------------------------------------
+    */
 
-    /**
-     * Hitung Usia dalam Tahun (Real-time)
-     * Dapat dipanggil dengan: $remaja->usia_tahun
-     */
-    public function getUsiaTahunAttribute()
+    public function user(): BelongsTo
     {
-        if (!$this->tanggal_lahir) return 0;
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi Kunjungan & Pemeriksaan
+    |--------------------------------------------------------------------------
+    */
+
+    public function kunjungans(): MorphMany
+    {
+        return $this->morphMany(Kunjungan::class, 'pasien');
+    }
+
+    public function pemeriksaans(): HasMany
+    {
+        return $this->hasMany(Pemeriksaan::class, 'pasien_id')
+            ->where('kategori_pasien', 'remaja');
+    }
+
+    public function pemeriksaanTerbaru()
+    {
+        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
+            ->where('kategori_pasien', 'remaja')
+            ->latestOfMany('tanggal_periksa');
+    }
+
+    public function absensiDetails(): HasMany
+    {
+        return $this->hasMany(AbsensiDetail::class, 'pasien_id')
+            ->where('pasien_type', 'remaja');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Identitas
+    |--------------------------------------------------------------------------
+    */
+
+    public function getNamaAttribute(): string
+    {
+        return $this->nama_lengkap ?? '-';
+    }
+
+    public function getNamaPendekAttribute(): string
+    {
+        $nama = trim((string) $this->nama_lengkap);
+
+        if ($nama === '') {
+            return '-';
+        }
+
+        $parts = explode(' ', $nama);
+
+        return count($parts) > 2
+            ? $parts[0] . ' ' . $parts[1]
+            : $nama;
+    }
+
+    public function getJenisKelaminLabelAttribute(): string
+    {
+        return match (strtolower((string) $this->jenis_kelamin)) {
+            'l', 'laki-laki', 'laki laki', 'pria' => 'Laki-laki',
+            'p', 'perempuan', 'wanita' => 'Perempuan',
+            default => '-',
+        };
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'active', 'aktif' => 'Aktif',
+            'inactive', 'nonaktif' => 'Nonaktif',
+            default => ucfirst((string) ($this->status ?? 'aktif')),
+        };
+    }
+
+    public function getIsActiveAttribute(): bool
+    {
+        return in_array($this->status, ['active', 'aktif', null], true);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Umur
+    |--------------------------------------------------------------------------
+    */
+
+    public function getUmurAttribute(): ?int
+    {
+        if (!$this->tanggal_lahir) {
+            return null;
+        }
+
         return Carbon::parse($this->tanggal_lahir)->age;
     }
 
-    /**
-     * Kategorikan otomatis berdasarkan SOP Posyandu Remaja (Kemenkes)
-     */
-    public function getKategoriSopAttribute()
+    public function getUmurTextAttribute(): string
     {
-        $tahun = $this->usia_tahun;
-
-        if ($tahun < 10) {
-            return 'Pra-Remaja (< 10 Tahun)';
-        } elseif ($tahun >= 10 && $tahun <= 19) {
-            return 'Remaja (10 - 19 Tahun)';
-        } else {
-            return 'Dewasa Muda (> 19 Tahun)';
+        if (!$this->tanggal_lahir) {
+            return '-';
         }
-    }
 
-    /**
-     * Format Info Pendidikan Otomatis untuk UI
-     * Output contoh: "SMAN 1 Kajen (Kelas 11)"
-     */
-    public function getInfoPendidikanAttribute()
-    {
-        if ($this->sekolah && $this->kelas) {
-            return $this->sekolah . ' (Kelas ' . $this->kelas . ')';
+        $tanggalLahir = Carbon::parse($this->tanggal_lahir);
+        $tahun = $tanggalLahir->diffInYears(now());
+        $bulan = $tanggalLahir->copy()->addYears($tahun)->diffInMonths(now());
+
+        if ($tahun <= 0) {
+            return $bulan . ' bulan';
         }
-        return $this->sekolah ?: 'Pendidikan Belum Diisi';
+
+        return $bulan > 0
+            ? $tahun . ' tahun ' . $bulan . ' bulan'
+            : $tahun . ' tahun';
     }
 
-
-    // ── RELASI DASAR ──────────────────────────────────────────────
-    public function user()
+    public function getTanggalLahirFormatAttribute(): string
     {
-        return $this->belongsTo(User::class);
+        if (!$this->tanggal_lahir) {
+            return '-';
+        }
+
+        return Carbon::parse($this->tanggal_lahir)->translatedFormat('d F Y');
     }
 
-    public function kunjungans()
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Pemeriksaan Terbaru
+    |--------------------------------------------------------------------------
+    */
+
+    public function getBeratBadanTerakhirAttribute()
     {
-        // Kunjungan selalu diurutkan dari yang terbaru
-        return $this->morphMany(Kunjungan::class, 'pasien')
-                    ->orderBy('tanggal_kunjungan', 'desc');
+        return $this->pemeriksaanTerbaru?->berat_badan;
     }
 
-    // ── RELASI PEMERIKSAAN (POWERFUL EAGER LOADING) ───────────────
-    public function pemeriksaans()
+    public function getTinggiBadanTerakhirAttribute()
     {
-        return $this->hasMany(Pemeriksaan::class, 'pasien_id')
-                    ->where('kategori_pasien', 'remaja');
+        return $this->pemeriksaanTerbaru?->tinggi_badan;
     }
 
-    public function pemeriksaan_terakhir()
+    public function getImtTerakhirAttribute()
     {
-        // Menggunakan latestOfMany() untuk performa tinggi saat memuat grafik/kartu
-        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
-                    ->where('kategori_pasien', 'remaja')
-                    ->latestOfMany();
+        return $this->pemeriksaanTerbaru?->imt;
+    }
+
+    public function getLilaTerakhirAttribute()
+    {
+        return $this->pemeriksaanTerbaru?->lingkar_lengan;
+    }
+
+    public function getLingkarPerutTerakhirAttribute()
+    {
+        return $this->pemeriksaanTerbaru?->lingkar_perut;
+    }
+
+    public function getTekananDarahTerakhirAttribute()
+    {
+        return $this->pemeriksaanTerbaru?->tekanan_darah;
+    }
+
+    public function getHemoglobinTerakhirAttribute()
+    {
+        return $this->pemeriksaanTerbaru?->hemoglobin;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scope
+    |--------------------------------------------------------------------------
+    */
+
+    public function scopeAktif($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('status')
+                ->orWhereIn('status', ['active', 'aktif']);
+        });
+    }
+
+    public function scopeNonaktif($query)
+    {
+        return $query->whereIn('status', ['inactive', 'nonaktif']);
+    }
+
+    public function scopeSearch($query, ?string $keyword)
+    {
+        $keyword = trim((string) $keyword);
+
+        if ($keyword === '') {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($keyword) {
+            if (is_numeric($keyword)) {
+                $q->where('nik', 'like', "{$keyword}%")
+                    ->orWhere('nik', 'like', "%{$keyword}%")
+                    ->orWhere('no_hp', 'like', "%{$keyword}%");
+            } else {
+                $q->where('nama_lengkap', 'like', "{$keyword}%")
+                    ->orWhere('nama_lengkap', 'like', "%{$keyword}%")
+                    ->orWhere('nama_orang_tua', 'like', "%{$keyword}%");
+            }
+        });
+    }
+
+    public function scopeGender($query, ?string $gender)
+    {
+        if (!$gender) {
+            return $query;
+        }
+
+        return $query->where('jenis_kelamin', $gender);
+    }
+
+    public function scopeTerbaru($query)
+    {
+        return $query->latest('created_at')->latest('id');
     }
 }

@@ -1,34 +1,43 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th style="width: 26px;">No</th>
-            <th style="width: 115px;">Nama Balita</th>
-            <th style="width: 70px;">Usia</th>
-            <th style="width: 120px;">Orang Tua</th>
-            <th style="width: 48px;">BB</th>
-            <th style="width: 52px;">TB/PB</th>
-            <th style="width: 45px;">LK</th>
-            <th style="width: 45px;">LILA</th>
-            <th style="width: 80px;">Status Gizi</th>
-            <th style="width: 110px;">Imunisasi Terakhir</th>
-            <th>Keterangan</th>
+            <th style="width: 4%;">No</th>
+            <th style="width: 7%;">Tgl</th>
+            <th style="width: 15%;">Nama Balita</th>
+            <th style="width: 8%;">Usia</th>
+            <th style="width: 14%;">Nama Ortu</th>
+            <th style="width: 6%;">BB</th>
+            <th style="width: 6%;">TB/PB</th>
+            <th style="width: 6%;">LK</th>
+            <th style="width: 6%;">LILA</th>
+            <th style="width: 10%;">Status Gizi</th>
+            <th style="width: 8%;">Imunisasi</th>
+            <th style="width: 10%;">Keterangan</th>
         </tr>
     </thead>
+
     <tbody>
-        @foreach($rows as $row)
+        @forelse($rows as $row)
             <tr>
-                <td class="center">{{ $row['no'] }}</td>
-                <td class="bold">{{ $row['nama'] }}</td>
-                <td>{{ $row['usia'] }}</td>
-                <td>{{ $row['orang_tua'] }}</td>
-                <td class="center">{{ $row['bb'] }}</td>
-                <td class="center">{{ $row['tb'] }}</td>
-                <td class="center">{{ $row['lk'] }}</td>
-                <td class="center">{{ $row['lila'] }}</td>
-                <td class="center">{{ $row['status_gizi'] }}</td>
-                <td>{{ $row['imunisasi'] }}</td>
-                <td>{{ $row['keterangan'] }}</td>
+                <td class="text-center">{{ $row['no'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['tanggal'] ?? '-' }}</td>
+                <td class="font-bold">{{ $row['nama'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['usia'] ?? '-' }}</td>
+                <td>{{ $row['orang_tua'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['bb'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['tb'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['lk'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['lila'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['status_gizi'] ?? '-' }}</td>
+                <td class="text-center">{{ $row['imunisasi'] ?? '-' }}</td>
+                <td>{{ $row['keterangan'] ?? '-' }}</td>
             </tr>
-        @endforeach
+        @empty
+            <tr>
+                <td colspan="12" class="text-center">
+                    Tidak ada data pemeriksaan Balita pada periode ini.
+                </td>
+            </tr>
+        @endforelse
     </tbody>
 </table>

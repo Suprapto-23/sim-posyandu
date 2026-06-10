@@ -4,12 +4,15 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AbsensiPosyandu extends Model
 {
+    use HasFactory;
+
     protected $table = 'absensi_posyandu';
 
     protected $fillable = [
@@ -20,6 +23,7 @@ class AbsensiPosyandu extends Model
         'tahun',
         'nomor_pertemuan',
         'dicatat_oleh',
+        'catatan',
     ];
 
     protected $casts = [
@@ -54,8 +58,8 @@ class AbsensiPosyandu extends Model
             if (!$absensi->nomor_pertemuan) {
                 $absensi->nomor_pertemuan = self::getNextNomorPertemuan(
                     $absensi->kategori,
-                    (int) $tanggal->month,
-                    (int) $tanggal->year
+                    (int) $absensi->bulan,
+                    (int) $absensi->tahun
                 );
             }
 
@@ -77,12 +81,17 @@ class AbsensiPosyandu extends Model
 
             if ($absensi->tanggal_posyandu) {
                 $tanggal = Carbon::parse($absensi->tanggal_posyandu, 'Asia/Jakarta');
-
                 $absensi->bulan = (int) $tanggal->month;
                 $absensi->tahun = (int) $tanggal->year;
             }
         });
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relasi
+    |--------------------------------------------------------------------------
+    */
 
     public function details(): HasMany
     {
@@ -105,6 +114,12 @@ class AbsensiPosyandu extends Model
     {
         return $this->belongsTo(User::class, 'dicatat_oleh');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Helper Kategori
+    |--------------------------------------------------------------------------
+    */
 
     public static function normalizeKategori(?string $kategori): string
     {
@@ -140,35 +155,35 @@ class AbsensiPosyandu extends Model
     }
 
     public static function generateKodeAbsensi(string $kategori, Carbon $tanggal, int $nomorPertemuan): string
-{
-    $kategori = self::normalizeKategori($kategori);
+    {
+        $kategori = self::normalizeKategori($kategori);
 
-    $prefix = match ($kategori) {
-        'balita' => 'BAL',
-        'remaja' => 'REM',
-        'lansia' => 'LAN',
-        default => 'POS',
-    };
+        $prefix = match ($kategori) {
+            'balita' => 'BAL',
+            'remaja' => 'REM',
+            'lansia' => 'LAN',
+            default => 'POS',
+        };
 
-    $nomorPertemuan = max(1, (int) $nomorPertemuan);
+        $base = 'ABS-' . $prefix . '-' . $tanggal->format('Ymd') . '-P'
+            . str_pad(max(1, $nomorPertemuan), 2, '0', STR_PAD_LEFT);
 
-    $base = 'ABS-' 
-        . $prefix 
-        . '-' 
-        . $tanggal->format('Ymd') 
-        . '-P' 
-        . str_pad($nomorPertemuan, 2, '0', STR_PAD_LEFT);
+        $kode = $base;
+        $counter = 1;
 
-    $kode = $base;
-    $counter = 1;
+        while (self::query()->where('kode_absensi', $kode)->exists()) {
+            $kode = $base . '-' . $counter;
+            $counter++;
+        }
 
-    while (self::query()->where('kode_absensi', $kode)->exists()) {
-        $kode = $base . '-' . $counter;
-        $counter++;
+        return $kode;
     }
 
-    return $kode;
-}
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Tampilan
+    |--------------------------------------------------------------------------
+    */
 
     public function getKategoriLabelAttribute(): string
     {
@@ -201,73 +216,73 @@ class AbsensiPosyandu extends Model
             return '-';
         }
 
-        return Carbon::createFromDate((int) $this->tahun, (int) $this->bulan, 1, 'Asia/Jakarta')
-            ->translatedFormat('F Y');
+        return Carbon::createFromDate(
+            (int) $this->tahun,
+            (int) $this->bulan,
+            1,
+            'Asia/Jakarta'
+        )->translatedFormat('F Y');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessor Rekap
+    |--------------------------------------------------------------------------
+    */
 
     public function getTotalPesertaAttribute(): int
     {
-        if ($this->relationLoaded('details')) {
-            return $this->details->count();
-        }
-
-        return $this->details()->count();
+        return $this->relationLoaded('details')
+            ? $this->details->count()
+            : $this->details()->count();
     }
 
     public function getTotalHadirAttribute(): int
     {
-        if ($this->relationLoaded('details')) {
-            return $this->details->where('hadir', true)->count();
-        }
-
-        return $this->detailHadir()->count();
+        return $this->relationLoaded('details')
+            ? $this->details->where('hadir', true)->count()
+            : $this->detailHadir()->count();
     }
 
     public function getTotalTidakHadirAttribute(): int
     {
-        if ($this->relationLoaded('details')) {
-            return $this->details->where('hadir', false)->count();
-        }
-
-        return $this->detailTidakHadir()->count();
+        return $this->relationLoaded('details')
+            ? $this->details->where('hadir', false)->count()
+            : $this->detailTidakHadir()->count();
     }
 
     public function getPersentaseHadirAttribute(): float
     {
-        $totalPeserta = (int) $this->total_peserta;
+        $total = (int) $this->total_peserta;
 
-        if ($totalPeserta <= 0) {
-            return 0;
-        }
-
-        return round(((int) $this->total_hadir / $totalPeserta) * 100, 1);
+        return $total > 0
+            ? round(((int) $this->total_hadir / $total) * 100, 1)
+            : 0;
     }
 
     public function getPersentaseTidakHadirAttribute(): float
     {
-        $totalPeserta = (int) $this->total_peserta;
+        $total = (int) $this->total_peserta;
 
-        if ($totalPeserta <= 0) {
-            return 0;
-        }
-
-        return round(((int) $this->total_tidak_hadir / $totalPeserta) * 100, 1);
+        return $total > 0
+            ? round(((int) $this->total_tidak_hadir / $total) * 100, 1)
+            : 0;
     }
 
     public function getStatusRekapTextAttribute(): string
     {
-        $totalPeserta = (int) $this->total_peserta;
-        $totalHadir = (int) $this->total_hadir;
+        $total = (int) $this->total_peserta;
+        $hadir = (int) $this->total_hadir;
 
-        if ($totalPeserta <= 0) {
+        if ($total <= 0) {
             return 'Belum Ada Peserta';
         }
 
-        if ($totalHadir <= 0) {
+        if ($hadir <= 0) {
             return 'Belum Ada Kehadiran';
         }
 
-        if ($totalHadir === $totalPeserta) {
+        if ($hadir === $total) {
             return 'Semua Hadir';
         }
 
@@ -276,23 +291,29 @@ class AbsensiPosyandu extends Model
 
     public function getStatusRekapBadgeAttribute(): string
     {
-        $totalPeserta = (int) $this->total_peserta;
-        $totalHadir = (int) $this->total_hadir;
+        $total = (int) $this->total_peserta;
+        $hadir = (int) $this->total_hadir;
 
-        if ($totalPeserta <= 0) {
+        if ($total <= 0) {
             return 'slate';
         }
 
-        if ($totalHadir <= 0) {
+        if ($hadir <= 0) {
             return 'rose';
         }
 
-        if ($totalHadir === $totalPeserta) {
+        if ($hadir === $total) {
             return 'emerald';
         }
 
         return 'amber';
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scope
+    |--------------------------------------------------------------------------
+    */
 
     public function scopeKategori(Builder $query, string $kategori): Builder
     {
@@ -301,7 +322,10 @@ class AbsensiPosyandu extends Model
 
     public function scopeTanggal(Builder $query, string $tanggal): Builder
     {
-        return $query->whereDate('tanggal_posyandu', Carbon::parse($tanggal)->toDateString());
+        return $query->whereDate(
+            'tanggal_posyandu',
+            Carbon::parse($tanggal)->toDateString()
+        );
     }
 
     public function scopeHariIni(Builder $query): Builder
@@ -338,6 +362,12 @@ class AbsensiPosyandu extends Model
             ->orderByDesc('tanggal_posyandu')
             ->orderByDesc('created_at');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Aksi Detail
+    |--------------------------------------------------------------------------
+    */
 
     public function syncPesertaDariKategori(bool $defaultHadir = false): int
     {
