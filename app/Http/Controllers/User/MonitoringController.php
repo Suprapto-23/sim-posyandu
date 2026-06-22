@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\Concerns\ResolvesUserHealthContext;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
@@ -15,7 +16,13 @@ class MonitoringController extends Controller
     public function index(): View
     {
         try {
-            $context = $this->getUserContext(auth()->user());
+            $user = auth()->user();
+
+            // SINKRONISASI CACHE DENGAN DASHBOARD
+            $contextKey = 'user_dashboard_context_' . $user->id;
+            $context = Cache::remember($contextKey, 300, function () use ($user) {
+                return $this->getUserContext($user);
+            });
 
             $balitas = $this->loadMonitoringRelations($context['balitas']);
             $remajas = $this->loadMonitoringRelations($context['remajas']);

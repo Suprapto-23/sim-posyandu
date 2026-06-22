@@ -17,577 +17,265 @@
         'vaksin_tercatat' => 0,
     ];
 
-    $programOptions = $programOptions ?? [
-        'BCG' => 'BCG',
-        'Polio' => 'Polio',
-        'DPT-HB-Hib' => 'DPT-HB-Hib',
-        'Hepatitis B' => 'Hepatitis B',
-        'Campak / MR' => 'Campak / MR',
-        'IPV' => 'IPV',
-        'PCV' => 'PCV',
-        'Rotavirus' => 'Rotavirus',
-        'Lainnya' => 'Lainnya',
-    ];
-
     $getValue = function ($item, array $keys, mixed $default = '-') {
         foreach ($keys as $key) {
             $value = data_get($item, $key);
-
-            if ($value !== null && $value !== '') {
-                return $value;
-            }
+            if ($value !== null && $value !== '') return $value;
         }
-
         return $default;
     };
 
     $getBalita = function ($item) {
-        $pasien = data_get($item, 'kunjungan.pasien');
-
-        if ($pasien) {
-            return $pasien;
-        }
-
-        $balita = data_get($item, 'balita');
-
-        return $balita ?: null;
+        return data_get($item, 'kunjungan.pasien') ?? data_get($item, 'balita') ?: null;
     };
 
     $getNamaBalita = function ($item) use ($getBalita, $getValue) {
         $balita = $getBalita($item);
-
-        if ($balita) {
-            return $getValue($balita, ['nama_lengkap', 'nama', 'nama_balita'], 'Balita tidak terdata');
-        }
-
+        if ($balita) return $getValue($balita, ['nama_lengkap', 'nama', 'nama_balita'], 'Balita tidak terdata');
         return $getValue($item, ['nama_balita', 'nama_pasien'], 'Balita tidak terdata');
     };
 
     $getNikBalita = function ($item) use ($getBalita, $getValue) {
         $balita = $getBalita($item);
-
-        if ($balita) {
-            return $getValue($balita, ['nik', 'nik_anak'], '-');
-        }
-
+        if ($balita) return $getValue($balita, ['nik', 'nik_anak'], '-');
         return $getValue($item, ['nik', 'nik_balita', 'nik_anak'], '-');
     };
 
     $getWaliBalita = function ($item) use ($getBalita, $getValue) {
         $balita = $getBalita($item);
-
-        if ($balita) {
-            return $getValue($balita, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
-        }
-
+        if ($balita) return $getValue($balita, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
         return $getValue($item, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
-    };
-
-    $getAlamatBalita = function ($item) use ($getBalita, $getValue) {
-        $balita = $getBalita($item);
-
-        if ($balita) {
-            return $getValue($balita, ['alamat', 'alamat_lengkap', 'dusun'], '-');
-        }
-
-        return $getValue($item, ['alamat', 'alamat_balita'], '-');
     };
 
     $getPetugas = function ($item) {
         $petugas = data_get($item, 'kunjungan.petugas');
-
-        if (!$petugas) {
-            return '-';
-        }
-
-        return data_get($petugas, 'name')
-            ?? data_get($petugas, 'nama')
-            ?? data_get($petugas, 'nama_lengkap')
-            ?? '-';
+        if (!$petugas) return '-';
+        return data_get($petugas, 'name') ?? data_get($petugas, 'nama') ?? '-';
     };
 
-    $formatDate = function ($date) {
-        if (!$date || $date === '-') {
-            return '-';
-        }
+    $formatDate = fn($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y') : '-';
+    $formatBulanPendek = fn($date) => $date ? Carbon::parse($date)->translatedFormat('M') : '-';
+    $formatTanggalAngka = fn($date) => $date ? Carbon::parse($date)->format('d') : '-';
+    $isThisMonth = fn($date) => $date ? Carbon::parse($date)->isSameMonth(now()) : false;
 
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatBulanPendek = function ($date) {
-        if (!$date || $date === '-') {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('M');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatTanggalAngka = function ($date) {
-        if (!$date || $date === '-') {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->format('d');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $isThisMonth = function ($date) {
-        if (!$date || $date === '-') {
-            return false;
-        }
-
-        try {
-            return Carbon::parse($date)->isSameMonth(now());
-        } catch (\Throwable $e) {
-            return false;
-        }
-    };
-
-    $visibleCount = method_exists($imunisasis, 'count')
-        ? $imunisasis->count()
-        : count($imunisasis);
-
-    $totalData = method_exists($imunisasis, 'total')
-        ? $imunisasis->total()
-        : $visibleCount;
+    $visibleCount = method_exists($imunisasis, 'count') ? $imunisasis->count() : count($imunisasis);
+    $totalData = method_exists($imunisasis, 'total') ? $imunisasis->total() : $visibleCount;
 
     $summaryCards = [
-        [
-            'label' => 'Total Catatan',
-            'value' => $stats['total'] ?? 0,
-            'icon' => 'ph-syringe',
-            'class' => 'bg-cyan-50 text-cyan-700 ring-cyan-100',
-        ],
-        [
-            'label' => 'Bulan Ini',
-            'value' => $stats['bulan_ini'] ?? 0,
-            'icon' => 'ph-calendar-check',
-            'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-        ],
-        [
-            'label' => 'Total Balita',
-            'value' => $stats['total_balita'] ?? 0,
-            'icon' => 'ph-baby',
-            'class' => 'bg-sky-50 text-sky-700 ring-sky-100',
-        ],
-        [
-            'label' => 'Jenis Vaksin',
-            'value' => $stats['vaksin_tercatat'] ?? 0,
-            'icon' => 'ph-list-checks',
-            'class' => 'bg-amber-50 text-amber-700 ring-amber-100',
-        ],
+        ['label' => 'Total Catatan', 'value' => $stats['total'] ?? 0, 'icon' => 'fa-syringe', 'theme' => 'emerald'],
+        ['label' => 'Bulan Ini', 'value' => $stats['bulan_ini'] ?? 0, 'icon' => 'fa-calendar-check', 'theme' => 'teal'],
+        ['label' => 'Total Balita', 'value' => $stats['total_balita'] ?? 0, 'icon' => 'fa-baby', 'theme' => 'sky'],
+        ['label' => 'Jenis Vaksin', 'value' => $stats['vaksin_tercatat'] ?? 0, 'icon' => 'fa-list-check', 'theme' => 'amber'],
     ];
 @endphp
 
 @push('styles')
 <style>
-    .nexus-font {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    html { scroll-behavior: smooth; }
+    body { background-color: #f1f5f9; }
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        pointer-events: none;
+    }
+    
+    .widget-card {
+        background: #ffffff; 
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 2rem; 
+        box-shadow: 0 4px 20px -10px rgba(0, 0, 0, 0.05);
+        transform: translateZ(0); 
+        will-change: transform, box-shadow;
+        transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+    }
+    .widget-card:hover {
+        transform: translateY(-4px) translateZ(0);
+        box-shadow: 0 20px 40px -10px rgba(20, 184, 166, 0.12);
+        border-color: rgba(20, 184, 166, 0.2);
     }
 
-    .nexus-page-enter {
-        animation: nexusMainIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
-    }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
+    .btn-pill:active { transform: scale(0.97); }
 
-    .nexus-panel-enter {
-        animation: nexusPanelIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
-    }
+    .slim-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    .slim-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.2); border-radius: 9999px; }
+    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(20, 184, 166, 0.5); }
 
-    .nexus-scroll {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(16, 185, 129, .35) transparent;
-    }
-
-    .nexus-scroll::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    .nexus-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .nexus-scroll::-webkit-scrollbar-thumb {
-        background: rgba(16, 185, 129, .35);
-        border-radius: 999px;
-    }
-
-    .nexus-live-hidden {
-        display: none !important;
-    }
-
-    .nexus-list-stable {
-        min-height: 420px;
-        contain: layout paint;
-    }
-
-    @keyframes nexusMainIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 3px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @keyframes nexusPanelIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 2px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation-duration: .08s;
-        }
-
-        .nexus-list-stable {
-            min-height: 320px;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation: none !important;
-        }
-    }
+    .animate-pop-in { animation: popIn .5s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 </style>
 @endpush
 
 @section('content')
-<div class="nexus-font nexus-page-enter space-y-5 pb-8 text-slate-800">
+<div class="bg-mesh-fixed"></div>
 
-    {{-- HEADER --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div class="min-w-0">
-                <div class="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">
-                    <i class="ph ph-syringe text-base"></i>
-                    Layanan Balita
-                </div>
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 animate-pop-in">
 
-                <h1 class="mt-4 max-w-4xl text-[26px] font-black leading-tight tracking-[-0.025em] text-slate-900 md:text-[30px]">
-                    Vaksinasi & Imunisasi Balita
-                </h1>
+    {{-- HEADER BANNER --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-8 sm:p-10 shadow-2xl shadow-teal-500/20 flex flex-col lg:flex-row justify-between items-center gap-8 border-[6px] border-white/40" style="transform: translateZ(0);">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
 
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Halaman ini digunakan Bidan untuk mencatat dan melihat riwayat imunisasi pada sasaran Balita.
-                </p>
-
-                <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3.5 py-2 text-xs font-black text-cyan-700">
-                        <i class="ph ph-baby"></i>
-                        Khusus Balita
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-database"></i>
-                        <span id="imunisasiVisibleCount">{{ $visibleCount }}</span>
-                        catatan tampil
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-list-magnifying-glass"></i>
-                        Total data: {{ $totalData }}
-                    </span>
-                </div>
+        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-4 text-center lg:text-left">
+            <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+                    <i class="fa-solid fa-syringe"></i> Layanan Balita
+                </span>
             </div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                Vaksinasi & Imunisasi
+            </h1>
 
-            <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row xl:pt-12">
-                <a href="{{ route('bidan.imunisasi.create') }}"
-                   class="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700">
-                    <i class="ph ph-plus"></i>
-                    Catat Imunisasi
+            <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+                Halaman ini digunakan Bidan untuk mencatat, mengelola, dan melihat arsip riwayat imunisasi pada sasaran Balita.
+            </p>
+
+            <div class="flex justify-center lg:justify-start mt-2">
+                <a href="{{ route('bidan.imunisasi.create') }}" class="btn-pill bg-white text-teal-600 hover:bg-teal-50 px-6 py-3.5 text-[11px] font-black uppercase tracking-widest shadow-md flex items-center gap-2 transition-all hover:-translate-y-0.5">
+                    <i class="fa-solid fa-plus text-sm"></i> Catat Imunisasi Baru
                 </a>
+            </div>
+        </div>
+
+        <div class="relative z-10 w-full lg:w-1/3 flex justify-center lg:justify-end">
+            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/20 border border-white/30 backdrop-blur-md px-6 py-4 flex items-center gap-5">
+                <div>
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-teal-50">Total Tampil</span>
+                    <span class="block text-3xl font-black text-white mt-0.5" id="imunisasiVisibleCount">{{ $visibleCount }}</span>
+                </div>
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-teal-500 shadow-lg">
+                    <i class="fa-solid fa-database text-2xl"></i>
+                </div>
             </div>
         </div>
     </section>
 
-    {{-- SUMMARY --}}
-    <section class="nexus-panel-enter grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {{-- SUMMARY CARDS --}}
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         @foreach($summaryCards as $card)
-            <div class="rounded-[22px] border border-white/80 bg-white/85 p-4 shadow-sm shadow-slate-200/70 backdrop-blur">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="truncate text-xs font-black uppercase tracking-[0.12em] text-slate-400">
-                            {{ $card['label'] }}
-                        </p>
-
-                        <h2 class="mt-2 line-clamp-1 text-xl font-black tracking-tight text-slate-900">
-                            {{ $card['value'] }}
-                        </h2>
-                    </div>
-
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $card['class'] }}">
-                        <i class="ph {{ $card['icon'] }} text-lg"></i>
-                    </div>
+            <div class="widget-card p-5 group flex items-center justify-between">
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 group-hover:text-{{ $card['theme'] }}-500 transition-colors">{{ $card['label'] }}</p>
+                    <h2 class="text-3xl font-black text-slate-800 leading-none">{{ $card['value'] }}</h2>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 border border-{{ $card['theme'] }}-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid {{ $card['icon'] }}"></i>
                 </div>
             </div>
         @endforeach
     </section>
 
-    {{-- OUTPUT INFO --}}
-    <section class="nexus-panel-enter rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4">
-        <div class="flex gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-cyan-700 ring-1 ring-cyan-100">
-                <i class="ph ph-info text-lg"></i>
-            </div>
-
-            <div>
-                <h2 class="text-sm font-black text-slate-900">
-                    Output Modul Imunisasi
-                </h2>
-
-                <p class="mt-1 text-sm leading-6 text-slate-600">
-                    Data yang ditampilkan berupa catatan layanan imunisasi Balita, meliputi identitas Balita, jenis imunisasi, vaksin, dosis, nomor batch, tanggal layanan, dan catatan tambahan.
-                </p>
-            </div>
-        </div>
-    </section>
-
-    {{-- CONTENT --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="mb-5 grid gap-4 xl:grid-cols-[180px_minmax(0,1fr)] xl:items-center">
+    {{-- MAIN TABLE AREA (FIXED HEIGHT & SCROLLABLE) --}}
+    <section class="widget-card overflow-hidden flex flex-col relative">
+        
+        {{-- Header & Pencarian --}}
+        <div class="p-6 border-b border-slate-100 bg-white flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between shrink-0 z-20">
             <div class="min-w-0">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-600">
-                    Direktori
-                </p>
-
-                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                    Catatan Imunisasi
-                </h2>
+                <h2 class="text-base font-black tracking-tight text-slate-800 uppercase flex items-center gap-2"><i class="fa-solid fa-folder-open text-teal-500"></i> Arsip Imunisasi</h2>
+                <p class="mt-1 text-[11px] font-bold text-slate-400 tracking-widest uppercase">Catatan Layanan Balita</p>
             </div>
 
-            <form method="GET"
-                  action="{{ route('bidan.imunisasi.index') }}"
-                  class="grid w-full gap-2 md:grid-cols-[1fr_auto_auto]">
-                <div class="relative">
-                    <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-
-                    <input type="text"
-                           id="imunisasiLiveSearch"
-                           name="search"
-                           value="{{ $search }}"
-                           autocomplete="off"
-                           spellcheck="false"
-                           inputmode="search"
-                           placeholder="Cari nama, NIK, imunisasi, atau vaksin..."
-                           class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-11 text-sm font-semibold text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100">
-
-                    <button type="button"
-                            id="imunisasiClearSearch"
-                            class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-                        <i class="ph ph-x text-sm"></i>
-                    </button>
-                </div>
-
-                <button type="submit"
-                        class="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
-                    <i class="ph ph-funnel"></i>
-                    Filter
+            <form method="GET" action="{{ route('bidan.imunisasi.index') }}" class="flex w-full gap-2 xl:max-w-md relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="imunisasiLiveSearch" name="search" value="{{ $search }}" autocomplete="off" placeholder="Cari nama, NIK, atau jenis vaksin..."
+                       class="w-full rounded-[1.2rem] border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100 shadow-inner">
+                
+                <button type="button" id="imunisasiClearSearch" class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
-
-                @if($search)
-                    <a href="{{ route('bidan.imunisasi.index') }}"
-                       class="inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
-                        Reset
-                    </a>
-                @endif
             </form>
         </div>
 
-        <div class="nexus-list-stable">
-
-            {{-- DESKTOP TABLE --}}
-            <div class="nexus-scroll hidden max-h-[620px] overflow-auto lg:block">
-                <table class="min-w-[1180px] w-full border-separate border-spacing-y-3">
-                    <thead class="sticky top-0 z-10 bg-white/95 backdrop-blur">
-                        <tr class="text-left text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                            <th class="px-4 py-3">Tanggal</th>
-                            <th class="px-4 py-3">Balita</th>
-                            <th class="px-4 py-3">Wali</th>
-                            <th class="px-4 py-3">Jenis Imunisasi</th>
-                            <th class="px-4 py-3">Vaksin</th>
-                            <th class="px-4 py-3">Dosis</th>
-                            <th class="px-4 py-3">Petugas</th>
-                            <th class="px-4 py-3 text-right">Aksi</th>
+        {{-- Tabel Scrollable Area (Kunci Presisi h-[550px]) --}}
+        <div class="min-h-[200px] max-h-[600px] overflow-y-auto overflow-x-auto slim-scroll relative bg-slate-50/30">
+            <div class="hidden lg:block w-full min-w-[1000px]">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Tanggal</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Balita & Wali</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Imunisasi & Vaksin</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Dosis / Batch</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Petugas</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Aksi</th>
                         </tr>
                     </thead>
-
-                    <tbody>
+                    <tbody id="imunisasiTableBody" class="divide-y divide-slate-100 bg-white">
                         @forelse($imunisasis as $imunisasi)
                             @php
                                 $namaBalita = $getNamaBalita($imunisasi);
                                 $nikBalita = $getNikBalita($imunisasi);
                                 $waliBalita = $getWaliBalita($imunisasi);
-                                $alamatBalita = $getAlamatBalita($imunisasi);
-
                                 $jenisImunisasi = $getValue($imunisasi, ['jenis_imunisasi', 'nama_imunisasi', 'jenis'], 'Imunisasi');
                                 $vaksin = $getValue($imunisasi, ['vaksin', 'nama_vaksin'], '-');
                                 $dosis = $getValue($imunisasi, ['dosis', 'dosis_ke'], '-');
                                 $batch = $getValue($imunisasi, ['batch_number', 'no_batch', 'nomor_batch'], '-');
                                 $tanggal = $getValue($imunisasi, ['tanggal_imunisasi', 'tanggal', 'created_at'], null);
                                 $petugas = $getPetugas($imunisasi);
+                                $bulanIni = $isThisMonth($tanggal);
 
                                 $searchName = mb_strtolower(trim((string) $namaBalita), 'UTF-8');
                                 $searchNik = mb_strtolower(trim((string) $nikBalita), 'UTF-8');
                                 $searchJenis = mb_strtolower(trim((string) $jenisImunisasi), 'UTF-8');
                                 $searchVaksin = mb_strtolower(trim((string) $vaksin), 'UTF-8');
-
-                                $bulanIni = $isThisMonth($tanggal);
                             @endphp
 
-                            <tr class="js-imunisasi-row"
-                                data-name="{{ $searchName }}"
-                                data-nik="{{ $searchNik }}"
-                                data-jenis="{{ $searchJenis }}"
-                                data-vaksin="{{ $searchVaksin }}">
-                                <td class="rounded-l-2xl border-y border-l border-slate-100 bg-slate-50/80 px-4 py-4">
+                            <tr class="js-imunisasi-row hover:bg-slate-50/80 transition-colors group" data-name="{{ $searchName }}" data-nik="{{ $searchNik }}" data-jenis="{{ $searchJenis }}" data-vaksin="{{ $searchVaksin }}">
+                                <td class="px-6 py-5 align-middle">
                                     <div class="flex items-center gap-3">
-                                        <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-white ring-1 ring-slate-100">
-                                            <span class="text-[10px] font-black uppercase text-cyan-600">
-                                                {{ $formatBulanPendek($tanggal) }}
-                                            </span>
-
-                                            <span class="text-xl font-black leading-none text-slate-900">
-                                                {{ $formatTanggalAngka($tanggal) }}
-                                            </span>
+                                        <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm group-hover:border-teal-300 transition-colors">
+                                            <span class="text-[9px] font-black uppercase text-teal-600">{{ $formatBulanPendek($tanggal) }}</span>
+                                            <span class="text-lg font-black leading-none text-slate-800">{{ $formatTanggalAngka($tanggal) }}</span>
                                         </div>
-
                                         <div class="min-w-0">
-                                            <p class="whitespace-nowrap text-sm font-black text-slate-900">
-                                                {{ $formatDate($tanggal) }}
-                                            </p>
-
+                                            <p class="text-[11px] font-bold text-slate-800">{{ $formatDate($tanggal) }}</p>
                                             @if($bulanIni)
-                                                <span class="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-200">
-                                                    Bulan Ini
-                                                </span>
+                                                <span class="mt-1 inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-600 border border-emerald-100">Bulan Ini</span>
                                             @endif
                                         </div>
                                     </div>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
-                                            <i class="ph ph-baby text-lg"></i>
-                                        </div>
-
-                                        <div class="min-w-0">
-                                            <p class="max-w-[220px] truncate text-sm font-black text-slate-900">
-                                                {{ $namaBalita }}
-                                            </p>
-
-                                            <p class="mt-1 max-w-[220px] truncate text-xs font-semibold text-slate-500">
-                                                NIK: {{ $nikBalita }}
-                                            </p>
-                                        </div>
-                                    </div>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-sm font-bold text-slate-800 group-hover:text-teal-600 transition-colors">{{ $namaBalita }}</p>
+                                    <p class="text-[10px] font-semibold text-slate-400 font-mono mt-0.5">{{ $nikBalita }} <span class="mx-1">•</span> Wali: {{ $waliBalita }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <div class="min-w-0">
-                                        <p class="max-w-[180px] truncate text-sm font-black text-slate-700">
-                                            {{ $waliBalita }}
-                                        </p>
-
-                                        <p class="mt-1 max-w-[180px] truncate text-xs font-semibold text-slate-500">
-                                            {{ $alamatBalita }}
-                                        </p>
-                                    </div>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-[11px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded-md inline-block mb-1">{{ $jenisImunisasi }}</p>
+                                    <p class="text-xs font-bold text-slate-500 block">{{ $vaksin }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <span class="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">
-                                        <i class="ph ph-syringe"></i>
-                                        {{ $jenisImunisasi }}
-                                    </span>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-xs font-bold text-slate-800">Dosis: {{ $dosis }}</p>
+                                    <p class="text-[10px] font-semibold text-slate-400 mt-0.5">Batch: {{ $batch }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <div class="min-w-0">
-                                        <p class="max-w-[160px] truncate text-sm font-black text-slate-900">
-                                            {{ $vaksin }}
-                                        </p>
-
-                                        <p class="mt-1 max-w-[160px] truncate text-xs font-semibold text-slate-500">
-                                            Batch: {{ $batch }}
-                                        </p>
-                                    </div>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-xs font-bold text-slate-600 flex items-center gap-1.5"><i class="fa-solid fa-user-nurse text-slate-400"></i> {{ $petugas }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <span class="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200">
-                                        {{ $dosis }}
-                                    </span>
-                                </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <p class="max-w-[150px] truncate text-sm font-semibold text-slate-500">
-                                        {{ $petugas }}
-                                    </p>
-                                </td>
-
-                                <td class="rounded-r-2xl border-y border-r border-slate-100 bg-slate-50/80 px-4 py-4">
+                                <td class="px-6 py-5 align-middle text-right">
                                     <div class="flex justify-end gap-2">
-                                        <a href="{{ route('bidan.imunisasi.show', $imunisasi->id) }}"
-                                           class="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-700">
-                                            Detail
+                                        <a href="{{ route('bidan.imunisasi.show', $imunisasi->id) }}" class="btn-pill inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-500 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50 transition shadow-sm" title="Detail">
+                                            <i class="fa-solid fa-eye text-sm"></i>
                                         </a>
-
-                                        <a href="{{ route('bidan.imunisasi.edit', $imunisasi->id) }}"
-                                           class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700"
-                                           title="Perbaiki catatan">
-                                            <i class="ph ph-pencil-simple"></i>
+                                        <a href="{{ route('bidan.imunisasi.edit', $imunisasi->id) }}" class="btn-pill inline-flex h-9 w-9 items-center justify-center border border-slate-200 bg-white text-slate-500 hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 transition shadow-sm" title="Edit">
+                                            <i class="fa-solid fa-pen text-sm"></i>
                                         </a>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                                        <i class="ph ph-syringe text-3xl"></i>
+                                <td colspan="6" class="p-14 text-center bg-white">
+                                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100 text-slate-300 mb-4 shadow-inner">
+                                        <i class="fa-solid fa-folder-open text-3xl"></i>
                                     </div>
-
-                                    <h3 class="mt-4 text-base font-black text-slate-800">
-                                        Catatan Imunisasi Belum Ada
-                                    </h3>
-
-                                    <p class="mt-2 text-sm text-slate-500">
-                                        Data akan tampil setelah Bidan mencatat layanan imunisasi Balita.
-                                    </p>
-
-                                    <a href="{{ route('bidan.imunisasi.create') }}"
-                                       class="mt-5 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
-                                        <i class="ph ph-plus"></i>
-                                        Catat Imunisasi
-                                    </a>
+                                    <h3 class="text-sm font-black text-slate-700">Belum Ada Catatan Imunisasi</h3>
+                                    <p class="text-xs font-medium text-slate-400 mt-1 mb-4">Data akan tampil setelah Anda mencatat layanan imunisasi baru.</p>
+                                    <a href="{{ route('bidan.imunisasi.create') }}" class="btn-pill bg-teal-500 text-white px-5 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-md">Catat Sekarang</a>
                                 </td>
                             </tr>
                         @endforelse
@@ -595,185 +283,98 @@
                 </table>
             </div>
 
-            {{-- MOBILE CARD --}}
-            <div class="space-y-3 lg:hidden">
-                @forelse($imunisasis as $imunisasi)
+            {{-- MOBILE VIEW --}}
+            <div id="imunisasiCardContainer" class="space-y-4 lg:hidden p-4">
+                @foreach($imunisasis as $imunisasi)
                     @php
                         $namaBalita = $getNamaBalita($imunisasi);
                         $nikBalita = $getNikBalita($imunisasi);
-                        $waliBalita = $getWaliBalita($imunisasi);
-                        $alamatBalita = $getAlamatBalita($imunisasi);
-
                         $jenisImunisasi = $getValue($imunisasi, ['jenis_imunisasi', 'nama_imunisasi', 'jenis'], 'Imunisasi');
                         $vaksin = $getValue($imunisasi, ['vaksin', 'nama_vaksin'], '-');
-                        $dosis = $getValue($imunisasi, ['dosis', 'dosis_ke'], '-');
-                        $batch = $getValue($imunisasi, ['batch_number', 'no_batch', 'nomor_batch'], '-');
                         $tanggal = $getValue($imunisasi, ['tanggal_imunisasi', 'tanggal', 'created_at'], null);
-
+                        
                         $searchName = mb_strtolower(trim((string) $namaBalita), 'UTF-8');
                         $searchNik = mb_strtolower(trim((string) $nikBalita), 'UTF-8');
                         $searchJenis = mb_strtolower(trim((string) $jenisImunisasi), 'UTF-8');
                         $searchVaksin = mb_strtolower(trim((string) $vaksin), 'UTF-8');
                     @endphp
-
-                    <article class="js-imunisasi-card rounded-2xl border border-slate-100 bg-slate-50/80 p-4"
-                             data-name="{{ $searchName }}"
-                             data-nik="{{ $searchNik }}"
-                             data-jenis="{{ $searchJenis }}"
-                             data-vaksin="{{ $searchVaksin }}">
-                        <div class="flex items-start gap-3">
-                            <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-white ring-1 ring-slate-100">
-                                <span class="text-[10px] font-black uppercase text-cyan-600">
-                                    {{ $formatBulanPendek($tanggal) }}
-                                </span>
-
-                                <span class="text-xl font-black leading-none text-slate-900">
-                                    {{ $formatTanggalAngka($tanggal) }}
-                                </span>
+                    <article class="js-imunisasi-card rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm" data-name="{{ $searchName }}" data-nik="{{ $searchNik }}" data-jenis="{{ $searchJenis }}" data-vaksin="{{ $searchVaksin }}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">{{ $namaBalita }}</h3>
+                                <p class="text-[10px] text-slate-400 font-mono mt-0.5">{{ $nikBalita }}</p>
                             </div>
-
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <h3 class="line-clamp-2 text-base font-black text-slate-900">
-                                            {{ $namaBalita }}
-                                        </h3>
-
-                                        <p class="mt-1 text-xs font-semibold text-slate-500">
-                                            NIK: {{ $nikBalita }}
-                                        </p>
-                                    </div>
-
-                                    <span class="shrink-0 rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-200">
-                                        Balita
-                                    </span>
-                                </div>
-
-                                <div class="mt-4 grid grid-cols-2 gap-2">
-                                    <div class="rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                        <p class="text-[10px] font-black uppercase text-slate-400">
-                                            Imunisasi
-                                        </p>
-
-                                        <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                            {{ $jenisImunisasi }}
-                                        </p>
-                                    </div>
-
-                                    <div class="rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                        <p class="text-[10px] font-black uppercase text-slate-400">
-                                            Vaksin
-                                        </p>
-
-                                        <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                            {{ $vaksin }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="mt-3 grid grid-cols-2 gap-2">
-                                    <div class="rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                        <p class="text-[10px] font-black uppercase text-slate-400">
-                                            Dosis
-                                        </p>
-
-                                        <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                            {{ $dosis }}
-                                        </p>
-                                    </div>
-
-                                    <div class="rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                        <p class="text-[10px] font-black uppercase text-slate-400">
-                                            Tanggal
-                                        </p>
-
-                                        <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                            {{ $formatDate($tanggal) }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="mt-3 rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                    <p class="text-[10px] font-black uppercase text-slate-400">
-                                        Wali / Alamat
-                                    </p>
-
-                                    <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                        {{ $waliBalita }}
-                                    </p>
-
-                                    <p class="mt-1 truncate text-xs font-semibold text-slate-500">
-                                        {{ $alamatBalita }}
-                                    </p>
-                                </div>
-
-                                <div class="mt-4 grid grid-cols-[1fr_auto] gap-2">
-                                    <a href="{{ route('bidan.imunisasi.show', $imunisasi->id) }}"
-                                       class="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-700">
-                                        Detail
-                                    </a>
-
-                                    <a href="{{ route('bidan.imunisasi.edit', $imunisasi->id) }}"
-                                       class="inline-flex h-[42px] w-[42px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700"
-                                       title="Perbaiki catatan">
-                                        <i class="ph ph-pencil-simple"></i>
-                                    </a>
-                                </div>
-                            </div>
+                            <span class="inline-flex rounded-md border border-teal-100 bg-teal-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-teal-600">{{ $formatDate($tanggal) }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-4 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">{{ $jenisImunisasi }}</span>
+                            <span class="text-slate-300">•</span>
+                            <span class="text-[10px] font-bold text-slate-500">{{ $vaksin }}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-50">
+                            <a href="{{ route('bidan.imunisasi.show', $imunisasi->id) }}" class="btn-pill inline-flex justify-center items-center border border-slate-200 bg-slate-50 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">Detail</a>
+                            <a href="{{ route('bidan.imunisasi.edit', $imunisasi->id) }}" class="btn-pill inline-flex justify-center items-center border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm">Edit</a>
                         </div>
                     </article>
-                @empty
-                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                            <i class="ph ph-syringe text-3xl"></i>
-                        </div>
-
-                        <h3 class="mt-4 text-base font-black text-slate-800">
-                            Catatan Imunisasi Belum Ada
-                        </h3>
-
-                        <p class="mt-2 text-sm text-slate-500">
-                            Data akan tampil setelah Bidan mencatat layanan imunisasi Balita.
-                        </p>
-
-                        <a href="{{ route('bidan.imunisasi.create') }}"
-                           class="mt-5 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
-                            <i class="ph ph-plus"></i>
-                            Catat Imunisasi
-                        </a>
-                    </div>
-                @endforelse
+                @endforeach
             </div>
 
-            {{-- LIVE EMPTY --}}
-            <div id="imunisasiLiveEmpty"
-                 class="hidden rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                    <i class="ph ph-magnifying-glass text-3xl"></i>
-                </div>
-
-                <h3 class="mt-4 text-base font-black text-slate-800">
-                    Catatan Tidak Cocok
-                </h3>
-
-                <p class="mt-2 text-sm text-slate-500">
-                    Tidak ada catatan pada halaman ini yang sesuai dengan nama, NIK, jenis imunisasi, atau vaksin.
-                </p>
+            {{-- LIVE EMPTY STATE --}}
+            <div id="imunisasiLiveEmpty" class="hidden rounded-[2rem] border border-dashed border-slate-300 bg-white/50 p-10 text-center m-6">
+                <i class="fa-solid fa-magnifying-glass text-4xl text-slate-300 mb-3"></i>
+                <h3 class="text-sm font-black text-slate-700">Data Tidak Ditemukan</h3>
+                <p class="text-xs font-medium text-slate-500 mt-1">Pencarian untuk kriteria tersebut tidak cocok dengan data manapun.</p>
             </div>
-
-            {{-- PAGINATION --}}
-            @if(method_exists($imunisasis, 'hasPages') && $imunisasis->hasPages())
-                <div id="imunisasiPagination" class="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-5 md:flex-row md:items-center md:justify-between">
-                    <p class="text-sm font-semibold text-slate-500">
-                        Menampilkan {{ $imunisasis->firstItem() }} sampai {{ $imunisasis->lastItem() }} dari {{ $imunisasis->total() }} catatan
-                    </p>
-
-                    <div>
-                        {{ $imunisasis->links() }}
-                    </div>
-                </div>
-            @endif
         </div>
+
+        {{-- PAGINATION CUSTOM UI (Rounded Teal) --}}
+        @if(method_exists($imunisasis, 'hasPages') && $imunisasis->hasPages())
+            <div id="imunisasiPagination" class="bg-white p-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 rounded-b-[2rem]">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Menampilkan <span class="text-slate-700">{{ $imunisasis->firstItem() }}</span> - <span class="text-slate-700">{{ $imunisasis->lastItem() }}</span> dari <span class="text-slate-800">{{ $imunisasis->total() }}</span> data
+                </p>
+                
+                <div class="flex items-center gap-1.5">
+                    {{-- Previous --}}
+                    @if ($imunisasis->onFirstPage())
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 cursor-not-allowed"><i class="fa-solid fa-chevron-left text-xs"></i></span>
+                    @else
+                        <a href="{{ $imunisasis->previousPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-left text-xs"></i></a>
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @php
+                        $start = max(1, $imunisasis->currentPage() - 1);
+                        $end = min($imunisasis->lastPage(), $imunisasis->currentPage() + 1);
+                    @endphp
+
+                    @if($start > 1)
+                        <a href="{{ $imunisasis->url(1) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 transition-all shadow-sm text-xs font-bold">1</a>
+                        @if($start > 2)<span class="inline-flex h-8 w-8 items-center justify-center text-slate-400 text-xs font-bold">...</span>@endif
+                    @endif
+
+                    @for ($page = $start; $page <= $end; $page++)
+                        @if ($page == $imunisasis->currentPage())
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-teal-500 text-white shadow-md shadow-teal-500/30 text-xs font-black">{{ $page }}</span>
+                        @else
+                            <a href="{{ $imunisasis->url($page) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 transition-all shadow-sm text-xs font-bold">{{ $page }}</a>
+                        @endif
+                    @endfor
+
+                    @if($end < $imunisasis->lastPage())
+                        @if($end < $imunisasis->lastPage() - 1)<span class="inline-flex h-8 w-8 items-center justify-center text-slate-400 text-xs font-bold">...</span>@endif
+                        <a href="{{ $imunisasis->url($imunisasis->lastPage()) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 transition-all shadow-sm text-xs font-bold">{{ $imunisasis->lastPage() }}</a>
+                    @endif
+
+                    {{-- Next --}}
+                    @if ($imunisasis->hasMorePages())
+                        <a href="{{ $imunisasis->nextPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-right text-xs"></i></a>
+                    @else
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 cursor-not-allowed"><i class="fa-solid fa-chevron-right text-xs"></i></span>
+                    @endif
+                </div>
+            </div>
+        @endif
     </section>
 </div>
 @endsection
@@ -785,106 +386,54 @@
         const clearButton = document.getElementById('imunisasiClearSearch');
         const visibleCountText = document.getElementById('imunisasiVisibleCount');
         const liveEmpty = document.getElementById('imunisasiLiveEmpty');
-
+        const pagination = document.getElementById('imunisasiPagination');
+        const tableBody = document.getElementById('imunisasiTableBody');
+        const cardContainer = document.getElementById('imunisasiCardContainer');
         const rows = Array.from(document.querySelectorAll('.js-imunisasi-row'));
         const cards = Array.from(document.querySelectorAll('.js-imunisasi-card'));
 
-        const normalize = (value) => {
-            return String(value || '')
-                .toLowerCase()
-                .trim();
-        };
-
-        const isNumericKeyword = (keyword) => {
-            return /^[0-9]+$/.test(keyword);
-        };
-
+        const normalize = (value) => String(value || '').toLowerCase().trim();
+        
         const itemMatches = (item, keyword) => {
-            const name = normalize(item.dataset.name);
-            const nik = normalize(item.dataset.nik);
-            const jenis = normalize(item.dataset.jenis);
-            const vaksin = normalize(item.dataset.vaksin);
-
-            if (keyword === '') {
-                return true;
-            }
-
-            if (isNumericKeyword(keyword)) {
-                return nik.includes(keyword);
-            }
-
-            return name.includes(keyword)
-                || jenis.includes(keyword)
-                || vaksin.includes(keyword);
-        };
-
-        const setHidden = (element, hidden) => {
-            if (!element) {
-                return;
-            }
-
-            element.classList.toggle('nexus-live-hidden', hidden);
+            if (keyword === '') return true;
+            return normalize(item.dataset.name).includes(keyword) || 
+                   normalize(item.dataset.nik).includes(keyword) || 
+                   normalize(item.dataset.jenis).includes(keyword) || 
+                   normalize(item.dataset.vaksin).includes(keyword);
         };
 
         let frameId = null;
-
         const applyFilter = () => {
-            if (frameId) {
-                cancelAnimationFrame(frameId);
-            }
-
+            if (frameId) cancelAnimationFrame(frameId);
             frameId = requestAnimationFrame(() => {
                 const keyword = normalize(searchInput?.value);
                 let visibleCount = 0;
 
                 rows.forEach((row) => {
                     const visible = itemMatches(row, keyword);
-
-                    setHidden(row, !visible);
-
-                    if (visible) {
-                        visibleCount += 1;
-                    }
+                    row.classList.toggle('hidden', !visible);
+                    if (visible) visibleCount++;
                 });
 
                 cards.forEach((card) => {
-                    const visible = itemMatches(card, keyword);
-
-                    setHidden(card, !visible);
+                    card.classList.toggle('hidden', !itemMatches(card, keyword));
                 });
 
-                if (visibleCountText) {
-                    visibleCountText.textContent = String(visibleCount);
-                }
-
+                if (visibleCountText) visibleCountText.textContent = String(visibleCount);
                 if (liveEmpty) {
                     const hasData = rows.length > 0 || cards.length > 0;
                     liveEmpty.classList.toggle('hidden', !hasData || visibleCount > 0);
                 }
-
                 if (clearButton) {
                     const hasKeyword = keyword !== '';
                     clearButton.classList.toggle('hidden', !hasKeyword);
-                    clearButton.classList.toggle('inline-flex', hasKeyword);
                 }
+                if (pagination) pagination.classList.toggle('hidden', keyword !== '');
             });
         };
 
         searchInput?.addEventListener('input', applyFilter, { passive: true });
-        searchInput?.addEventListener('keyup', applyFilter, { passive: true });
-        searchInput?.addEventListener('search', applyFilter, { passive: true });
-
-        clearButton?.addEventListener('click', () => {
-            if (!searchInput) {
-                return;
-            }
-
-            searchInput.value = '';
-            searchInput.focus();
-            applyFilter();
-        });
-
-        applyFilter();
+        clearButton?.addEventListener('click', () => { if (searchInput) { searchInput.value = ''; searchInput.focus(); applyFilter(); } });
     })();
 </script>
 @endpush

@@ -65,7 +65,7 @@ class AbsensiController extends Controller
     {
         $validated = $request->validate([
             'kategori' => ['required', 'in:balita,remaja,lansia'],
-            'tanggal' => ['nullable', 'date', 'before_or_equal:today'],
+            'tanggal' => ['nullable', 'date'],
             'kehadiran' => ['required', 'array'],
             'kehadiran.*' => ['nullable', 'in:0,1'],
             'keterangan' => ['nullable', 'array'],

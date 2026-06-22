@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
@@ -54,17 +55,20 @@ class ProfileController extends Controller
             'telepon.regex' => 'Nomor WhatsApp hanya boleh berisi angka, spasi, tanda plus, atau strip.',
         ]);
 
-        try {
-            DB::transaction(function () use ($user, $validated) {
-                $nik = $this->normalizeNik($validated['nik'] ?? null);
+        // DETEKSI PERUBAHAN NIK SEBELUM UPDATE
+        $oldNik = $this->normalizeNik($user->nik ?? data_get($user, 'profile.nik'));
+        $newNik = $this->normalizeNik($validated['nik'] ?? null);
+        $nikChanged = ($oldNik !== $newNik);
 
+        try {
+            DB::transaction(function () use ($user, $validated, $newNik) {
                 $userPayload = [
                     'name' => $validated['name'],
                     'updated_at' => now(),
                 ];
 
                 if (Schema::hasColumn('users', 'nik')) {
-                    $userPayload['nik'] = $nik;
+                    $userPayload['nik'] = $newNik;
                 }
 
                 DB::table('users')
@@ -74,10 +78,19 @@ class ProfileController extends Controller
                 if (Schema::hasTable('profiles')) {
                     DB::table('profiles')->updateOrInsert(
                         ['user_id' => $user->id],
-                        $this->profilePayload($validated, $nik, $user->id)
+                        $this->profilePayload($validated, $newNik, $user->id)
                     );
                 }
             });
+
+            // TRIGGER FLUSH CACHE AGAR DATA KELUARGA TER-REFRESH INSTAN
+            if ($nikChanged) {
+                Cache::forget('user_dashboard_context_' . $user->id);
+                Cache::forget('user_dashboard_jadwal_' . $user->id);
+                Cache::forget('user_jadwal_count_' . $user->id);
+                Cache::forget('user_dashboard_notif_' . $user->id);
+                Cache::forget('user_unread_notif_' . $user->id);
+            }
 
             return back()->with('success', 'Profil berhasil diperbarui.');
         } catch (\Throwable $e) {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -15,52 +16,65 @@ class DashboardController extends Controller
     private array $tableCache = [];
     private array $columnCache = [];
 
+    /**
+     * Tampilkan dashboard Bidan dengan data teroptimasi.
+     */
     public function index(): View
     {
-        $stats = [
-            'balita' => $this->safeTableCount('balitas'),
-            'remaja' => $this->safeTableCount('remajas'),
-            'lansia' => $this->safeTableCount('lansias'),
+        Carbon::setLocale('id');
 
-            'menunggu_validasi' => $this->countPemeriksaanStatus($this->pendingStatuses()),
-            'tervalidasi' => $this->countPemeriksaanStatus($this->verifiedStatuses()),
-            'perlu_revisi' => $this->countPemeriksaanStatus($this->revisionStatuses()),
+        // --- CACHE STATISTIK UTAMA (5 menit) ---
+        $stats = Cache::remember('bidan_dashboard_stats', 300, function () {
+            return [
+                'balita' => $this->safeTableCount('balitas'),
+                'remaja' => $this->safeTableCount('remajas'),
+                'lansia' => $this->safeTableCount('lansias'),
 
-            'pemeriksaan_hari_ini' => $this->countByDate(
-                'pemeriksaans',
-                ['tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'],
-                'today'
-            ),
+                'menunggu_validasi' => $this->countPemeriksaanStatus($this->pendingStatuses()),
+                'tervalidasi' => $this->countPemeriksaanStatus($this->verifiedStatuses()),
+                'perlu_revisi' => $this->countPemeriksaanStatus($this->revisionStatuses()),
 
-            'pemeriksaan_bulan_ini' => $this->countByDate(
-                'pemeriksaans',
-                ['tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'],
-                'month'
-            ),
+                'pemeriksaan_hari_ini' => $this->countByDate(
+                    'pemeriksaans',
+                    ['tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'],
+                    'today'
+                ),
 
-            'imunisasi_bulan_ini' => $this->countByDate(
-                $this->firstExistingTable(['imunisasis', 'imunisasi']),
-                ['tanggal_imunisasi', 'tanggal_pemberian', 'tanggal', 'created_at'],
-                'month'
-            ),
+                'pemeriksaan_bulan_ini' => $this->countByDate(
+                    'pemeriksaans',
+                    ['tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'],
+                    'month'
+                ),
 
-            'jadwal_aktif' => $this->countJadwalAktif(),
-            'notifikasi_belum_dibaca' => $this->countUnreadNotifications(),
-        ];
+                'imunisasi_bulan_ini' => $this->countByDate(
+                    $this->firstExistingTable(['imunisasis', 'imunisasi']),
+                    ['tanggal_imunisasi', 'tanggal_pemberian', 'tanggal', 'created_at'],
+                    'month'
+                ),
 
+                'jadwal_aktif' => $this->countJadwalAktif(),
+                'notifikasi_belum_dibaca' => $this->countUnreadNotifications(),
+            ];
+        });
+
+        // Alias untuk kompatibilitas
         $stats['total_sasaran'] = $stats['balita'] + $stats['remaja'] + $stats['lansia'];
-
-        // Alias aman untuk Blade lama atau komponen yang belum ikut disesuaikan.
         $stats['menunggu_review'] = $stats['menunggu_validasi'];
         $stats['sudah_ditinjau'] = $stats['tervalidasi'];
         $stats['perlu_perbaikan'] = $stats['perlu_revisi'];
 
+        // --- CACHE TREND (5 menit) ---
+        $trendData = Cache::remember('bidan_dashboard_trend', 300, function () {
+            return $this->monthlyPemeriksaanStats(6);
+        });
+
+        // --- DATA DINAMIS (tidak di-cache) ---
         $recentPemeriksaans = $this->latestPemeriksaans(5);
         $recentImunisasi = $this->latestImunisasi(4);
         $jadwalTerdekat = $this->upcomingJadwal(4);
         $notifications = $this->latestNotifications(4);
-        $monthlyStats = $this->monthlyPemeriksaanStats(6);
 
+        // Summary untuk view
         $statusSummary = $this->statusSummary($stats);
         $sasaranSummary = $this->sasaranSummary($stats);
         $operationalSummary = $this->operationalSummary($stats);
@@ -71,83 +85,74 @@ class DashboardController extends Controller
             'recentImunisasi',
             'jadwalTerdekat',
             'notifications',
-            'monthlyStats',
+            'trendData',
             'statusSummary',
             'sasaranSummary',
             'operationalSummary'
         ));
     }
 
+    /**
+     * Endpoint AJAX untuk trend chart.
+     */
     public function trend(): JsonResponse
     {
+        $data = Cache::remember('bidan_dashboard_trend', 300, function () {
+            return $this->monthlyPemeriksaanStats(6);
+        });
+
         return response()->json([
-            'data' => collect($this->monthlyPemeriksaanStats(6))
-                ->map(function ($item) {
-                    return [
-                        'label' => data_get($item, 'label', data_get($item, 'short', '-')),
-                        'short' => data_get($item, 'short', data_get($item, 'label', '-')),
-                        'count' => (int) data_get($item, 'count', 0),
-                    ];
-                })
-                ->values(),
+            'data' => collect($data)->map(fn ($item) => [
+                'label' => data_get($item, 'label', data_get($item, 'short', '-')),
+                'short' => data_get($item, 'short', data_get($item, 'label', '-')),
+                'count' => (int) data_get($item, 'count', 0),
+            ])->values(),
         ]);
     }
+
+    // ========== PRIVATE HELPERS (semua dioptimasi dengan cache kolom) ==========
 
     private function latestPemeriksaans(int $limit = 5): array
     {
         try {
-            if (!$this->hasTable('pemeriksaans')) {
-                return [];
-            }
+            if (!$this->hasTable('pemeriksaans')) return [];
 
             $dateColumn = $this->firstExistingColumn('pemeriksaans', [
-                'tanggal_periksa',
-                'tanggal_pemeriksaan',
-                'tanggal_kunjungan',
-                'created_at',
+                'tanggal_periksa', 'tanggal_pemeriksaan', 'tanggal_kunjungan', 'created_at'
             ]) ?? 'created_at';
 
             $statusColumn = $this->firstExistingColumn('pemeriksaans', [
-                'status_verifikasi',
-                'status_validasi',
-                'status',
+                'status_verifikasi', 'status_validasi', 'status'
             ]);
 
-            $query = DB::table('pemeriksaans')
-                ->orderByDesc($dateColumn);
-
-            if ($this->hasColumn('pemeriksaans', 'id')) {
-                $query->orderByDesc('id');
-            }
-
-            return $query
+            return DB::table('pemeriksaans')
+                ->orderByDesc($dateColumn)
                 ->limit($limit)
                 ->get()
-                ->map(function ($item) use ($dateColumn, $statusColumn) {
-                    $kategori = $this->kategoriFromPemeriksaan($item);
-                    $patientId = $this->patientIdFromPemeriksaan($item, $kategori);
-                    $patient = $this->findPatient($kategori, $patientId, $item);
-
-                    $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
-                    $statusRaw = $statusColumn ? ($item->{$statusColumn} ?? null) : null;
-
-                    return [
-                        'id' => $item->id ?? null,
-                        'nama' => $patient['nama'] ?? 'Warga tidak ditemukan',
-                        'nik' => $patient['nik'] ?? '-',
-                        'kategori' => $this->kategoriLabel($kategori),
-                        'kategori_raw' => $kategori,
-                        'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
-                        'waktu' => $date ? $date->format('H:i') . ' WIB' : '-',
-                        'parameter' => $this->parameterRingkas($item, $kategori),
-                        'status' => $this->statusLabel($statusRaw),
-                        'status_raw' => $statusRaw,
-                    ];
-                })
+                ->map(fn ($item) => $this->formatPemeriksaanItem($item, $dateColumn, $statusColumn))
                 ->toArray();
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    private function formatPemeriksaanItem($item, string $dateColumn, ?string $statusColumn): array
+    {
+        $kategori = $this->kategoriFromPemeriksaan($item);
+        $date = $this->dateValue($item->{$dateColumn} ?? $item->created_at ?? null);
+
+        return [
+            'id' => $item->id ?? null,
+            'nama' => $this->resolvePatientName($item, $kategori),
+            'nik' => $this->resolvePatientNik($item, $kategori),
+            'kategori' => $this->kategoriLabel($kategori),
+            'kategori_raw' => $kategori,
+            'tanggal' => $date ? $date->translatedFormat('d M Y') : '-',
+            'waktu' => $date ? $date->format('H:i') . ' WIB' : '-',
+            'parameter' => $this->parameterRingkas($item, $kategori),
+            'status' => $this->statusLabel($statusColumn ? ($item->{$statusColumn} ?? null) : null),
+            'status_raw' => $statusColumn ? ($item->{$statusColumn} ?? null) : null,
+        ];
     }
 
     private function latestImunisasi(int $limit = 4): array
@@ -900,7 +905,12 @@ class DashboardController extends Controller
 
         return $this->directPatientFromRecord($item);
     }
-
+// ========== FLUSH CACHE ==========
+    public static function flushCache()
+    {
+        Cache::forget('bidan_dashboard_stats');
+        Cache::forget('bidan_dashboard_trend');
+    }
     private function safeTableCount(string $table): int
     {
         try {

@@ -117,11 +117,6 @@ trait ResolvesUserHealthContext
         $query = Balita::query();
 
         $query->when(
-            method_exists(Balita::class, 'pemeriksaan_terakhir'),
-            fn ($q) => $q->with('pemeriksaan_terakhir')
-        );
-
-        $query->when(
             method_exists(Balita::class, 'user'),
             fn ($q) => $q->with('user')
         );
@@ -130,24 +125,25 @@ trait ResolvesUserHealthContext
             if (Schema::hasColumn('balitas', 'user_id')) {
                 $q->where('user_id', $user->id);
             }
-
             if ($nik && Schema::hasColumn('balitas', 'nik')) {
                 $this->safeOrWhere($q, 'nik', $nik);
             }
-
             if ($nik && Schema::hasColumn('balitas', 'nik_ibu')) {
                 $this->safeOrWhere($q, 'nik_ibu', $nik);
             }
-
             if ($nik && Schema::hasColumn('balitas', 'nik_orangtua')) {
                 $this->safeOrWhere($q, 'nik_orangtua', $nik);
             }
         });
 
-        return $query
-            ->orderBy('nama_lengkap')
-            ->limit(20)
-            ->get();
+        $balitas = $query->orderBy('nama_lengkap')->limit(20)->get();
+
+        // FIX: Tarik data pemeriksaan terakhir secara manual
+        $balitas->each(function ($item) {
+            $item->setAttribute('pemeriksaan_terakhir', $this->verifiedPemeriksaanQuery('balita', $item->id)->latest()->first());
+        });
+
+        return $balitas;
     }
 
     protected function resolveRemajas(User $user, ?string $nik): Collection
@@ -159,11 +155,6 @@ trait ResolvesUserHealthContext
         $query = Remaja::query();
 
         $query->when(
-            method_exists(Remaja::class, 'pemeriksaan_terakhir'),
-            fn ($q) => $q->with('pemeriksaan_terakhir')
-        );
-
-        $query->when(
             method_exists(Remaja::class, 'user'),
             fn ($q) => $q->with('user')
         );
@@ -172,16 +163,19 @@ trait ResolvesUserHealthContext
             if (Schema::hasColumn('remajas', 'user_id')) {
                 $q->where('user_id', $user->id);
             }
-
             if ($nik && Schema::hasColumn('remajas', 'nik')) {
                 $this->safeOrWhere($q, 'nik', $nik);
             }
         });
 
-        return $query
-            ->orderBy('nama_lengkap')
-            ->limit(5)
-            ->get();
+        $remajas = $query->orderBy('nama_lengkap')->limit(5)->get();
+
+        // FIX: Tarik data pemeriksaan terakhir secara manual
+        $remajas->each(function ($item) {
+            $item->setAttribute('pemeriksaan_terakhir', $this->verifiedPemeriksaanQuery('remaja', $item->id)->latest()->first());
+        });
+
+        return $remajas;
     }
 
     protected function resolveLansias(User $user, ?string $nik): Collection
@@ -193,11 +187,6 @@ trait ResolvesUserHealthContext
         $query = Lansia::query();
 
         $query->when(
-            method_exists(Lansia::class, 'pemeriksaan_terakhir'),
-            fn ($q) => $q->with('pemeriksaan_terakhir')
-        );
-
-        $query->when(
             method_exists(Lansia::class, 'user'),
             fn ($q) => $q->with('user')
         );
@@ -206,16 +195,19 @@ trait ResolvesUserHealthContext
             if (Schema::hasColumn('lansias', 'user_id')) {
                 $q->where('user_id', $user->id);
             }
-
             if ($nik && Schema::hasColumn('lansias', 'nik')) {
                 $this->safeOrWhere($q, 'nik', $nik);
             }
         });
 
-        return $query
-            ->orderBy('nama_lengkap')
-            ->limit(5)
-            ->get();
+        $lansias = $query->orderBy('nama_lengkap')->limit(5)->get();
+
+        // FIX: Tarik data pemeriksaan terakhir secara manual
+        $lansias->each(function ($item) {
+            $item->setAttribute('pemeriksaan_terakhir', $this->verifiedPemeriksaanQuery('lansia', $item->id)->latest()->first());
+        });
+
+        return $lansias;
     }
 
     protected function safeOrWhere(Builder $query, string $column, string $value): void

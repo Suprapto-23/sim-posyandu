@@ -10,112 +10,109 @@
 
     Carbon::setLocale('id');
 
+    // Data Utama Imunisasi[cite: 12]
     $kategoriTheme = $imunisasi->kategori_theme;
     $badgeTheme = $imunisasi->badge_theme;
-
     $nama = $imunisasi->nama_penerima;
     $nik = $imunisasi->nik_penerima;
+    $initial = Str::upper(Str::substr(trim($nama), 0, 1)) ?: 'P';
 
+    $catLabel = strtolower($kategoriTheme['label'] ?? 'balita');
+    
+    // Tema Gradien Berdasarkan Kategori
+    $heroTheme = match ($catLabel) {
+        'remaja' => [
+            'gradient' => 'from-teal-500 via-cyan-500 to-blue-500',
+            'shadow' => 'shadow-[0_20px_40px_-12px_rgba(6,182,212,.35)]',
+            'text' => 'text-teal-500',
+            'badge' => 'bg-teal-100 text-teal-700',
+            'light' => 'bg-teal-50 border-teal-100',
+        ],
+        'lansia' => [
+            'gradient' => 'from-sky-500 via-blue-500 to-indigo-500',
+            'shadow' => 'shadow-[0_20px_40px_-12px_rgba(14,165,233,.35)]',
+            'text' => 'text-sky-500',
+            'badge' => 'bg-sky-100 text-sky-700',
+            'light' => 'bg-sky-50 border-sky-100',
+        ],
+        default => [
+            'gradient' => 'from-emerald-500 via-teal-500 to-teal-600',
+            'shadow' => 'shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)]',
+            'text' => 'text-emerald-500',
+            'badge' => 'bg-emerald-100 text-emerald-700',
+            'light' => 'bg-emerald-50 border-emerald-100',
+        ],
+    };
+
+    // Metrik Detail[cite: 12]
     $detailMetrics = [
-        [
-            'label' => 'Tanggal Imunisasi',
-            'value' => $imunisasi->tanggal_lengkap_label,
-            'icon' => 'fa-calendar-check',
-        ],
-        [
-            'label' => 'Waktu Catat',
-            'value' => $imunisasi->jam_label,
-            'icon' => 'fa-clock',
-        ],
-        [
-            'label' => 'Dosis',
-            'value' => $imunisasi->dosis_label,
-            'icon' => 'fa-prescription-bottle-medical',
-        ],
-        [
-            'label' => 'No. Batch',
-            'value' => $imunisasi->batch_label,
-            'icon' => 'fa-barcode',
-        ],
-        [
-            'label' => 'Tanggal Kedaluwarsa',
-            'value' => $imunisasi->expiry_label,
-            'icon' => 'fa-hourglass-end',
-        ],
-        [
-            'label' => 'Penyelenggara',
-            'value' => $imunisasi->penyelenggara_label,
-            'icon' => 'fa-hospital',
-        ],
+        ['label' => 'Tanggal Imunisasi', 'value' => $imunisasi->tanggal_lengkap_label],
+        ['label' => 'Waktu Pencatatan', 'value' => $imunisasi->jam_label],
+        ['label' => 'Dosis Ke-', 'value' => $imunisasi->dosis_label],
+        ['label' => 'No. Batch', 'value' => $imunisasi->batch_label],
+        ['label' => 'Tanggal Kedaluwarsa', 'value' => $imunisasi->expiry_label],
+        ['label' => 'Instansi Penyelenggara', 'value' => $imunisasi->penyelenggara_label],
     ];
 @endphp
 
 @push('styles')
 <style>
-    html {
-        scroll-behavior: auto !important;
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
     }
 
-    html.pc-modal-open,
-    body.pc-modal-open {
-        overflow: hidden !important;
+    .animate-pop-in {
+        animation: popIn .48s cubic-bezier(.16, 1, .3, 1) forwards;
+        opacity: 0;
     }
 
-    .pc-page {
-        background:
-            radial-gradient(circle at 8% 5%, rgba(16, 185, 129, .14), transparent 28%),
-            radial-gradient(circle at 95% 8%, rgba(14, 165, 233, .13), transparent 26%),
-            radial-gradient(circle at 50% 96%, rgba(251, 191, 36, .10), transparent 30%),
-            linear-gradient(135deg, #f3fff9 0%, #eef9ff 48%, #f8fafc 100%);
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    .pc-grid {
-        background-image:
-            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
-        background-size: 30px 30px;
+    .hero-grid {
+        background-image: radial-gradient(rgba(255,255,255,.45) 1px, transparent 1px);
+        background-size: 24px 24px;
     }
 
     .pc-glass {
         background: rgba(255, 255, 255, .86);
-        backdrop-filter: blur(9px);
-        -webkit-backdrop-filter: blur(9px);
-        box-shadow: 0 18px 45px rgba(15, 23, 42, .065);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .05);
+        border: 1px solid rgba(255, 255, 255, 0.9);
     }
 
-    .pc-soft-hover {
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 0;
+        border-bottom: 1px dashed rgba(203, 213, 225, 0.6);
+    }
+    .data-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .data-label {
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+    }
+    .data-value {
+        font-size: 0.875rem;
+        font-weight: 900;
+        color: #1e293b;
+        text-align: right;
     }
 
-    .pc-soft-hover:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 16px 36px rgba(15, 23, 42, .07);
-    }
-
-    .pc-balanced-grid {
-        align-items: stretch !important;
-    }
-
-    .pc-left-panel {
-        min-height: 100%;
-        height: 100%;
-    }
-
-    .pc-side-panel {
-        min-height: 100%;
-        height: 100%;
-        align-self: stretch;
-    }
-
-    .pc-side-fill {
-        flex: 1 1 auto;
-        min-height: 0;
-    }
-
-    .pc-note-card {
-        min-height: 132px;
-    }
-
+    /* Modal Styling Nexus Premium */
     .pc-modal-backdrop {
         position: fixed !important;
         inset: 0 !important;
@@ -123,357 +120,225 @@
         display: none;
         align-items: center;
         justify-content: center;
-        width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        margin: 0 !important;
-        padding: 1rem;
         background: rgba(15, 23, 42, .58);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-    }
-
-    .pc-modal-backdrop.is-open {
-        display: flex !important;
-    }
-
-    .pc-modal-card {
-        width: min(100%, 470px);
-        transform: translateY(12px) scale(.97);
+        padding: 1rem;
         opacity: 0;
-        border-radius: 1.75rem;
-        border: 1px solid rgba(255, 255, 255, .78);
-        background:
-            radial-gradient(circle at 0% 0%, rgba(16, 185, 129, .14), transparent 34%),
-            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
-            rgba(255, 255, 255, .95);
-        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
-        transition: transform .18s ease, opacity .18s ease;
+        transition: opacity 0.3s ease;
     }
-
+    .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
+    
+    .pc-modal-card {
+        width: 100%;
+        max-width: 400px;
+        background: white;
+        border-radius: 2rem;
+        padding: 2.5rem 2rem;
+        transform: scale(0.95) translateY(10px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
     .pc-modal-backdrop.is-open .pc-modal-card {
-        transform: translateY(0) scale(1);
+        transform: scale(1) translateY(0);
         opacity: 1;
-    }
-
-    @media (max-width: 1279px) {
-        .pc-balanced-grid {
-            align-items: start !important;
-        }
-
-        .pc-left-panel,
-        .pc-side-panel {
-            min-height: auto;
-            height: auto;
-        }
-
-        .pc-side-fill {
-            flex: none;
-        }
     }
 </style>
 @endpush
 
 @section('content')
-<div class="pc-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
-    <div class="pointer-events-none absolute inset-0 pc-grid opacity-70"></div>
+<div class="max-w-5xl mx-auto animate-pop-in pb-12 px-4 sm:px-6 lg:px-8 mt-6">
 
-    <div class="relative z-10 mx-auto max-w-[1400px] space-y-5">
+    {{-- 1. HERO SECTION (Identitas Penerima)[cite: 12] --}}
+    <section class="bg-gradient-to-br {{ $heroTheme['gradient'] }} rounded-[2.5rem] p-8 md:p-12 mb-8 relative overflow-hidden {{ $heroTheme['shadow'] }} border border-white/20">
+        <div class="hero-grid absolute inset-0 opacity-20 pointer-events-none"></div>
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
+        <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
 
-        <section class="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-br from-emerald-50/95 via-cyan-50/90 to-white/95 pc-glass">
-            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl"></div>
-            <div class="absolute -bottom-24 left-24 h-72 w-72 rounded-full bg-sky-300/16 blur-3xl"></div>
-
-            <div class="relative grid gap-6 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.28fr)_350px] xl:items-stretch">
-                <div class="flex min-w-0 flex-col justify-between gap-6">
-                    <div>
-                        <div class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/75 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
-                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                            Detail Log Imunisasi
-                        </div>
-
-                        <h1 class="mt-4 max-w-4xl text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-[1.85rem] lg:text-[2rem]">
-                            Detail imunisasi yang dicatat oleh Bidan.
-                        </h1>
-
-                        <p class="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-                            Informasi ini bersifat read-only untuk Kader. Data bersumber dari pencatatan Bidan supaya alur sistem tetap rapi dan tidak jadi ajang rebutan tombol.
-                        </p>
-                    </div>
-
-                    <div class="flex flex-wrap gap-3">
-                        <a href="{{ route('kader.imunisasi.index') }}"
-                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-2.5 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
-                            <i class="fa-solid fa-arrow-left"></i>
-                            Kembali
-                        </a>
-
-                        <a href="{{ route('kader.dashboard') }}"
-                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
-                            <i class="fa-solid fa-chart-line"></i>
-                            Dashboard
-                        </a>
-                    </div>
-                </div>
-
-                <div class="rounded-[1.55rem] border p-5 {{ $badgeTheme['soft'] }}">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Status Arsip</p>
-                            <h2 class="mt-2 text-xl font-black text-slate-950">Tercatat</h2>
-                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                Data imunisasi tersimpan sebagai log pemantauan Kader.
-                            </p>
-                        </div>
-
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl {{ $badgeTheme['solid'] }}">
-                            <i class="fa-solid {{ $badgeTheme['icon'] }}"></i>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                        <p class="text-xs font-black uppercase tracking-[.14em] text-slate-500">Jenis Program</p>
-                        <p class="mt-1 text-sm font-black text-slate-950">{{ $badgeTheme['label'] }}</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="pc-balanced-grid grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(330px,.55fr)]">
-            <div class="pc-left-panel flex h-full flex-col gap-5">
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Identitas Penerima</p>
-                            <h2 class="mt-1 text-xl font-black text-slate-950">{{ $nama }}</h2>
-                            <p class="mt-1 text-sm font-bold text-slate-500">NIK {{ $nik }}</p>
-                        </div>
-
-                        <span class="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-black {{ $kategoriTheme['badge'] }}">
-                            <i class="fa-solid {{ $kategoriTheme['icon'] }}"></i>
-                            {{ $kategoriTheme['label'] }}
-                        </span>
-                    </div>
-
-                    <div class="rounded-[1.45rem] border {{ $badgeTheme['soft'] }} p-5">
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl {{ $badgeTheme['solid'] }}">
-                                    <i class="fa-solid {{ $badgeTheme['icon'] }} text-xl"></i>
-                                </div>
-
-                                <div>
-                                    <p class="text-[11px] font-black uppercase tracking-[.16em] text-slate-500">Vaksin</p>
-                                    <h3 class="mt-1 text-2xl font-black text-slate-950">{{ $imunisasi->vaksin_label }}</h3>
-                                    <p class="mt-1 text-sm font-bold text-slate-500">{{ $imunisasi->jenis_label }}</p>
-                                </div>
-                            </div>
-
-                            <span class="inline-flex w-fit items-center justify-center rounded-2xl border border-white/80 bg-white/85 px-4 py-3 text-sm font-black text-slate-700">
-                                {{ $imunisasi->dosis_label }}
-                            </span>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-sky-700">Detail Pelaksanaan</p>
-                        <h2 class="mt-1 text-xl font-black text-slate-950">Informasi imunisasi</h2>
-                    </div>
-
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach($detailMetrics as $metric)
-                            <div class="pc-soft-hover rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[.14em] text-slate-400">{{ $metric['label'] }}</p>
-                                        <p class="mt-2 text-sm font-black text-slate-950">{{ $metric['value'] }}</p>
-                                    </div>
-
-                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                                        <i class="fa-solid {{ $metric['icon'] }}"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
-
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="grid items-stretch gap-4 lg:grid-cols-2">
-                        <div class="pc-note-card rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Catatan</p>
-                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                {{ $imunisasi->catatan_label }}
-                            </p>
-                        </div>
-
-                        <div class="pc-note-card rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Keterangan Sistem</p>
-                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                Data ini hanya dapat diubah melalui akun Bidan. Kader melihat log untuk pemantauan kegiatan.
-                            </p>
-                        </div>
-                    </div>
-                </section>
+        <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+            
+            {{-- Avatar --}}
+            <div class="w-28 h-28 shrink-0 rounded-[2rem] bg-white border-4 border-white/50 {{ $heroTheme['text'] }} flex items-center justify-center font-black text-5xl shadow-xl">
+                {{ $initial }}
             </div>
 
-            <aside class="pc-side-panel flex h-full flex-col gap-5">
-                <section class="pc-glass pc-side-fill rounded-[1.75rem] border border-white/80 p-5">
-                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Otoritas Medis</p>
-                    <h2 class="mt-1 text-xl font-black text-slate-950">{{ $imunisasi->nama_petugas }}</h2>
-                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                        Petugas yang mencatat atau bertanggung jawab pada data imunisasi ini.
-                    </p>
+            {{-- Info Utama --}}
+            <div class="flex-1">
+                <div class="inline-flex items-center justify-center md:justify-start gap-2 mb-3">
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                        <i class="fas {{ $kategoriTheme['icon'] }}"></i> {{ $kategoriTheme['label'] }}
+                    </span>
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm uppercase tracking-widest">
+                        <i class="fas fa-syringe"></i> Data Arsip
+                    </span>
+                </div>
 
-                    <div class="mt-5 space-y-3">
-                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm font-black text-slate-600">Petugas</span>
-                                <span class="line-clamp-1 text-right text-sm font-black text-slate-950">{{ $imunisasi->nama_petugas }}</span>
-                            </div>
-                        </div>
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
+                    {{ $nama }}
+                </h1>
+                
+                <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-white/90 text-sm font-semibold">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-id-card opacity-70"></i> NIK: {{ $nik }}</span>
+                </div>
+            </div>
 
-                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm font-black text-slate-600">Tanggal</span>
-                                <span class="text-right text-sm font-black text-slate-950">{{ $imunisasi->tanggal_label }}</span>
-                            </div>
-                        </div>
+            {{-- Action Buttons --}}
+            <div class="flex flex-col items-center md:items-end gap-3 shrink-0 w-full md:w-auto mt-4 md:mt-0">
+                <span class="bg-slate-900/40 backdrop-blur-md text-white text-[10px] uppercase tracking-widest px-4 py-2 rounded-2xl shadow-lg border border-white/20 flex items-center gap-2 mb-2">
+                    <i class="fas fa-lock text-sm"></i> Mode Baca Saja
+                </span>
 
-                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm font-black text-slate-600">Sumber Data</span>
-                                <span class="text-right text-sm font-black text-slate-950">Bidan</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <div class="flex gap-2 w-full justify-center md:justify-end">
+                    <a href="{{ route('kader.imunisasi.index') }}" class="w-full md:w-auto bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-[11px] uppercase tracking-widest font-bold px-6 py-3 rounded-xl transition-all shadow-sm text-center">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar
+                    </a>
+                </div>
+            </div>
 
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Aksi Data</p>
+        </div>
+    </section>
 
-                    <div class="mt-4 space-y-3">
-                        <div class="rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4">
-                            <div class="flex gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600">
-                                    <i class="fa-solid fa-lock"></i>
-                                </div>
-
-                                <div>
-                                    <p class="text-sm font-black text-emerald-800">Mode baca saja</p>
-                                    <p class="mt-1 text-xs font-semibold leading-5 text-slate-600">
-                                        Kader tidak dapat mengubah log imunisasi. Jadi tidak ada tombol edit yang tiba-tiba bikin sidangmu jadi debat kusir.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <a href="{{ route('kader.imunisasi.index') }}"
-                           class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50">
-                            <i class="fa-solid fa-list"></i>
-                            Kembali ke Daftar
-                        </a>
-                    </div>
-                </section>
-            </aside>
-        </section>
-    </div>
-
+    {{-- System Alerts --}}
     @if(session('success') || session('error'))
-        <div id="pcInfoModal" class="pc-modal-backdrop" aria-hidden="true">
-            <div class="pc-modal-card p-6">
-                <div class="flex gap-4">
-                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] {{ session('error') ? 'bg-gradient-to-br from-rose-500 to-orange-500 shadow-rose-500/20' : 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-500/20' }} text-white shadow-lg">
-                        <i class="fa-solid {{ session('error') ? 'fa-triangle-exclamation' : 'fa-circle-check' }} text-xl"></i>
+        <div class="mb-8">
+            @if(session('success'))
+                <div class="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden">
+                    <div class="w-12 h-12 rounded-2xl bg-white text-emerald-500 flex items-center justify-center text-xl shrink-0 shadow-sm border border-emerald-100">
+                        <i class="fas fa-check-circle"></i>
                     </div>
+                    <div>
+                        <h4 class="text-sm font-black text-emerald-800">Berhasil!</h4>
+                        <p class="text-xs font-semibold text-emerald-600 mt-0.5">{{ session('success') }}</p>
+                    </div>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="bg-rose-50 border border-rose-200 rounded-3xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden">
+                    <div class="w-12 h-12 rounded-2xl bg-white text-rose-500 flex items-center justify-center text-xl shrink-0 shadow-sm border border-rose-100">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-rose-800">Peringatan!</h4>
+                        <p class="text-xs font-semibold text-rose-600 mt-0.5">{{ session('error') }}</p>
+                    </div>
+                </div>
+            @endif
+        </div>
+    @endif
 
-                    <div class="min-w-0 flex-1">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] {{ session('error') ? 'text-rose-700' : 'text-emerald-700' }}">
-                            Informasi
-                        </p>
-                        <h3 class="mt-1 text-lg font-black text-slate-950">
-                            {{ session('error') ? 'Ada kendala' : 'Berhasil' }}
-                        </h3>
-                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                            {{ session('error') ?: session('success') }}
-                        </p>
+    {{-- 2. GRID CONTENT[cite: 12] --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        {{-- KOLOM KIRI: Informasi Vaksin & Detail Imunisasi --}}
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            {{-- Card Vaksin Utama --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-2xl {{ $badgeTheme['soft'] ?? 'bg-indigo-50 border-indigo-100' }} {{ $badgeTheme['text'] ?? 'text-indigo-600' }} flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <i class="fas {{ $badgeTheme['icon'] ?? 'fa-syringe' }}"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Informasi Vaksin</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Vaksin yang diberikan</p>
                     </div>
                 </div>
 
-                <div class="mt-6 flex justify-end">
-                    <button type="button"
-                            id="pcCloseInfo"
-                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/10">
-                        <i class="fa-solid fa-check"></i>
-                        Mengerti
-                    </button>
+                <div class="bg-white/50 rounded-2xl p-5 border border-slate-100 flex-1 flex flex-col justify-center text-center sm:text-left">
+                    <p class="text-[11px] font-black uppercase tracking-[.16em] text-slate-500 mb-1">Nama Vaksin</p>
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">{{ $imunisasi->vaksin_label }}</h3>
+                    <p class="text-sm font-bold text-slate-500">{{ $imunisasi->jenis_label }}</p>
+                </div>
+            </div>
+
+            {{-- Card Detail Pelaksanaan --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col flex-1">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-500 flex items-center justify-center text-xl shrink-0 shadow-inner border border-slate-100">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Detail Pelaksanaan</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Waktu & Tempat</p>
+                    </div>
+                </div>
+
+                <div class="bg-white/50 rounded-2xl p-4 border border-slate-100 flex-1 flex flex-col justify-center">
+                    @foreach($detailMetrics as $metric)
+                        <div class="data-row">
+                            <span class="data-label">{{ $metric['label'] }}</span>
+                            <span class="data-value">{{ $metric['value'] }}</span>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         </div>
-    @endif
+
+        {{-- KOLOM KANAN: Otoritas Medis & Catatan --}}
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            {{-- Card Otoritas Bidan (Highlight Card) --}}
+            <div class="rounded-[2rem] p-6 sm:p-8 border {{ $heroTheme['light'] }} shadow-sm relative overflow-hidden flex-none">
+                {{-- Dekorasi Latar --}}
+                <i class="fas fa-user-nurse absolute -right-6 -top-6 text-9xl opacity-5"></i>
+                
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-white {{ $heroTheme['text'] }} flex items-center justify-center text-lg shadow-sm border {{ $heroTheme['light'] }}">
+                            <i class="fas fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-[11px] font-black {{ $heroTheme['text'] }} uppercase tracking-widest">Otoritas Medis</h4>
+                            <p class="text-sm font-black text-slate-800 leading-tight">Penanggung Jawab</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/70 rounded-2xl p-5 border border-white/50 space-y-4">
+                        <div class="flex justify-between items-center border-b border-white pb-3">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nama Petugas</span>
+                            <span class="text-xs font-black text-slate-800">{{ $imunisasi->nama_petugas }}</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-white pb-3">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sumber Data</span>
+                            <span class="text-xs font-black text-slate-800">Akun Bidan</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Data</span>
+                            <span class="text-[10px] font-bold text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm"><i class="fa-solid fa-lock mr-1"></i> Terkunci (Read-Only)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Card Catatan & Keterangan --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col flex-1">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0 shadow-inner border border-amber-100">
+                        <i class="fas fa-comment-medical"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Catatan Medis</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Keterangan Tambahan</p>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col gap-4">
+                    <div class="flex-1 flex flex-col">
+                        <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Catatan Pelaksanaan Imunisasi</span>
+                        <div class="bg-white/50 rounded-2xl p-4 border border-slate-100 text-xs font-semibold text-slate-700 leading-relaxed flex-1">
+                            {{ $imunisasi->catatan_label ?: '-' }}
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-[11px] font-semibold text-slate-500 leading-relaxed text-center">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Kader hanya dapat melihat data pemantauan imunisasi. Edit atau hapus data harus melalui wewenang akun Bidan.
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
 </div>
 @endsection
-
-@push('scripts')
-<script>
-(function () {
-    'use strict';
-
-    let modal = document.querySelector('#pcInfoModal');
-
-    if (modal && modal.parentElement !== document.body) {
-        document.body.appendChild(modal);
-    }
-
-    const closeBtn = document.querySelector('#pcCloseInfo');
-
-    function lockBody() {
-        document.documentElement.classList.add('pc-modal-open');
-        document.body.classList.add('pc-modal-open');
-    }
-
-    function unlockBody() {
-        document.documentElement.classList.remove('pc-modal-open');
-        document.body.classList.remove('pc-modal-open');
-    }
-
-    function openInfo() {
-        if (!modal) return;
-
-        lockBody();
-        modal.classList.add('is-open');
-        modal.setAttribute('aria-hidden', 'false');
-    }
-
-    function closeInfo() {
-        if (!modal) return;
-
-        modal.classList.remove('is-open');
-        modal.setAttribute('aria-hidden', 'true');
-        unlockBody();
-    }
-
-    if (modal) {
-        requestAnimationFrame(openInfo);
-
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) {
-                closeInfo();
-            }
-        });
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeInfo);
-    }
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            closeInfo();
-        }
-    });
-})();
-</script>
-@endpush

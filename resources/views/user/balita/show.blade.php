@@ -1,11 +1,12 @@
 @extends('layouts.user')
 
-@section('title', 'Detail Balita')
+@section('title', 'Detail Kesehatan Balita')
 @section('page_title', 'Detail Balita')
 
 @php
     use Carbon\Carbon;
     use Illuminate\Support\Facades\Route;
+    use Illuminate\Pagination\LengthAwarePaginator;
 
     Carbon::setLocale('id');
 
@@ -17,7 +18,6 @@
                 return route($name, $params);
             }
         }
-
         return '#';
     };
 
@@ -33,7 +33,7 @@
     $growthAnalysis = $growthAnalysis ?? [
         'label' => 'Belum Ada Data',
         'message' => 'Data pengukuran balita belum tersedia.',
-        'suggestion' => 'Lakukan pengukuran BB, TB, lingkar kepala, dan LILA di Posyandu.',
+        'suggestion' => 'Lakukan pengukuran rutin di Posyandu.',
         'tone' => 'slate',
         'icon' => 'fa-circle-info',
     ];
@@ -51,485 +51,410 @@
         : '-';
 
     $analysisTone = match ($growthAnalysis['tone'] ?? 'slate') {
-        'emerald' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-        'amber' => 'border-amber-200 bg-amber-50 text-amber-700',
-        'rose' => 'border-rose-200 bg-rose-50 text-rose-700',
-        'sky' => 'border-sky-200 bg-sky-50 text-sky-700',
-        default => 'border-slate-200 bg-slate-50 text-slate-600',
+        'emerald' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
+        'amber'   => 'border-amber-200 bg-amber-50 text-amber-800',
+        'rose'    => 'border-rose-200 bg-rose-50 text-rose-800',
+        'sky'     => 'border-sky-200 bg-sky-50 text-sky-800',
+        default   => 'border-slate-200 bg-slate-50 text-slate-800',
     };
 
     $metricTone = function ($tone) {
         return match ($tone) {
-            'emerald' => 'border-emerald-100 bg-emerald-50/78 text-emerald-800',
-            'sky' => 'border-sky-100 bg-sky-50/78 text-sky-800',
-            'amber' => 'border-amber-100 bg-amber-50/78 text-amber-800',
-            'rose' => 'border-rose-100 bg-rose-50/78 text-rose-800',
-            default => 'border-slate-100 bg-white/76 text-slate-800',
+            'emerald' => 'bg-emerald-50 text-emerald-600',
+            'sky'     => 'bg-sky-50 text-sky-600',
+            'amber'   => 'bg-amber-50 text-amber-600',
+            'rose'    => 'bg-rose-50 text-rose-600',
+            default   => 'bg-slate-50 text-slate-600',
         };
     };
+
+    // LOGIKA PAGINATION MANUAL DI VIEW (Pemeriksaan & Imunisasi)
+    $perPage = 4; 
+
+    // Pagination Riwayat Pemeriksaan
+    $currentPageRiwayat = LengthAwarePaginator::resolveCurrentPage('pemeriksaan');
+    $currentItemsRiwayat = $riwayatCards->slice(($currentPageRiwayat - 1) * $perPage, $perPage)->all();
+    $paginatedRiwayat = new LengthAwarePaginator(
+        $currentItemsRiwayat, $riwayatCards->count(), $perPage, $currentPageRiwayat, 
+        ['path' => request()->url(), 'query' => array_merge(request()->query(), ['pemeriksaan' => $currentPageRiwayat]), 'pageName' => 'pemeriksaan']
+    );
+
+    // Pagination Riwayat Imunisasi
+    $currentPageImun = LengthAwarePaginator::resolveCurrentPage('imunisasi');
+    $currentItemsImun = $imunisasiCards->slice(($currentPageImun - 1) * $perPage, $perPage)->all();
+    $paginatedImun = new LengthAwarePaginator(
+        $currentItemsImun, $imunisasiCards->count(), $perPage, $currentPageImun, 
+        ['path' => request()->url(), 'query' => array_merge(request()->query(), ['imunisasi' => $currentPageImun]), 'pageName' => 'imunisasi']
+    );
 @endphp
 
 @push('styles')
 <style>
-    .balita-page {
-        background:
-            radial-gradient(circle at 8% 8%, rgba(244, 63, 94, .11), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(16, 185, 129, .13), transparent 26%),
-            radial-gradient(circle at 78% 88%, rgba(14, 165, 233, .10), transparent 28%),
-            linear-gradient(135deg, #f8fafc 0%, #fff1f2 38%, #ecfdf5 100%);
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
     }
 
-    .bt-enter {
+    .animate-pop-in {
+        animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards;
         opacity: 0;
-        animation: btEnter .36s cubic-bezier(.16, 1, .3, 1) forwards;
     }
 
-    .bt-enter-2 {
-        opacity: 0;
-        animation: btEnter .36s cubic-bezier(.16, 1, .3, 1) .07s forwards;
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    @keyframes btEnter {
-        from {
-            opacity: 0;
-            transform: translateY(12px) scale(.99);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
+    .widget-card {
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 1.5rem; 
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+        transition: all 0.3s ease;
     }
 
-    .bt-glass {
-        border: 1px solid rgba(255, 255, 255, .76);
-        background: rgba(255, 255, 255, .70);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 16px 46px rgba(15, 23, 42, .055);
+    .btn-pill {
+        border-radius: 9999px;
+        transition: all 0.2s ease;
+        cursor: pointer;
     }
+    .btn-pill:active { transform: scale(0.96); }
 
-    .bt-card {
-        border: 1px solid rgba(226, 232, 240, .78);
-        background: rgba(255, 255, 255, .74);
-        backdrop-filter: blur(16px);
-        box-shadow: 0 10px 28px rgba(15, 23, 42, .04);
-    }
-
-    .bt-scroll::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .bt-scroll::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, .55);
-        border-radius: 999px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .bt-enter,
-        .bt-enter-2 {
-            animation: none;
-            opacity: 1;
-        }
-    }
+    .slim-scroll::-webkit-scrollbar { width: 6px; }
+    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(244, 63, 94, 0.2); border-radius: 10px; }
+    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(244, 63, 94, 0.5); }
 </style>
 @endpush
 
 @section('content')
-<div class="balita-page -mx-4 -my-4 min-h-[calc(100vh-96px)] px-4 py-5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-    <div class="mx-auto max-w-7xl space-y-5">
+<div class="max-w-[1280px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 lg:px-8 mt-6 space-y-5">
 
-        {{-- HERO --}}
-        <section class="bt-enter grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div class="bt-glass relative overflow-hidden rounded-[30px] p-5 sm:p-6">
-                <div class="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-rose-300/18 blur-3xl"></div>
-                <div class="pointer-events-none absolute -bottom-24 left-8 h-56 w-56 rounded-full bg-emerald-300/16 blur-3xl"></div>
-
-                <div class="relative flex flex-col gap-5 sm:flex-row sm:items-center">
-                    <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-[26px] bg-gradient-to-br from-rose-400 to-emerald-500 text-3xl font-black text-white shadow-[0_18px_42px_rgba(244,63,94,.18)]">
-                        {{ $initial }}
-                    </div>
-
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap gap-2">
-                            <span class="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-rose-700">
-                                Balita
-                            </span>
-
-                            <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-emerald-700">
-                                {{ $genderLabel }}
-                            </span>
-
-                            <span class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-sky-700">
-                                {{ $usia['kategori'] ?? 'Balita' }}
-                            </span>
-                        </div>
-
-                        <h1 class="mt-3 line-clamp-2 text-3xl font-black tracking-tight text-slate-800 sm:text-4xl">
-                            {{ $dataBalita->nama_lengkap ?? '-' }}
-                        </h1>
-
-                        <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                            NIK {{ $dataBalita->nik ?? '-' }} •
-                            {{ $formatDate($dataBalita->tanggal_lahir ?? null) }}
-                        </p>
-
-                        <div class="mt-4 flex flex-wrap gap-3">
-                            <a href="{{ $backRoute }}"
-                               class="smooth-route inline-flex h-10 items-center justify-center rounded-2xl border border-rose-100 bg-white/82 px-4 text-xs font-black uppercase tracking-[0.12em] text-rose-700 transition hover:bg-rose-50">
-                                Kembali
-                            </a>
-
-                            <a href="{{ $dashboardRoute }}"
-                               class="smooth-route inline-flex h-10 items-center justify-center rounded-2xl bg-emerald-600 px-4 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_12px_26px_rgba(16,185,129,.20)] transition hover:bg-emerald-700">
-                                Dashboard
-                            </a>
-                        </div>
-                    </div>
-                </div>
+    {{-- 1. HERO SECTION (PROFIL COMPACT) --}}
+    <section class="bg-gradient-to-br from-rose-500 via-rose-400 to-pink-500 rounded-[2rem] p-6 md:p-8 relative overflow-hidden shadow-[0_15px_30px_-10px_rgba(244,63,94,.3)] border border-white/20 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-20 pointer-events-none"></div>
+        
+        <div class="relative z-10 flex items-center gap-5">
+            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1rem] bg-white text-2xl font-black text-rose-500 shadow-md border-2 border-white/40">
+                {{ $initial }}
             </div>
-
-            {{-- GROWTH ANALYSIS --}}
-            <div class="bt-glass rounded-[30px] p-5">
-                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-rose-700">
-                    Analisis Pertumbuhan
-                </p>
-
-                <div class="mt-4 rounded-[24px] border p-4 {{ $analysisTone }}">
-                    <div class="flex items-start gap-4">
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[17px] bg-white/75 text-lg shadow-sm">
-                            <i class="fas {{ $growthAnalysis['icon'] ?? 'fa-circle-info' }}"></i>
-                        </div>
-
-                        <div>
-                            <h2 class="text-xl font-black">
-                                {{ $growthAnalysis['label'] ?? 'Belum Ada Data' }}
-                            </h2>
-
-                            <p class="mt-2 text-sm font-bold leading-6 opacity-80">
-                                {{ $growthAnalysis['message'] ?? '-' }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <p class="mt-4 text-sm font-semibold leading-6 text-slate-600">
-                    {{ $growthAnalysis['suggestion'] ?? 'Lakukan pemantauan pertumbuhan secara rutin di Posyandu.' }}
-                </p>
-            </div>
-        </section>
-
-        {{-- PRIMARY METRICS --}}
-        <section class="bt-enter-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            @forelse($metrics as $metric)
-                <div class="rounded-[24px] border p-5 shadow-[0_10px_28px_rgba(15,23,42,.04)] backdrop-blur-xl {{ $metricTone($metric['tone'] ?? 'slate') }}">
-                    <p class="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
-                        {{ $metric['label'] ?? '-' }}
-                    </p>
-
-                    <p class="mt-3 text-2xl font-black leading-tight">
-                        {{ $metric['value'] ?? '-' }}
-                    </p>
-
-                    <p class="mt-1 text-sm font-bold opacity-70">
-                        {{ $metric['caption'] ?? '-' }}
-                    </p>
-                </div>
-            @empty
-                <div class="rounded-[24px] border border-slate-100 bg-white/76 p-5 text-slate-700 shadow-sm">
-                    <p class="text-sm font-black">Data ringkasan belum tersedia.</p>
-                </div>
-            @endforelse
-        </section>
-
-        {{-- SECONDARY GROWTH METRICS --}}
-        <section class="bt-enter-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
-            @foreach($growthMetrics as $metric)
-                <div class="bt-card rounded-[22px] p-4 {{ $metricTone($metric['tone'] ?? 'slate') }}">
-                    <p class="text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
-                        {{ $metric['label'] ?? '-' }}
-                    </p>
-
-                    <p class="mt-2 truncate text-xl font-black leading-tight">
-                        {{ $metric['value'] ?? '-' }}
-                    </p>
-
-                    <p class="mt-1 truncate text-xs font-bold opacity-70">
-                        {{ $metric['caption'] ?? '-' }}
-                    </p>
-                </div>
-            @endforeach
-        </section>
-
-        <section class="bt-enter-2 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-
-            <div class="space-y-5">
-
-                {{-- TREND --}}
-                <div class="bt-glass overflow-hidden rounded-[30px]">
-                    <div class="border-b border-rose-100/80 bg-gradient-to-r from-white/86 via-rose-50/72 to-emerald-50/62 px-5 py-4">
-                        <p class="text-[10px] font-black uppercase tracking-[0.20em] text-rose-700">
-                            Tren Pertumbuhan
-                        </p>
-                        <h2 class="mt-1 text-xl font-black text-slate-800">
-                            Grafik Ringkas Berat Badan
-                        </h2>
-                    </div>
-
-                    <div class="p-5">
-                        @if($trend->isNotEmpty())
-                            <div class="flex h-48 items-end gap-3 rounded-[26px] border border-rose-100 bg-gradient-to-br from-white/82 via-rose-50/48 to-emerald-50/45 p-4">
-                                @foreach($trend as $point)
-                                    <div class="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
-                                        <div class="flex h-32 w-full items-end justify-center">
-                                            <div class="w-full max-w-[34px] rounded-t-2xl bg-gradient-to-t from-rose-500 to-emerald-400 shadow-[0_10px_24px_rgba(244,63,94,.16)]"
-                                                 style="height: {{ $point['height'] ?? 14 }}%;"></div>
-                                        </div>
-
-                                        <p class="truncate text-[10px] font-black text-slate-500">
-                                            {{ $point['label'] ?? '-' }}
-                                        </p>
-
-                                        <p class="text-[10px] font-black text-rose-700">
-                                            {{ filled($point['berat'] ?? null) ? $point['berat'] . ' kg' : '-' }}
-                                        </p>
-
-                                        <p class="text-[9px] font-black text-slate-400">
-                                            {{ $point['tinggi'] ?? '-' }}
-                                        </p>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="rounded-[26px] border border-dashed border-rose-300 bg-rose-50/55 p-8 text-center">
-                                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-xl text-rose-500 shadow-sm">
-                                    <i class="fas fa-chart-column"></i>
-                                </div>
-
-                                <h3 class="mt-4 text-base font-black text-slate-800">
-                                    Tren Belum Tersedia
-                                </h3>
-
-                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
-                                    Grafik akan muncul setelah ada riwayat pengukuran berat badan.
-                                </p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- PROFILE --}}
-                <div class="bt-glass overflow-hidden rounded-[30px]">
-                    <div class="border-b border-emerald-100/80 bg-gradient-to-r from-white/86 via-emerald-50/72 to-rose-50/62 px-5 py-4">
-                        <p class="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-700">
-                            Profil Balita
-                        </p>
-                        <h2 class="mt-1 text-xl font-black text-slate-800">
-                            Identitas dan Data Dasar
-                        </h2>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
-                        <div class="bt-card rounded-[22px] p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Nama</p>
-                            <p class="mt-2 text-sm font-black text-slate-800">{{ $dataBalita->nama_lengkap ?? '-' }}</p>
-                        </div>
-
-                        <div class="bt-card rounded-[22px] p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">NIK</p>
-                            <p class="mt-2 text-sm font-black text-slate-800">{{ $dataBalita->nik ?? '-' }}</p>
-                        </div>
-
-                        <div class="bt-card rounded-[22px] p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Tempat Lahir</p>
-                            <p class="mt-2 text-sm font-black text-slate-800">{{ $dataBalita->tempat_lahir ?? '-' }}</p>
-                        </div>
-
-                        <div class="bt-card rounded-[22px] p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Tanggal Lahir</p>
-                            <p class="mt-2 text-sm font-black text-slate-800">{{ $formatDate($dataBalita->tanggal_lahir ?? null) }}</p>
-                        </div>
-
-                        <div class="bt-card rounded-[22px] p-4 sm:col-span-2">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Alamat</p>
-                            <p class="mt-2 text-sm font-black leading-6 text-slate-800">{{ $dataBalita->alamat ?? '-' }}</p>
-                        </div>
-
-                        <div class="bt-card rounded-[22px] p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Nama Orang Tua</p>
-                            <p class="mt-2 text-sm font-black text-slate-800">{{ $dataBalita->nama_orangtua ?? $dataBalita->nama_ibu ?? '-' }}</p>
-                        </div>
-
-                        <div class="bt-card rounded-[22px] p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Usia</p>
-                            <p class="mt-2 text-sm font-black text-slate-800">{{ $usia['label'] ?? '-' }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- RIWAYAT --}}
-            <aside class="bt-glass flex max-h-[820px] min-h-[520px] flex-col overflow-hidden rounded-[30px]">
-                <div class="border-b border-rose-100/80 bg-gradient-to-r from-white/86 via-rose-50/72 to-emerald-50/62 px-5 py-4">
-                    <p class="text-[10px] font-black uppercase tracking-[0.20em] text-rose-700">
-                        Riwayat Klinis
-                    </p>
-                    <h2 class="mt-1 text-xl font-black text-slate-800">
-                        Pengukuran Balita
-                    </h2>
-                </div>
-
-                <div class="bt-scroll flex-1 space-y-3 overflow-y-auto p-4">
-                    @forelse($riwayatCards as $item)
-                        <article class="rounded-[24px] border border-rose-100 bg-white/72 p-4 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-black text-slate-800">
-                                        {{ $item['tanggal'] ?? '-' }}
-                                    </p>
-
-                                    <p class="mt-1 text-xs font-bold text-slate-500">
-                                        Usia saat periksa {{ $item['usia'] ?? '-' }}
-                                    </p>
-                                </div>
-
-                                <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] text-emerald-700">
-                                    {{ $item['status'] ?? 'Tervalidasi' }}
-                                </span>
-                            </div>
-
-                            <div class="mt-4 grid grid-cols-3 gap-2">
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">BB</p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $item['berat'] ?? '-' }}</p>
-                                </div>
-
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">TB</p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $item['tinggi'] ?? '-' }}</p>
-                                </div>
-
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">LK</p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $item['lingkar_kepala'] ?? '-' }}</p>
-                                </div>
-                            </div>
-
-                            <div class="mt-2 grid grid-cols-3 gap-2">
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">LILA</p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $item['lila'] ?? '-' }}</p>
-                                </div>
-
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">BB/U</p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $item['status_bbu'] ?? '-' }}</p>
-                                </div>
-
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">BB/TB</p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">{{ $item['status_bbtb'] ?? '-' }}</p>
-                                </div>
-                            </div>
-
-                            <div class="mt-3 rounded-[18px] border border-rose-100 bg-rose-50/55 px-3 py-3 text-sm font-semibold leading-6 text-rose-700">
-                                <span class="font-black">Status Gizi:</span>
-                                {{ $item['status_gizi'] ?? 'Belum Dinilai' }}
-                            </div>
-
-                            <p class="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-slate-500">
-                                {{ $item['keluhan'] ?? 'Tidak ada catatan keluhan.' }}
-                            </p>
-                        </article>
-                    @empty
-                        <div class="flex h-full min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-dashed border-rose-300 bg-rose-50/55 p-8 text-center">
-                            <div class="flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-xl text-rose-500 shadow-sm">
-                                <i class="fas fa-notes-medical"></i>
-                            </div>
-
-                            <h3 class="mt-4 text-base font-black text-slate-800">
-                                Riwayat Masih Kosong
-                            </h3>
-
-                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-500">
-                                Riwayat pengukuran akan muncul setelah data divalidasi oleh Bidan.
-                            </p>
-                        </div>
-                    @endforelse
-                </div>
-            </aside>
-        </section>
-
-        {{-- IMUNISASI --}}
-        <section class="bt-enter-2 bt-glass overflow-hidden rounded-[30px]">
-            <div class="border-b border-emerald-100/80 bg-gradient-to-r from-white/86 via-emerald-50/72 to-sky-50/62 px-5 py-4">
-                <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-[10px] font-black uppercase tracking-[0.20em] text-emerald-700">
-                            Riwayat Imunisasi
-                        </p>
-                        <h2 class="mt-1 text-xl font-black text-slate-800">
-                            Vaksinasi dan Imunisasi Balita
-                        </h2>
-                    </div>
-
-                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] text-emerald-700">
-                        {{ $imunisasiCards->count() }} Data
+            <div>
+                <div class="flex flex-wrap gap-2 mb-1.5">
+                    <span class="btn-pill bg-white/20 border border-white/30 text-white px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest backdrop-blur-md shadow-sm">
+                        Data Balita
+                    </span>
+                    <span class="btn-pill bg-white/20 border border-white/30 text-white px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest backdrop-blur-md shadow-sm">
+                        {{ $genderLabel }}
+                    </span>
+                    <span class="btn-pill bg-white/20 border border-white/30 text-white px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest backdrop-blur-md shadow-sm">
+                        {{ $usia['kategori'] ?? 'Balita' }}
                     </span>
                 </div>
+                <h1 class="text-xl md:text-2xl font-black text-white tracking-tight leading-tight line-clamp-1" title="{{ $dataBalita->nama_lengkap ?? '-' }}">
+                    {{ $dataBalita->nama_lengkap ?? '-' }}
+                </h1>
+                <p class="text-rose-50 text-[11px] font-semibold mt-1 opacity-90">
+                    NIK: {{ $dataBalita->nik ?? '-' }} • {{ $formatDate($dataBalita->tanggal_lahir ?? null) }}
+                </p>
+            </div>
+        </div>
+
+        <div class="relative z-10 flex gap-2 shrink-0">
+            <a href="{{ $backRoute }}" data-no-delay="true" class="btn-pill bg-white/10 hover:bg-white/20 text-white border border-white/30 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md transition-all shadow-sm">
+                Kembali
+            </a>
+            <a href="{{ $dashboardRoute }}" data-no-delay="true" class="btn-pill bg-white hover:bg-rose-50 text-rose-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5">
+                Dashboard
+            </a>
+        </div>
+    </section>
+
+    {{-- 2. METRIK KESEHATAN UTAMA --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        @foreach($metrics as $metric)
+            <div class="widget-card p-4 flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300">
+                <div class="w-10 h-10 mx-auto rounded-full {{ $metricTone($metric['tone'] ?? 'slate') }} flex items-center justify-center text-lg mb-2 shadow-inner">
+                    <i class="fas @if($metric['label']=='Usia') fa-baby @elseif($metric['label']=='Berat') fa-scale-unbalanced @elseif($metric['label']=='Tinggi') fa-ruler-vertical @else fa-clipboard-check @endif"></i>
+                </div>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                    {{ $metric['label'] }}
+                </p>
+                <p class="text-xl font-black text-slate-800 leading-none">
+                    {{ $metric['value'] }}
+                </p>
+                <p class="text-[9px] font-bold text-slate-500 mt-1.5">
+                    {{ $metric['caption'] }}
+                </p>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- 3. AREA PROFIL & KESIMPULAN (MEMBENTANG PENUH / FULL WIDTH) --}}
+    <div class="widget-card flex flex-col overflow-hidden">
+        <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-rose-500 flex items-center justify-center shadow-sm shrink-0">
+                <i class="fas fa-id-card-clip text-xs"></i>
+            </div>
+            <div>
+                <h2 class="text-sm font-black text-slate-800">Buku KIA / Rekam Medis</h2>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Informasi Profil & Status Pertumbuhan</p>
+            </div>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            {{-- Bagian Kiri: Identitas & Metrik Tambahan --}}
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 shadow-sm">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-user text-rose-500"></i> Nama Lengkap</p>
+                        <p class="text-sm font-black text-slate-800">{{ $dataBalita->nama_lengkap ?? '-' }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 shadow-sm">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-people-roof text-rose-500"></i> Nama Orang Tua</p>
+                        <p class="text-sm font-black text-slate-800">{{ $dataBalita->nama_orangtua ?? $dataBalita->nama_ibu ?? '-' }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 shadow-sm">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-calendar-day text-rose-500"></i> Tempat, Tgl Lahir</p>
+                        <p class="text-sm font-black text-slate-800">{{ $dataBalita->tempat_lahir ?? '-' }}, {{ $formatDate($dataBalita->tanggal_lahir ?? null) }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 shadow-sm">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-id-card text-rose-500"></i> NIK Balita</p>
+                        <p class="text-sm font-black text-slate-800">{{ $dataBalita->nik ?? '-' }}</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 shadow-sm sm:col-span-2">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1.5"><i class="fa-solid fa-map-location-dot text-rose-500"></i> Alamat</p>
+                        <p class="text-sm font-black text-slate-800 leading-relaxed">{{ $dataBalita->alamat ?? '-' }}</p>
+                    </div>
+                </div>
+
+                @if($growthMetrics->isNotEmpty())
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        @foreach($growthMetrics->take(6) as $metric)
+                            <div class="rounded-lg border border-slate-100 bg-white p-2 text-center shadow-sm">
+                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5 truncate">{{ $metric['label'] }}</p>
+                                <p class="text-xs font-black text-slate-800 truncate">{{ $metric['value'] }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
-            <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
-                @forelse($imunisasiCards as $item)
-                    <article class="bt-card rounded-[24px] p-4">
-                        <div class="flex items-start gap-4">
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-[17px] border border-emerald-100 bg-emerald-50 text-emerald-600">
-                                <i class="fas fa-syringe"></i>
-                            </div>
+            {{-- Bagian Kanan: Kesimpulan Status --}}
+            <div class="lg:col-span-5 h-full">
+                <div class="h-full rounded-[1.5rem] border p-6 flex flex-col justify-center gap-4 {{ $analysisTone }}">
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-2xl shadow-sm border {{ explode(' ', $analysisTone)[0] }} {{ explode(' ', $analysisTone)[2] }}">
+                            <i class="fas {{ $growthAnalysis['icon'] ?? 'fa-circle-info' }}"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Status Gizi & Pertumbuhan</p>
+                            <h2 class="text-xl font-black leading-none {{ explode(' ', $analysisTone)[2] }}">
+                                {{ $growthAnalysis['label'] ?? 'Belum Ada Data' }}
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t {{ explode(' ', $analysisTone)[0] }} opacity-80 border-dashed">
+                        <p class="text-sm font-bold leading-relaxed mb-1">
+                            {{ $growthAnalysis['message'] ?? '-' }}
+                        </p>
+                        <p class="text-xs font-semibold leading-relaxed">
+                            <i class="fa-solid fa-lightbulb mr-1"></i> {{ $growthAnalysis['suggestion'] ?? 'Lakukan pemantauan di Posyandu secara berkala.' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                            <div class="min-w-0 flex-1">
-                                <p class="line-clamp-1 text-base font-black text-slate-800">
-                                    {{ $item['nama'] ?? 'Imunisasi' }}
-                                </p>
+        </div>
+    </div>
 
-                                <p class="mt-1 text-sm font-semibold text-slate-500">
-                                    {{ $item['tanggal'] ?? '-' }}
-                                </p>
+    {{-- 4. AREA BAWAH: RIWAYAT KLINIS (MEMBENTANG & BER-GRID) --}}
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+        
+        {{-- BAGIAN KIRI: RIWAYAT PENGUKURAN (7 KOLOM) --}}
+        <div class="lg:col-span-7 widget-card flex flex-col h-full overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center shadow-sm shrink-0">
+                        <i class="fas fa-weight-scale text-xs"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-black text-slate-800">Riwayat Pengukuran</h2>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Log Antropometri Terakhir</p>
+                    </div>
+                </div>
+            </div>
 
-                                <div class="mt-3 grid grid-cols-2 gap-2">
-                                    <div class="rounded-[16px] border border-slate-100 bg-slate-50/70 px-3 py-2">
-                                        <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Batch</p>
-                                        <p class="mt-1 truncate text-xs font-black text-slate-700">{{ $item['batch'] ?? '-' }}</p>
-                                    </div>
-
-                                    <div class="rounded-[16px] border border-slate-100 bg-slate-50/70 px-3 py-2">
-                                        <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Petugas</p>
-                                        <p class="mt-1 truncate text-xs font-black text-slate-700">{{ $item['petugas'] ?? '-' }}</p>
-                                    </div>
+            <div class="flex-1 overflow-y-auto slim-scroll p-5 bg-slate-50/30 space-y-4">
+                @forelse($paginatedRiwayat as $item)
+                    <article class="rounded-[1.25rem] border border-slate-200/80 bg-white p-4 shadow-sm hover:border-rose-300 transition-all">
+                        <div class="flex items-start justify-between gap-3 mb-3 border-b border-slate-50 pb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center text-slate-600 shrink-0">
+                                    <span class="text-sm font-black leading-none">{{ Carbon::parse($item['tanggal'] ?? '')->format('d') }}</span>
+                                    <span class="text-[8px] font-black uppercase">{{ Carbon::parse($item['tanggal'] ?? '')->translatedFormat('M') }}</span>
                                 </div>
-
-                                <p class="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-slate-500">
-                                    {{ $item['catatan'] ?? 'Tidak ada catatan tambahan.' }}
-                                </p>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800">{{ $item['tanggal'] ?? '-' }}</p>
+                                    <p class="mt-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Usia: {{ $item['usia'] ?? '-' }}</p>
+                                </div>
                             </div>
+                            <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 shrink-0">
+                                <i class="fa-solid fa-check mr-0.5"></i> {{ $item['status'] ?? 'Tervalidasi' }}
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
+                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">BB</p>
+                                <p class="truncate text-xs font-black text-slate-800">{{ $item['berat'] ?? '-' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
+                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">TB</p>
+                                <p class="truncate text-xs font-black text-slate-800">{{ $item['tinggi'] ?? '-' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
+                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">LK / LILA</p>
+                                <p class="truncate text-xs font-black text-slate-800">{{ $item['lingkar_kepala'] !== '-' ? $item['lingkar_kepala'] : $item['lila'] }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto bg-rose-50 p-2.5 rounded-lg border border-rose-100">
+                            <p class="text-[8px] font-black uppercase tracking-widest text-rose-600 mb-0.5">Status Gizi (BB/TB)</p>
+                            <p class="text-xs font-black text-slate-700">{{ $item['status_gizi'] ?? 'Belum Dinilai' }}</p>
                         </div>
                     </article>
                 @empty
-                    <div class="col-span-full rounded-[26px] border border-dashed border-emerald-300 bg-emerald-50/55 p-8 text-center">
-                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-xl text-emerald-500 shadow-sm">
-                            <i class="fas fa-syringe"></i>
+                    <div class="flex flex-col items-center justify-center text-center opacity-70 p-8 border border-dashed border-slate-200 rounded-[1.5rem] min-h-[250px]">
+                        <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center mb-3 text-2xl text-slate-300 border border-slate-100 shadow-sm">
+                            <i class="fas fa-folder-open"></i>
                         </div>
-
-                        <h3 class="mt-4 text-base font-black text-slate-800">
-                            Riwayat Imunisasi Belum Tersedia
-                        </h3>
-
-                        <p class="mx-auto mt-1 max-w-md text-sm font-semibold leading-6 text-slate-500">
-                            Riwayat imunisasi akan muncul setelah dicatat oleh petugas Posyandu.
-                        </p>
+                        <h3 class="text-xs font-black text-slate-700">Belum Ada Pengukuran</h3>
+                        <p class="text-[10px] font-semibold text-slate-500 mt-1 max-w-xs leading-relaxed">Catatan akan muncul setelah validasi Bidan.</p>
                     </div>
                 @endforelse
             </div>
-        </section>
+
+            {{-- Pagination Pengukuran --}}
+            @if($paginatedRiwayat->hasPages())
+                <div class="border-t border-slate-100 bg-slate-50/80 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Hal. <span class="text-slate-900">{{ $paginatedRiwayat->currentPage() }}</span> dari <span class="text-slate-900">{{ $paginatedRiwayat->lastPage() }}</span>
+                    </p>
+                    <div class="flex items-center gap-1.5">
+                        @if ($paginatedRiwayat->onFirstPage())
+                            <button disabled class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50"><i class="fas fa-chevron-left text-[10px]"></i></button>
+                        @else
+                            <a href="{{ $paginatedRiwayat->previousPageUrl() }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-rose-50 hover:text-rose-600"><i class="fas fa-chevron-left text-[10px]"></i></a>
+                        @endif
+
+                        @php $start = max(1, $paginatedRiwayat->currentPage() - 1); $end = min($paginatedRiwayat->lastPage(), $paginatedRiwayat->currentPage() + 1); @endphp
+                        @for ($page = $start; $page <= $end; $page++)
+                            @if ($page == $paginatedRiwayat->currentPage())
+                                <span class="btn-pill w-8 h-8 flex items-center justify-center bg-rose-500 text-white font-black text-[10px] shadow-sm">{{ $page }}</span>
+                            @else
+                                <a href="{{ $paginatedRiwayat->url($page) }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-[10px] shadow-sm hover:bg-rose-50 hover:text-rose-600">{{ $page }}</a>
+                            @endif
+                        @endfor
+
+                        @if ($paginatedRiwayat->hasMorePages())
+                            <a href="{{ $paginatedRiwayat->nextPageUrl() }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-rose-50 hover:text-rose-600"><i class="fas fa-chevron-right text-[10px]"></i></a>
+                        @else
+                            <button disabled class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50"><i class="fas fa-chevron-right text-[10px]"></i></button>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- BAGIAN KANAN: RIWAYAT IMUNISASI (5 KOLOM) --}}
+        <div class="lg:col-span-5 widget-card flex flex-col h-full overflow-hidden">
+            <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-sky-500 flex items-center justify-center shadow-sm shrink-0">
+                        <i class="fas fa-syringe text-xs"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-black text-slate-800">Riwayat Imunisasi</h2>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">Log Vaksin Balita</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto slim-scroll p-5 bg-slate-50/30 space-y-4">
+                @forelse($paginatedImun as $imun)
+                    <article class="rounded-[1.25rem] border border-slate-200/80 bg-white p-4 shadow-sm hover:border-sky-300 transition-all">
+                        <div class="flex items-start gap-3 mb-3 border-b border-slate-50 pb-3">
+                            <div class="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-500 shrink-0">
+                                <i class="fas fa-shield-virus"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-black text-slate-800">{{ $imun['nama'] ?? 'Imunisasi' }}</p>
+                                <p class="mt-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">{{ $imun['tanggal'] ?? '-' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
+                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Vaksin</p>
+                                <p class="truncate text-xs font-black text-slate-800">{{ $imun['batch'] ?? '-' }}</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
+                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Petugas</p>
+                                <p class="truncate text-xs font-black text-slate-800">{{ $imun['petugas'] ?? '-' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5 flex items-center gap-1"><i class="fa-regular fa-comment-dots"></i> Keterangan</p>
+                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600">{{ $imun['catatan'] ?? 'Tidak ada catatan khusus.' }}</p>
+                        </div>
+                    </article>
+                @empty
+                    <div class="flex flex-col items-center justify-center text-center opacity-70 p-8 border border-dashed border-slate-200 rounded-[1.5rem] min-h-[250px]">
+                        <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center mb-3 text-2xl text-slate-300 border border-slate-100 shadow-sm">
+                            <i class="fas fa-syringe"></i>
+                        </div>
+                        <h3 class="text-xs font-black text-slate-700">Belum Ada Imunisasi</h3>
+                        <p class="text-[10px] font-semibold text-slate-500 mt-1 max-w-xs leading-relaxed">Log vaksin akan muncul setelah data dimasukkan oleh Bidan.</p>
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Pagination Imunisasi --}}
+            @if($paginatedImun->hasPages())
+                <div class="border-t border-slate-100 bg-slate-50/80 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                        Hal. <span class="text-slate-900">{{ $paginatedImun->currentPage() }}</span> dari <span class="text-slate-900">{{ $paginatedImun->lastPage() }}</span>
+                    </p>
+                    <div class="flex items-center gap-1.5">
+                        @if ($paginatedImun->onFirstPage())
+                            <button disabled class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50"><i class="fas fa-chevron-left text-[10px]"></i></button>
+                        @else
+                            <a href="{{ $paginatedImun->previousPageUrl() }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-sky-50 hover:text-sky-600"><i class="fas fa-chevron-left text-[10px]"></i></a>
+                        @endif
+
+                        @php $startImun = max(1, $paginatedImun->currentPage() - 1); $endImun = min($paginatedImun->lastPage(), $paginatedImun->currentPage() + 1); @endphp
+                        @for ($page = $startImun; $page <= $endImun; $page++)
+                            @if ($page == $paginatedImun->currentPage())
+                                <span class="btn-pill w-8 h-8 flex items-center justify-center bg-sky-500 text-white font-black text-[10px] shadow-sm">{{ $page }}</span>
+                            @else
+                                <a href="{{ $paginatedImun->url($page) }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-[10px] shadow-sm hover:bg-sky-50 hover:text-sky-600">{{ $page }}</a>
+                            @endif
+                        @endfor
+
+                        @if ($paginatedImun->hasMorePages())
+                            <a href="{{ $paginatedImun->nextPageUrl() }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-sky-50 hover:text-sky-600"><i class="fas fa-chevron-right text-[10px]"></i></a>
+                        @else
+                            <button disabled class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50"><i class="fas fa-chevron-right text-[10px]"></i></button>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        </div>
+
     </div>
 </div>
 @endsection

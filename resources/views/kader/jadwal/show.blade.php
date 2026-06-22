@@ -1,581 +1,258 @@
 @extends('layouts.kader')
 
-@section('title', 'Agenda Posyandu')
-@section('page-name', 'Agenda Posyandu')
-@section('page-title', 'Agenda Posyandu')
-@section('page_title', 'Agenda Posyandu')
+@section('title', 'Detail Agenda Posyandu')
+@section('page-name', 'Detail Agenda')
+@section('page-title', 'Detail Agenda Posyandu')
 
-@section('content')
 @php
-    $filters = $filters ?? [
-        'search' => request('search', ''),
-        'kategori' => request('kategori', 'semua'),
-        'periode' => request('periode', 'semua'),
-    ];
+    use Carbon\Carbon;
+    use Illuminate\Support\Str;
 
-    $stats = $stats ?? [
-        'semua' => 0,
-        'aktif' => 0,
-        'mendatang' => 0,
-        'selesai' => 0,
-    ];
+    Carbon::setLocale('id');
 
-    $initialPayload = $initialPayload ?? [
-        'items' => [],
-        'stats' => $stats,
-        'latest_id' => 0,
-        'hash' => '',
-        'server_time' => now('Asia/Jakarta')->format('H:i:s'),
-        'unread_jadwal_notifikasi' => 0,
-    ];
+    // Data Utama
+    $kategori = strtolower((string) ($jadwal->kategori ?? 'posyandu'));
+    $status = strtolower((string) ($jadwal->status ?? 'terjadwal'));
 
-    $kategoriOptions = [
-        'semua' => 'Semua Kategori',
-        'posyandu' => 'Posyandu Rutin',
-        'balita' => 'Balita',
-        'remaja' => 'Remaja',
-        'lansia' => 'Lansia',
-        'imunisasi' => 'Imunisasi',
-        'pemeriksaan' => 'Pemeriksaan',
-        'lainnya' => 'Lainnya',
-    ];
+    // Tema Kategori
+    $kategoriMeta = match($kategori) {
+        'balita' => ['label' => 'Balita', 'icon' => 'fa-child-reaching', 'color' => 'emerald', 'grad' => 'from-emerald-500 to-teal-600', 'text' => 'text-emerald-600', 'bg' => 'bg-emerald-50'],
+        'remaja' => ['label' => 'Remaja', 'icon' => 'fa-user-graduate', 'color' => 'teal', 'grad' => 'from-teal-500 to-cyan-600', 'text' => 'text-teal-600', 'bg' => 'bg-teal-50'],
+        'lansia' => ['label' => 'Lansia', 'icon' => 'fa-person-cane', 'color' => 'sky', 'grad' => 'from-sky-500 to-blue-600', 'text' => 'text-sky-600', 'bg' => 'bg-sky-50'],
+        'imunisasi' => ['label' => 'Imunisasi', 'icon' => 'fa-syringe', 'color' => 'indigo', 'grad' => 'from-indigo-500 to-violet-600', 'text' => 'text-indigo-600', 'bg' => 'bg-indigo-50'],
+        'pemeriksaan' => ['label' => 'Pemeriksaan', 'icon' => 'fa-stethoscope', 'color' => 'violet', 'grad' => 'from-violet-500 to-fuchsia-600', 'text' => 'text-violet-600', 'bg' => 'bg-violet-50'],
+        default => ['label' => 'Posyandu Rutin', 'icon' => 'fa-calendar-check', 'color' => 'emerald', 'grad' => 'from-emerald-500 via-teal-400 to-emerald-400', 'text' => 'text-emerald-600', 'bg' => 'bg-emerald-50'],
+    };
 
-    $periodeOptions = [
-        'semua' => 'Semua Periode',
-        'hari_ini' => 'Hari Ini',
-        'minggu_ini' => 'Minggu Ini',
-        'bulan_ini' => 'Bulan Ini',
-        'mendatang' => 'Mendatang',
-        'selesai' => 'Selesai',
-    ];
+    // Tema Status
+    $statusMeta = match($status) {
+        'aktif' => ['label' => 'Sedang Aktif', 'dot' => 'bg-emerald-500', 'badge' => 'bg-emerald-100 text-emerald-800 border-emerald-200', 'icon' => 'fa-satellite-dish animate-pulse'],
+        'selesai' => ['label' => 'Selesai', 'dot' => 'bg-slate-400', 'badge' => 'bg-slate-100 text-slate-700 border-slate-200', 'icon' => 'fa-check-double'],
+        'dibatalkan' => ['label' => 'Dibatalkan', 'dot' => 'bg-rose-500', 'badge' => 'bg-rose-100 text-rose-800 border-rose-200', 'icon' => 'fa-ban'],
+        default => ['label' => 'Mendatang', 'dot' => 'bg-sky-500', 'badge' => 'bg-sky-100 text-sky-800 border-sky-200', 'icon' => 'fa-calendar-plus'],
+    };
 @endphp
 
+@push('styles')
 <style>
-    .kj-shell {
-        animation: kjIn .32s cubic-bezier(.16, 1, .3, 1) both;
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
     }
 
-    .kj-hero {
-        background:
-            radial-gradient(circle at 8% 0%, rgba(16, 185, 129, .16), transparent 28%),
-            radial-gradient(circle at 86% 10%, rgba(14, 165, 233, .13), transparent 30%),
-            linear-gradient(135deg, rgba(255,255,255,.88), rgba(236,253,245,.72));
-    }
-
-    .kj-card {
-        transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
-    }
-
-    .kj-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 22px 55px rgba(15, 23, 42, .09);
-        border-color: rgba(16, 185, 129, .24);
-    }
-
-    .kj-live-list {
-        transition: opacity .2s ease, transform .2s ease;
-    }
-
-    .kj-live-list.is-loading {
-        opacity: .58;
-        transform: translateY(4px);
-    }
-
-    .kj-toast {
+    .animate-pop-in {
+        animation: popIn .48s cubic-bezier(.16, 1, .3, 1) forwards;
         opacity: 0;
-        pointer-events: none;
-        transform: translateY(14px) scale(.96);
-        transition: opacity .22s ease, transform .22s ease;
     }
 
-    .kj-toast.show {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateY(0) scale(1);
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    @keyframes kjIn {
-        from {
-            opacity: 0;
-            transform: translateY(12px);
-        }
+    .hero-grid {
+        background-image: radial-gradient(rgba(255,255,255,.45) 1px, transparent 1px);
+        background-size: 24px 24px;
+    }
 
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .pc-glass {
+        background: rgba(255, 255, 255, .86);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .05);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+    }
+
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px dashed rgba(203, 213, 225, 0.6);
+    }
+    .data-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .data-label {
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #64748b;
+    }
+    .data-value {
+        font-size: 0.875rem;
+        font-weight: 900;
+        color: #1e293b;
+        text-align: right;
     }
 </style>
+@endpush
 
-<div class="kj-shell mx-auto max-w-7xl space-y-6 px-4 pb-10 sm:px-6 lg:px-8">
-    <section class="kj-hero overflow-hidden rounded-[34px] border border-white/80 p-5 shadow-[0_24px_80px_rgba(15,23,42,.07)] backdrop-blur-xl sm:p-7 lg:p-8">
-        <div class="grid gap-5 xl:grid-cols-[1fr_390px] xl:items-stretch">
-            <div class="rounded-[30px] border border-emerald-100/80 bg-white/65 p-6 shadow-sm backdrop-blur-xl sm:p-8">
-                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                    Agenda Kader
+@section('content')
+<div class="max-w-[1180px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 lg:px-8 mt-6">
+
+    {{-- 1. HERO SECTION (Identitas Agenda) --}}
+    <section class="bg-gradient-to-br {{ $kategoriMeta['grad'] }} rounded-[2.5rem] p-8 md:p-12 mb-8 relative overflow-hidden shadow-2xl shadow-{{ $kategoriMeta['color'] }}-500/20 border border-white/20">
+        <div class="hero-grid absolute inset-0 opacity-20 pointer-events-none"></div>
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
+        <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+            
+            {{-- Icon Kategori --}}
+            <div class="w-24 h-24 shrink-0 rounded-[2rem] bg-white border-4 border-white/50 {{ $kategoriMeta['text'] }} flex items-center justify-center text-4xl shadow-xl">
+                <i class="fas {{ $kategoriMeta['icon'] }}"></i>
+            </div>
+
+            {{-- Info Utama --}}
+            <div class="flex-1">
+                <div class="inline-flex items-center justify-center md:justify-start gap-2 mb-3">
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                        <i class="fas fa-tag"></i> {{ $jadwal->kategori_label ?? $kategoriMeta['label'] }}
+                    </span>
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm uppercase tracking-widest">
+                        <i class="fas fa-users"></i> Target: {{ $jadwal->target_label ?? 'Semua Sasaran' }}
+                    </span>
                 </div>
 
-                <h1 class="mt-6 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-                    Jadwal Posyandu
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
+                    {{ $jadwal->judul }}
                 </h1>
-
-                <p class="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-600 sm:text-base">
-                    Agenda dari Bidan akan tampil otomatis di halaman ini. Kader cukup memantau jadwal, target sasaran, lokasi, dan persiapan layanan.
-                </p>
-
-                <div class="mt-7 grid gap-3 sm:grid-cols-4">
-                    <div class="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-                        <p class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400">Semua</p>
-                        <p id="stat-semua" class="mt-2 text-2xl font-black text-slate-900">{{ $stats['semua'] ?? 0 }}</p>
-                    </div>
-
-                    <div class="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-                        <p class="text-[11px] font-black uppercase tracking-[0.15em] text-emerald-500">Aktif</p>
-                        <p id="stat-aktif" class="mt-2 text-2xl font-black text-emerald-600">{{ $stats['aktif'] ?? 0 }}</p>
-                    </div>
-
-                    <div class="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-                        <p class="text-[11px] font-black uppercase tracking-[0.15em] text-sky-500">Mendatang</p>
-                        <p id="stat-mendatang" class="mt-2 text-2xl font-black text-sky-600">{{ $stats['mendatang'] ?? 0 }}</p>
-                    </div>
-
-                    <div class="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-                        <p class="text-[11px] font-black uppercase tracking-[0.15em] text-amber-500">Selesai</p>
-                        <p id="stat-selesai" class="mt-2 text-2xl font-black text-amber-600">{{ $stats['selesai'] ?? 0 }}</p>
-                    </div>
+                
+                <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-white/90 text-sm font-semibold">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-map-pin opacity-70"></i> {{ $jadwal->lokasi }}</span>
                 </div>
             </div>
 
-            <form method="GET" action="{{ route('kader.jadwal.index') }}" class="rounded-[30px] border border-white/80 bg-white/82 p-6 shadow-sm backdrop-blur-xl">
-                <div class="mb-5 flex items-center justify-between gap-3">
+            {{-- Action Buttons & Status --}}
+            <div class="flex flex-col items-center md:items-end gap-3 shrink-0 w-full md:w-auto mt-4 md:mt-0">
+                <span class="{{ $statusMeta['badge'] }} text-[10px] uppercase tracking-widest px-4 py-2 rounded-full shadow-lg border flex items-center gap-2 mb-2 font-black">
+                    <i class="fas {{ $statusMeta['icon'] }} text-sm"></i> {{ $statusMeta['label'] }}
+                </span>
+
+                <div class="flex gap-2 w-full justify-center md:justify-end">
+                    <a href="{{ route('kader.jadwal.index') }}" class="w-full md:w-auto bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-[11px] uppercase tracking-widest font-bold px-6 py-3 rounded-xl transition-all shadow-sm text-center">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    {{-- 2. GRID CONTENT --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        
+        {{-- KOLOM KIRI: Informasi Pelaksanaan & Deskripsi --}}
+        <div class="lg:col-span-7 flex flex-col gap-6">
+            
+            {{-- Card Detail Pelaksanaan --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col">
+                <div class="flex items-center gap-4 mb-6 border-b border-slate-100 pb-5">
+                    <div class="w-12 h-12 rounded-2xl {{ $kategoriMeta['bg'] }} {{ $kategoriMeta['text'] }} flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
                     <div>
-                        <p class="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Filter Jadwal</p>
-                        <p class="mt-1 text-xs font-semibold text-slate-500">Cari agenda tanpa reload berat.</p>
-                    </div>
-
-                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                        <i class="fas fa-filter"></i>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Detail Pelaksanaan</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Waktu & Tempat Acara</p>
                     </div>
                 </div>
 
-                <div class="space-y-3">
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ $filters['search'] ?? '' }}"
-                        placeholder="Cari judul, lokasi, atau kategori..."
-                        class="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                    >
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <select name="kategori" class="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-                            @foreach($kategoriOptions as $value => $label)
-                                <option value="{{ $value }}" @selected(($filters['kategori'] ?? 'semua') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-
-                        <select name="periode" class="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-                            @foreach($periodeOptions as $value => $label)
-                                <option value="{{ $value }}" @selected(($filters['periode'] ?? 'semua') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
+                <div class="bg-slate-50/50 rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm flex-1">
+                    <div class="data-row pt-1">
+                        <span class="data-label"><i class="fas fa-calendar-alt text-slate-400 mr-1"></i> Tanggal</span>
+                        <span class="data-value">{{ $jadwal->tanggal_label }}</span>
                     </div>
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <button type="submit" class="inline-flex h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-[0_14px_30px_rgba(16,185,129,.25)] transition hover:bg-emerald-700">
-                            Terapkan
-                        </button>
-
-                        <a href="{{ route('kader.jadwal.index') }}" class="inline-flex h-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 text-xs font-black uppercase tracking-[0.16em] text-emerald-700 transition hover:bg-emerald-100">
-                            Reset
-                        </a>
+                    <div class="data-row">
+                        <span class="data-label"><i class="fas fa-clock text-slate-400 mr-1"></i> Waktu</span>
+                        <span class="data-value">{{ $jadwal->waktu_label }}</span>
+                    </div>
+                    <div class="data-row pb-1 border-b-0">
+                        <span class="data-label"><i class="fas fa-map-marker-alt text-slate-400 mr-1"></i> Lokasi Posyandu</span>
+                        <span class="data-value text-right">{{ $jadwal->lokasi }}</span>
                     </div>
                 </div>
-            </form>
-        </div>
-    </section>
-
-    <section class="space-y-5">
-        <div class="flex flex-col gap-3 rounded-[26px] border border-white/80 bg-white/76 p-4 shadow-sm backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-lg font-black text-slate-900">Daftar Agenda</h2>
-                <p class="mt-1 text-xs font-semibold text-slate-500">
-                    Jadwal baru dari Bidan akan masuk otomatis tanpa pindah halaman.
-                </p>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700">
-                    <span id="live-dot" class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                    <span id="live-text">Realtime aktif</span>
+            {{-- Card Deskripsi / Keterangan --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col flex-1">
+                <div class="flex items-center gap-4 mb-6 border-b border-slate-100 pb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0 shadow-inner border border-amber-100">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Keterangan Agenda</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Informasi Tambahan</p>
+                    </div>
                 </div>
 
-                <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-sky-700">
-                    <i class="fas fa-clock"></i>
-                    <span id="server-time">{{ $initialPayload['server_time'] ?? '-' }}</span>
-                </div>
-
-                <div id="notif-pill" class="hidden items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-amber-700">
-                    <i class="fas fa-bell"></i>
-                    <span id="notif-count">0</span> notifikasi
+                <div class="bg-white/50 rounded-2xl p-5 border border-slate-100 flex-1 min-h-[6rem]">
+                    <p class="text-sm font-semibold text-slate-700 leading-relaxed whitespace-pre-line">
+                        {{ $jadwal->deskripsi ?: 'Tidak ada keterangan tambahan yang disertakan pada agenda ini.' }}
+                    </p>
                 </div>
             </div>
         </div>
 
-        <div id="jadwal-card-list" class="kj-live-list grid gap-4 lg:grid-cols-2"></div>
+        {{-- KOLOM KANAN: Otoritas & Aturan --}}
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            {{-- Card Otoritas Bidan --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col">
+                <div class="flex items-center gap-4 mb-6 border-b border-slate-100 pb-5">
+                    <div class="w-12 h-12 rounded-2xl {{ $kategoriMeta['bg'] }} {{ $kategoriMeta['text'] }} flex items-center justify-center text-xl shrink-0 shadow-inner">
+                        <i class="fas fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Otoritas Medis</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Penanggung Jawab</p>
+                    </div>
+                </div>
 
-        <div id="jadwal-empty" class="hidden rounded-[30px] border border-dashed border-emerald-300 bg-emerald-50/70 p-10 text-center">
-            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-2xl text-emerald-500 shadow-sm">
-                <i class="fas fa-calendar-times"></i>
+                <div class="bg-slate-50/50 rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm flex-1">
+                    <div class="data-row pt-1">
+                        <span class="data-label">Pembuat Jadwal</span>
+                        <span class="data-value">{{ $jadwal->nama_petugas ?? 'Bidan' }}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Sumber Data</span>
+                        <span class="data-value">Akun Bidan</span>
+                    </div>
+                    <div class="data-row pb-1 border-b-0">
+                        <span class="data-label">Dibuat Pada</span>
+                        <span class="data-value font-semibold">{{ $jadwal->created_at ? $jadwal->created_at->translatedFormat('d M Y') : '-' }}</span>
+                    </div>
+                </div>
             </div>
 
-            <h3 class="mt-5 text-xl font-black text-slate-800">Jadwal Tidak Ditemukan</h3>
+            {{-- Card Info Mode Baca Saja --}}
+            <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col flex-1">
+                <div class="flex items-center gap-4 mb-6 border-b border-slate-100 pb-5">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-xl shrink-0 shadow-inner border border-rose-100">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Mode Baca Saja</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Wewenang Kader</p>
+                    </div>
+                </div>
 
-            <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-600">
-                Belum ada agenda Posyandu yang sesuai dengan filter saat ini.
-            </p>
-
-            <a href="{{ route('kader.jadwal.index') }}" class="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_12px_26px_rgba(16,185,129,.22)] transition hover:bg-emerald-700">
-                Reset Filter
-            </a>
-        </div>
-    </section>
-</div>
-
-<div id="jadwal-toast" class="kj-toast fixed bottom-6 right-6 z-[80] w-[calc(100%-2rem)] max-w-sm rounded-[26px] border border-emerald-200 bg-white/95 p-4 shadow-[0_24px_70px_rgba(15,23,42,.18)] backdrop-blur-xl">
-    <div class="flex gap-3">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-            <i class="fas fa-bell"></i>
-        </div>
-
-        <div class="min-w-0">
-            <p class="text-sm font-black text-slate-900">Jadwal baru diterima</p>
-            <p id="jadwal-toast-text" class="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                Agenda dari Bidan sudah masuk ke daftar.
-            </p>
+                <div class="flex-1 flex flex-col justify-center">
+                    <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 text-xs font-semibold text-slate-500 leading-relaxed text-center shadow-inner">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-400 mx-auto mb-4 shadow-sm border border-slate-100">
+                            <i class="fa-solid fa-circle-info text-lg"></i>
+                        </div>
+                        Sebagai Kader, Anda hanya dapat memantau dan mempersiapkan agenda ini. Pembuatan, pengubahan, atau pembatalan jadwal Posyandu adalah wewenang eksklusif dari akun Bidan.
+                    </div>
+                </div>
+            </div>
+            
         </div>
     </div>
+
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const initialPayload = @json($initialPayload);
-    const liveUrl = @json(route('kader.jadwal.live'));
-    const lastSeenKey = 'posyandu_kader_last_seen_jadwal_id';
-
-    const list = document.getElementById('jadwal-card-list');
-    const empty = document.getElementById('jadwal-empty');
-    const liveText = document.getElementById('live-text');
-    const liveDot = document.getElementById('live-dot');
-    const serverTime = document.getElementById('server-time');
-    const toast = document.getElementById('jadwal-toast');
-    const toastText = document.getElementById('jadwal-toast-text');
-    const notifPill = document.getElementById('notif-pill');
-    const notifCount = document.getElementById('notif-count');
-
-    let isFetching = false;
-    let currentHash = initialPayload?.hash || '';
-    let lastSeenId = Number(localStorage.getItem(lastSeenKey) || 0);
-
-    if (!lastSeenId && initialPayload?.latest_id) {
-        lastSeenId = Number(initialPayload.latest_id);
-        localStorage.setItem(lastSeenKey, String(lastSeenId));
-    }
-
-    const escapeHtml = (value) => {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-    };
-
-    const kategoriClass = (kategori) => {
-        const map = {
-            balita: 'bg-sky-50 text-sky-700 border-sky-200',
-            remaja: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-            lansia: 'bg-orange-50 text-orange-700 border-orange-200',
-            imunisasi: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
-            pemeriksaan: 'bg-teal-50 text-teal-700 border-teal-200',
-            lainnya: 'bg-slate-100 text-slate-700 border-slate-200',
-            posyandu: 'bg-emerald-50 text-emerald-700 border-emerald-200'
-        };
-
-        return map[kategori] || map.posyandu;
-    };
-
-    const kategoriIcon = (kategori) => {
-        const map = {
-            balita: 'fa-child-reaching',
-            remaja: 'fa-user-graduate',
-            lansia: 'fa-person-cane',
-            imunisasi: 'fa-syringe',
-            pemeriksaan: 'fa-stethoscope',
-            lainnya: 'fa-layer-group',
-            posyandu: 'fa-calendar-check'
-        };
-
-        return map[kategori] || map.posyandu;
-    };
-
-    const statusClass = (status) => {
-        const map = {
-            aktif: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            selesai: 'bg-slate-100 text-slate-600 border-slate-200',
-            dibatalkan: 'bg-rose-50 text-rose-700 border-rose-200',
-            terjadwal: 'bg-amber-50 text-amber-700 border-amber-200'
-        };
-
-        return map[status] || map.terjadwal;
-    };
-
-    const statusDot = (status) => {
-        const map = {
-            aktif: 'bg-emerald-500',
-            selesai: 'bg-slate-400',
-            dibatalkan: 'bg-rose-500',
-            terjadwal: 'bg-amber-500'
-        };
-
-        return map[status] || map.terjadwal;
-    };
-
-    const cardTemplate = (item) => {
-        return `
-            <article class="kj-card overflow-hidden rounded-[30px] border border-white/80 bg-white/82 shadow-sm backdrop-blur-xl">
-                <div class="flex h-full flex-col p-5 sm:p-6">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="min-w-0">
-                            <div class="mb-3 flex flex-wrap items-center gap-2">
-                                <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${kategoriClass(item.kategori)}">
-                                    <i class="fas ${kategoriIcon(item.kategori)}"></i>
-                                    ${escapeHtml(item.kategori_label)}
-                                </span>
-
-                                <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${statusClass(item.status)}">
-                                    <span class="h-2 w-2 rounded-full ${statusDot(item.status)}"></span>
-                                    ${escapeHtml(item.status_label)}
-                                </span>
-                            </div>
-
-                            <h3 class="line-clamp-2 text-xl font-black leading-tight text-slate-900">
-                                ${escapeHtml(item.judul)}
-                            </h3>
-
-                            <p class="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-slate-500">
-                                ${escapeHtml(item.deskripsi)}
-                            </p>
-                        </div>
-
-                        <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-xl text-emerald-600 sm:flex">
-                            <i class="fas fa-calendar-day"></i>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Tanggal</p>
-                            <p class="mt-1 text-sm font-black text-slate-800">${escapeHtml(item.tanggal_label)}</p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Waktu</p>
-                            <p class="mt-1 text-sm font-black text-slate-800">${escapeHtml(item.waktu_label)}</p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Lokasi</p>
-                            <p class="mt-1 line-clamp-1 text-sm font-black text-slate-800">${escapeHtml(item.lokasi)}</p>
-                        </div>
-
-                        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Target</p>
-                            <p class="mt-1 text-sm font-black text-slate-800">${escapeHtml(item.target_label)}</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p class="text-xs font-semibold text-slate-400">
-                            Read-only untuk Kader.
-                        </p>
-
-                        <a href="${escapeHtml(item.show_url)}" class="inline-flex h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-xs font-black uppercase tracking-[0.14em] text-white transition hover:bg-emerald-700">
-                            Detail
-                        </a>
-                    </div>
-                </div>
-            </article>
-        `;
-    };
-
-    const setStatus = (text, mode = 'active') => {
-        if (liveText) liveText.textContent = text;
-
-        if (!liveDot) return;
-
-        const color = mode === 'active'
-            ? 'bg-emerald-500'
-            : mode === 'loading'
-                ? 'bg-amber-500'
-                : 'bg-rose-500';
-
-        liveDot.className = `h-2 w-2 rounded-full ${color}`;
-    };
-
-    const showToast = (message) => {
-        if (!toast) return;
-
-        if (toastText) toastText.textContent = message || 'Agenda dari Bidan sudah masuk ke daftar.';
-
-        toast.classList.add('show');
-
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 4200);
-    };
-
-    const updateStats = (stats) => {
-        const pairs = {
-            'stat-semua': stats?.semua ?? 0,
-            'stat-aktif': stats?.aktif ?? 0,
-            'stat-mendatang': stats?.mendatang ?? 0,
-            'stat-selesai': stats?.selesai ?? 0,
-        };
-
-        Object.entries(pairs).forEach(([id, value]) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
-        });
-    };
-
-    const updateNotif = (count) => {
-        const total = Number(count || 0);
-
-        if (notifCount) notifCount.textContent = total;
-
-        if (!notifPill) return;
-
-        if (total > 0) {
-            notifPill.classList.remove('hidden');
-            notifPill.classList.add('inline-flex');
-        } else {
-            notifPill.classList.add('hidden');
-            notifPill.classList.remove('inline-flex');
-        }
-    };
-
-    const renderPayload = (payload, animate = true) => {
-        const items = Array.isArray(payload?.items) ? payload.items : [];
-
-        updateStats(payload?.stats || {});
-        updateNotif(payload?.unread_jadwal_notifikasi || 0);
-
-        if (serverTime && payload?.server_time) {
-            serverTime.textContent = payload.server_time;
-        }
-
-        if (!list || !empty) return;
-
-        if (animate) {
-            list.classList.add('is-loading');
-        }
-
-        setTimeout(() => {
-            if (items.length === 0) {
-                list.innerHTML = '';
-                empty.classList.remove('hidden');
-            } else {
-                empty.classList.add('hidden');
-                list.innerHTML = items.map(cardTemplate).join('');
-            }
-
-            list.classList.remove('is-loading');
-        }, animate ? 130 : 0);
-    };
-
-    const buildUrl = () => {
-        const url = new URL(liveUrl, window.location.origin);
-        const params = new URLSearchParams(window.location.search);
-
-        params.forEach((value, key) => {
-            url.searchParams.set(key, value);
-        });
-
-        url.searchParams.set('_live', Date.now().toString());
-
-        return url.toString();
-    };
-
-    const refreshJadwal = async (manual = false) => {
-        if (isFetching) return;
-
-        isFetching = true;
-
-        if (manual) {
-            setStatus('Memeriksa jadwal...', 'loading');
-        }
-
-        try {
-            const response = await fetch(buildUrl(), {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                cache: 'no-store'
-            });
-
-            if (!response.ok) {
-                throw new Error('Gagal memuat jadwal.');
-            }
-
-            const payload = await response.json();
-
-            const newestId = Number(payload?.latest_id || 0);
-
-            if (payload.hash !== currentHash) {
-                if (newestId > lastSeenId && lastSeenId > 0) {
-                    showToast('Bidan menambahkan atau memperbarui jadwal Posyandu.');
-                }
-
-                renderPayload(payload, true);
-                currentHash = payload.hash || '';
-            } else {
-                updateNotif(payload?.unread_jadwal_notifikasi || 0);
-
-                if (serverTime && payload?.server_time) {
-                    serverTime.textContent = payload.server_time;
-                }
-            }
-
-            if (newestId > lastSeenId) {
-                lastSeenId = newestId;
-                localStorage.setItem(lastSeenKey, String(lastSeenId));
-            }
-
-            setStatus('Realtime aktif', 'active');
-        } catch (error) {
-            setStatus('Realtime tertunda', 'error');
-            console.warn(error.message);
-        } finally {
-            isFetching = false;
-        }
-    };
-
-    renderPayload(initialPayload, false);
-
-    setTimeout(() => refreshJadwal(false), 700);
-    setInterval(() => refreshJadwal(false), 2000);
-
-    window.addEventListener('focus', () => refreshJadwal(true));
-
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            refreshJadwal(true);
-        }
-    });
-});
-</script>
 @endsection

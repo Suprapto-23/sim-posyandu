@@ -40,9 +40,9 @@
         ],
         [
             'label' => 'Menunggu Review', 'value' => number_format($stats['pengukuran_pending'] ?? 0),
-            'desc' => 'Perlu tinjauan Bidan', 'icon' => 'fa-clock-rotate-left',
+            'desc' => 'Tinjauan Bidan', 'icon' => 'fa-clock-rotate-left',
             'url' => $routeUrl('kader.pemeriksaan.index'),
-            'theme' => 'gold'
+            'theme' => 'amber'
         ],
         [
             'label' => 'Jadwal Hari Ini', 'value' => $jadwalHariIni ? 'Aktif' : 'Kosong',
@@ -52,237 +52,247 @@
         ],
     ];
 
-    $totalTrendHadir = $trend['summary']['total_hadir'] ?? 0;
-    $totalTrendPengukuran = $trend['summary']['total_pengukuran'] ?? 0;
+    $breakdowns = [
+        ['title' => 'Balita', 'count' => $stats['total_balita'] ?? 0, 'icon' => 'fa-child-reaching', 'url' => $routeUrl('kader.data.balita.index'), 'color' => 'emerald'],
+        ['title' => 'Remaja', 'count' => $stats['total_remaja'] ?? 0, 'icon' => 'fa-user-graduate', 'url' => $routeUrl('kader.data.remaja.index'), 'color' => 'amber'],
+        ['title' => 'Lansia', 'count' => $stats['total_lansia'] ?? 0, 'icon' => 'fa-person-cane', 'url' => $routeUrl('kader.data.lansia.index'), 'color' => 'blue'],
+    ];
 @endphp
 
 @push('styles')
 <style>
-    /* Latar belakang global abu-abu sangat muda/bersih */
-    body { background-color: #f8fafc; }
-
-    /* Kartu putih elegan untuk konten bawah */
-    .premium-card {
-        background: #ffffff;
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        box-shadow: 0 4px 20px -10px rgba(0,0,0,0.05);
-        border-radius: 1.5rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Latar belakang Ambient Gradient Mesh */
+    body { 
+        background-color: #f1f5f9; 
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
     }
     
-    .premium-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 30px -10px rgba(20, 184, 166, 0.15);
-        border-color: rgba(20, 184, 166, 0.2);
+    /* Widget Card Super Membulat (Squircle) */
+    .widget-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 2rem; 
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .widget-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px -10px rgba(20, 184, 166, 0.15);
+        background: rgba(255, 255, 255, 0.95);
     }
 
-    /* Animasi masuk yang mulus */
-    .fade-up {
-        animation: smoothFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        opacity: 0;
+    /* Tombol Pil (Pill Buttons) */
+    .btn-pill {
+        border-radius: 9999px;
+        transition: all 0.3s ease;
     }
-    @keyframes smoothFadeUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .delay-1 { animation-delay: 100ms; }
-    .delay-2 { animation-delay: 200ms; }
-    .delay-3 { animation-delay: 300ms; }
 
-    /* Custom Scrollbar */
-    .slim-scroll::-webkit-scrollbar { width: 4px; }
+    /* Scrollbar Super Membulat */
+    .slim-scroll::-webkit-scrollbar { width: 6px; }
     .slim-scroll::-webkit-scrollbar-track { background: transparent; }
-    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.2); border-radius: 10px; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.2); border-radius: 9999px; }
     .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(20, 184, 166, 0.5); }
 
-    /* Palet Warna Ikon Bawah */
-    .icon-emerald { background: #ecfdf5; color: #10b981; }
-    .icon-teal { background: #f0fdfa; color: #14b8a6; }
-    .icon-gold { background: #fffbeb; color: #f59e0b; }
-    .icon-blue { background: #eff6ff; color: #3b82f6; }
+    /* Fix Tooltip ApexChart agar membulat juga */
+    .apexcharts-tooltip {
+        border-radius: 1.5rem !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        border: none !important;
+    }
 </style>
 @endpush
 
 @section('content')
-<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6">
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-8">
 
-    {{-- 1. HERO SECTION : Premium Tosca (Teal) Gradient --}}
-    <div class="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-teal-600 via-teal-500 to-emerald-500 p-8 lg:p-10 shadow-xl shadow-teal-500/20 fade-up">
+    {{-- 1. FLOATING HERO WIDGET --}}
+    <div class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-8 sm:p-10 shadow-2xl shadow-teal-500/20 flex flex-col lg:flex-row justify-between items-center gap-8 border-[6px] border-white/40">
         
-        <div class="absolute -right-10 -top-24 w-96 h-96 bg-white/15 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute right-1/4 -bottom-20 w-72 h-72 bg-emerald-400/30 rounded-full blur-2xl pointer-events-none"></div>
-        <div class="absolute -left-10 top-1/4 w-64 h-64 bg-teal-400/20 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        
+        <div class="relative z-10 w-full lg:w-1/2 flex flex-col gap-5 text-center lg:text-left">
+            <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-xs font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-200 animate-pulse"></span>
+                    Posyandu Center
+                </span>
+            </div>
             
-            <div class="max-w-2xl">
-                <div class="flex flex-wrap items-center gap-3 mb-5">
-                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-widest text-white shadow-sm backdrop-blur-md">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
-                        Kader Operation Center
-                    </span>
-                    <span id="realtime-clock" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white shadow-sm backdrop-blur-md">
-                        <i class="far fa-clock text-emerald-200"></i> <span id="clock-text">Memuat waktu...</span>
-                    </span>
+            <h1 class="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                <span id="dynamic-greeting">Halo</span>,<br/>
+                {{ $firstName }} <span id="dynamic-emoji" class="inline-block animate-bounce">👋</span>
+            </h1>
+
+            <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
+                Pusat operasional Posyandu terpadu. Kelola data sasaran, pantau tren kehadiran, dan rekam hasil pengukuran secara real-time.
+            </p>
+
+            <div class="flex flex-wrap justify-center lg:justify-start gap-4 mt-2">
+                @if(Route::has('kader.absensi.index'))
+                    <a href="{{ route('kader.absensi.index') }}" class="btn-pill bg-white text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-6 py-3 text-sm font-bold shadow-lg flex items-center gap-2">
+                        <i class="fa-solid fa-user-check"></i> Catat Absensi
+                    </a>
+                @endif
+                @if(Route::has('kader.pemeriksaan.create'))
+                    <a href="{{ route('kader.pemeriksaan.create') }}" class="btn-pill bg-black/10 hover:bg-black/20 text-white border border-white/30 px-6 py-3 text-sm font-bold backdrop-blur-md transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-stethoscope"></i> Cek Kesehatan
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        {{-- WIDGET JAM & STATISTIK BULANAN --}}
+        <div class="relative z-10 w-full lg:w-auto flex flex-col sm:flex-row gap-4 justify-center">
+            
+            {{-- Jam Realtime Panel --}}
+            <div class="widget-card !rounded-[2.5rem] !bg-white/80 p-6 flex flex-col items-center justify-center min-w-[200px]">
+                <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-500 flex items-center justify-center text-xl mb-3 shadow-inner">
+                    <i class="fa-solid fa-stopwatch"></i>
                 </div>
-
-                <h1 class="text-3xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                    <span id="dynamic-greeting">Selamat Pagi</span>,<br class="hidden sm:block"/>
-                    Ibu {{ $firstName }} <span id="dynamic-emoji">✨</span>
-                </h1>
-
-                <p class="mt-4 text-sm sm:text-base font-medium text-teal-50/90 leading-relaxed max-w-xl">
-                    Sistem manajemen terpusat Posyandu. Pantau sasaran warga, registrasi kehadiran bulanan, dan kelola pengukuran fisik secara real-time.
-                </p>
-                
-                <div class="flex flex-wrap gap-4 mt-7">
-                    @if(Route::has('kader.absensi.index'))
-                        <a href="{{ route('kader.absensi.index') }}" class="group inline-flex items-center gap-2 bg-white text-teal-700 px-6 py-3 rounded-xl text-sm font-bold shadow-[0_8px_20px_rgba(0,0,0,0.1)] hover:bg-teal-50 hover:-translate-y-0.5 transition-all">
-                            <i class="fa-solid fa-user-check text-teal-500"></i> Input Absensi
-                        </a>
-                    @endif
-                    @if(Route::has('kader.pemeriksaan.create'))
-                        <a href="{{ route('kader.pemeriksaan.create') }}" class="group inline-flex items-center gap-2 bg-white/10 text-white border border-white/30 px-6 py-3 rounded-xl text-sm font-bold backdrop-blur-md hover:bg-white/20 hover:border-white/50 hover:-translate-y-0.5 transition-all">
-                            <i class="fa-solid fa-stethoscope"></i> Input Pengukuran
-                        </a>
-                    @endif
+                <p id="clock-date" class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Memuat tanggal...</p>
+                <div class="text-3xl font-black text-slate-800 tracking-tighter tabular-nums flex items-baseline gap-1">
+                    <span id="clock-hm">00:00</span>
+                    <span id="clock-s" class="text-lg text-teal-500">:00</span>
                 </div>
             </div>
 
-            <div class="shrink-0 w-full lg:w-auto">
-                <div class="bg-white/10 backdrop-blur-lg border border-white/20 rounded-[1.8rem] p-7 shadow-2xl">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-teal-100 text-center mb-6">Capaian Bulan Ini</p>
-                    <div class="flex items-center gap-8">
-                        <div class="text-center px-2">
-                            <div class="flex items-center justify-center w-12 h-12 mx-auto rounded-full bg-white/20 text-white mb-3 shadow-inner">
-                                <i class="fa-solid fa-clipboard-check text-lg"></i>
-                            </div>
-                            <p class="text-4xl font-black text-white">{{ number_format($laporanBulanan['jumlah_hadir'] ?? 0) }}</p>
-                            <p class="mt-1.5 text-[10px] font-bold text-teal-100 uppercase tracking-wider">Kehadiran</p>
-                        </div>
-                        <div class="h-20 w-[1px] bg-white/20"></div>
-                        <div class="text-center px-2">
-                            <div class="flex items-center justify-center w-12 h-12 mx-auto rounded-full bg-white/20 text-white mb-3 shadow-inner">
-                                <i class="fa-solid fa-weight-scale text-lg"></i>
-                            </div>
-                            <p class="text-4xl font-black text-white">{{ number_format($laporanBulanan['jumlah_pengukuran'] ?? 0) }}</p>
-                            <p class="mt-1.5 text-[10px] font-bold text-teal-100 uppercase tracking-wider">Pengukuran</p>
-                        </div>
+            {{-- Ringkasan Bulanan --}}
+            <div class="widget-card !rounded-[2.5rem] !bg-white/80 p-6 flex flex-col justify-center gap-4 min-w-[200px]">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-500 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Hadir Bulan Ini</p>
+                        <p class="text-2xl font-black text-slate-800">{{ number_format($laporanBulanan['jumlah_hadir'] ?? 0) }}</p>
+                    </div>
+                </div>
+                <div class="w-full border-t-[3px] border-dotted border-slate-200 rounded-full"></div>
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-weight-scale"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Telah Diukur</p>
+                        <p class="text-2xl font-black text-slate-800">{{ number_format($laporanBulanan['jumlah_pengukuran'] ?? 0) }}</p>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 
-    {{-- 2. KPI CARDS : Clean Premium White --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 fade-up delay-1">
+    {{-- 2. METRIK UTAMA (4 BUBBLE WIDGETS) --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         @foreach($cardStats as $card)
-            <a href="{{ $card['url'] }}" class="premium-card group block p-6 relative overflow-hidden">
-                <div class="absolute -right-6 -top-6 w-24 h-24 bg-{{ $card['theme'] }}-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
-                
-                <div class="relative z-10 flex justify-between items-start mb-4">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ $card['label'] }}</p>
-                        <h3 class="text-3xl font-extrabold text-slate-800 tracking-tight mt-1">{{ $card['value'] }}</h3>
-                    </div>
-                    <div class="w-12 h-12 rounded-full icon-{{ $card['theme'] }} flex items-center justify-center text-xl shadow-sm">
+            <a href="{{ $card['url'] }}" class="widget-card p-6 group block flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-5">
+                    <div class="w-14 h-14 rounded-full bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 flex items-center justify-center text-2xl group-hover:bg-{{ $card['theme'] }}-500 group-hover:text-white group-hover:shadow-lg group-hover:shadow-{{ $card['theme'] }}-500/30 transition-all duration-300">
                         <i class="fa-solid {{ $card['icon'] }}"></i>
                     </div>
+                    <span class="text-3xl font-black text-slate-800">{{ $card['value'] }}</span>
                 </div>
-                <div class="relative z-10 flex items-center gap-2 pt-4 border-t border-slate-100">
-                    <span class="w-1.5 h-1.5 rounded-full bg-{{ $card['theme'] }}-400"></span>
-                    <p class="text-[11px] font-semibold text-slate-500">{{ $card['desc'] }}</p>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-700">{{ $card['label'] }}</h3>
+                    <p class="text-xs font-medium text-slate-400 mt-1.5 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-{{ $card['theme'] }}-400"></span> {{ $card['desc'] }}
+                    </p>
                 </div>
             </a>
         @endforeach
     </div>
 
-    {{-- 3. BREAKDOWN DEMOGRAFI : Horizontal Cards --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 fade-up delay-2">
-        @php 
-            $breakdowns = [
-                ['title' => 'Balita Aktif', 'count' => $stats['total_balita'] ?? 0, 'icon' => 'fa-child-reaching', 'url' => $routeUrl('kader.data.balita.index'), 'color' => 'emerald'],
-                ['title' => 'Remaja Aktif', 'count' => $stats['total_remaja'] ?? 0, 'icon' => 'fa-user-graduate', 'url' => $routeUrl('kader.data.remaja.index'), 'color' => 'amber'],
-                ['title' => 'Lansia Aktif', 'count' => $stats['total_lansia'] ?? 0, 'icon' => 'fa-person-cane', 'url' => $routeUrl('kader.data.lansia.index'), 'color' => 'teal'],
-            ];
-        @endphp
+    {{-- 3. AREA KONTEN (CHART & JADWAL & DEMOGRAFI) --}}
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
         
-        @foreach($breakdowns as $b)
-            <a href="{{ $b['url'] }}" class="premium-card p-5 flex items-center gap-5 group">
-                <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 text-{{ $b['color'] }}-500 flex items-center justify-center text-2xl group-hover:bg-{{ $b['color'] }}-50 transition-colors">
-                    <i class="fa-solid {{ $b['icon'] }}"></i>
-                </div>
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ $b['title'] }}</p>
-                    <h3 class="text-2xl font-extrabold text-slate-800 tracking-tight leading-none mt-1">{{ number_format($b['count']) }} <span class="text-[10px] font-medium text-slate-400 tracking-normal">Jiwa</span></h3>
-                </div>
-            </a>
-        @endforeach
-    </div>
-
-    {{-- 4. MAIN GRID: CHART & JADWAL --}}
-    <div class="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 fade-up delay-3">
-        
-        {{-- CHART PANEL --}}
-        <div class="premium-card p-6 md:p-8 flex flex-col">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <div>
-                    <h2 class="text-lg font-extrabold text-slate-800 tracking-tight">Aktivitas Operasional</h2>
-                    <p class="text-xs font-semibold text-slate-500 mt-1">Tren kehadiran dan pengukuran fisik</p>
-                </div>
-                <div class="flex shrink-0 gap-1 rounded-xl bg-slate-50 p-1 border border-slate-100 shadow-inner">
-                    @foreach([7, 14, 30] as $days)
-                        <button type="button" data-range="{{ $days }}" class="trend-range rounded-lg px-4 py-1.5 text-[10px] font-bold transition-all {{ $days === 7 ? 'bg-teal-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/50' }}">
-                            {{ $days }} Hari
-                        </button>
-                    @endforeach
-                </div>
+        {{-- Kiri: Chart & Demografi (Col-span-2) --}}
+        <div class="xl:col-span-2 flex flex-col gap-6">
+            
+            {{-- Pill Demografi --}}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                @foreach($breakdowns as $b)
+                    <a href="{{ $b['url'] }}" class="widget-card !rounded-full p-3 pr-6 flex items-center gap-4 hover:border-{{ $b['color'] }}-300">
+                        <div class="w-12 h-12 rounded-full bg-{{ $b['color'] }}-100 text-{{ $b['color'] }}-600 flex items-center justify-center text-xl shrink-0">
+                            <i class="fa-solid {{ $b['icon'] }}"></i>
+                        </div>
+                        <div class="flex-1 flex justify-between items-center">
+                            <p class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{{ $b['title'] }}</p>
+                            <p class="text-xl font-black text-slate-800">{{ number_format($b['count']) }}</p>
+                        </div>
+                    </a>
+                @endforeach
             </div>
 
-            <div id="kaderTrendChart" class="min-h-[280px] w-full flex-1 border-t border-slate-100 pt-6"></div>
+            {{-- Smooth Area Chart --}}
+            <div class="widget-card p-6 sm:p-8 flex-1 flex flex-col min-h-[350px]">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 bg-slate-50/50 p-2 pl-6 rounded-full border border-slate-100">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-widest">Tren Aktivitas</h2>
+                    </div>
+                    <div class="flex shrink-0 bg-white p-1 rounded-full shadow-sm border border-slate-100 relative">
+                        @foreach([7, 14, 30] as $days)
+                            <button type="button" data-range="{{ $days }}" class="trend-range btn-pill px-4 py-2 text-xs font-bold transition-all duration-300 {{ $days === 7 ? 'bg-teal-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50' }}">
+                                {{ $days }} Hari
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+                <div id="kaderTrendChart" class="w-full flex-1"></div>
+            </div>
         </div>
 
-        {{-- JADWAL PANEL --}}
-        <div class="premium-card flex flex-col h-[400px] xl:h-auto overflow-hidden">
-            <div class="p-6 pb-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div>
-                    <h2 class="text-lg font-extrabold text-slate-800 tracking-tight">Agenda Posyandu</h2>
-                    <p class="text-xs font-semibold text-slate-500 mt-1">Jadwal operasional terdekat</p>
+        {{-- Kanan: Jadwal Terdekat (Pill List) --}}
+        <div class="widget-card flex flex-col p-2">
+            <div class="p-5 flex items-center justify-between pb-2 border-b border-slate-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center text-lg shadow-inner">
+                        <i class="fa-regular fa-calendar-days"></i>
+                    </div>
+                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-widest">Agenda Posyandu</h2>
                 </div>
                 @if(Route::has('kader.jadwal.index'))
-                    <a href="{{ route('kader.jadwal.index') }}" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-400 hover:bg-teal-50 hover:text-teal-600 transition-colors border border-slate-200 shadow-sm">
-                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    <a href="{{ route('kader.jadwal.index') }}" class="btn-pill w-10 h-10 bg-slate-50 hover:bg-teal-50 border border-slate-100 text-slate-400 hover:text-teal-600 flex items-center justify-center transition-all">
+                        <i class="fa-solid fa-arrow-right"></i>
                     </a>
                 @endif
             </div>
 
-            <div class="flex-1 overflow-y-auto slim-scroll p-6 space-y-4">
+            <div class="flex-1 overflow-y-auto slim-scroll p-3 space-y-3 max-h-[400px] xl:max-h-[100%]">
                 @forelse($jadwalMendatang as $jadwal)
-                    <a href="{{ Route::has('kader.jadwal.show') ? route('kader.jadwal.show', $jadwal->id) : '#' }}" class="group block rounded-[1.2rem] bg-slate-50 p-4 border border-slate-100 shadow-sm hover:shadow-md hover:bg-white hover:border-teal-100 transition-all">
+                    @php $isToday = !empty($jadwal->tanggal) && Carbon::parse($jadwal->tanggal)->isToday(); @endphp
+                    <a href="{{ Route::has('kader.jadwal.show') ? route('kader.jadwal.show', $jadwal->id) : '#' }}" 
+                       class="group block rounded-[2rem] p-3 border transition-all {{ $isToday ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 shadow-sm' : 'bg-white border-slate-100 hover:border-teal-200 hover:shadow-md' }}">
                         <div class="flex gap-4 items-center">
-                            <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-[14px] bg-white text-teal-600 border border-slate-200 shadow-sm group-hover:bg-teal-500 group-hover:border-teal-500 group-hover:text-white transition-colors">
-                                <span class="text-xl font-extrabold leading-none">{{ $formatDate($jadwal->tanggal ?? null, 'd') }}</span>
-                                <span class="text-[9px] font-black uppercase tracking-widest mt-1">{{ $formatDate($jadwal->tanggal ?? null, 'M') }}</span>
+                            <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full shrink-0 shadow-inner {{ $isToday ? 'bg-amber-500 text-white shadow-amber-500/30' : 'bg-slate-50 text-slate-600 group-hover:bg-teal-500 group-hover:text-white' }} transition-colors">
+                                <span class="text-lg font-black leading-none">{{ $formatDate($jadwal->tanggal ?? null, 'd') }}</span>
+                                <span class="text-[9px] font-bold uppercase tracking-widest mt-0.5">{{ $formatDate($jadwal->tanggal ?? null, 'M') }}</span>
                             </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <div class="min-w-0 flex-1 pr-2">
+                                <div class="flex items-center gap-2 mb-1">
                                     <h3 class="truncate text-sm font-bold text-slate-800">{{ $jadwal->judul ?? 'Agenda' }}</h3>
-                                    @if(!empty($jadwal->tanggal) && Carbon::parse($jadwal->tanggal)->isToday())
-                                        <span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-amber-700">Hari Ini</span>
+                                    @if($isToday)
+                                        <span class="btn-pill bg-amber-500 px-2 py-0.5 text-[9px] font-black text-white uppercase tracking-wider">HARI INI</span>
                                     @endif
                                 </div>
-                                <p class="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
-                                    <i class="far fa-clock text-slate-400"></i> {{ $formatTime($jadwal->waktu_mulai ?? null) }} - {{ $formatTime($jadwal->waktu_selesai ?? null) }}
+                                <p class="btn-pill inline-flex bg-slate-50 border border-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500 items-center gap-1.5">
+                                    <i class="fa-regular fa-clock text-teal-500"></i> {{ $formatTime($jadwal->waktu_mulai ?? null) }} - {{ $formatTime($jadwal->waktu_selesai ?? null) }}
                                 </p>
                             </div>
                         </div>
                     </a>
                 @empty
-                    <div class="flex h-full flex-col items-center justify-center text-center opacity-60">
-                        <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                            <i class="fa-regular fa-calendar-xmark text-slate-400 text-2xl"></i>
+                    <div class="flex h-full flex-col items-center justify-center text-center opacity-70 p-8 min-h-[250px]">
+                        <div class="w-20 h-20 rounded-3xl bg-slate-50 flex items-center justify-center mb-4 border border-slate-100">
+                            <i class="fa-solid fa-mug-hot text-3xl text-slate-300"></i>
                         </div>
-                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Belum ada agenda</p>
+                        <p class="text-sm font-bold text-slate-500">Belum ada agenda terdekat</p>
+                        <p class="text-xs font-semibold text-slate-400 mt-2">Waktunya beristirahat atau melakukan evaluasi data sasaran.</p>
                     </div>
                 @endforelse
             </div>
@@ -296,26 +306,29 @@
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // 1. JAM & SAPAAN REALTIME
-    function updateClockAndGreeting() {
+    
+    // 1. JAM REALTIME DENGAN DETIK PRESISI
+    function updateRealtimeClock() {
         const now = new Date();
-        const clockTextEl = document.getElementById('clock-text');
+        const dateEl = document.getElementById('clock-date');
+        const hmEl = document.getElementById('clock-hm');
+        const sEl = document.getElementById('clock-s');
         const greetingEl = document.getElementById('dynamic-greeting');
         const emojiEl = document.getElementById('dynamic-emoji');
 
         const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-
-        const dayName = days[now.getDay()];
-        const date = String(now.getDate()).padStart(2, '0');
-        const month = months[now.getMonth()];
-        const year = now.getFullYear();
+        
+        if (dateEl) {
+            dateEl.innerText = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+        }
 
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
 
-        if (clockTextEl) clockTextEl.innerText = `${dayName}, ${date} ${month} ${year} • ${hours}:${minutes}:${seconds} WIB`;
+        if (hmEl) hmEl.innerText = `${hours}:${minutes}`;
+        if (sEl) sEl.innerText = `:${seconds}`;
 
         const h = now.getHours();
         let greeting = 'Selamat Malam';
@@ -329,10 +342,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (emojiEl) emojiEl.innerText = emoji;
     }
 
-    updateClockAndGreeting();
-    setInterval(updateClockAndGreeting, 1000);
+    updateRealtimeClock();
+    setInterval(updateRealtimeClock, 1000);
 
-    // 2. GRAFIK KADER
+    // 2. GRAFIK TREN DENGAN ANIMASI SANGAT HALUS (SMOOTH MORPHING)
     const endpoint = @json(Route::has('kader.dashboard.trend') ? route('kader.dashboard.trend') : null);
     const initialTrend = @json($trend ?? ['labels' => [], 'series' => []]);
     const chartElement = document.querySelector('#kaderTrendChart');
@@ -342,26 +355,49 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentRange = 7;
     const chart = new ApexCharts(chartElement, {
         chart: {
-            type: 'area', height: 280, toolbar: { show: false }, zoom: { enabled: false },
-            fontFamily: 'inherit', foreColor: '#94a3b8'
+            type: 'area', 
+            height: '100%', 
+            toolbar: { show: false }, 
+            zoom: { enabled: false },
+            fontFamily: 'inherit', 
+            foreColor: '#94a3b8', 
+            parentHeightOffset: 0,
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 800, // Kecepatan transisi garis yang mulus
+                animateGradually: {
+                    enabled: true,
+                    delay: 150
+                },
+                dynamicAnimation: {
+                    enabled: true,
+                    speed: 500 // Animasi saat update series
+                }
+            }
         },
-        colors: ['#14b8a6', '#f59e0b'], // Teal dan Amber
+        colors: ['#0d9488', '#f59e0b'], 
         series: initialTrend.series || [],
         xaxis: {
             categories: initialTrend.labels || [],
-            axisBorder: { show: false }, axisTicks: { show: false },
-            labels: { style: { fontSize: '10px', fontWeight: 600 } }
+            axisBorder: { show: false }, 
+            axisTicks: { show: false },
+            labels: { style: { fontSize: '11px', fontWeight: 600 } }
         },
-        yaxis: { min: 0, forceNiceScale: true, labels: { style: { fontSize: '10px', fontWeight: 600 } } },
-        stroke: { curve: 'smooth', width: 2.5 },
+        yaxis: { 
+            min: 0, 
+            forceNiceScale: true, 
+            labels: { style: { fontSize: '11px', fontWeight: 600 } } 
+        },
+        stroke: { curve: 'smooth', width: 3 },
         dataLabels: { enabled: false },
         fill: {
             type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0.0, stops: [0, 100] }
+            gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.01, stops: [0, 100] }
         },
-        grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { top: 0, right: 0, left: 10, bottom: 0 } },
-        legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', fontWeight: 700, markers: { radius: 12 } },
-        tooltip: { theme: 'light' }
+        grid: { borderColor: 'transparent', strokeDashArray: 0, padding: { top: 0, right: 0, left: 10, bottom: 0 } },
+        legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px', fontWeight: 700, markers: { radius: 12 } },
+        tooltip: { theme: 'light', x: { show: true } }
     });
 
     chart.render();
@@ -374,18 +410,25 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             if (!res.ok) return;
             const data = await res.json();
+            
+            // Update Series dan Kategori sumbu X menggunakan API built-in agar animasinya aktif
             chart.updateOptions({ xaxis: { categories: data.labels || [] } }, false, true);
             chart.updateSeries(data.series || [], true);
         } catch (e) { console.warn('Gagal memuat trend:', e); }
     }
 
+    // Interaksi Tombol Filter Waktu
     document.querySelectorAll('.trend-range').forEach(btn => {
         btn.addEventListener('click', function () {
             currentRange = parseInt(this.dataset.range || '7', 10);
+            
+            // Ubah gaya tombol secara visual
             document.querySelectorAll('.trend-range').forEach(item => {
-                item.className = 'trend-range rounded-lg px-4 py-1.5 text-[10px] font-bold transition-all text-slate-500 hover:text-slate-800 hover:bg-slate-200/50';
+                item.className = 'trend-range btn-pill px-4 py-2 text-xs font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 hover:bg-slate-50';
             });
-            this.className = 'trend-range rounded-lg px-4 py-1.5 text-[10px] font-bold transition-all bg-teal-500 text-white shadow-sm';
+            this.className = 'trend-range btn-pill px-4 py-2 text-xs font-bold transition-all duration-300 bg-teal-500 text-white shadow-md';
+            
+            // Panggil fungsi refresh chart (dengan animasi smooth morphing)
             refreshTrend(currentRange);
         });
     });

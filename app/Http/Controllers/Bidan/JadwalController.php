@@ -57,7 +57,7 @@ class JadwalController extends Controller
                 ->orderByRaw("CASE WHEN tanggal >= CURDATE() THEN 0 ELSE 1 END")
                 ->orderBy('tanggal')
                 ->orderBy('waktu_mulai')
-                ->paginate(10)
+                ->paginate(5)
                 ->withQueryString();
 
             $stats = [

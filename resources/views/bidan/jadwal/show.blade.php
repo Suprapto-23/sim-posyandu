@@ -6,71 +6,28 @@
 
 @php
     use Carbon\Carbon;
+    use Illuminate\Support\Str;
 
     Carbon::setLocale('id');
 
     $kategoriOptions = $kategoriOptions ?? [
-        'posyandu' => [
-            'label' => 'Posyandu Rutin',
-            'desc' => 'Agenda pelayanan Posyandu umum, absensi, dan pengukuran dasar.',
-            'icon' => 'ph ph-house-line',
-        ],
-        'imunisasi' => [
-            'label' => 'Imunisasi Balita',
-            'desc' => 'Agenda pelayanan imunisasi untuk sasaran Balita.',
-            'icon' => 'ph ph-syringe',
-        ],
-        'pemeriksaan' => [
-            'label' => 'Pemeriksaan Klinis',
-            'desc' => 'Agenda pemeriksaan lanjutan oleh Bidan.',
-            'icon' => 'ph ph-stethoscope',
-        ],
-        'lainnya' => [
-            'label' => 'Kegiatan Lainnya',
-            'desc' => 'Agenda tambahan Posyandu di luar layanan utama.',
-            'icon' => 'ph ph-calendar-plus',
-        ],
+        'posyandu' => ['label' => 'Posyandu Rutin', 'desc' => 'Agenda pelayanan Posyandu umum, absensi, dan pengukuran dasar.', 'icon' => 'fa-house-medical'],
+        'imunisasi' => ['label' => 'Imunisasi Balita', 'desc' => 'Agenda pelayanan imunisasi untuk sasaran Balita.', 'icon' => 'fa-syringe'],
+        'pemeriksaan' => ['label' => 'Pemeriksaan Klinis', 'desc' => 'Agenda pemeriksaan lanjutan oleh Bidan.', 'icon' => 'fa-stethoscope'],
+        'lainnya' => ['label' => 'Kegiatan Lainnya', 'desc' => 'Agenda tambahan Posyandu di luar layanan utama.', 'icon' => 'fa-calendar-plus'],
     ];
 
     $targetOptions = $targetOptions ?? [
-        'semua' => [
-            'label' => 'Semua Sasaran',
-            'desc' => 'Balita, Remaja, Lansia, dan warga yang terdaftar.',
-            'icon' => 'ph ph-users-three',
-        ],
-        'balita' => [
-            'label' => 'Balita',
-            'desc' => 'Sasaran Balita.',
-            'icon' => 'ph ph-baby',
-        ],
-        'remaja' => [
-            'label' => 'Remaja',
-            'desc' => 'Sasaran Remaja.',
-            'icon' => 'ph ph-user-focus',
-        ],
-        'lansia' => [
-            'label' => 'Lansia',
-            'desc' => 'Sasaran Lansia.',
-            'icon' => 'ph ph-heartbeat',
-        ],
+        'semua'  => ['label' => 'Semua Sasaran', 'desc' => 'Balita, Remaja, Lansia, dan warga.', 'icon' => 'fa-users'],
+        'balita' => ['label' => 'Balita', 'desc' => 'Khusus sasaran Balita.', 'icon' => 'fa-baby'],
+        'remaja' => ['label' => 'Remaja', 'desc' => 'Khusus sasaran Remaja.', 'icon' => 'fa-user-graduate'],
+        'lansia' => ['label' => 'Lansia', 'desc' => 'Khusus sasaran Lansia.', 'icon' => 'fa-person-cane'],
     ];
 
     $statusOptions = $statusOptions ?? [
-        'aktif' => [
-            'label' => 'Aktif',
-            'desc' => 'Jadwal masih berlaku.',
-            'icon' => 'ph ph-check-circle',
-        ],
-        'selesai' => [
-            'label' => 'Selesai',
-            'desc' => 'Jadwal sudah dilaksanakan.',
-            'icon' => 'ph ph-flag-checkered',
-        ],
-        'dibatalkan' => [
-            'label' => 'Dibatalkan',
-            'desc' => 'Jadwal dibatalkan atau ditunda.',
-            'icon' => 'ph ph-x-circle',
-        ],
+        'aktif'      => ['label' => 'Aktif', 'desc' => 'Jadwal masih berlaku.', 'icon' => 'fa-circle-check'],
+        'selesai'    => ['label' => 'Selesai', 'desc' => 'Jadwal sudah dilaksanakan.', 'icon' => 'fa-flag-checkered'],
+        'dibatalkan' => ['label' => 'Dibatalkan', 'desc' => 'Jadwal dibatalkan atau ditunda.', 'icon' => 'fa-circle-xmark'],
     ];
 
     $judul = $jadwal->judul ?? 'Judul Jadwal Tidak Terdata';
@@ -84,122 +41,23 @@
     $targetMeta = $targetOptions[$target] ?? $targetOptions['semua'];
     $statusMeta = $statusOptions[$status] ?? $statusOptions['aktif'];
 
-    $formatTanggal = function ($date, bool $withDay = false) {
-        if (! $date) {
-            return '-';
-        }
+    $formatTanggal = fn($date, $withDay = false) => $date ? Carbon::parse($date)->translatedFormat($withDay ? 'l, d F Y' : 'd F Y') : '-';
+    $formatTanggalPendek = fn($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y') : '-';
+    $formatBulanPendek = fn($date) => $date ? Carbon::parse($date)->translatedFormat('M') : '-';
+    $formatTanggalAngka = fn($date) => $date ? Carbon::parse($date)->format('d') : '-';
+    $formatWaktu = fn($mulai, $selesai) => ($mulai && $selesai) ? Carbon::parse($mulai)->format('H:i') . ' - ' . Carbon::parse($selesai)->format('H:i') . ' WIB' : '-';
+    $formatMetaDate = fn($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y, H:i') : '-';
 
-        try {
-            return Carbon::parse($date)->translatedFormat($withDay ? 'l, d F Y' : 'd F Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatTanggalPendek = function ($date) {
-        if (! $date) {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatBulanPendek = function ($date) {
-        if (! $date) {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('M');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatTanggalAngka = function ($date) {
-        if (! $date) {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->format('d');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatWaktu = function ($mulai, $selesai) {
-        try {
-            $mulai = $mulai ? Carbon::parse($mulai)->format('H:i') : '-';
-            $selesai = $selesai ? Carbon::parse($selesai)->format('H:i') : '-';
-
-            return $mulai . ' - ' . $selesai . ' WIB';
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatMetaDate = function ($date) {
-        if (! $date) {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y, H:i');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $isToday = function ($date) {
-        if (! $date) {
-            return false;
-        }
-
-        try {
-            return Carbon::parse($date)->isToday();
-        } catch (\Throwable $e) {
-            return false;
-        }
-    };
-
-    $isPastDate = function ($date) {
-        if (! $date) {
-            return false;
-        }
-
-        try {
-            return Carbon::parse($date)->startOfDay()->lt(now()->startOfDay());
-        } catch (\Throwable $e) {
-            return false;
-        }
-    };
+    $isToday = fn($date) => $date ? Carbon::parse($date)->isToday() : false;
+    $isPastDate = fn($date) => $date ? Carbon::parse($date)->startOfDay()->lt(now()->startOfDay()) : false;
 
     $canModifyFallback = function ($jadwal) {
-        if (($jadwal->status ?? 'aktif') !== 'aktif') {
-            return false;
-        }
-
-        if (empty($jadwal->tanggal)) {
-            return false;
-        }
-
+        if (($jadwal->status ?? 'aktif') !== 'aktif') return false;
+        if (empty($jadwal->tanggal)) return false;
         try {
-            $tanggal = Carbon::parse($jadwal->tanggal)->format('Y-m-d');
-            $waktuMulai = $jadwal->waktu_mulai
-                ? Carbon::parse($jadwal->waktu_mulai)->format('H:i:s')
-                : '00:00:00';
-
-            $startDateTime = Carbon::parse($tanggal . ' ' . $waktuMulai);
-
+            $startDateTime = Carbon::parse(Carbon::parse($jadwal->tanggal)->format('Y-m-d') . ' ' . ($jadwal->waktu_mulai ?? '00:00:00'));
             return now()->lt($startDateTime);
-        } catch (\Throwable $e) {
-            return false;
-        }
+        } catch (\Throwable $e) { return false; }
     };
 
     $canEdit = isset($canEdit) ? (bool) $canEdit : $canModifyFallback($jadwal);
@@ -216,141 +74,38 @@
 
     $statusTheme = function ($value) {
         return match (strtolower((string) $value)) {
-            'aktif' => [
-                'label' => 'Aktif',
-                'badge' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'panel' => 'border-emerald-100 bg-emerald-50/75',
-                'iconBox' => 'bg-white text-emerald-700 ring-emerald-100',
-                'dot' => 'bg-emerald-500',
-                'icon' => 'ph ph-check-circle',
-            ],
-            'selesai' => [
-                'label' => 'Selesai',
-                'badge' => 'bg-slate-50 text-slate-600 ring-slate-200',
-                'panel' => 'border-slate-100 bg-slate-50/80',
-                'iconBox' => 'bg-white text-slate-600 ring-slate-100',
-                'dot' => 'bg-slate-400',
-                'icon' => 'ph ph-flag-checkered',
-            ],
-            'dibatalkan' => [
-                'label' => 'Dibatalkan',
-                'badge' => 'bg-rose-50 text-rose-700 ring-rose-200',
-                'panel' => 'border-rose-100 bg-rose-50/75',
-                'iconBox' => 'bg-white text-rose-700 ring-rose-100',
-                'dot' => 'bg-rose-500',
-                'icon' => 'ph ph-x-circle',
-            ],
-            default => [
-                'label' => ucfirst((string) $value),
-                'badge' => 'bg-slate-50 text-slate-600 ring-slate-200',
-                'panel' => 'border-slate-100 bg-slate-50/80',
-                'iconBox' => 'bg-white text-slate-600 ring-slate-100',
-                'dot' => 'bg-slate-400',
-                'icon' => 'ph ph-info',
-            ],
+            'aktif' => ['label' => 'Aktif', 'badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'panel' => 'border-emerald-100 bg-emerald-50/70', 'iconBox' => 'bg-white text-emerald-600 border border-emerald-100', 'dot' => 'bg-emerald-500', 'icon' => 'fa-circle-check'],
+            'selesai' => ['label' => 'Selesai', 'badge' => 'bg-slate-50 text-slate-600 border-slate-200', 'panel' => 'border-slate-100 bg-slate-50/80', 'iconBox' => 'bg-white text-slate-500 border border-slate-100', 'dot' => 'bg-slate-400', 'icon' => 'fa-flag-checkered'],
+            'dibatalkan' => ['label' => 'Dibatalkan', 'badge' => 'bg-rose-50 text-rose-700 border-rose-200', 'panel' => 'border-rose-100 bg-rose-50/70', 'iconBox' => 'bg-white text-rose-600 border border-rose-100', 'dot' => 'bg-rose-500', 'icon' => 'fa-circle-xmark'],
+            default => ['label' => ucfirst((string) $value), 'badge' => 'bg-slate-50 text-slate-600 border-slate-200', 'panel' => 'border-slate-100 bg-slate-50/80', 'iconBox' => 'bg-white text-slate-500 border border-slate-100', 'dot' => 'bg-slate-400', 'icon' => 'fa-circle-info'],
         };
     };
 
-    $kategoriTheme = function ($value) {
+    $kategoriTheme = function ($value) use ($kategoriMeta) {
+        $icon = $kategoriMeta['icon'];
         return match (strtolower((string) $value)) {
-            'imunisasi' => [
-                'badge' => 'bg-cyan-50 text-cyan-700 ring-cyan-200',
-                'panel' => 'border-cyan-100 bg-cyan-50/75',
-                'iconBox' => 'bg-white text-cyan-700 ring-cyan-100',
-                'gradient' => 'from-cyan-500 to-sky-500',
-                'icon' => 'ph ph-syringe',
-            ],
-            'pemeriksaan' => [
-                'badge' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'panel' => 'border-emerald-100 bg-emerald-50/75',
-                'iconBox' => 'bg-white text-emerald-700 ring-emerald-100',
-                'gradient' => 'from-emerald-500 to-teal-500',
-                'icon' => 'ph ph-stethoscope',
-            ],
-            'lainnya' => [
-                'badge' => 'bg-amber-50 text-amber-700 ring-amber-200',
-                'panel' => 'border-amber-100 bg-amber-50/75',
-                'iconBox' => 'bg-white text-amber-700 ring-amber-100',
-                'gradient' => 'from-amber-500 to-orange-500',
-                'icon' => 'ph ph-calendar-plus',
-            ],
-            default => [
-                'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
-                'panel' => 'border-sky-100 bg-sky-50/75',
-                'iconBox' => 'bg-white text-sky-700 ring-sky-100',
-                'gradient' => 'from-sky-500 to-cyan-500',
-                'icon' => 'ph ph-house-line',
-            ],
+            'imunisasi' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'panel' => 'border-cyan-100 bg-cyan-50/70', 'iconBox' => 'bg-white text-cyan-600 border border-cyan-100', 'gradient' => 'from-cyan-500 to-sky-500', 'icon' => $icon],
+            'pemeriksaan' => ['badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'panel' => 'border-emerald-100 bg-emerald-50/70', 'iconBox' => 'bg-white text-emerald-600 border border-emerald-100', 'gradient' => 'from-emerald-500 to-teal-500', 'icon' => $icon],
+            'lainnya' => ['badge' => 'bg-amber-50 text-amber-700 border-amber-200', 'panel' => 'border-amber-100 bg-amber-50/70', 'iconBox' => 'bg-white text-amber-600 border border-amber-100', 'gradient' => 'from-amber-500 to-orange-500', 'icon' => $icon],
+            default => ['badge' => 'bg-sky-50 text-sky-700 border-sky-200', 'panel' => 'border-sky-100 bg-sky-50/70', 'iconBox' => 'bg-white text-sky-600 border border-sky-100', 'gradient' => 'from-sky-500 to-blue-500', 'icon' => $icon],
         };
     };
 
-    $targetTheme = function ($value) {
+    $targetTheme = function ($value) use ($targetMeta) {
+        $icon = $targetMeta['icon'];
         return match (strtolower((string) $value)) {
-            'balita' => [
-                'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
-                'panel' => 'border-sky-100 bg-sky-50/75',
-                'iconBox' => 'bg-white text-sky-700 ring-sky-100',
-                'icon' => 'ph ph-baby',
-            ],
-            'remaja' => [
-                'badge' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-                'panel' => 'border-indigo-100 bg-indigo-50/75',
-                'iconBox' => 'bg-white text-indigo-700 ring-indigo-100',
-                'icon' => 'ph ph-user-focus',
-            ],
-            'lansia' => [
-                'badge' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'panel' => 'border-emerald-100 bg-emerald-50/75',
-                'iconBox' => 'bg-white text-emerald-700 ring-emerald-100',
-                'icon' => 'ph ph-heartbeat',
-            ],
-            default => [
-                'badge' => 'bg-slate-50 text-slate-700 ring-slate-200',
-                'panel' => 'border-slate-100 bg-slate-50/80',
-                'iconBox' => 'bg-white text-slate-700 ring-slate-100',
-                'icon' => 'ph ph-users-three',
-            ],
+            'balita' => ['badge' => 'bg-sky-50 text-sky-700 border-sky-200', 'panel' => 'border-sky-100 bg-sky-50/70', 'iconBox' => 'bg-white text-sky-600 border border-sky-100', 'icon' => $icon],
+            'remaja' => ['badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200', 'panel' => 'border-indigo-100 bg-indigo-50/70', 'iconBox' => 'bg-white text-indigo-600 border border-indigo-100', 'icon' => $icon],
+            'lansia' => ['badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'panel' => 'border-emerald-100 bg-emerald-50/70', 'iconBox' => 'bg-white text-emerald-600 border border-emerald-100', 'icon' => $icon],
+            default => ['badge' => 'bg-slate-50 text-slate-700 border-slate-200', 'panel' => 'border-slate-100 bg-slate-50/80', 'iconBox' => 'bg-white text-slate-600 border border-slate-100', 'icon' => $icon],
         };
     };
 
     $lockState = function () use ($canEdit, $status) {
-        if ($canEdit) {
-            return [
-                'label' => 'Bisa Diedit',
-                'desc' => 'Jadwal masih aktif dan belum melewati waktu mulai.',
-                'icon' => 'ph ph-pencil-simple',
-                'panel' => 'border-emerald-100 bg-emerald-50/75',
-                'iconBox' => 'bg-white text-emerald-700 ring-emerald-100',
-            ];
-        }
-
-        if ($status === 'dibatalkan') {
-            return [
-                'label' => 'Dibatalkan',
-                'desc' => 'Jadwal dibatalkan dan tidak dapat diedit.',
-                'icon' => 'ph ph-x-circle',
-                'panel' => 'border-rose-100 bg-rose-50/75',
-                'iconBox' => 'bg-white text-rose-700 ring-rose-100',
-            ];
-        }
-
-        if ($status === 'selesai') {
-            return [
-                'label' => 'Terkunci',
-                'desc' => 'Jadwal sudah selesai dan disimpan sebagai arsip.',
-                'icon' => 'ph ph-lock-simple',
-                'panel' => 'border-slate-100 bg-slate-50/80',
-                'iconBox' => 'bg-white text-slate-600 ring-slate-100',
-            ];
-        }
-
-        return [
-            'label' => 'Terkunci',
-            'desc' => 'Waktu mulai jadwal sudah terlewati.',
-            'icon' => 'ph ph-lock-simple',
-            'panel' => 'border-slate-100 bg-slate-50/80',
-            'iconBox' => 'bg-white text-slate-600 ring-slate-100',
-        ];
+        if ($canEdit) return ['label' => 'Bisa Diedit', 'desc' => 'Masih dapat diubah.', 'icon' => 'fa-pen', 'panel' => 'border-emerald-100 bg-emerald-50/70', 'iconBox' => 'bg-white text-emerald-600 border border-emerald-100'];
+        if ($status === 'dibatalkan') return ['label' => 'Dibatalkan', 'desc' => 'Jadwal tidak berlaku.', 'icon' => 'fa-ban', 'panel' => 'border-rose-100 bg-rose-50/70', 'iconBox' => 'bg-white text-rose-600 border border-rose-100'];
+        if ($status === 'selesai') return ['label' => 'Terkunci', 'desc' => 'Sudah jadi arsip.', 'icon' => 'fa-lock', 'panel' => 'border-slate-100 bg-slate-50/80', 'iconBox' => 'bg-white text-slate-500 border border-slate-100'];
+        return ['label' => 'Terkunci', 'desc' => 'Waktu sudah lewat.', 'icon' => 'fa-lock', 'panel' => 'border-slate-100 bg-slate-50/80', 'iconBox' => 'bg-white text-slate-500 border border-slate-100'];
     };
 
     $statusData = $statusTheme($status);
@@ -359,665 +114,369 @@
     $lockData = $lockState();
 
     $summaryCards = [
-        [
-            'label' => 'Tanggal',
-            'value' => $tanggalPendek,
-            'icon' => 'ph ph-calendar-check',
-            'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-        ],
-        [
-            'label' => 'Waktu',
-            'value' => $waktuLabel,
-            'icon' => 'ph ph-clock',
-            'class' => 'bg-cyan-50 text-cyan-700 ring-cyan-100',
-        ],
-        [
-            'label' => 'Status',
-            'value' => $statusData['label'],
-            'icon' => $statusData['icon'],
-            'class' => 'bg-slate-50 text-slate-700 ring-slate-100',
-        ],
-        [
-            'label' => 'Akses',
-            'value' => $lockData['label'],
-            'icon' => $lockData['icon'],
-            'class' => 'bg-amber-50 text-amber-700 ring-amber-100',
-        ],
+        ['label' => 'Tanggal', 'value' => $tanggalPendek, 'icon' => 'fa-calendar-check', 'theme' => 'emerald'],
+        ['label' => 'Waktu', 'value' => $waktuLabel, 'icon' => 'fa-clock', 'theme' => 'cyan'],
+        ['label' => 'Status', 'value' => $statusData['label'], 'icon' => $statusData['icon'], 'theme' => 'slate'],
+        ['label' => 'Akses', 'value' => $lockData['label'], 'icon' => $lockData['icon'], 'theme' => 'amber'],
     ];
 @endphp
 
 @push('styles')
 <style>
-    html {
-        scroll-behavior: auto !important;
+    html { scroll-behavior: smooth; }
+    body { background-color: #f4f7f6; } 
+
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        pointer-events: none;
     }
 
-    html.pc-modal-open,
-    body.pc-modal-open {
-        overflow: hidden !important;
+    .widget-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .widget-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
     }
 
-    .pc-page {
-        background:
-            radial-gradient(circle at 8% 6%, rgba(16, 185, 129, .14), transparent 28%),
-            radial-gradient(circle at 92% 8%, rgba(14, 165, 233, .12), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(245, 158, 11, .09), transparent 30%),
-            linear-gradient(135deg, #f4fff9 0%, #eef9ff 46%, #f8fafc 100%);
-    }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
+    .btn-pill:active { transform: scale(0.97); }
 
-    .pc-grid-bg {
-        background-image:
-            linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
-        background-size: 30px 30px;
-    }
+    .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-    .pc-glass {
-        background: rgba(255, 255, 255, .84);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        box-shadow: 0 18px 45px rgba(15, 23, 42, .065);
-    }
-
-    .pc-soft-card {
-        border: 1px solid rgba(226, 232, 240, .88);
-        background: rgba(255, 255, 255, .88);
-        box-shadow: 0 12px 30px rgba(15, 23, 42, .045);
-    }
-
-    .pc-stat-card {
-        min-height: 118px;
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-    }
-
-    .pc-stat-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 16px 36px rgba(15, 23, 42, .075);
-    }
-
-    .pc-label {
-        display: block;
-        font-size: 10px;
-        font-weight: 950;
-        letter-spacing: .13em;
-        text-transform: uppercase;
-        color: #94a3b8;
-    }
-
-    .pc-value {
-        margin-top: 4px;
-        font-size: 14px;
-        font-weight: 950;
-        line-height: 1.45;
-        color: #0f172a;
-    }
-
-    .pc-help {
-        margin-top: 2px;
-        font-size: 12px;
-        font-weight: 750;
-        line-height: 1.5;
-        color: #64748b;
-    }
-
-    .pc-action-btn {
-        display: inline-flex;
-        min-height: 42px;
-        align-items: center;
-        justify-content: center;
-        gap: .45rem;
-        border-radius: 1rem;
-        padding: .65rem 1rem;
-        font-size: 13px;
-        font-weight: 950;
-        line-height: 1;
-        transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
-        white-space: nowrap;
-    }
-
-    .pc-action-btn:hover {
-        transform: translateY(-1px);
-    }
-
+    /* Nexus Modal */
     .pc-modal-backdrop {
-        position: fixed !important;
-        inset: 0 !important;
-        z-index: 2147483647 !important;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        margin: 0 !important;
-        padding: 1rem;
-        background: rgba(15, 23, 42, .58);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        position: fixed !important; inset: 0 !important; z-index: 9999 !important; display: none;
+        align-items: center; justify-content: center; background: rgba(15, 23, 42, .6); backdrop-filter: blur(10px); padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
     }
-
-    .pc-modal-backdrop.is-open {
-        display: flex !important;
-    }
-
+    .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
     .pc-modal-card {
-        width: min(100%, 500px);
-        transform: translateY(12px) scale(.97);
-        opacity: 0;
-        border-radius: 1.75rem;
-        border: 1px solid rgba(255, 255, 255, .78);
-        background:
-            radial-gradient(circle at 0% 0%, rgba(244, 63, 94, .14), transparent 34%),
-            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, .12), transparent 34%),
-            rgba(255, 255, 255, .96);
-        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
-        transition: transform .18s ease, opacity .18s ease;
+        width: 100%; max-width: 440px; background: white; border-radius: 2.5rem; padding: 2.5rem 2rem;
+        transform: scale(0.9) translateY(20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;
     }
-
-    .pc-modal-backdrop.is-open .pc-modal-card {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-
-    @media (max-width: 640px) {
-        .pc-action-btn {
-            width: 100%;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        * {
-            animation-duration: .01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: .01ms !important;
-            scroll-behavior: auto !important;
-        }
-    }
+    .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
 </style>
 @endpush
 
 @section('content')
-<div class="pc-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
-    <div class="pointer-events-none absolute inset-0 pc-grid-bg opacity-70"></div>
+<div class="bg-mesh-fixed"></div>
 
-    <div class="relative z-10 mx-auto max-w-[1450px] space-y-5">
-        <section class="pc-glass relative overflow-hidden rounded-[1.8rem] border border-white/80 p-5 sm:p-6">
-            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl"></div>
-            <div class="absolute -bottom-24 left-24 h-72 w-72 rounded-full bg-sky-300/16 blur-3xl"></div>
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 animate-pop-in">
 
-            <div class="relative grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+    {{-- 1. HERO BANNER --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col md:flex-row justify-between items-center gap-8 border-[6px] border-white/40">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 w-full flex flex-col gap-4 text-center md:text-left">
+            <div class="flex flex-col sm:flex-row items-center gap-3 justify-center md:justify-start">
+                <a href="{{ route('bidan.jadwal.index') }}" class="btn-pill inline-flex items-center gap-2 border border-white/30 bg-white/20 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/30 shadow-sm backdrop-blur-md transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i> Antrean Jadwal
+                </a>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm backdrop-blur-md">
+                    <i class="fa-solid fa-calendar-check"></i> Detail Agenda
+                </span>
+            </div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                {{ $judul }}
+            </h1>
+
+            <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-2 mt-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black border {{ $statusData['badge'] }}">
+                    <span class="h-2 w-2 rounded-full {{ $statusData['dot'] }}"></span> {{ $statusData['label'] }}
+                </span>
+                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black border {{ $kategoriData['badge'] }}">
+                    <i class="fa-solid {{ $kategoriData['icon'] }}"></i> {{ $kategoriMeta['label'] }}
+                </span>
+                <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black border {{ $targetData['badge'] }}">
+                    <i class="fa-solid {{ $targetData['icon'] }}"></i> {{ $targetMeta['label'] }}
+                </span>
+                @if($today)
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-700 px-3 py-1.5 text-[10px] font-black border border-emerald-200">
+                        <i class="fa-solid fa-sparkles"></i> Hari Ini
+                    </span>
+                @elseif($past)
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1.5 text-[10px] font-black border border-amber-200">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Terlewat
+                    </span>
+                @endif
+            </div>
+        </div>
+
+        <div class="relative z-10 flex gap-3 flex-col sm:flex-row shrink-0">
+            @if($canEdit)
+                <a href="{{ route('bidan.jadwal.edit', $jadwal) }}" class="btn-pill bg-white text-emerald-600 hover:bg-emerald-50 px-6 py-3.5 text-[11px] font-black uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5">
+                    <i class="fa-solid fa-pen text-sm"></i> Edit
+                </a>
+            @else
+                <span class="btn-pill bg-white/20 text-white border border-white/30 px-6 py-3.5 text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 cursor-not-allowed">
+                    <i class="fa-solid fa-lock text-sm"></i> Terkunci
+                </span>
+            @endif
+
+            @if($canDelete)
+                <button type="button" data-delete-trigger class="btn-pill bg-rose-500 text-white hover:bg-rose-600 px-6 py-3.5 text-[11px] font-black uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5">
+                    <i class="fa-solid fa-trash text-sm"></i> Hapus
+                </button>
+            @endif
+        </div>
+    </section>
+
+    {{-- 2. SUMMARY CARDS --}}
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        @foreach($summaryCards as $card)
+            <div class="widget-card p-5 group flex items-center justify-between">
                 <div>
-                    <a href="{{ route('bidan.jadwal.index') }}"
-                       class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm transition hover:bg-white">
-                        <i class="ph ph-arrow-left"></i>
-                        Kembali
-                    </a>
-
-                    <div class="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs font-black text-emerald-700">
-                        <i class="ph ph-calendar-check"></i>
-                        Detail Agenda Posyandu
-                    </div>
-
-                    <h1 class="mt-4 max-w-4xl text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-                        {{ $judul }}
-                    </h1>
-
-                    <p class="mt-3 max-w-3xl text-sm font-semibold leading-6 text-slate-600">
-                        Detail jadwal pelayanan Posyandu, target sasaran, status agenda, dan aturan akses perubahan.
-                    </p>
-
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-black ring-1 {{ $statusData['badge'] }}">
-                            <span class="h-2 w-2 rounded-full {{ $statusData['dot'] }}"></span>
-                            {{ $statusData['label'] }}
-                        </span>
-
-                        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-black ring-1 {{ $kategoriData['badge'] }}">
-                            <i class="{{ $kategoriData['icon'] }}"></i>
-                            {{ $kategoriMeta['label'] }}
-                        </span>
-
-                        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-black ring-1 {{ $targetData['badge'] }}">
-                            <i class="{{ $targetData['icon'] }}"></i>
-                            {{ $targetMeta['label'] }}
-                        </span>
-
-                        @if($today)
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-2 text-xs font-black text-emerald-700">
-                                <i class="ph ph-sparkle"></i>
-                                Hari Ini
-                            </span>
-                        @elseif($past)
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-2 text-xs font-black text-amber-700">
-                                <i class="ph ph-warning-circle"></i>
-                                Tanggal Terlewat
-                            </span>
-                        @endif
-                    </div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 group-hover:text-{{ $card['theme'] }}-500 transition-colors">{{ $card['label'] }}</p>
+                    <h2 class="text-xl font-black text-slate-800 leading-none">{{ $card['value'] }}</h2>
                 </div>
-
-                <div class="flex flex-col gap-3 sm:flex-row xl:justify-end">
-                    @if($canEdit)
-                        <a href="{{ route('bidan.jadwal.edit', $jadwal) }}"
-                           class="pc-action-btn bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-500/20">
-                            <i class="ph ph-pencil-simple"></i>
-                            Edit Jadwal
-                        </a>
-                    @else
-                        <span class="pc-action-btn border border-slate-200 bg-slate-50 text-slate-500">
-                            <i class="ph ph-lock-simple"></i>
-                            Tidak Dapat Diedit
-                        </span>
-                    @endif
-
-                    @if($canDelete)
-                        <form action="{{ route('bidan.jadwal.destroy', $jadwal) }}"
-                              method="POST"
-                              data-delete-form
-                              data-delete-title="Hapus jadwal ini?"
-                              data-delete-message="Jadwal {{ $judul }} akan dihapus dan tidak tampil lagi pada daftar agenda.">
-                            @csrf
-                            @method('DELETE')
-
-                            <button type="submit"
-                                    class="pc-action-btn border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100">
-                                <i class="ph ph-trash"></i>
-                                Hapus
-                            </button>
-                        </form>
-                    @else
-                        <span class="pc-action-btn border border-slate-200 bg-slate-50 text-slate-500">
-                            <i class="ph ph-lock-simple"></i>
-                            Hapus Terkunci
-                        </span>
-                    @endif
+                <div class="w-12 h-12 rounded-2xl bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 border border-{{ $card['theme'] }}-100 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid {{ $card['icon'] }}"></i>
                 </div>
             </div>
-        </section>
+        @endforeach
+    </section>
 
-        <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            @foreach($summaryCards as $card)
-                <div class="pc-stat-card pc-glass rounded-[1.5rem] border border-white/80 p-4">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="min-w-0">
-                            <p class="text-[11px] font-black uppercase tracking-[.15em] text-slate-400">
-                                {{ $card['label'] }}
-                            </p>
+    {{-- 3. GRID BENTO (MENGGUNAKAN items-start AGAR KOTAK TIDAK MELAR PAKSA) --}}
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start mb-6">
+        
+        {{-- KOLOM KIRI (Col 8) --}}
+        <div class="xl:col-span-8 flex flex-col gap-6">
+            
+            {{-- Detail Informasi Pelaksanaan --}}
+            <section class="widget-card p-6 sm:p-8">
+                <div class="flex items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Informasi Agenda</p>
+                        <h2 class="text-base font-black tracking-tight text-slate-900">Detail Pelaksanaan</h2>
+                    </div>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br {{ $kategoriData['gradient'] }} text-white shadow-md">
+                        <i class="fa-solid {{ $kategoriData['icon'] }} text-xl"></i>
+                    </div>
+                </div>
 
-                            <p class="mt-2 truncate text-xl font-black tracking-tight text-slate-950">
-                                {{ $card['value'] }}
-                            </p>
+                <div class="rounded-3xl border {{ $kategoriData['panel'] }} p-6">
+                    <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
+                        {{-- Ikon Kalender --}}
+                        <div class="flex min-h-[120px] w-full sm:w-[140px] flex-col items-center justify-center rounded-[1.4rem] border border-white/70 bg-white/60 p-5 shrink-0 shadow-sm">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{{ $bulanPendek }}</p>
+                            <p class="text-5xl font-black leading-none text-slate-800">{{ $tanggalAngka }}</p>
+                            <p class="mt-2 text-[10px] font-black text-slate-500">{{ $tanggalPendek }}</p>
                         </div>
 
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $card['class'] }}">
-                            <i class="{{ $card['icon'] }} text-xl"></i>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">{{ $kategoriMeta['label'] }}</p>
+                            <h3 class="text-2xl font-black tracking-tight text-slate-900 leading-tight mb-2">{{ $judul }}</h3>
+                            <p class="text-sm font-bold text-slate-600 mb-4">{{ $tanggalLabel }}</p>
+
+                            <div class="grid gap-3 sm:grid-cols-3">
+                                <div class="rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm flex flex-col justify-center">
+                                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Waktu</span>
+                                    <p class="text-[11px] font-bold text-slate-800">{{ $waktuLabel }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm flex flex-col justify-center">
+                                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Lokasi</span>
+                                    <p class="text-[11px] font-bold text-slate-800 truncate" title="{{ $lokasi }}">{{ $lokasi }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-white/70 bg-white/70 p-3 shadow-sm flex flex-col justify-center">
+                                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Sasaran</span>
+                                    <p class="text-[11px] font-bold text-slate-800">{{ $targetMeta['label'] }}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            @endforeach
-        </section>
+            </section>
 
-        <section class="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,.65fr)]">
-            <div class="space-y-5">
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5 flex items-center justify-between gap-4">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                                Informasi Agenda
-                            </p>
-                            <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                                Detail Pelaksanaan
-                            </h2>
-                        </div>
-
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br {{ $kategoriData['gradient'] }} text-white shadow-lg shadow-emerald-500/15">
-                            <i class="{{ $kategoriData['icon'] }} text-xl"></i>
-                        </div>
+            {{-- Deskripsi (Memiliki tinggi natural, tidak memaksa melar) --}}
+            <section class="widget-card p-6 sm:p-8">
+                <div class="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 border border-amber-100 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-notes-medical"></i>
                     </div>
-
-                    <div class="rounded-[1.5rem] border {{ $kategoriData['panel'] }} p-5">
-                        <div class="flex flex-col gap-5 lg:flex-row lg:items-center">
-                            <div class="flex min-h-[120px] w-full items-center justify-center rounded-[1.4rem] border border-white/70 bg-white/65 p-5 lg:w-[160px]">
-                                <div class="text-center">
-                                    <p class="text-xs font-black uppercase tracking-[.16em] text-slate-400">
-                                        {{ $bulanPendek }}
-                                    </p>
-                                    <p class="text-5xl font-black leading-none text-slate-950">
-                                        {{ $tanggalAngka }}
-                                    </p>
-                                    <p class="mt-2 text-xs font-black text-slate-500">
-                                        {{ $tanggalPendek }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="min-w-0 flex-1">
-                                <p class="text-xs font-black uppercase tracking-[.16em] text-slate-500">
-                                    {{ $kategoriMeta['label'] }}
-                                </p>
-
-                                <h3 class="mt-2 text-2xl font-black tracking-tight text-slate-950">
-                                    {{ $judul }}
-                                </h3>
-
-                                <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                    {{ $tanggalLabel }}
-                                </p>
-
-                                <div class="mt-4 grid gap-3 md:grid-cols-3">
-                                    <div class="rounded-2xl border border-white/70 bg-white/70 p-4">
-                                        <span class="pc-label">Waktu</span>
-                                        <p class="pc-value">{{ $waktuLabel }}</p>
-                                    </div>
-
-                                    <div class="rounded-2xl border border-white/70 bg-white/70 p-4">
-                                        <span class="pc-label">Lokasi</span>
-                                        <p class="pc-value">{{ $lokasi }}</p>
-                                    </div>
-
-                                    <div class="rounded-2xl border border-white/70 bg-white/70 p-4">
-                                        <span class="pc-label">Sasaran</span>
-                                        <p class="pc-value">{{ $targetMeta['label'] }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Deskripsi / Catatan</h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Keterangan Tambahan Agenda</p>
                     </div>
+                </div>
 
-                    <div class="mt-5 grid gap-4 md:grid-cols-2">
-                        <div class="pc-soft-card rounded-[1.4rem] p-4">
-                            <span class="pc-label">Tanggal</span>
-                            <p class="pc-value">{{ $tanggalLabel }}</p>
-                            <p class="pc-help">Tanggal pelaksanaan agenda Posyandu.</p>
-                        </div>
-
-                        <div class="pc-soft-card rounded-[1.4rem] p-4">
-                            <span class="pc-label">Waktu</span>
-                            <p class="pc-value">{{ $waktuLabel }}</p>
-                            <p class="pc-help">Rentang waktu kegiatan pelayanan.</p>
-                        </div>
-
-                        <div class="pc-soft-card rounded-[1.4rem] p-4">
-                            <span class="pc-label">Lokasi</span>
-                            <p class="pc-value">{{ $lokasi }}</p>
-                            <p class="pc-help">Tempat pelaksanaan kegiatan.</p>
-                        </div>
-
-                        <div class="pc-soft-card rounded-[1.4rem] p-4">
-                            <span class="pc-label">Target Sasaran</span>
-                            <p class="pc-value">{{ $targetMeta['label'] }}</p>
-                            <p class="pc-help">{{ $targetMeta['desc'] }}</p>
-                        </div>
+                @if($deskripsi !== '')
+                    <div class="bg-slate-50 border border-slate-100 rounded-3xl p-5">
+                        <p class="text-sm font-semibold leading-relaxed text-slate-700 whitespace-pre-line">{{ $deskripsi }}</p>
                     </div>
-
-                    <div class="mt-5 pc-soft-card rounded-[1.4rem] p-4">
-                        <span class="pc-label">Deskripsi / Catatan</span>
-                        <p class="mt-2 text-sm font-semibold leading-7 text-slate-600">
-                            {{ $deskripsi !== '' ? $deskripsi : 'Tidak ada deskripsi tambahan.' }}
-                        </p>
+                @else
+                    <div class="flex flex-col items-center justify-center py-6 bg-slate-50 border border-dashed border-slate-200 rounded-3xl">
+                        <i class="fa-solid fa-comment-slash text-2xl text-slate-300 mb-2"></i>
+                        <p class="text-[11px] font-bold text-slate-400 italic">Tidak ada catatan tambahan untuk agenda ini.</p>
                     </div>
-                </section>
+                @endif
+            </section>
+        </div>
 
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Distribusi
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Sasaran dan Kategori Layanan
-                        </h2>
-                    </div>
+        {{-- KOLOM KANAN (Col 4): Sidebar Properties --}}
+        <aside class="xl:col-span-4 flex flex-col gap-6">
+            
+            {{-- Distribusi (Kategori & Target) --}}
+            <section class="widget-card p-6">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Distribusi</p>
+                <h2 class="text-sm font-black tracking-tight text-slate-900 mb-5">Sasaran & Layanan</h2>
 
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div class="rounded-[1.4rem] border {{ $kategoriData['panel'] }} p-4">
-                            <div class="flex items-start gap-3">
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $kategoriData['iconBox'] }}">
-                                    <i class="{{ $kategoriData['icon'] }} text-lg"></i>
-                                </div>
-
-                                <div>
-                                    <span class="pc-label">Kategori Layanan</span>
-                                    <h3 class="mt-1 text-base font-black text-slate-950">
-                                        {{ $kategoriMeta['label'] }}
-                                    </h3>
-                                    <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                        {{ $kategoriMeta['desc'] }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="rounded-[1.4rem] border {{ $targetData['panel'] }} p-4">
-                            <div class="flex items-start gap-3">
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $targetData['iconBox'] }}">
-                                    <i class="{{ $targetData['icon'] }} text-lg"></i>
-                                </div>
-
-                                <div>
-                                    <span class="pc-label">Target Peserta</span>
-                                    <h3 class="mt-1 text-base font-black text-slate-950">
-                                        {{ $targetMeta['label'] }}
-                                    </h3>
-                                    <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                        {{ $targetMeta['desc'] }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 rounded-[1.4rem] border border-amber-100 bg-amber-50/80 p-4">
+                <div class="space-y-4">
+                    <div class="rounded-[1.4rem] border {{ $kategoriData['panel'] }} p-4">
                         <div class="flex items-start gap-3">
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700 ring-1 ring-amber-100">
-                                <i class="ph ph-info"></i>
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $kategoriData['iconBox'] }}">
+                                <i class="fa-solid {{ $kategoriData['icon'] }} text-lg"></i>
                             </div>
-
                             <div>
-                                <h3 class="text-sm font-black text-amber-800">
-                                    Jadwal hanya agenda layanan
-                                </h3>
-
-                                <p class="mt-1 text-sm font-semibold leading-6 text-amber-700">
-                                    Jadwal digunakan untuk mengatur informasi waktu, lokasi, kategori layanan, dan target sasaran. Data pemeriksaan dan catatan medis tetap dikelola pada modul pemeriksaan atau rekam medis.
-                                </p>
-
-                                @if($kategori === 'imunisasi')
-                                    <p class="mt-2 text-sm font-semibold leading-6 text-amber-700">
-                                        Karena modul imunisasi difokuskan untuk Balita, jadwal kategori imunisasi ditujukan ke sasaran Balita.
-                                    </p>
-                                @endif
+                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Kategori</span>
+                                <h3 class="text-sm font-black text-slate-900">{{ $kategoriMeta['label'] }}</h3>
+                                <p class="mt-0.5 text-xs font-semibold leading-tight text-slate-600">{{ $kategoriMeta['desc'] }}</p>
                             </div>
                         </div>
                     </div>
-                </section>
-            </div>
 
-            <aside class="space-y-5">
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Status
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Kondisi Jadwal
-                        </h2>
+                    <div class="rounded-[1.4rem] border {{ $targetData['panel'] }} p-4">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $targetData['iconBox'] }}">
+                                <i class="fa-solid {{ $targetData['icon'] }} text-lg"></i>
+                            </div>
+                            <div>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Target</span>
+                                <h3 class="text-sm font-black text-slate-900">{{ $targetMeta['label'] }}</h3>
+                                <p class="mt-0.5 text-xs font-semibold leading-tight text-slate-600">{{ $targetMeta['desc'] }}</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
 
+                @if($kategori === 'imunisasi')
+                    <div class="mt-4 rounded-[1.2rem] border border-amber-100 bg-amber-50/80 p-3.5 flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-amber-500 text-lg mt-0.5"></i>
+                        <p class="text-[10px] font-bold leading-relaxed text-amber-700">Jadwal imunisasi otomatis ditujukan ke sasaran Balita.</p>
+                    </div>
+                @endif
+            </section>
+
+            {{-- Status & Akses --}}
+            <section class="widget-card p-6">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Konfigurasi</p>
+                <h2 class="text-sm font-black tracking-tight text-slate-900 mb-5">Status & Hak Akses</h2>
+
+                <div class="space-y-4">
                     <div class="rounded-[1.4rem] border {{ $statusData['panel'] }} p-4">
                         <div class="flex items-start gap-3">
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $statusData['iconBox'] }}">
-                                <i class="{{ $statusData['icon'] }} text-lg"></i>
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $statusData['iconBox'] }}">
+                                <i class="fa-solid {{ $statusData['icon'] }} text-lg"></i>
                             </div>
-
                             <div>
-                                <span class="pc-label">Status Jadwal</span>
-                                <h3 class="mt-1 text-base font-black text-slate-950">
-                                    {{ $statusData['label'] }}
-                                </h3>
-                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                    {{ $statusMeta['desc'] }}
-                                </p>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Status Jadwal</span>
+                                <h3 class="text-sm font-black text-slate-900">{{ $statusData['label'] }}</h3>
+                                <p class="mt-0.5 text-xs font-semibold leading-tight text-slate-600">{{ $statusMeta['desc'] }}</p>
                             </div>
                         </div>
-                    </div>
-                </section>
-
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Akses
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Perubahan Data
-                        </h2>
                     </div>
 
                     <div class="rounded-[1.4rem] border {{ $lockData['panel'] }} p-4">
                         <div class="flex items-start gap-3">
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $lockData['iconBox'] }}">
-                                <i class="{{ $lockData['icon'] }} text-lg"></i>
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $lockData['iconBox'] }}">
+                                <i class="fa-solid {{ $lockData['icon'] }} text-lg"></i>
                             </div>
-
                             <div>
-                                <span class="pc-label">Hak Edit</span>
-                                <h3 class="mt-1 text-base font-black text-slate-950">
-                                    {{ $lockData['label'] }}
-                                </h3>
-                                <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                    {{ $lockData['desc'] }}
-                                </p>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Hak Edit</span>
+                                <h3 class="text-sm font-black text-slate-900">{{ $lockData['label'] }}</h3>
+                                <p class="mt-0.5 text-xs font-semibold leading-tight text-slate-600">{{ $lockData['desc'] }}</p>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">
-                            Riwayat
-                        </p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-slate-950">
-                            Data Sistem
-                        </h2>
-                    </div>
+        </aside>
+    </div>
 
-                    <div class="space-y-3">
-                        <div class="pc-soft-card rounded-[1.4rem] p-4">
-                            <span class="pc-label">Dibuat</span>
-                            <p class="pc-value">{{ $formatMetaDate($jadwal->created_at ?? null) }}</p>
-                        </div>
-
-                        <div class="pc-soft-card rounded-[1.4rem] p-4">
-                            <span class="pc-label">Diperbarui</span>
-                            <p class="pc-value">{{ $formatMetaDate($jadwal->updated_at ?? null) }}</p>
-                        </div>
-                    </div>
-                </section>
-            </aside>
-        </section>
-
-        <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <a href="{{ route('bidan.jadwal.index') }}"
-                   class="pc-action-btn border border-slate-200 bg-white text-slate-700 hover:bg-slate-50">
-                    <i class="ph ph-arrow-left"></i>
-                    Kembali ke Daftar
-                </a>
-
-                <div class="flex flex-col gap-3 sm:flex-row">
-                    @if($canEdit)
-                        <a href="{{ route('bidan.jadwal.edit', $jadwal) }}"
-                           class="pc-action-btn border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100">
-                            <i class="ph ph-pencil-simple"></i>
-                            Edit Jadwal
-                        </a>
-                    @else
-                        <span class="pc-action-btn border border-slate-200 bg-slate-50 text-slate-500">
-                            <i class="ph ph-lock-simple"></i>
-                            Edit Terkunci
-                        </span>
-                    @endif
-
-                    @if($canDelete)
-                        <form action="{{ route('bidan.jadwal.destroy', $jadwal) }}"
-                              method="POST"
-                              data-delete-form
-                              data-delete-title="Hapus jadwal ini?"
-                              data-delete-message="Jadwal {{ $judul }} akan dihapus dan tidak tampil lagi pada daftar agenda.">
-                            @csrf
-                            @method('DELETE')
-
-                            <button type="submit"
-                                    class="pc-action-btn border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100">
-                                <i class="ph ph-trash"></i>
-                                Hapus
-                            </button>
-                        </form>
-                    @endif
+    {{-- 4. FULL WIDTH CARD: Jejak Rekam Sistem (Sebagai Pijakan / Footer) --}}
+    <div class="widget-card p-6 sm:p-8 w-full border-t-4 border-t-slate-300">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            
+            {{-- Header --}}
+            <div class="flex items-center gap-4 border-b lg:border-b-0 lg:border-r border-slate-100 pb-4 lg:pb-0 lg:pr-8 shrink-0">
+                <div class="w-12 h-12 rounded-2xl bg-slate-50 text-slate-500 border border-slate-200 flex items-center justify-center text-xl shadow-inner">
+                    <i class="fa-solid fa-server"></i>
+                </div>
+                <div>
+                    <h4 class="text-[11px] font-black text-slate-600 uppercase tracking-widest">Jejak Rekam Sistem</h4>
+                    <p class="text-sm font-black text-slate-800 leading-tight">Log Aktivitas Data</p>
                 </div>
             </div>
-        </section>
+
+            {{-- Detail Waktu --}}
+            <div class="flex flex-col sm:flex-row flex-1 gap-4 lg:pl-2">
+                <div class="flex-1 flex justify-between items-center bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-slate-300 text-lg"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Waktu Dibuat</span>
+                    </div>
+                    <span class="text-xs font-bold text-slate-800">{{ $formatMetaDate($jadwal->created_at ?? null) }}</span>
+                </div>
+                
+                <div class="flex-1 flex justify-between items-center bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-300 text-lg"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Pembaruan Terakhir</span>
+                    </div>
+                    <span class="text-xs font-bold text-slate-800">{{ $formatMetaDate($jadwal->updated_at ?? null) }}</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{{-- MODAL HAPUS --}}
+@if($canDelete)
+<div id="pcJadwalDeleteModal" class="pc-modal-backdrop">
+    <div class="pc-modal-card text-center">
+        <div class="w-20 h-20 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-5 text-rose-500 shadow-inner">
+            <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+        </div>
+        <h3 class="text-2xl font-black text-slate-800 mb-2">Hapus Jadwal?</h3>
+        <p class="text-sm font-medium text-slate-500 mb-6 leading-relaxed px-4">Jadwal <strong>{{ $judul }}</strong> akan dihapus permanen dan tidak akan tampil lagi di daftar agenda.</p>
+        
+        <form action="{{ route('bidan.jadwal.destroy', $jadwal) }}" method="POST" id="deleteForm">
+            @csrf
+            @method('DELETE')
+            <div class="flex gap-3">
+                <button type="button" id="pcJadwalDeleteCancel" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">Batal</button>
+                <button type="submit" id="pcJadwalDeleteSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-rose-500 to-orange-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-rose-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-trash"></i> Ya, Hapus</button>
+            </div>
+        </form>
     </div>
 </div>
+@endif
+
 @endsection
-
-@push('modals')
-<div id="pcJadwalDeleteModal" class="pc-modal-backdrop" aria-hidden="true">
-    <div class="pc-modal-card p-6">
-        <div class="flex gap-4">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-500/20">
-                <i class="ph ph-warning-circle text-2xl"></i>
-            </div>
-
-            <div class="min-w-0 flex-1">
-                <p class="text-[11px] font-black uppercase tracking-[.18em] text-rose-700">
-                    Konfirmasi
-                </p>
-
-                <h3 id="pcJadwalDeleteTitle" class="mt-1 text-lg font-black text-slate-950">
-                    Hapus jadwal ini?
-                </h3>
-
-                <p id="pcJadwalDeleteMessage" class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                    Jadwal yang dihapus tidak akan tampil lagi pada daftar agenda.
-                </p>
-            </div>
-        </div>
-
-        <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button type="button"
-                    id="pcJadwalDeleteCancel"
-                    class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
-                Batal
-            </button>
-
-            <button type="button"
-                    id="pcJadwalDeleteSubmit"
-                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-400/20 transition hover:-translate-y-0.5">
-                <i class="ph ph-trash"></i>
-                Hapus Jadwal
-            </button>
-        </div>
-    </div>
-</div>
-@endpush
 
 @push('scripts')
 <script>
-(function () {
-    'use strict';
-
-    let modal = document.querySelector('#pcJadwalDeleteModal');
-    const modalTitle = document.querySelector('#pcJadwalDeleteTitle');
-    const modalMessage = document.querySelector('#pcJadwalDeleteMessage');
-    const modalCancel = document.querySelector('#pcJadwalDeleteCancel');
-    const modalSubmit = document.querySelector('#pcJadwalDeleteSubmit');
-
-    let selectedDeleteForm = null;
-
-    if (modal && modal.parentElement !== document.body) {
-        document.body.appendChild(modal);
-    }
+(() => {
+    // Delete Modal Logic
+    const triggerBtn = document.querySelector('[data-delete-trigger]');
+    const modal = document.getElementById('pcJadwalDeleteModal');
+    const cancelBtn = document.getElementById('pcJadwalDeleteCancel');
+    const submitBtn = document.getElementById('pcJadwalDeleteSubmit');
+    const form = document.getElementById('deleteForm');
 
     function lockBody() {
         document.documentElement.classList.add('pc-modal-open');
@@ -1029,89 +488,42 @@
         document.body.classList.remove('pc-modal-open');
     }
 
-    function showDeleteDialog(form) {
-        if (!modal) {
-            HTMLFormElement.prototype.submit.call(form);
-            return;
-        }
-
-        selectedDeleteForm = form;
-
-        if (modalTitle) {
-            modalTitle.textContent = form.dataset.deleteTitle || 'Hapus jadwal ini?';
-        }
-
-        if (modalMessage) {
-            modalMessage.textContent = form.dataset.deleteMessage || 'Jadwal yang dihapus tidak akan tampil lagi pada daftar agenda.';
-        }
-
-        if (modalSubmit) {
-            modalSubmit.disabled = false;
-            modalSubmit.classList.remove('opacity-70', 'cursor-not-allowed');
-            modalSubmit.innerHTML = '<i class="ph ph-trash"></i> Hapus Jadwal';
-        }
-
-        lockBody();
-        modal.classList.add('is-open');
-        modal.setAttribute('aria-hidden', 'false');
+    if (triggerBtn && modal) {
+        triggerBtn.addEventListener('click', () => {
+            lockBody();
+            modal.classList.add('is-open');
+        });
     }
 
-    function hideDeleteDialog() {
-        if (!modal) {
-            return;
-        }
-
-        selectedDeleteForm = null;
-        modal.classList.remove('is-open');
-        modal.setAttribute('aria-hidden', 'true');
-        unlockBody();
-    }
-
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('[data-delete-form]');
-
-        if (!form) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopImmediatePropagation();
-
-        showDeleteDialog(form);
-    }, true);
-
-    if (modalCancel) {
-        modalCancel.addEventListener('click', hideDeleteDialog);
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            modal.classList.remove('is-open');
+            unlockBody();
+        });
     }
 
     if (modal) {
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) {
-                hideDeleteDialog();
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('is-open');
+                unlockBody();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+                modal.classList.remove('is-open');
+                unlockBody();
             }
         });
     }
 
-    if (modalSubmit) {
-        modalSubmit.addEventListener('click', function () {
-            if (!selectedDeleteForm) {
-                hideDeleteDialog();
-                return;
-            }
-
-            modalSubmit.disabled = true;
-            modalSubmit.classList.add('opacity-70', 'cursor-not-allowed');
-            modalSubmit.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Menghapus...';
-
-            HTMLFormElement.prototype.submit.call(selectedDeleteForm);
+    if (form && submitBtn) {
+        form.addEventListener('submit', () => {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
         });
     }
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && modal && modal.classList.contains('is-open')) {
-            hideDeleteDialog();
-        }
-    });
 })();
 </script>
 @endpush

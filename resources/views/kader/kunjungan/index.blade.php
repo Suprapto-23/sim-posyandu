@@ -1,345 +1,356 @@
 @extends('layouts.kader')
+
 @section('title', 'Logbook Kunjungan')
 @section('page-name', 'Buku Induk Kunjungan')
+@section('page-title', 'Buku Induk Kunjungan Warga')
+
+@php
+    use Carbon\Carbon;
+    use Illuminate\Support\Str;
+
+    Carbon::setLocale('id');
+
+    $kunjungans = $kunjungans ?? collect();
+    $search = $search ?? request('search', '');
+    $kategori = $kategori ?? request('kategori', 'semua');
+
+    // MAPPING KATEGORI
+    $kategoriOptions = [
+        'semua'  => ['label' => 'Semua Kunjungan', 'icon' => 'fa-users-rectangle'],
+        'balita' => ['label' => 'Balita', 'icon' => 'fa-baby'],
+        'remaja' => ['label' => 'Remaja', 'icon' => 'fa-user-graduate'],
+        'lansia' => ['label' => 'Lansia', 'icon' => 'fa-person-cane'],
+    ];
+
+    $currentKatMeta = $kategoriOptions[$kategori] ?? $kategoriOptions['semua'];
+
+    // HELPER FUNCTIONS
+    $getPasienName = function($pasien) {
+        if (!$pasien) return 'Pasien Tidak Diketahui';
+        return $pasien->nama_lengkap ?? $pasien->nama ?? $pasien->nama_balita ?? 'Tanpa Nama';
+    };
+
+    $getPasienNik = function($pasien) {
+        if (!$pasien) return '-';
+        return $pasien->nik ?? $pasien->nik_anak ?? '-';
+    };
+
+    $getPasienTypeStr = function($pasienType) {
+        if (!$pasienType) return 'Umum';
+        $type = strtolower(class_basename($pasienType));
+        return match($type) {
+            'balita' => 'Balita',
+            'remaja' => 'Remaja',
+            'lansia' => 'Lansia',
+            default => ucfirst($type),
+        };
+    };
+
+    $getTypeTheme = function($type) {
+        return match(strtolower($type)) {
+            'balita' => ['bg' => 'bg-sky-50', 'text' => 'text-sky-600', 'border' => 'border-sky-200', 'icon' => 'fa-baby'],
+            'remaja' => ['bg' => 'bg-indigo-50', 'text' => 'text-indigo-600', 'border' => 'border-indigo-200', 'icon' => 'fa-user-graduate'],
+            'lansia' => ['bg' => 'bg-emerald-50', 'text' => 'text-emerald-600', 'border' => 'border-emerald-200', 'icon' => 'fa-person-cane'],
+            default  => ['bg' => 'bg-slate-50', 'text' => 'text-slate-600', 'border' => 'border-slate-200', 'icon' => 'fa-user'],
+        };
+    };
+
+    $formatDateTime = fn($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y, H:i') . ' WIB' : '-';
+    
+    // SMART STATUS (Mendeteksi apakah pasien sudah diperiksa/diimunisasi oleh Bidan)
+    $getLayananStatus = function($kunjungan) {
+        $hasPemeriksaan = $kunjungan->pemeriksaan !== null;
+        $hasImunisasi = $kunjungan->imunisasis && $kunjungan->imunisasis->count() > 0;
+
+        if ($hasPemeriksaan || $hasImunisasi) {
+            return [
+                'label' => 'Selesai Dilayani',
+                'badge' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                'icon'  => 'fa-check-double'
+            ];
+        }
+
+        return [
+            'label' => 'Menunggu Antrean',
+            'badge' => 'bg-amber-100 text-amber-700 border-amber-200',
+            'icon'  => 'fa-hourglass-half'
+        ];
+    };
+
+    $totalData = method_exists($kunjungans, 'total') ? $kunjungans->total() : count($kunjungans);
+@endphp
 
 @push('styles')
 <style>
-    /* ANIMASI MASUK KILAT (Lebih Cepat & Snappy) */
-    .fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-    .stagger-1 { animation-delay: 0.05s; } .stagger-2 { animation-delay: 0.1s; } .stagger-3 { animation-delay: 0.15s; }
+    html { scroll-behavior: smooth; }
+    body { background-color: #f4f7f6; } 
 
-    /* INPUT PENCARIAN (NEXUS KAPSUL) */
-    .glass-search {
-        width: 100%; background-color: #f8fafc; border: 2px solid transparent; color: #0f172a;
-        font-size: 0.85rem; font-weight: 700; border-radius: 9999px; padding: 0.8rem 1.5rem 0.8rem 3rem;
-        outline: none; transition: all 0.2s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        pointer-events: none;
     }
-    .glass-search:focus { background-color: #ffffff; border-color: #06b6d4; box-shadow: 0 4px 20px -3px rgba(6, 182, 212, 0.15); }
 
-    /* TABEL DALAM KONTENER (NEXUS CANVAS) */
-    .table-canvas {
-        background: #ffffff; border: 1px solid #f1f5f9; border-radius: 32px;
-        box-shadow: 0 10px 40px -10px rgba(6, 182, 212, 0.06); padding: 1.5rem;
+    .widget-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transform: translateZ(0); 
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .modern-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
-    .modern-table th {
-        color: #64748b; font-size: 0.65rem; font-weight: 900; text-transform: uppercase;
-        letter-spacing: 0.05em; padding: 0.5rem 1.5rem 1rem 1.5rem; text-align: left; border-bottom: 2px solid #f8fafc;
+
+    .input-soft {
+        width: 100%; background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 9999px; padding: 12px 20px 12px 42px; font-size: 13px;
+        font-weight: 700; color: #1e293b; outline: none; transition: all .25s ease;
+    }
+    .input-soft:focus {
+        background: #ffffff; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, .15);
     }
     
-    /* BARIS DATA (DATA ROW) */
-    .data-row {
-        background-color: #ffffff; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 20px; box-shadow: 0 2px 10px -2px rgba(0,0,0,0.02); border: 1px solid #f8fafc;
-    }
-    .data-row td { padding: 1rem 1.5rem; vertical-align: middle; }
-    .data-row td:first-child { border-top-left-radius: 20px; border-bottom-left-radius: 20px; border-left: 4px solid transparent; transition: border-color 0.2s ease; }
-    .data-row td:last-child { border-top-right-radius: 20px; border-bottom-right-radius: 20px; }
-    
-    .data-row:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.15); border-color: transparent; }
-    .data-row:hover td:first-child { border-left-color: #06b6d4; }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
+    .btn-pill:active { transform: scale(0.97); }
 
-    /* PILL BADGE */
-    .pill-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+    .slim-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    .slim-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 9999px; }
+    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.5); }
 
-    /* LOADING AJAX SUPER CEPAT (Tanpa Blur Berat) */
-    #mainContentArea { transition: opacity 0.15s ease-out; }
-    .fast-loading { opacity: 0.5; pointer-events: none; }
-
-    /* ANIMASI SVG EMPTY STATE (Murni CSS, Bebas Localhost Error) */
-    @keyframes hoverBook { 0%, 100% { transform: translateY(0); filter: drop-shadow(0 10px 15px rgba(6,182,212,0.2)); } 50% { transform: translateY(-10px); filter: drop-shadow(0 20px 25px rgba(6,182,212,0.4)); } }
-    @keyframes pulseRingCyan { 0% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
-    .svg-book { animation: hoverBook 3s ease-in-out infinite; }
-    .svg-ring-cyan { animation: pulseRingCyan 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; border: 2px solid #22d3ee; border-radius: 50%; position: absolute; inset: 0; margin: auto; }
+    .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 </style>
 @endpush
 
 @section('content')
-<div class="max-w-[1350px] mx-auto fade-in-up pb-12 relative z-10">
+<div class="bg-mesh-fixed"></div>
 
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-96 bg-gradient-to-b from-cyan-50/80 to-transparent rounded-full blur-3xl pointer-events-none z-0"></div>
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 animate-pop-in">
 
-    {{-- 1. HEADER (KARTU KACA MELENGKUNG WARNA CYAN) --}}
-    <div class="bg-white/80 backdrop-blur-xl rounded-[36px] border border-white shadow-[0_10px_40px_-10px_rgba(6,182,212,0.08)] p-8 mb-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 z-10">
-        
-        <div class="absolute -left-12 -top-12 w-48 h-48 bg-cyan-400/10 rounded-full blur-2xl"></div>
+    {{-- 1. HERO BANNER (Konsisten Hijau Emerald) --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col lg:flex-row justify-between items-center gap-8 border-[6px] border-white/40" style="transform: translateZ(0);">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
 
-        <div class="flex items-center gap-5 relative z-10 w-full md:w-auto">
-            <div class="w-16 h-16 rounded-[20px] bg-gradient-to-br from-cyan-400 to-blue-500 text-white flex items-center justify-center text-2xl shadow-[0_8px_20px_rgba(6,182,212,0.3)] shrink-0 transform -rotate-3">
-                <i class="fas fa-clipboard-list"></i>
+        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-4 text-center lg:text-left">
+            <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+                    <i class="fa-solid fa-address-book"></i> Registrasi (Meja 1)
+                </span>
             </div>
-            <div>
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight font-poppins mb-1">Buku Induk Kunjungan</h1>
-                <p class="text-slate-500 font-medium text-[13px]">Log rekam jejak kedatangan dan layanan yang diterima warga.</p>
-            </div>
-        </div>
-        
-        <div class="relative z-10 shrink-0 w-full md:w-auto text-left md:text-right">
-            <div class="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 text-slate-600 px-5 py-2.5 rounded-full shadow-sm mb-1.5">
-                <i class="fas fa-robot text-cyan-500"></i>
-                <span class="text-[10px] font-black uppercase tracking-widest">Sistem Arsip Otomatis</span>
-            </div>
-            <p class="text-[10px] font-bold text-slate-400 block ml-2 md:ml-0">Terisi Otomatis Saat Ada Pelayanan</p>
-        </div>
-    </div>
-
-    {{-- 2. KENDALI PENCARIAN & TAB (SUPER ROUNDED PILLS) --}}
-    <div class="mb-6 relative z-20">
-        <form id="filterForm" action="{{ route('kader.kunjungan.index') }}" method="GET" class="flex flex-col lg:flex-row items-center justify-between gap-5">
             
-            <input type="hidden" name="kategori" id="hiddenKategori" value="{{ request('kategori', 'semua') }}">
-            <input type="hidden" name="search" id="hiddenSearch" value="{{ request('search') }}">
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                Buku Induk Kunjungan
+            </h1>
 
-            <div class="flex gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0" style="scrollbar-width: none;">
-                @foreach([
-                    'semua'     => ['label' => 'Semua', 'icon' => 'fa-list'],
-                    'balita'    => ['label' => 'Balita', 'icon' => 'fa-baby'],
-                    'remaja'    => ['label' => 'Remaja', 'icon' => 'fa-user-graduate'],
-                    'lansia'    => ['label' => 'Lansia', 'icon' => 'fa-user-clock']
-                ] as $val => $data)
-                    @php $isActive = request('kategori', 'semua') === $val; @endphp
-                    <button type="button" data-kategori="{{ $val }}" class="tab-btn px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-200 whitespace-nowrap {{ $isActive ? 'bg-cyan-500 text-white shadow-[0_8px_20px_rgba(6,182,212,0.3)] transform scale-105' : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-cyan-600 shadow-sm border border-slate-100' }}">
-                        <i class="fas {{ $data['icon'] }} mr-2 {{ $isActive ? 'text-cyan-100' : 'text-slate-400' }}"></i> {{ $data['label'] }}
-                    </button>
-                @endforeach
-            </div>
+            <p class="text-white/90 text-sm font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+                Data kehadiran warga yang tercatat secara otomatis ketika Anda memproses pengukuran fisik atau pendaftaran layanan di aplikasi. Bersifat Read-Only untuk integritas data.
+            </p>
+        </div>
 
-            <div class="relative w-full lg:w-[450px] group flex items-center">
-                <div class="absolute inset-0 bg-cyan-500/5 rounded-full blur-md opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
-                <i class="fas fa-search absolute left-6 text-slate-400 text-sm group-focus-within:text-cyan-500 transition-colors z-10"></i>
-                <input type="text" id="liveSearchInput" value="{{ request('search') }}" placeholder="Ketik nama warga atau NIK..." class="glass-search relative z-0" autocomplete="off">
-                <div id="searchSpinner" class="absolute right-6 hidden z-10">
-                    <i class="fas fa-circle-notch fa-spin text-cyan-500"></i>
+        <div class="relative z-10 w-full lg:w-1/3 flex justify-center lg:justify-end">
+            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/20 border border-white/30 backdrop-blur-md px-6 py-4 flex items-center gap-5">
+                <div>
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-white/90">Total Kehadiran</span>
+                    <span class="block text-3xl font-black text-white mt-0.5">{{ $totalData }}</span>
+                </div>
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-500 shadow-lg">
+                    <i class="fa-solid fa-users text-2xl"></i>
                 </div>
             </div>
-            
-        </form>
-    </div>
+        </div>
+    </section>
 
-    {{-- 3. AREA TABEL / EMPTY STATE (DYNAMIC NEXUS CANVAS) --}}
-    <div id="mainContentArea" class="relative z-10">
+    {{-- 2. TAB KATEGORI & PENCARIAN --}}
+    <section class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         
-        @if(isset($kunjungans) && $kunjungans->count() > 0)
-            {{-- DATA TERSEDIA: TAMPILKAN TABEL FULL --}}
-            <div class="table-canvas">
-                <div class="overflow-x-auto" style="scrollbar-width: thin; min-h: 300px;">
-                    <table class="modern-table min-w-[1000px]">
-                        <thead>
-                            <tr>
-                                <th class="w-56 pl-8">Waktu Check-In</th>
-                                <th class="w-72">Profil Pasien</th>
-                                <th>Layanan Diterima</th>
-                                <th class="w-40 text-center">Resepsionis</th>
-                                <th class="w-32 text-center pr-8">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($kunjungans as $index => $kunjungan)
+        {{-- Tabs --}}
+        <div class="flex flex-wrap items-center gap-2">
+            @foreach($kategoriOptions as $key => $option)
+                @php $isActive = $kategori === $key; @endphp
+                <a href="{{ route('kader.kunjungan.index', ['kategori' => $key, 'search' => $search]) }}" 
+                   class="btn-pill px-5 py-3 text-[11px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 shadow-sm
+                   {{ $isActive ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-white text-slate-500 border-slate-200 hover:bg-emerald-50 hover:text-emerald-600' }}">
+                    <i class="fa-solid {{ $option['icon'] }} text-sm"></i> {{ $option['label'] }}
+                </a>
+            @endforeach
+        </div>
+
+        {{-- Search Form --}}
+        <form method="GET" action="{{ route('kader.kunjungan.index') }}" class="w-full xl:w-96 relative shrink-0">
+            <input type="hidden" name="kategori" value="{{ $kategori }}">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" name="search" value="{{ $search }}" placeholder="Cari nama atau NIK warga..." class="input-soft shadow-sm">
+            @if($search)
+                <a href="{{ route('kader.kunjungan.index', ['kategori' => $kategori]) }}" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            @endif
+        </form>
+    </section>
+
+    {{-- 3. TABEL DATA (Presisi max-h-[600px] dengan scrollbar) --}}
+    <section class="widget-card overflow-hidden flex flex-col relative">
+        <div class="p-6 border-b border-slate-100 bg-white flex items-center gap-3 shrink-0 z-20">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-lg shadow-sm border border-emerald-100"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div>
+                <h2 class="text-base font-black tracking-tight text-slate-800 uppercase">Daftar Kehadiran</h2>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Filter: {{ $currentKatMeta['label'] }}</p>
+            </div>
+        </div>
+
+        <div class="min-h-[200px] max-h-[600px] overflow-y-auto overflow-x-auto slim-scroll relative bg-slate-50/30">
+            <div class="hidden lg:block w-full min-w-[1000px]">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Data Warga</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Kategori Sasaran</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Waktu Kedatangan</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Status Layanan</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        @forelse($kunjungans as $kunjungan)
                             @php
-                                $staggerClass = 'stagger-' . (($index % 5) + 1);
-                                $tipe = class_basename($kunjungan->pasien_type); 
-                                $badge = match($tipe) {
-                                    'Balita'   => 'bg-sky-50 text-sky-600 border-sky-200',
-                                    'Remaja'   => 'bg-indigo-50 text-indigo-600 border-indigo-200',
-                                    'Lansia'   => 'bg-emerald-50 text-emerald-600 border-emerald-200',
-                                    default    => 'bg-slate-50 text-slate-600 border-slate-200'
-                                };
+                                $nama = $getPasienName($kunjungan->pasien);
+                                $nik = $getPasienNik($kunjungan->pasien);
+                                $typeLabel = $getPasienTypeStr($kunjungan->pasien_type);
+                                $theme = $getTypeTheme($typeLabel);
+                                $waktu = $formatDateTime($kunjungan->created_at);
+                                $status = $getLayananStatus($kunjungan);
                             @endphp
-                            
-                            <tr class="data-row fade-in-up {{ $staggerClass }}">
-                                
-                                {{-- 1. WAKTU DATANG --}}
-                                <td class="pl-8">
+
+                            <tr class="hover:bg-slate-50/80 transition-colors group">
+                                <td class="px-6 py-5 align-middle">
                                     <div class="flex items-center gap-4">
-                                        <div class="flex flex-col items-center justify-center w-11 h-11 bg-slate-50 rounded-[14px] text-slate-700 shrink-0 border border-slate-100">
-                                            <span class="text-[8px] font-black uppercase leading-none mb-1 text-slate-400">{{ \Carbon\Carbon::parse($kunjungan->created_at)->translatedFormat('M') }}</span>
-                                            <span class="text-[16px] font-black leading-none font-poppins">{{ \Carbon\Carbon::parse($kunjungan->created_at)->format('d') }}</span>
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border {{ $theme['bg'] }} {{ $theme['border'] }} {{ $theme['text'] }} shadow-sm">
+                                            <i class="fa-solid {{ $theme['icon'] }} text-sm"></i>
                                         </div>
-                                        <div class="flex flex-col">
-                                            <span class="text-[13px] font-black text-slate-800">{{ \Carbon\Carbon::parse($kunjungan->created_at)->format('Y') }}</span>
-                                            <span class="text-[10px] font-bold text-cyan-600 mt-0.5"><i class="far fa-clock"></i> {{ $kunjungan->created_at->format('H:i') }} WIB</span>
+                                        <div class="min-w-0">
+                                            <p class="text-sm font-bold text-slate-800 group-hover:text-emerald-600 transition-colors">{{ $nama }}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 mt-0.5 font-mono"><i class="fa-solid fa-id-card mr-1"></i> {{ $nik }}</p>
                                         </div>
                                     </div>
                                 </td>
-
-                                {{-- 2. IDENTITAS --}}
-                                <td>
-                                    <div class="flex flex-col gap-1.5 items-start">
-                                        <span class="text-[14px] font-black text-slate-800 font-poppins truncate max-w-[240px]">{{ $kunjungan->pasien->nama_lengkap ?? 'Data Terhapus' }}</span>
-                                        <span class="pill-badge border shadow-sm {{ $badge }}">
-                                            <i class="fas fa-tag"></i> {{ match($tipe) {
-    'Balita' => 'Balita / Anak',
-    'Remaja' => 'Remaja',
-    'Lansia' => 'Lansia',
-    default => $tipe
-} }}
-                                        </span>
-                                    </div>
+                                <td class="px-6 py-5 align-middle">
+                                    <span class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-black border {{ $theme['bg'] }} {{ $theme['text'] }} {{ $theme['border'] }}">
+                                        {{ $typeLabel }}
+                                    </span>
                                 </td>
-
-                                {{-- 3. LAYANAN DITERIMA (BADGES) --}}
-                                <td>
-                                    <div class="flex flex-wrap gap-2 mb-1.5">
-                                        @if($kunjungan->pemeriksaan)
-                                            <span class="pill-badge bg-blue-50 text-blue-700 border border-blue-200"><i class="fas fa-stethoscope"></i> Cek Fisik/Medis</span>
-                                        @endif
-                                        @if($kunjungan->imunisasis && $kunjungan->imunisasis->count() > 0)
-                                            <span class="pill-badge bg-teal-50 text-teal-700 border border-teal-200"><i class="fas fa-syringe"></i> Vaksinasi</span>
-                                        @endif
-                                        @if(!$kunjungan->pemeriksaan && (!$kunjungan->imunisasis || $kunjungan->imunisasis->count() == 0))
-                                            <span class="pill-badge bg-slate-100 text-slate-600 border border-slate-200"><i class="fas fa-comment"></i> Kunjungan Umum</span>
-                                        @endif
-                                    </div>
-                                    @if($kunjungan->keluhan)
-                                        <p class="text-[10px] font-bold text-slate-500 italic max-w-[200px] truncate"><i class="fas fa-quote-left text-slate-300 mr-1"></i> {{ $kunjungan->keluhan }}</p>
-                                    @else
-                                        <p class="text-[10px] font-medium text-slate-400 italic">Tidak ada keluhan.</p>
-                                    @endif
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-xs font-bold text-slate-700"><i class="fa-solid fa-clock text-slate-400 mr-1.5"></i> {{ $waktu }}</p>
                                 </td>
-
-                                {{-- 4. OTORITAS --}}
-                                <td class="text-center">
-                                    <div class="flex flex-col items-center justify-center">
-                                        <div class="w-7 h-7 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 text-[10px] font-black mb-1.5">
-                                            {{ strtoupper(substr($kunjungan->petugas->name ?? 'S', 0, 1)) }}
-                                        </div>
-                                        <span class="text-[10px] font-bold text-slate-600 truncate max-w-[120px]">{{ $kunjungan->petugas->name ?? 'Sistem Otomatis' }}</span>
-                                    </div>
+                                <td class="px-6 py-5 align-middle">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black border {{ $status['badge'] }}">
+                                        <i class="fa-solid {{ $status['icon'] }}"></i> {{ $status['label'] }}
+                                    </span>
                                 </td>
-
-                                {{-- 5. AKSI (BUKA ARSIP) --}}
-                                <td class="text-center pr-8">
-                                    <a href="{{ route('kader.kunjungan.show', $kunjungan->id) }}" class="inline-flex w-9 h-9 rounded-full bg-slate-50 border border-slate-200 items-center justify-center text-slate-400 hover:text-cyan-600 hover:border-cyan-300 hover:bg-cyan-50 hover:shadow-sm transition-all hover:scale-110" title="Buka Arsip">
-                                        <i class="fas fa-folder-open text-sm"></i>
+                                <td class="px-6 py-5 align-middle text-right">
+                                    <a href="{{ route('kader.kunjungan.show', $kunjungan->id) }}" class="btn-pill inline-flex items-center gap-2 border border-slate-200 bg-white text-slate-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm">
+                                        <i class="fa-solid fa-folder-open"></i> Buka Log
                                     </a>
                                 </td>
                             </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                
-                @if($kunjungans->hasPages())
-                <div id="paginationArea" class="mt-4 flex justify-center pt-4 border-t border-slate-100">
-                    {{ $kunjungans->links() }}
-                </div>
-                @endif
+                        @empty
+                            <tr>
+                                <td colspan="5" class="p-14 text-center bg-white">
+                                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100 text-slate-300 mb-4 shadow-inner">
+                                        <i class="fa-solid fa-clipboard-list text-3xl"></i>
+                                    </div>
+                                    <h3 class="text-sm font-black text-slate-700">Belum Ada Kunjungan</h3>
+                                    <p class="text-xs font-medium text-slate-400 mt-1 max-w-sm mx-auto">Data kunjungan akan tercatat otomatis ketika Anda melakukan pengukuran atau pendaftaran layanan.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
 
-        @else
-            {{-- DATA KOSONG: HEADER TABEL DIHAPUS, TAMPILKAN NATIVE SVG --}}
-            <div class="table-canvas flex flex-col items-center justify-center p-12 lg:p-24 fade-in-up">
-                <div class="relative w-36 h-36 mb-6 flex items-center justify-center">
-                    <div class="absolute inset-0 bg-cyan-100 rounded-full blur-2xl opacity-60"></div>
-                    
-                    {{-- Gelombang Radar Cyan --}}
-                    <div class="svg-ring-cyan w-24 h-24"></div>
-                    <div class="svg-ring-cyan w-24 h-24" style="animation-delay: 1s;"></div>
-                    
-                    {{-- Logo Buku Tamu SVG Murni --}}
-                    <svg class="svg-book w-20 h-20 text-cyan-500 relative z-10" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V5H19V19Z"></path>
-                        <path d="M14 17H7V15H14V17Z"></path>
-                        <path d="M17 13H7V11H17V13Z"></path>
-                        <path d="M17 9H7V7H17V9Z"></path>
-                    </svg>
+            {{-- MOBILE VIEW --}}
+            <div class="space-y-4 lg:hidden p-4">
+                @foreach($kunjungans as $kunjungan)
+                    @php
+                        $nama = $getPasienName($kunjungan->pasien);
+                        $nik = $getPasienNik($kunjungan->pasien);
+                        $typeLabel = $getPasienTypeStr($kunjungan->pasien_type);
+                        $theme = $getTypeTheme($typeLabel);
+                        $waktu = $formatDateTime($kunjungan->created_at);
+                        $status = $getLayananStatus($kunjungan);
+                    @endphp
+                    <article class="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full border {{ $theme['bg'] }} {{ $theme['border'] }} {{ $theme['text'] }} flex items-center justify-center"><i class="fa-solid {{ $theme['icon'] }}"></i></div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-900">{{ $nama }}</h3>
+                                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">{{ $nik }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p class="text-[10px] font-bold text-slate-500"><i class="fa-solid fa-clock mr-1.5 w-3 text-center"></i> {{ $waktu }}</p>
+                            <p class="text-[10px] font-bold {{ str_contains($status['badge'], 'emerald') ? 'text-emerald-600' : 'text-amber-600' }}"><i class="fa-solid {{ $status['icon'] }} mr-1.5 w-3 text-center"></i> {{ $status['label'] }}</p>
+                        </div>
+                        <a href="{{ route('kader.kunjungan.show', $kunjungan->id) }}" class="btn-pill w-full inline-flex justify-center items-center bg-slate-900 text-white px-3 py-3 text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-emerald-600">Lihat Log</a>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- PAGINATION CUSTOM UI (Rounded/Membulat) --}}
+        @if(method_exists($kunjungans, 'hasPages') && $kunjungans->hasPages())
+            <div class="bg-white p-6 border-t border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 rounded-b-[2rem]">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Menampilkan <span class="text-slate-700">{{ $kunjungans->firstItem() }}</span> - <span class="text-slate-700">{{ $kunjungans->lastItem() }}</span> dari <span class="text-slate-800">{{ $kunjungans->total() }}</span> data
+                </p>
+                
+                <div class="flex items-center gap-1.5">
+                    {{-- Previous --}}
+                    @if ($kunjungans->onFirstPage())
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-100"><i class="fa-solid fa-chevron-left text-[10px]"></i></span>
+                    @else
+                        <a href="{{ $kunjungans->appends(request()->query())->previousPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-left text-[10px]"></i></a>
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @php
+                        $start = max(1, $kunjungans->currentPage() - 1);
+                        $end = min($kunjungans->lastPage(), $kunjungans->currentPage() + 1);
+                    @endphp
+
+                    @if($start > 1)
+                        <a href="{{ $kunjungans->appends(request()->query())->url(1) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm text-xs font-bold">1</a>
+                        @if($start > 2)<span class="inline-flex h-8 w-8 items-center justify-center text-slate-400 text-xs font-bold">...</span>@endif
+                    @endif
+
+                    @for ($page = $start; $page <= $end; $page++)
+                        @if ($page == $kunjungans->currentPage())
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30 text-xs font-black">{{ $page }}</span>
+                        @else
+                            <a href="{{ $kunjungans->appends(request()->query())->url($page) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm text-xs font-bold">{{ $page }}</a>
+                        @endif
+                    @endfor
+
+                    @if($end < $kunjungans->lastPage())
+                        @if($end < $kunjungans->lastPage() - 1)<span class="inline-flex h-8 w-8 items-center justify-center text-slate-400 text-xs font-bold">...</span>@endif
+                        <a href="{{ $kunjungans->appends(request()->query())->url($kunjungans->lastPage()) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm text-xs font-bold">{{ $kunjungans->lastPage() }}</a>
+                    @endif
+
+                    {{-- Next --}}
+                    @if ($kunjungans->hasMorePages())
+                        <a href="{{ $kunjungans->appends(request()->query())->nextPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-right text-[10px]"></i></a>
+                    @else
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-100"><i class="fa-solid fa-chevron-right text-[10px]"></i></span>
+                    @endif
                 </div>
-                <h4 class="text-[18px] font-black text-slate-800 uppercase tracking-widest mb-2 font-poppins">Buku Tamu Kosong</h4>
-                <p class="text-[13px] text-slate-500 font-medium leading-relaxed max-w-md text-center">Data kunjungan akan terisi otomatis ke dalam arsip saat ada warga yang mendapatkan pelayanan medis atau registrasi.</p>
             </div>
         @endif
-
-    </div>
+    </section>
 </div>
-
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    let typingTimer;
-    const searchInput = document.getElementById('liveSearchInput');
-    const contentArea = document.getElementById('mainContentArea');
-    const spinner = document.getElementById('searchSpinner');
-    const form = document.getElementById('filterForm');
-    const hiddenSearch = document.getElementById('hiddenSearch');
-    const hiddenKategori = document.getElementById('hiddenKategori');
-
-    // ENGINE AJAX SUPER CEPAT KUNJUNGAN
-    async function fetchRealTimeData(url, isSearch = false) {
-        if(isSearch) spinner.classList.remove('hidden');
-        contentArea.classList.add('fast-loading');
-        
-        try {
-            const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
-            const html = await response.text();
-            
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            contentArea.innerHTML = doc.getElementById('mainContentArea').innerHTML;
-            
-            window.history.pushState({}, '', url);
-            bindPagination();
-        } catch (error) {
-            console.error("Gagal memuat data:", error);
-        } finally {
-            spinner.classList.add('hidden');
-            contentArea.classList.remove('fast-loading');
-        }
-    }
-
-    // PENCARIAN KETIK (DEBOUNCE KILAT: 200ms)
-    if(searchInput) {
-        searchInput.addEventListener('input', function(e) {
-            clearTimeout(typingTimer);
-            hiddenSearch.value = e.target.value;
-            
-            typingTimer = setTimeout(() => {
-                const url = new URL(form.action);
-                url.searchParams.set('search', e.target.value);
-                url.searchParams.set('kategori', hiddenKategori.value);
-                fetchRealTimeData(url.toString(), true);
-            }, 200); 
-        });
-    }
-
-    // EVENT KLIK TAB KATEGORI
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('bg-cyan-500', 'text-white', 'shadow-[0_8px_20px_rgba(6,182,212,0.3)]', 'scale-105');
-                b.classList.add('bg-white', 'text-slate-500', 'hover:bg-slate-50', 'hover:text-cyan-600');
-                const icon = b.querySelector('i');
-                if(icon) { icon.classList.remove('text-cyan-100'); icon.classList.add('text-slate-400'); }
-            });
-            
-            this.classList.remove('bg-white', 'text-slate-500', 'hover:bg-slate-50', 'hover:text-cyan-600');
-            this.classList.add('bg-cyan-500', 'text-white', 'shadow-[0_8px_20px_rgba(6,182,212,0.3)]', 'scale-105');
-            const myIcon = this.querySelector('i');
-            if(myIcon) { myIcon.classList.remove('text-slate-400'); myIcon.classList.add('text-cyan-100'); }
-
-            const kat = this.dataset.kategori;
-            hiddenKategori.value = kat;
-            
-            const url = new URL(form.action);
-            url.searchParams.set('kategori', kat);
-            url.searchParams.set('search', hiddenSearch.value);
-            fetchRealTimeData(url.toString(), false);
-        });
-    });
-
-    function bindPagination() {
-        document.querySelectorAll('#paginationArea a').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault(); e.stopPropagation();
-                fetchRealTimeData(this.href, false);
-            });
-        });
-    }
-    
-    window.addEventListener('popstate', function() { fetchRealTimeData(window.location.href, false); });
-    bindPagination();
-});
-</script>
-@endpush
 @endsection

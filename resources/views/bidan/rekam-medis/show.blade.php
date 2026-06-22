@@ -6,6 +6,7 @@
 
 @php
     use Carbon\Carbon;
+    use Illuminate\Support\Str;
 
     $pasienType = $pasienType ?? $pasien_type ?? request('pasien_type', 'balita');
     $pasien_type = $pasien_type ?? $pasienType;
@@ -14,154 +15,57 @@
     $riwayatImunisasi = collect($riwayatImunisasi ?? []);
     $summary = $summary ?? [];
 
-    $typeOptions = $typeOptions ?? [
-        'balita' => [
-            'label' => 'Balita',
-            'desc' => 'Riwayat pertumbuhan, pemeriksaan dasar, dan imunisasi.',
-            'icon' => 'ph-baby',
-            'theme' => 'sky',
-        ],
-        'remaja' => [
-            'label' => 'Remaja',
-            'desc' => 'Riwayat pemeriksaan kesehatan remaja.',
-            'icon' => 'ph-user-focus',
-            'theme' => 'indigo',
-        ],
-        'lansia' => [
-            'label' => 'Lansia',
-            'desc' => 'Riwayat pemeriksaan dasar dan pemantauan kesehatan lansia.',
-            'icon' => 'ph-heartbeat',
-            'theme' => 'emerald',
-        ],
+    $typeOptions = [
+        'balita' => ['label' => 'Balita', 'icon' => 'fa-baby'],
+        'remaja' => ['label' => 'Remaja', 'icon' => 'fa-user-graduate'],
+        'lansia' => ['label' => 'Lansia', 'icon' => 'fa-person-cane'],
     ];
 
     $currentTypeMeta = $typeOptions[$pasienType] ?? $typeOptions['balita'];
-    $pasienTypeLabel = $pasienTypeLabel ?? ($currentTypeMeta['label'] ?? ucfirst($pasienType));
+    $pasienTypeLabel = $currentTypeMeta['label'];
+    $pasienIcon = $currentTypeMeta['icon'];
 
     $getValue = function ($item, array $keys, mixed $default = '-') {
         foreach ($keys as $key) {
             $value = data_get($item, $key);
-
-            if ($value !== null && $value !== '') {
-                return $value;
-            }
+            if ($value !== null && $value !== '') return $value;
         }
-
         return $default;
     };
 
-    $formatDate = function ($date) {
-        if (!$date || $date === '-') {
-            return '-';
-        }
+    $formatDate = fn($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y') : '-';
+    $formatDateTime = fn($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y, H:i') . ' WIB' : '-';
+    $displayValue = fn($value, $suffix = '') => ($value === null || $value === '' || $value === '-') ? '-' : trim((string) $value . ' ' . $suffix);
 
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatDateTime = function ($date) {
-        if (!$date || $date === '-') {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y, H:i') . ' WIB';
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $displayValue = function (mixed $value, string $suffix = '') {
-        if ($value === null || $value === '' || $value === '-') {
-            return '-';
-        }
-
-        return trim((string) $value . ' ' . $suffix);
-    };
-
-    $getNama = function ($item) use ($getValue) {
-        return $getValue($item, ['nama_lengkap', 'nama', 'nama_balita', 'nama_remaja', 'nama_lansia'], 'Nama tidak tersedia');
-    };
-
-    $getNik = function ($item) use ($getValue) {
-        return $getValue($item, ['nik', 'nik_anak', 'nik_remaja', 'nik_lansia'], '-');
-    };
-
-    $getAlamat = function ($item) use ($getValue) {
-        return $getValue($item, ['alamat', 'alamat_lengkap', 'dusun'], '-');
-    };
-
-    $getKontak = function ($item) use ($getValue) {
-        return $getValue($item, ['no_hp', 'nomor_hp', 'telepon', 'no_telepon'], '-');
-    };
-
+    $getNama = fn($item) => $getValue($item, ['nama_lengkap', 'nama', 'nama_balita', 'nama_remaja', 'nama_lansia'], 'Nama tidak tersedia');
+    $getNik = fn($item) => $getValue($item, ['nik', 'nik_anak', 'nik_remaja', 'nik_lansia'], '-');
+    $getAlamat = fn($item) => $getValue($item, ['alamat', 'alamat_lengkap', 'dusun'], '-');
+    $getKontak = fn($item) => $getValue($item, ['no_hp', 'nomor_hp', 'telepon', 'no_telepon'], '-');
+    
     $getWali = function ($item) use ($getValue, $pasienType) {
-        if ($pasienType === 'balita') {
-            return $getValue($item, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
-        }
-
-        if ($pasienType === 'remaja') {
-            return $getValue($item, ['nama_orang_tua', 'nama_wali', 'sekolah'], '-');
-        }
-
+        if ($pasienType === 'balita') return $getValue($item, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
+        if ($pasienType === 'remaja') return $getValue($item, ['nama_orang_tua', 'nama_wali', 'sekolah'], '-');
         return $getValue($item, ['kontak_keluarga', 'nama_keluarga', 'nama_wali'], '-');
     };
 
     $getGender = function ($item) use ($getValue) {
         $gender = strtolower((string) $getValue($item, ['jenis_kelamin', 'jk', 'gender'], '-'));
-
         return match ($gender) {
-            'l', 'laki-laki', 'laki laki', 'male' => 'Laki-laki',
+            'l', 'laki-laki', 'male' => 'Laki-laki',
             'p', 'perempuan', 'female' => 'Perempuan',
-            default => $gender === '-' ? '-' : ucfirst($gender),
+            default => '-'
         };
     };
 
-    $getTanggalLahir = function ($item) use ($getValue, $formatDate) {
-        return $formatDate($getValue($item, ['tanggal_lahir', 'tgl_lahir', 'lahir'], null));
-    };
+    $getTanggalLahir = fn($item) => $formatDate($getValue($item, ['tanggal_lahir', 'tgl_lahir', 'lahir'], null));
 
     $getPersonName = function ($item, array $paths) {
         foreach ($paths as $path) {
-            $value = data_get($item, $path . '.name')
-                ?? data_get($item, $path . '.nama')
-                ?? data_get($item, $path . '.nama_lengkap');
-
-            if ($value !== null && $value !== '') {
-                return $value;
-            }
+            $value = data_get($item, $path . '.name') ?? data_get($item, $path . '.nama');
+            if ($value) return $value;
         }
-
         return '-';
     };
-
-    $themeMeta = function ($key) {
-        return match ($key) {
-            'remaja' => [
-                'badge' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-                'panel' => 'border-indigo-100 bg-indigo-50/70',
-                'iconBox' => 'bg-indigo-50 text-indigo-700 ring-indigo-100',
-                'gradient' => 'from-indigo-500 to-violet-500',
-            ],
-            'lansia' => [
-                'badge' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'panel' => 'border-emerald-100 bg-emerald-50/70',
-                'iconBox' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-                'gradient' => 'from-emerald-500 to-teal-500',
-            ],
-            default => [
-                'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
-                'panel' => 'border-sky-100 bg-sky-50/70',
-                'iconBox' => 'bg-sky-50 text-sky-700 ring-sky-100',
-                'gradient' => 'from-sky-500 to-cyan-500',
-            ],
-        };
-    };
-
-    $currentTheme = $themeMeta($pasienType);
 
     $pasienNama = $getNama($pasien);
     $pasienNik = $getNik($pasien);
@@ -169,674 +73,363 @@
     $pasienKontak = $getKontak($pasien);
     $pasienWali = $getWali($pasien);
     $pasienGender = $getGender($pasien);
-    $pasienTanggalLahir = $getTanggalLahir($pasien);
+    $pasienTanggalLahirRaw = $getValue($pasien, ['tanggal_lahir', 'tgl_lahir', 'lahir'], null);
+    $pasienTanggalLahir = $formatDate($pasienTanggalLahirRaw);
+    $usia = $pasienTanggalLahirRaw ? Carbon::parse($pasienTanggalLahirRaw)->diff(now())->format('%y Thn %m Bln') : '-';
+    $initial = Str::upper(Str::substr(trim($pasienNama), 0, 1)) ?: 'P';
 
     $latestParams = data_get($summary, 'parameter_terakhir', []);
     $latestParams = is_array($latestParams) ? $latestParams : [];
 
     $summaryCards = [
-        [
-            'label' => 'Pemeriksaan',
-            'value' => data_get($summary, 'total_medis', $riwayatMedis->count()),
-            'icon' => 'ph-stethoscope',
-            'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-        ],
-        [
-            'label' => $pasienType === 'balita' ? 'Imunisasi' : 'Ruang Lingkup',
-            'value' => $pasienType === 'balita' ? data_get($summary, 'total_imunisasi', $riwayatImunisasi->count()) : 'Klinis',
-            'icon' => $pasienType === 'balita' ? 'ph-syringe' : 'ph-folder-simple-user',
-            'class' => $pasienType === 'balita'
-                ? 'bg-cyan-50 text-cyan-700 ring-cyan-100'
-                : 'bg-slate-50 text-slate-700 ring-slate-100',
-        ],
-        [
-            'label' => 'Terakhir',
-            'value' => data_get($summary, 'pemeriksaan_terakhir', '-'),
-            'icon' => 'ph-clock-counter-clockwise',
-            'class' => 'bg-amber-50 text-amber-700 ring-amber-100',
-        ],
-        [
-            'label' => 'Kategori',
-            'value' => $pasienTypeLabel,
-            'icon' => $currentTypeMeta['icon'] ?? 'ph-user',
-            'class' => $currentTheme['iconBox'],
-        ],
+        ['label' => 'Total Pemeriksaan', 'value' => data_get($summary, 'total_medis', $riwayatMedis->count()), 'icon' => 'fa-stethoscope', 'theme' => 'emerald'],
+        ['label' => $pasienType === 'balita' ? 'Total Imunisasi' : 'Ruang Lingkup', 'value' => $pasienType === 'balita' ? data_get($summary, 'total_imunisasi', $riwayatImunisasi->count()) : 'Klinis', 'icon' => $pasienType === 'balita' ? 'fa-syringe' : 'fa-folder-open', 'theme' => 'sky'],
+        ['label' => 'Kunjungan Terakhir', 'value' => data_get($summary, 'pemeriksaan_terakhir', '-'), 'icon' => 'fa-clock-rotate-left', 'theme' => 'amber'],
+        ['label' => 'Kategori Sasaran', 'value' => $pasienTypeLabel, 'icon' => $pasienIcon, 'theme' => 'teal'],
     ];
 
     $medicalFields = function ($item) use ($pasienType, $displayValue) {
         if ($pasienType === 'lansia') {
             return [
-                [
-                    'label' => 'Tekanan Darah',
-                    'value' => $displayValue(data_get($item, 'tekanan_darah')),
-                    'icon' => 'ph-heartbeat',
-                ],
-                [
-                    'label' => 'Gula Darah',
-                    'value' => $displayValue(data_get($item, 'gula_darah'), 'mg/dL'),
-                    'icon' => 'ph-drop',
-                ],
-                [
-                    'label' => 'Kolesterol',
-                    'value' => $displayValue(data_get($item, 'kolesterol'), 'mg/dL'),
-                    'icon' => 'ph-waveform',
-                ],
-                [
-                    'label' => 'Asam Urat',
-                    'value' => $displayValue(data_get($item, 'asam_urat'), 'mg/dL'),
-                    'icon' => 'ph-flask',
-                ],
-                [
-                    'label' => 'Lingkar Perut',
-                    'value' => $displayValue(data_get($item, 'lingkar_perut'), 'cm'),
-                    'icon' => 'ph-ruler',
-                ],
-                [
-                    'label' => 'Kemandirian',
-                    'value' => $displayValue(data_get($item, 'tingkat_kemandirian')),
-                    'icon' => 'ph-person-simple-walk',
-                ],
+                ['label' => 'Tensi', 'value' => $displayValue(data_get($item, 'tekanan_darah')), 'icon' => 'fa-heart-pulse'],
+                ['label' => 'Gula', 'value' => $displayValue(data_get($item, 'gula_darah'), 'mg/dL'), 'icon' => 'fa-droplet'],
+                ['label' => 'Koles', 'value' => $displayValue(data_get($item, 'kolesterol'), 'mg/dL'), 'icon' => 'fa-vial'],
+                ['label' => 'Asam', 'value' => $displayValue(data_get($item, 'asam_urat'), 'mg/dL'), 'icon' => 'fa-flask'],
+                ['label' => 'L.Perut', 'value' => $displayValue(data_get($item, 'lingkar_perut'), 'cm'), 'icon' => 'fa-ruler'],
             ];
         }
 
         if ($pasienType === 'remaja') {
             return [
-                [
-                    'label' => 'Berat Badan',
-                    'value' => $displayValue(data_get($item, 'berat_badan'), 'kg'),
-                    'icon' => 'ph-scales',
-                ],
-                [
-                    'label' => 'Tinggi Badan',
-                    'value' => $displayValue(data_get($item, 'tinggi_badan'), 'cm'),
-                    'icon' => 'ph-ruler',
-                ],
-                [
-                    'label' => 'IMT',
-                    'value' => $displayValue(data_get($item, 'imt')),
-                    'icon' => 'ph-chart-line-up',
-                ],
-                [
-                    'label' => 'Tekanan Darah',
-                    'value' => $displayValue(data_get($item, 'tekanan_darah')),
-                    'icon' => 'ph-heartbeat',
-                ],
-                [
-                    'label' => 'LILA',
-                    'value' => $displayValue(data_get($item, 'lingkar_lengan'), 'cm'),
-                    'icon' => 'ph-ruler',
-                ],
+                ['label' => 'BB', 'value' => $displayValue(data_get($item, 'berat_badan'), 'kg'), 'icon' => 'fa-weight-scale'],
+                ['label' => 'TB', 'value' => $displayValue(data_get($item, 'tinggi_badan'), 'cm'), 'icon' => 'fa-ruler-vertical'],
+                ['label' => 'IMT', 'value' => $displayValue(data_get($item, 'imt')), 'icon' => 'fa-chart-line'],
+                ['label' => 'Tensi', 'value' => $displayValue(data_get($item, 'tekanan_darah')), 'icon' => 'fa-heart-pulse'],
+                ['label' => 'LILA', 'value' => $displayValue(data_get($item, 'lingkar_lengan'), 'cm'), 'icon' => 'fa-ruler'],
             ];
         }
 
         return [
-            [
-                'label' => 'Berat Badan',
-                'value' => $displayValue(data_get($item, 'berat_badan'), 'kg'),
-                'icon' => 'ph-scales',
-            ],
-            [
-                'label' => 'Tinggi Badan',
-                'value' => $displayValue(data_get($item, 'tinggi_badan'), 'cm'),
-                'icon' => 'ph-ruler',
-            ],
-            [
-                'label' => 'Lingkar Kepala',
-                'value' => $displayValue(data_get($item, 'lingkar_kepala'), 'cm'),
-                'icon' => 'ph-circle',
-            ],
-            [
-                'label' => 'LILA',
-                'value' => $displayValue(data_get($item, 'lingkar_lengan'), 'cm'),
-                'icon' => 'ph-ruler',
-            ],
-            [
-                'label' => 'Status Gizi',
-                'value' => $displayValue(data_get($item, 'status_gizi')),
-                'icon' => 'ph-bowl-food',
-            ],
+            ['label' => 'BB', 'value' => $displayValue(data_get($item, 'berat_badan'), 'kg'), 'icon' => 'fa-weight-scale'],
+            ['label' => 'TB/PB', 'value' => $displayValue(data_get($item, 'tinggi_badan'), 'cm'), 'icon' => 'fa-ruler-vertical'],
+            ['label' => 'L.Kepala', 'value' => $displayValue(data_get($item, 'lingkar_kepala'), 'cm'), 'icon' => 'fa-circle'],
+            ['label' => 'LILA', 'value' => $displayValue(data_get($item, 'lingkar_lengan'), 'cm'), 'icon' => 'fa-ruler'],
+            ['label' => 'Gizi', 'value' => $displayValue(data_get($item, 'status_gizi')), 'icon' => 'fa-bowl-food'],
         ];
     };
 @endphp
 
 @push('styles')
 <style>
-    .nexus-font {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    html { scroll-behavior: smooth; }
+    body { background-color: #f4f7f6; } 
+
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        pointer-events: none;
     }
 
-    .nexus-page-enter {
-        animation: nexusMainIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
+    .widget-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .widget-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
     }
 
-    .nexus-panel-enter {
-        animation: nexusPanelIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
-    }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
+    .btn-pill:active { transform: scale(0.97); }
 
-    .nexus-scroll {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(16, 185, 129, .35) transparent;
-    }
+    .slim-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    .slim-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.3); border-radius: 9999px; }
+    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(20, 184, 166, 0.5); }
 
-    .nexus-scroll::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    .nexus-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .nexus-scroll::-webkit-scrollbar-thumb {
-        background: rgba(16, 185, 129, .35);
-        border-radius: 999px;
-    }
-
-    .rekam-medis-scroll-box {
-        max-height: 560px;
-        overflow-y: auto;
-        padding-right: 6px;
-        scroll-behavior: smooth;
-    }
-
-    @media (max-width: 768px) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation-duration: .08s;
-        }
-
-        .rekam-medis-scroll-box {
-            max-height: 480px;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation: none !important;
-        }
-
-        .rekam-medis-scroll-box {
-            scroll-behavior: auto;
-        }
-    }
-
-    @keyframes nexusMainIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 3px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @keyframes nexusPanelIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 2px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
+    .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 </style>
 @endpush
 
 @section('content')
-<div class="nexus-font nexus-page-enter space-y-5 pb-8 text-slate-800">
+<div class="bg-mesh-fixed"></div>
 
-    {{-- HEADER --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div class="min-w-0">
-                <a href="{{ route('bidan.rekam-medis.index', ['type' => $pasienType]) }}"
-                   class="mb-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
-                    <i class="ph ph-arrow-left"></i>
-                    Kembali
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 animate-pop-in">
+
+    {{-- 1. HERO BANNER --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col lg:flex-row justify-between items-center gap-8 border-[6px] border-white/40" style="transform: translateZ(0);">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-4 text-center lg:text-left">
+            <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
+                <a href="{{ route('bidan.rekam-medis.index', ['type' => $pasienType]) }}" class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2 hover:bg-white/30 transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Direktori
                 </a>
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+                    <i class="fa-solid {{ $pasienIcon }}"></i> {{ $pasienTypeLabel }}
+                </span>
+            </div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                {{ $pasienNama }}
+            </h1>
 
-                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
-                    <i class="ph ph-folder-simple-user text-base"></i>
-                    Detail Rekam Medis
-                </div>
-
-                <h1 class="mt-4 max-w-4xl text-[26px] font-black leading-tight tracking-[-0.025em] text-slate-900 md:text-[30px]">
-                    {{ $pasienNama }}
-                </h1>
-
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Riwayat pemeriksaan tervalidasi dan ringkasan kesehatan {{ strtolower($pasienTypeLabel) }}.
-                    @if($pasienType === 'balita')
-                        Termasuk riwayat imunisasi yang telah dicatat pada layanan Balita.
-                    @endif
-                </p>
-
-                <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-black ring-1 {{ $currentTheme['badge'] }}">
-                        <i class="ph {{ $currentTypeMeta['icon'] ?? 'ph-user' }}"></i>
-                        {{ $pasienTypeLabel }}
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-identification-card"></i>
-                        {{ $pasienNik }}
-                    </span>
-                </div>
+            <div class="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-white/90 text-sm font-semibold">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-id-card opacity-70"></i> NIK: {{ $pasienNik }}</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-cake-candles opacity-70"></i> Usia: {{ $usia }}</span>
             </div>
         </div>
     </section>
 
-    {{-- SUMMARY --}}
-    <section class="nexus-panel-enter grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {{-- 2. SUMMARY CARDS --}}
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         @foreach($summaryCards as $card)
-            <div class="rounded-[22px] border border-white/80 bg-white/85 p-4 shadow-sm shadow-slate-200/70 backdrop-blur">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="truncate text-xs font-black uppercase tracking-[0.12em] text-slate-400">
-                            {{ $card['label'] }}
-                        </p>
-
-                        <h2 class="mt-2 line-clamp-1 text-base font-black tracking-tight text-slate-900">
-                            {{ $card['value'] }}
-                        </h2>
-                    </div>
-
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $card['class'] }}">
-                        <i class="ph {{ $card['icon'] }} text-lg"></i>
-                    </div>
+            <div class="widget-card p-5 group flex items-center justify-between">
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 group-hover:text-{{ $card['theme'] }}-500 transition-colors">{{ $card['label'] }}</p>
+                    <h2 class="text-xl font-black text-slate-800 leading-none">{{ $card['value'] }}</h2>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 border border-{{ $card['theme'] }}-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid {{ $card['icon'] }}"></i>
                 </div>
             </div>
         @endforeach
     </section>
 
-    {{-- PENJELASAN OUTPUT --}}
-    <section class="nexus-panel-enter rounded-[22px] border border-emerald-100 bg-emerald-50/70 p-4">
-        <div class="flex gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700 ring-1 ring-emerald-100">
-                <i class="ph ph-info text-lg"></i>
-            </div>
-
-            <div>
-                <h2 class="text-sm font-black text-slate-900">
-                    Output Rekam Medis
-                </h2>
-
-                <p class="mt-1 text-sm leading-6 text-slate-600">
-                    Halaman ini menampilkan identitas pasien, parameter pemeriksaan terakhir, riwayat pemeriksaan tervalidasi, catatan klinis, tindakan layanan, dan edukasi yang tercatat oleh Bidan.
-                </p>
-            </div>
-        </div>
-    </section>
-
-    {{-- IDENTITAS --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="mb-5 flex items-center justify-between gap-4">
-            <div>
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                    Identitas
-                </p>
-
-                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                    Data Pasien
-                </h2>
-            </div>
-
-            <div class="flex h-10 w-10 items-center justify-center rounded-2xl ring-1 {{ $currentTheme['iconBox'] }}">
-                <i class="ph {{ $currentTypeMeta['icon'] ?? 'ph-user' }} text-lg"></i>
-            </div>
-        </div>
-
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Nama</p>
-                <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $pasienNama }}</p>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">NIK</p>
-                <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $pasienNik }}</p>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Jenis Kelamin</p>
-                <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $pasienGender }}</p>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Tanggal Lahir</p>
-                <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $pasienTanggalLahir }}</p>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Wali / Keluarga</p>
-                <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $pasienWali }}</p>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Kontak</p>
-                <p class="mt-2 truncate text-sm font-black text-slate-900">{{ $pasienKontak }}</p>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100 md:col-span-2">
-                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">Alamat</p>
-                <p class="mt-2 line-clamp-2 text-sm font-black text-slate-900">{{ $pasienAlamat }}</p>
-            </div>
-        </div>
-    </section>
-
-    {{-- PARAMETER TERAKHIR --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="mb-5 flex items-center justify-between gap-4">
-            <div>
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                    Parameter
-                </p>
-
-                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                    Pemeriksaan Terakhir
-                </h2>
-            </div>
-
-            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                <i class="ph ph-chart-line-up text-lg"></i>
-            </div>
-        </div>
-
-        @if(count($latestParams) > 0)
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                @foreach($latestParams as $label => $value)
-                    <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                        <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                            {{ $label }}
-                        </p>
-
-                        <p class="mt-2 truncate text-sm font-black text-slate-900">
-                            {{ $value ?: '-' }}
-                        </p>
+    {{-- 3. GRID UTAMA (KUNCI PRESISI 100%: Menggunakan items-stretch agar tinggi kiri & kanan mutlak sama) --}}
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+        
+        {{-- KOLOM KIRI (Col 4): Identitas & Parameter Terakhir --}}
+        <div class="xl:col-span-4 flex flex-col gap-6 h-full">
+            
+            {{-- Identitas Pasien (Tinggi Natural) --}}
+            <div class="widget-card p-6 flex flex-col shrink-0">
+                <div class="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4">
+                    <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-500 border border-sky-100 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-user-circle"></i>
                     </div>
-                @endforeach
-            </div>
-        @else
-            <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                    <i class="ph ph-chart-line-up text-2xl"></i>
+                    <div>
+                        <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Identitas</h4>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Data Demografi Pasien</p>
+                    </div>
                 </div>
 
-                <h3 class="mt-4 text-base font-black text-slate-800">
-                    Parameter Belum Tersedia
-                </h3>
-
-                <p class="mt-2 text-sm text-slate-500">
-                    Belum ada pemeriksaan tervalidasi yang dapat ditampilkan.
-                </p>
-            </div>
-        @endif
-    </section>
-
-    {{-- RIWAYAT PEMERIKSAAN --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                    Riwayat Pemeriksaan
-                </p>
-
-                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                    Pemeriksaan Tervalidasi
-                </h2>
-
-                <p class="mt-1 text-xs font-semibold text-slate-500">
-                    Daftar dibatasi dalam area scroll agar halaman tetap ringkas dan mudah dibaca.
-                </p>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-700">
-                    <i class="ph ph-check-circle"></i>
-                    {{ $riwayatMedis->count() }} data tervalidasi
-                </span>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100">
-                    <i class="ph ph-stethoscope text-lg"></i>
-                </div>
-            </div>
-        </div>
-
-        @if($riwayatMedis->count() > 0)
-            <div class="rekam-medis-scroll-box nexus-scroll">
-                @foreach($riwayatMedis as $pemeriksaan)
-                    @php
-                        $tanggalPemeriksaan = $formatDateTime(
-                            data_get($pemeriksaan, 'tanggal_periksa')
-                            ?? data_get($pemeriksaan, 'created_at')
-                        );
-
-                        $petugas = $getPersonName($pemeriksaan, ['pemeriksa', 'verifikator', 'verifikatorLegacy']);
-                        $fields = $medicalFields($pemeriksaan);
-
-                        $catatan = $getValue($pemeriksaan, [
-                            'catatan_bidan',
-                            'catatan',
-                            'keterangan',
-                            'hasil_pemeriksaan',
-                            'keluhan',
-                        ], '-');
-
-                        $tindakan = $getValue($pemeriksaan, [
-                            'tindakan',
-                            'tindakan_lanjut',
-                            'layanan',
-                            'rekomendasi_tindakan',
-                        ], '-');
-
-                        $edukasi = $getValue($pemeriksaan, [
-                            'catatan_edukasi',
-                            'edukasi',
-                            'edukasi_kesehatan',
-                        ], '-');
-                    @endphp
-
-                    <article class="mb-3 rounded-[22px] border border-slate-100 bg-slate-50/80 p-4">
-                        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
-                                        <i class="ph ph-check-circle"></i>
-                                        Tervalidasi
-                                    </span>
-
-                                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black text-slate-500">
-                                        <i class="ph ph-clock"></i>
-                                        {{ $tanggalPemeriksaan }}
-                                    </span>
-                                </div>
-
-                                <h3 class="mt-3 text-base font-black text-slate-900">
-                                    Pemeriksaan {{ $pasienTypeLabel }}
-                                </h3>
-
-                                <p class="mt-1 text-sm font-semibold text-slate-500">
-                                    Petugas: {{ $petugas }}
-                                </p>
-                            </div>
+                <div class="space-y-3">
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Nama Lengkap</p>
+                        <p class="text-sm font-bold text-slate-800">{{ $pasienNama }}</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-1 bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                            <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Gender</p>
+                            <p class="text-xs font-bold text-slate-700">{{ $pasienGender }}</p>
                         </div>
+                        <div class="flex-1 bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                            <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Tgl Lahir</p>
+                            <p class="text-xs font-bold text-slate-700">{{ $pasienTanggalLahir }}</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Ibu / Wali / Kontak</p>
+                        <p class="text-xs font-bold text-slate-700">{{ $pasienWali }} <span class="mx-1 text-slate-300">•</span> {{ $pasienKontak }}</p>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3.5">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Alamat Domisili</p>
+                        <p class="text-xs font-medium text-slate-600 leading-relaxed">{{ $pasienAlamat }}</p>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            @foreach($fields as $field)
-                                <div class="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
-                                    <p class="flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                        <i class="ph {{ $field['icon'] }}"></i>
-                                        {{ $field['label'] }}
-                                    </p>
+            {{-- Parameter Terakhir (MENGGUNAKAN flex-1 AGAR MERENGGANG MENGISI RUANG BAWAH) --}}
+            <div class="widget-card p-6 flex flex-col flex-1">
+                <div class="flex items-center gap-3 mb-5 border-b border-slate-100 pb-4 shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Parameter Klinis</h4>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Hasil Pengukuran Terakhir</p>
+                    </div>
+                </div>
 
-                                    <p class="mt-2 truncate text-sm font-black text-slate-900">
-                                        {{ $field['value'] }}
-                                    </p>
+                {{-- Konten Parameter (Bisa grid jika ada data, atau di-tengah-kan jika kosong) --}}
+                <div class="flex-1 flex flex-col {{ count($latestParams) > 0 ? '' : 'justify-center items-center' }}">
+                    @if(count($latestParams) > 0)
+                        <div class="grid grid-cols-2 gap-3">
+                            @foreach($latestParams as $label => $value)
+                                <div class="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-3 flex flex-col justify-center">
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-1 truncate">{{ $label }}</p>
+                                    <p class="text-sm font-black text-slate-800">{{ $value ?: '-' }}</p>
                                 </div>
                             @endforeach
                         </div>
+                    @else
+                        <div class="w-full text-center py-6 border border-dashed border-slate-200 rounded-2xl bg-slate-50 flex flex-col items-center justify-center flex-1 min-h-[150px]">
+                            <i class="fa-solid fa-folder-open text-2xl text-slate-300 mb-2"></i>
+                            <p class="text-[11px] font-bold text-slate-500">Belum ada parameter</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
 
-                        <div class="mt-3 grid gap-3 lg:grid-cols-3">
-                            <div class="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-                                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                    Catatan Klinis
-                                </p>
+        </div>
 
-                                <p class="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-slate-600">
-                                    {{ $catatan }}
-                                </p>
+        {{-- KOLOM KANAN (Col 8): Riwayat Medis & Imunisasi --}}
+        <div class="xl:col-span-8 flex flex-col gap-6 h-full">
+            
+            {{-- Riwayat Pemeriksaan Medis (MENGGUNAKAN flex-1 AGAR TINGGINYA SAMA DENGAN KOLOM KIRI) --}}
+            <div class="widget-card p-6 flex flex-col flex-1">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-4 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-500 border border-teal-100 flex items-center justify-center text-lg shrink-0">
+                            <i class="fa-solid fa-stethoscope"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Riwayat Pemeriksaan</h4>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Data Medis Tervalidasi Bidan</p>
+                        </div>
+                    </div>
+                    <span class="bg-teal-50 border border-teal-100 text-teal-600 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0">
+                        <i class="fa-solid fa-check-circle mr-1"></i> {{ $riwayatMedis->count() }} Data
+                    </span>
+                </div>
+
+                {{-- Konten Riwayat Medis --}}
+                <div class="flex-1 flex flex-col {{ $riwayatMedis->count() > 0 ? '' : 'justify-center items-center' }}">
+                    @if($riwayatMedis->count() > 0)
+                        <div class="max-h-[500px] overflow-y-auto slim-scroll pr-2 space-y-4">
+                            @foreach($riwayatMedis as $pemeriksaan)
+                                @php
+                                    $tglPeriksa = $formatDateTime(data_get($pemeriksaan, 'tanggal_periksa') ?? data_get($pemeriksaan, 'created_at'));
+                                    $petugas = $getPersonName($pemeriksaan, ['pemeriksa', 'verifikator', 'verifikatorLegacy']);
+                                    $fields = $medicalFields($pemeriksaan);
+                                    $catatanKlinis = $getValue($pemeriksaan, ['catatan_bidan', 'catatan', 'keterangan', 'hasil_pemeriksaan', 'keluhan'], '-');
+                                    $tindakanLayanan = $getValue($pemeriksaan, ['tindakan', 'tindakan_lanjut', 'layanan', 'rekomendasi_tindakan'], '-');
+                                    $edukasiKesehatan = $getValue($pemeriksaan, ['catatan_edukasi', 'edukasi', 'edukasi_kesehatan'], '-');
+                                @endphp
+
+                                <article class="bg-slate-50 border border-slate-100 rounded-3xl p-5 relative overflow-hidden group">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-teal-400 rounded-l-3xl"></div>
+                                    
+                                    <div class="flex flex-col md:flex-row justify-between items-start gap-4 mb-4 border-b border-slate-200/60 pb-4">
+                                        <div>
+                                            <h3 class="text-sm font-black text-slate-800"><i class="fa-solid fa-file-medical text-teal-500 mr-1.5"></i> Pemeriksaan {{ $pasienTypeLabel }}</h3>
+                                            <p class="text-[10px] font-bold text-slate-500 mt-1"><i class="fa-solid fa-user-nurse mr-1"></i> Bidan: {{ $petugas }}</p>
+                                        </div>
+                                        <span class="bg-white border border-slate-200 text-slate-500 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-md shadow-sm whitespace-nowrap">
+                                            <i class="fa-solid fa-clock text-slate-400 mr-1"></i> {{ $tglPeriksa }}
+                                        </span>
+                                    </div>
+
+                                    <div class="flex flex-wrap gap-2 mb-4">
+                                        @foreach($fields as $field)
+                                            <div class="bg-white border border-slate-100 rounded-lg p-2.5 flex-1 min-w-[80px] shadow-sm">
+                                                <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1 truncate" title="{{ $field['label'] }}"><i class="fa-solid {{ $field['icon'] }} mr-1 text-slate-300"></i> {{ $field['label'] }}</p>
+                                                <p class="text-[11px] font-bold text-slate-800 truncate">{{ $field['value'] }}</p>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    <div class="grid gap-3 md:grid-cols-3">
+                                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                                            <p class="text-[9px] font-black uppercase tracking-widest text-teal-600 mb-1.5">Catatan Klinis</p>
+                                            <p class="text-[11px] font-semibold text-slate-600 leading-relaxed">{{ $catatanKlinis }}</p>
+                                        </div>
+                                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                                            <p class="text-[9px] font-black uppercase tracking-widest text-sky-600 mb-1.5">Tindakan / Layanan</p>
+                                            <p class="text-[11px] font-semibold text-slate-600 leading-relaxed">{{ $tindakanLayanan }}</p>
+                                        </div>
+                                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                                            <p class="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-1.5">Edukasi</p>
+                                            <p class="text-[11px] font-semibold text-slate-600 leading-relaxed">{{ $edukasiKesehatan }}</p>
+                                        </div>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="w-full text-center py-12 border border-dashed border-slate-200 rounded-3xl bg-slate-50 flex flex-col items-center justify-center flex-1 min-h-[300px]">
+                            <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-3"></i>
+                            <h3 class="text-sm font-black text-slate-700">Belum Ada Rekam Medis</h3>
+                            <p class="text-xs font-medium text-slate-500 mt-1">Data akan muncul setelah Bidan memvalidasi hasil pemeriksaan.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Riwayat Imunisasi (KHUSUS BALITA) - natural height --}}
+            @if($pasienType === 'balita')
+                <div class="widget-card p-6 flex flex-col shrink-0">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-slate-100 pb-4 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-500 border border-sky-100 flex items-center justify-center text-lg shrink-0">
+                                <i class="fa-solid fa-syringe"></i>
                             </div>
-
-                            <div class="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-                                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                    Tindakan / Layanan
-                                </p>
-
-                                <p class="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-slate-600">
-                                    {{ $tindakan }}
-                                </p>
-                            </div>
-
-                            <div class="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-                                <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                    Edukasi
-                                </p>
-
-                                <p class="mt-2 line-clamp-3 text-sm font-semibold leading-6 text-slate-600">
-                                    {{ $edukasi }}
-                                </p>
+                            <div>
+                                <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Riwayat Imunisasi</h4>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Catatan Pemberian Vaksin</p>
                             </div>
                         </div>
-                    </article>
-                @endforeach
-            </div>
-        @else
-            <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                    <i class="ph ph-folder-simple-dashed text-2xl"></i>
-                </div>
-
-                <h3 class="mt-4 text-base font-black text-slate-800">
-                    Belum Ada Rekam Medis Tervalidasi
-                </h3>
-
-                <p class="mt-2 text-sm text-slate-500">
-                    Data akan muncul setelah pemeriksaan divalidasi oleh Bidan.
-                </p>
-            </div>
-        @endif
-    </section>
-
-    {{-- IMUNISASI KHUSUS BALITA --}}
-    @if($pasienType === 'balita')
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Imunisasi
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Riwayat Imunisasi Balita
-                    </h2>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100">
-                    <i class="ph ph-syringe text-lg"></i>
-                </div>
-            </div>
-
-            @forelse($riwayatImunisasi as $imunisasi)
-                @php
-                    $tanggalImunisasi = $formatDate($getValue($imunisasi, ['tanggal_imunisasi', 'tanggal', 'created_at'], null));
-                    $jenisImunisasi = $getValue($imunisasi, ['jenis_imunisasi', 'jenis', 'nama_imunisasi'], 'Imunisasi');
-                    $vaksin = $getValue($imunisasi, ['vaksin', 'nama_vaksin'], '-');
-                    $dosis = $getValue($imunisasi, ['dosis', 'dosis_ke'], '-');
-                    $batch = $getValue($imunisasi, ['batch_number', 'no_batch', 'nomor_batch'], '-');
-                    $keterangan = $getValue($imunisasi, ['keterangan', 'catatan'], '-');
-                @endphp
-
-                <article class="mb-3 rounded-[22px] border border-cyan-100 bg-cyan-50/60 p-4">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div class="min-w-0">
-                            <h3 class="text-base font-black text-slate-900">
-                                {{ $jenisImunisasi }}
-                            </h3>
-
-                            <p class="mt-1 text-sm font-semibold text-slate-500">
-                                {{ $tanggalImunisasi }}
-                            </p>
-                        </div>
-
-                        <span class="inline-flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-100">
-                            <i class="ph ph-syringe"></i>
-                            {{ $vaksin }}
+                        <span class="bg-sky-50 border border-sky-100 text-sky-600 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0">
+                            <i class="fa-solid fa-list-check mr-1"></i> {{ $riwayatImunisasi->count() }} Data
                         </span>
                     </div>
 
-                    <div class="mt-4 grid gap-3 md:grid-cols-3">
-                        <div class="rounded-2xl bg-white p-3 ring-1 ring-cyan-100">
-                            <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                Dosis
-                            </p>
+                    <div class="max-h-[350px] overflow-y-auto slim-scroll pr-2 space-y-3">
+                        @forelse($riwayatImunisasi as $imun)
+                            @php
+                                $tglImun = $formatDate($getValue($imun, ['tanggal_imunisasi', 'tanggal', 'created_at'], null));
+                                $jnsImun = $getValue($imun, ['jenis_imunisasi', 'jenis', 'nama_imunisasi'], 'Imunisasi');
+                                $namaVaksin = $getValue($imun, ['vaksin', 'nama_vaksin'], '-');
+                                $dsImun = $getValue($imun, ['dosis', 'dosis_ke'], '-');
+                                $btImun = $getValue($imun, ['batch_number', 'no_batch', 'nomor_batch'], '-');
+                                $ketImun = $getValue($imun, ['keterangan', 'catatan'], '-');
+                            @endphp
 
-                            <p class="mt-2 text-sm font-black text-slate-900">
-                                {{ $dosis }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl bg-white p-3 ring-1 ring-cyan-100">
-                            <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                Batch
-                            </p>
-
-                            <p class="mt-2 text-sm font-black text-slate-900">
-                                {{ $batch }}
-                            </p>
-                        </div>
-
-                        <div class="rounded-2xl bg-white p-3 ring-1 ring-cyan-100">
-                            <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                Catatan
-                            </p>
-
-                            <p class="mt-2 truncate text-sm font-black text-slate-900">
-                                {{ $keterangan }}
-                            </p>
-                        </div>
+                            <article class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center gap-4 hover:border-sky-300 transition-colors">
+                                <div class="min-w-[180px]">
+                                    <h3 class="text-sm font-black text-slate-800">{{ $jnsImun }}</h3>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-1"><i class="fa-solid fa-calendar-day mr-1"></i> {{ $tglImun }}</p>
+                                </div>
+                                <div class="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div class="bg-slate-50 rounded-xl p-2.5">
+                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Vaksin</p>
+                                        <p class="text-xs font-bold text-sky-600 truncate" title="{{ $namaVaksin }}">{{ $namaVaksin }}</p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-xl p-2.5">
+                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Dosis</p>
+                                        <p class="text-xs font-bold text-slate-800">{{ $dsImun }}</p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-xl p-2.5">
+                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Batch</p>
+                                        <p class="text-xs font-bold text-slate-800 font-mono">{{ $btImun }}</p>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-xl p-2.5">
+                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Catatan</p>
+                                        <p class="text-xs font-medium text-slate-600 truncate" title="{{ $ketImun }}">{{ $ketImun }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        @empty
+                            <div class="text-center py-8 border border-dashed border-slate-200 rounded-2xl bg-slate-50 w-full">
+                                <i class="fa-solid fa-syringe text-3xl text-slate-300 mb-2"></i>
+                                <p class="text-[11px] font-bold text-slate-500">Belum ada riwayat imunisasi.</p>
+                            </div>
+                        @endforelse
                     </div>
-                </article>
-            @empty
-                <div class="rounded-2xl border border-dashed border-cyan-200 bg-cyan-50/60 px-6 py-10 text-center">
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-cyan-600 shadow-sm">
-                        <i class="ph ph-syringe text-2xl"></i>
-                    </div>
-
-                    <h3 class="mt-4 text-base font-black text-slate-800">
-                        Riwayat Imunisasi Belum Ada
-                    </h3>
-
-                    <p class="mt-2 text-sm text-slate-500">
-                        Data imunisasi akan tampil setelah layanan imunisasi Balita dicatat.
-                    </p>
                 </div>
-            @endforelse
-        </section>
-    @endif
+            @endif
 
-    {{-- ACTION --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur">
-        <a href="{{ route('bidan.rekam-medis.index', ['type' => $pasienType]) }}"
-           class="inline-flex min-h-[46px] w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
-            Kembali ke Direktori Rekam Medis
-        </a>
-    </section>
+        </div>
+    </div>
 </div>
 @endsection

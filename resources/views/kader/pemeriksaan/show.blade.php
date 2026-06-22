@@ -10,163 +10,109 @@
 
     Carbon::setLocale('id');
 
+    // 1. Inisialisasi Data Pasien & Kunjungan
     $pasien = optional($pemeriksaan->kunjungan)->pasien;
-
     $kategori = strtolower((string) ($pemeriksaan->kategori_pasien ?? 'balita'));
 
     if (! in_array($kategori, ['balita', 'remaja', 'lansia'], true)) {
         $kategori = 'balita';
     }
 
-    $namaPasien = $pasien->nama_lengkap
-        ?? $pasien->nama
-        ?? $pemeriksaan->nama_pasien
-        ?? 'Tanpa Nama';
-
-    $nikPasien = $pasien->nik
-        ?? $pemeriksaan->nik_pasien
-        ?? '-';
+    $namaPasien = $pasien->nama_lengkap ?? $pasien->nama ?? $pemeriksaan->nama_pasien ?? 'Tanpa Nama';
+    $nikPasien = $pasien->nik ?? $pemeriksaan->nik_pasien ?? '-';
+    $usia = '-';
+    if(isset($pasien->tanggal_lahir)) {
+        $usia = Carbon::parse($pasien->tanggal_lahir)->diff(now())->format('%y Thn %m Bln');
+    }
+    
+    $initial = Str::upper(Str::substr(trim($namaPasien), 0, 1)) ?: 'P';
 
     $tanggal = $pemeriksaan->tanggal_periksa
-        ? Carbon::parse($pemeriksaan->tanggal_periksa)->translatedFormat('l, d F Y')
+        ? Carbon::parse($pemeriksaan->tanggal_periksa)->translatedFormat('d F Y')
         : '-';
 
+    // 2. Status Verifikasi
     $statusRaw = strtolower((string) ($pemeriksaan->status_verifikasi ?? 'pending'));
-
     $statusType = 'pending';
 
     if (in_array($statusRaw, ['verified', 'terverifikasi', 'valid', 'approved', 'disetujui', 'selesai'], true)) {
         $statusType = 'verified';
-    }
-
-    if (in_array($statusRaw, ['ditolak', 'revisi', 'perlu_revisi', 'needs_revision', 'rejected', 'dikembalikan'], true)) {
+    } elseif (in_array($statusRaw, ['ditolak', 'revisi', 'perlu_revisi', 'needs_revision', 'rejected', 'dikembalikan'], true)) {
         $statusType = 'revisi';
     }
 
     $statusMeta = match ($statusType) {
         'verified' => [
             'label' => 'Tervalidasi',
-            'desc' => 'Sudah direview Bidan dan dikunci',
-            'icon' => 'fa-circle-check',
-            'badge' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'soft' => 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-teal-50 to-white',
-            'solid' => 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white',
+            'desc' => 'Sudah direview Bidan',
+            'icon' => 'fa-check-circle',
+            'badge' => 'bg-emerald-500 text-white shadow-emerald-500/30',
+            'text' => 'text-emerald-600',
+            'bg_light' => 'bg-emerald-50 border-emerald-200',
             'editable' => false,
         ],
         'revisi' => [
             'label' => 'Perlu Revisi',
-            'desc' => 'Dikembalikan Bidan untuk diperbaiki',
+            'desc' => 'Dikembalikan Bidan',
             'icon' => 'fa-rotate-left',
-            'badge' => 'border-rose-200 bg-rose-50 text-rose-700',
-            'soft' => 'border-rose-200 bg-gradient-to-br from-rose-50 via-orange-50 to-white',
-            'solid' => 'bg-gradient-to-br from-rose-500 to-orange-500 text-white',
+            'badge' => 'bg-rose-500 text-white shadow-rose-500/30',
+            'text' => 'text-rose-600',
+            'bg_light' => 'bg-rose-50 border-rose-200',
             'editable' => true,
         ],
         default => [
             'label' => 'Menunggu Review',
-            'desc' => 'Belum direview Bidan',
+            'desc' => 'Belum direview',
             'icon' => 'fa-clock',
-            'badge' => 'border-amber-200 bg-amber-50 text-amber-700',
-            'soft' => 'border-amber-200 bg-gradient-to-br from-amber-50 via-yellow-50 to-white',
-            'solid' => 'bg-gradient-to-br from-amber-500 to-orange-500 text-white',
+            'badge' => 'bg-amber-500 text-white shadow-amber-500/30',
+            'text' => 'text-amber-600',
+            'bg_light' => 'bg-amber-50 border-amber-200',
             'editable' => true,
         ],
     };
 
+    // 3. Tema Kategori
     $kategoriMeta = match ($kategori) {
         'remaja' => [
             'label' => 'Remaja',
             'icon' => 'fa-user-graduate',
-            'badge' => 'border-violet-200 bg-violet-50 text-violet-800',
-            'solid' => 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white',
+            'gradient' => 'from-teal-500 via-cyan-500 to-blue-500',
+            'shadow' => 'shadow-[0_20px_40px_-12px_rgba(6,182,212,.35)]',
+            'text' => 'text-teal-500',
+            'badge' => 'bg-teal-100 text-teal-700',
         ],
         'lansia' => [
             'label' => 'Lansia',
             'icon' => 'fa-person-cane',
-            'badge' => 'border-sky-200 bg-sky-50 text-sky-800',
-            'solid' => 'bg-gradient-to-br from-sky-500 to-cyan-500 text-white',
+            'gradient' => 'from-sky-500 via-blue-500 to-indigo-500',
+            'shadow' => 'shadow-[0_20px_40px_-12px_rgba(14,165,233,.35)]',
+            'text' => 'text-sky-500',
+            'badge' => 'bg-sky-100 text-sky-700',
         ],
         default => [
             'label' => 'Balita',
             'icon' => 'fa-child-reaching',
-            'badge' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-            'solid' => 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white',
+            'gradient' => 'from-emerald-500 via-teal-500 to-teal-600',
+            'shadow' => 'shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)]',
+            'text' => 'text-emerald-500',
+            'badge' => 'bg-emerald-100 text-emerald-700',
         ],
     };
 
-    $metric = function ($label, $value, $unit = '', $icon = 'fa-ruler') {
-        return [
-            'label' => $label,
-            'value' => ($value === null || $value === '') ? '-' : trim($value . ' ' . $unit),
-            'icon' => $icon,
-        ];
+    // 4. Data Metrik Penunjang & Review
+    $metric = function ($value, $unit = '') {
+        return ($value === null || $value === '') ? '-' : trim($value . ' ' . $unit);
     };
 
-    $mainMetrics = [
-        $metric('Berat Badan', $pemeriksaan->berat_badan, 'kg', 'fa-weight-scale'),
-        $metric('Tinggi Badan', $pemeriksaan->tinggi_badan, 'cm', 'fa-ruler-vertical'),
-        $metric('IMT', $pemeriksaan->imt, '', 'fa-chart-simple'),
-        $metric('Suhu Tubuh', $pemeriksaan->suhu_tubuh, '°C', 'fa-temperature-half'),
-    ];
-
-    $extraMetrics = match ($kategori) {
-    'balita' => [
-        $metric('Lingkar Kepala', $pemeriksaan->lingkar_kepala, 'cm', 'fa-circle-notch'),
-        $metric('Lingkar Lengan', $pemeriksaan->lingkar_lengan, 'cm', 'fa-ruler'),
-    ],
-
-    'remaja' => [
-        $metric('Lingkar Lengan', $pemeriksaan->lingkar_lengan, 'cm', 'fa-ruler'),
-        $metric('Lingkar Perut', $pemeriksaan->lingkar_perut, 'cm', 'fa-arrows-left-right'),
-        $metric('Tekanan Darah', $pemeriksaan->tekanan_darah, '', 'fa-heart-pulse'),
-        $metric('Hemoglobin', $pemeriksaan->hemoglobin, 'g/dL', 'fa-droplet'),
-        $metric('Gula Darah', $pemeriksaan->gula_darah, 'mg/dL', 'fa-droplet'),
-    ],
-
-    'lansia' => [
-        $metric('Lingkar Perut', $pemeriksaan->lingkar_perut, 'cm', 'fa-arrows-left-right'),
-        $metric('Tekanan Darah', $pemeriksaan->tekanan_darah, '', 'fa-heart-pulse'),
-        $metric('Gula Darah', $pemeriksaan->gula_darah, 'mg/dL', 'fa-droplet'),
-        $metric('Kolesterol', $pemeriksaan->kolesterol, 'mg/dL', 'fa-vial'),
-        $metric('Asam Urat', $pemeriksaan->asam_urat, 'mg/dL', 'fa-flask'),
-        $metric(
-            'Kemandirian',
-            $pemeriksaan->tingkat_kemandirian
-                ? Str::title(str_replace('_', ' ', $pemeriksaan->tingkat_kemandirian))
-                : null,
-            '',
-            'fa-person-walking'
-        ),
-    ],
-
-    default => [],
-};
-$parameterTitle = match ($kategori) {
-    'balita' => 'Parameter tumbuh kembang',
-    'remaja' => 'Parameter pengukuran remaja',
-    'lansia' => 'Parameter kesehatan lansia',
-    default => 'Parameter tambahan',
-};
-
-    $catatanBidan = $pemeriksaan->catatan_validasi
-        ?? $pemeriksaan->catatan_bidan
-        ?? $pemeriksaan->catatan_review
-        ?? null;
-
-    $verifikator = optional($pemeriksaan->verifikator)->name
-        ?? optional($pemeriksaan->verifikator)->nama
-        ?? null;
-
-    $tanggalValidasi = $pemeriksaan->verified_at
-        ?? $pemeriksaan->tanggal_validasi
-        ?? $pemeriksaan->reviewed_at
-        ?? null;
+    $catatanBidan = $pemeriksaan->catatan_validasi ?? $pemeriksaan->catatan_bidan ?? $pemeriksaan->catatan_review ?? null;
+    $verifikator = optional($pemeriksaan->verifikator)->name ?? optional($pemeriksaan->verifikator)->nama ?? null;
+    $tanggalValidasi = $pemeriksaan->verified_at ?? $pemeriksaan->tanggal_validasi ?? $pemeriksaan->reviewed_at ?? null;
 @endphp
 
 @push('styles')
 <style>
-    html {
-        scroll-behavior: auto !important;
+    body {
+        background-color: #f8fafc;
     }
 
     html.pc-modal-open,
@@ -191,108 +137,75 @@ $parameterTitle = match ($kategori) {
 
     .pc-glass {
         background: rgba(255, 255, 255, .86);
-        backdrop-filter: blur(9px);
-        -webkit-backdrop-filter: blur(9px);
-        box-shadow: 0 18px 45px rgba(15, 23, 42, .065);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .05);
+        border: 1px solid rgba(255, 255, 255, 0.9);
     }
 
-    .pc-soft-hover {
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    .data-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 0;
+        border-bottom: 1px dashed rgba(203, 213, 225, 0.6);
+    }
+    .data-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .data-label {
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+    }
+    .data-value {
+        font-size: 0.875rem;
+        font-weight: 900;
+        color: #1e293b;
+        text-align: right;
     }
 
-    .pc-balanced-grid {
-    align-items: stretch !important;
-}
-
-.pc-left-panel {
-    min-height: 100%;
-    height: 100%;
-}
-
-.pc-side-panel {
-    min-height: 100%;
-    height: 100%;
-    align-self: stretch;
-}
-
-.pc-side-fill {
-    flex: 1 1 auto;
-    min-height: 0;
-}
-
-.pc-side-panel > section:last-child {
-    flex: 0 0 auto;
-}
-
-.pc-note-card {
-    min-height: 96px;
-}
-
-.pc-left-panel > section {
-    width: 100%;
-}
-
-.pc-side-panel > section {
-    width: 100%;
-}
-
-@media (max-width: 1279px) {
-    .pc-balanced-grid {
-        align-items: start !important;
-    }
-
-    .pc-left-panel,
-    .pc-side-panel {
-        min-height: auto;
-        height: auto;
-    }
-
-    .pc-side-fill {
-        flex: none;
-    }
-}
-
+    /* Modal Styling Nexus Premium */
     .pc-modal-backdrop {
         position: fixed !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        left: 0 !important;
+        inset: 0 !important;
         z-index: 2147483647 !important;
         display: none;
         align-items: center;
         justify-content: center;
-        width: 100vw !important;
-        height: 100vh !important;
-        height: 100dvh !important;
-        margin: 0 !important;
-        padding: 1rem;
         background: rgba(15, 23, 42, .58);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+        padding: 1rem;
     }
-
-    .pc-modal-backdrop.is-open {
-        display: flex !important;
-    }
-
+    .pc-modal-backdrop.is-open { display: flex !important; }
+    
     .pc-modal-card {
-        width: min(100%, 470px);
-        transform: translateY(12px) scale(.97);
+        width: 100%;
+        max-width: 400px;
+        background: white;
+        border-radius: 2rem;
+        padding: 2.5rem 2rem;
+        transform: scale(0.95) translateY(10px);
         opacity: 0;
-        border-radius: 1.75rem;
-        border: 1px solid rgba(255, 255, 255, .78);
-        background:
-            radial-gradient(circle at 0% 0%, rgba(244, 63, 94, .12), transparent 34%),
-            radial-gradient(circle at 100% 0%, rgba(251, 146, 60, .10), transparent 34%),
-            rgba(255, 255, 255, .95);
-        box-shadow: 0 30px 90px rgba(15, 23, 42, .25);
-        transition: transform .18s ease, opacity .18s ease;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .pc-modal-backdrop.is-open .pc-modal-card {
+        transform: scale(1) translateY(0);
+        opacity: 1;
     }
 
-    .pc-modal-backdrop.is-open .pc-modal-card {
-        transform: translateY(0) scale(1);
-        opacity: 1;
+    .animate-pop-in {
+        animation: popIn .5s cubic-bezier(.16, 1, .3, 1) forwards;
+        opacity: 0;
+    }
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.97) translateY(15px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 </style>
 @endpush
@@ -301,288 +214,292 @@ $parameterTitle = match ($kategori) {
 <div class="pc-page relative min-h-screen overflow-hidden px-4 py-5 sm:px-6 lg:px-8">
     <div class="pointer-events-none absolute inset-0 pc-grid opacity-70"></div>
 
-    <div class="relative z-10 mx-auto max-w-[1400px] space-y-5">
-        <section class="relative overflow-hidden rounded-[1.75rem] border border-white/80 bg-gradient-to-br from-emerald-50/95 via-cyan-50/90 to-white/95 pc-glass">
-            <div class="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-300/20 blur-3xl"></div>
-            <div class="absolute -bottom-24 left-24 h-72 w-72 rounded-full bg-sky-300/16 blur-3xl"></div>
+    <div class="relative z-10 mx-auto max-w-[1200px] animate-pop-in pb-20">
 
-            <div class="relative grid gap-6 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.3fr)_340px] xl:items-stretch">
-                <div class="flex min-w-0 flex-col justify-between gap-6">
-                    <div>
-                        <div class="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-white/75 px-3 py-1.5 text-xs font-black text-emerald-700 shadow-sm">
-                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                            Detail Pengukuran Kader
-                        </div>
+        {{-- 1. HERO SECTION (Identitas Pasien & Action Buttons) --}}
+        <section class="bg-gradient-to-br {{ $kategoriMeta['gradient'] }} rounded-[2.5rem] p-8 md:p-12 mb-8 relative overflow-hidden {{ $kategoriMeta['shadow'] }} border border-white/20">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
 
-                        <h1 class="mt-4 max-w-4xl text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-[1.85rem] lg:text-[2rem]">
-                            Detail hasil pengukuran fisik sasaran.
-                        </h1>
-
-                        <p class="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-600">
-                            Halaman ini menampilkan data yang diinput Kader dan status review Bidan. Jadi jelas mana data mentah, mana data yang sudah dikunci. Akhirnya tertib juga, tidak seperti folder “final revisi final banget”.
-                        </p>
-                    </div>
-
-                    <div class="flex flex-wrap gap-3">
-                        <a href="{{ route('kader.pemeriksaan.index') }}"
-                           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white/80 px-4 py-2.5 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
-                            <i class="fa-solid fa-arrow-left"></i>
-                            Kembali
-                        </a>
-
-                        @if($statusMeta['editable'])
-                            <a href="{{ route('kader.pemeriksaan.edit', $pemeriksaan->id) }}"
-                               class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5">
-                                <i class="fa-solid fa-pen"></i>
-                                Edit Data
-                            </a>
-                        @endif
-                    </div>
+            <div class="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+                
+                {{-- Avatar --}}
+                <div class="w-28 h-28 shrink-0 rounded-[2rem] bg-white border-4 border-white/50 {{ $kategoriMeta['text'] }} flex items-center justify-center font-black text-5xl shadow-xl">
+                    {{ $initial }}
                 </div>
 
-                <div class="rounded-[1.55rem] border p-5 {{ $statusMeta['soft'] }}">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Status Data</p>
-                            <h2 class="mt-2 text-xl font-black text-slate-950">{{ $statusMeta['label'] }}</h2>
-                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">{{ $statusMeta['desc'] }}</p>
-                        </div>
-
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl {{ $statusMeta['solid'] }}">
-                            <i class="fa-solid {{ $statusMeta['icon'] }}"></i>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                        <p class="text-xs font-black uppercase tracking-[.14em] text-slate-500">Tanggal</p>
-                        <p class="mt-1 text-sm font-black text-slate-950">{{ $tanggal }}</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        @if(session('success') || session('error'))
-            <section class="space-y-3">
-                @if(session('success'))
-                    <div class="rounded-[1.35rem] border border-emerald-200 bg-emerald-50/90 p-4 text-sm font-bold text-emerald-800 shadow-sm">
-                        <i class="fa-solid fa-circle-check mr-2"></i>
-                        {{ session('success') }}
-                    </div>
-                @endif
-
-                @if(session('error'))
-                    <div class="rounded-[1.35rem] border border-rose-200 bg-rose-50/90 p-4 text-sm font-bold text-rose-800 shadow-sm">
-                        <i class="fa-solid fa-triangle-exclamation mr-2"></i>
-                        {{ session('error') }}
-                    </div>
-                @endif
-            </section>
-        @endif
-
-        <section class="pc-balanced-grid grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(330px,.55fr)]">
-            <div class="pc-left-panel flex h-full flex-col gap-5">
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Identitas Sasaran</p>
-                            <h2 class="mt-1 text-xl font-black text-slate-950">{{ $namaPasien }}</h2>
-                            <p class="mt-1 text-sm font-bold text-slate-500">NIK {{ $nikPasien }}</p>
-                        </div>
-
-                        <span class="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-black {{ $kategoriMeta['badge'] }}">
-                            <i class="fa-solid {{ $kategoriMeta['icon'] }}"></i>
-                            {{ $kategoriMeta['label'] }}
+                {{-- Info Utama --}}
+                <div class="flex-1">
+                    <div class="inline-flex items-center gap-2 mb-3">
+                        <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                            <i class="fas {{ $kategoriMeta['icon'] }}"></i> {{ $kategoriMeta['label'] }}
+                        </span>
+                        <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm uppercase tracking-widest">
+                            <i class="fas fa-calendar-day"></i> {{ $tanggal }}
                         </span>
                     </div>
 
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        @foreach($mainMetrics as $metric)
-                            <div class="pc-soft-hover rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[.14em] text-slate-400">{{ $metric['label'] }}</p>
-                                        <p class="mt-2 text-lg font-black text-slate-950">{{ $metric['value'] }}</p>
-                                    </div>
-
-                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                                        <i class="fa-solid {{ $metric['icon'] }}"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
+                    <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
+                        {{ $namaPasien }}
+                    </h1>
+                    
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 text-white/90 text-sm font-semibold">
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-id-card opacity-70"></i> NIK: {{ $nikPasien }}</span>
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-cake-candles opacity-70"></i> {{ $usia }}</span>
                     </div>
-                </section>
+                </div>
 
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="mb-5">
-                        <p class="text-[11px] font-black uppercase tracking-[.18em] text-sky-700">Parameter Tambahan</p>
-                        <h2 class="mt-1 text-xl font-black text-slate-950">{{ $parameterTitle }}</h2>
-                    </div>
+                {{-- Action Buttons --}}
+                <div class="flex flex-col items-center md:items-end gap-3 shrink-0 w-full md:w-auto mt-4 md:mt-0">
+                    <span class="{{ $statusMeta['badge'] }} text-[10px] uppercase tracking-widest px-4 py-2 rounded-2xl shadow-lg border border-white/20 flex items-center gap-2 mb-2">
+                        <i class="fas {{ $statusMeta['icon'] }} text-sm"></i> {{ $statusMeta['label'] }}
+                    </span>
 
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach($extraMetrics as $metric)
-                            <div class="pc-note-card rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-[11px] font-black uppercase tracking-[.14em] text-slate-400">{{ $metric['label'] }}</p>
-                                        <p class="mt-2 text-sm font-black text-slate-950">{{ $metric['value'] }}</p>
-                                    </div>
-
-                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-                                        <i class="fa-solid {{ $metric['icon'] }}"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
-
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-                    <div class="grid items-stretch gap-4 lg:grid-cols-2">
-    <div class="pc-note-card rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Keluhan</p>
-                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                {{ $pemeriksaan->keluhan ?: '-' }}
-                            </p>
-                        </div>
-
-                        <div class="pc-note-card rounded-[1.25rem] border border-slate-200 bg-white/75 p-4">
-                            <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Catatan Kader</p>
-                            <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                                {{ $pemeriksaan->catatan_kader ?: '-' }}
-                            </p>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <aside class="pc-side-panel flex h-full flex-col gap-5">
-                <section class="pc-glass pc-side-fill rounded-[1.75rem] border border-white/80 p-5">
-    <p class="text-[11px] font-black uppercase tracking-[.18em] text-emerald-700">Review Bidan</p>
-                    <h2 class="mt-1 text-xl font-black text-slate-950">{{ $statusMeta['label'] }}</h2>
-                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                        {{ $catatanBidan ?: 'Belum ada catatan dari Bidan.' }}
-                    </p>
-
-                    <div class="mt-5 space-y-3">
-                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm font-black text-slate-600">Petugas Review</span>
-                                <span class="line-clamp-1 text-right text-sm font-black text-slate-950">{{ $verifikator ?: '-' }}</span>
-                            </div>
-                        </div>
-
-                        <div class="rounded-[1.2rem] border border-white/80 bg-white/75 p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="text-sm font-black text-slate-600">Tanggal Review</span>
-                                <span class="text-right text-sm font-black text-slate-950">
-                                    {{ $tanggalValidasi ? Carbon::parse($tanggalValidasi)->translatedFormat('d M Y') : '-' }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="pc-glass rounded-[1.75rem] border border-white/80 p-5">
-    <p class="text-[11px] font-black uppercase tracking-[.18em] text-slate-500">Aksi Data</p>
-
-                    <div class="mt-4 space-y-3">
+                    <div class="flex flex-wrap justify-center md:justify-end gap-2 w-full">
+                        <a href="{{ route('kader.pemeriksaan.index') }}" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white text-[11px] uppercase tracking-widest font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm" title="Kembali">
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
                         @if($statusMeta['editable'])
-                            <a href="{{ route('kader.pemeriksaan.edit', $pemeriksaan->id) }}"
-                               class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/10 transition hover:-translate-y-0.5">
-                                <i class="fa-solid fa-pen"></i>
-                                Edit Pengukuran
+                            <a href="{{ route('kader.pemeriksaan.edit', $pemeriksaan->id) }}" class="bg-white/90 hover:bg-white text-slate-800 text-[11px] uppercase tracking-widest font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm hover:-translate-y-0.5">
+                                <i class="fas fa-pen mr-1"></i> Edit
                             </a>
+                            <button type="button" id="openDeleteModal" class="bg-rose-500/90 hover:bg-rose-600/90 backdrop-blur-md text-white border border-rose-400/50 text-[11px] uppercase tracking-widest font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm hover:-translate-y-0.5" title="Hapus Data">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        @endif
+                    </div>
+                </div>
 
-                            <form action="{{ route('kader.pemeriksaan.destroy', $pemeriksaan->id) }}"
-                                  method="POST"
-                                  data-delete-form>
-                                @csrf
-                                @method('DELETE')
+            </div>
+        </section>
 
-                                <button type="submit"
-                                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700 transition hover:bg-rose-100">
-                                    <i class="fa-solid fa-trash"></i>
-                                    Hapus Data
-                                </button>
-                            </form>
-                        @else
-                            <div class="rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4">
-                                <div class="flex gap-3">
-                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600">
-                                        <i class="fa-solid fa-lock"></i>
-                                    </div>
+        {{-- 2. GRID CONTENT --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            {{-- KOLOM KIRI: Data Klinis (Antropometri & Lab) --}}
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                {{-- Card Antropometri --}}
+                <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col {{ !in_array($kategori, ['remaja', 'lansia']) ? 'flex-1' : '' }}">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-2xl {{ $kategoriMeta['badge'] }} flex items-center justify-center text-xl shrink-0 shadow-inner">
+                            <i class="fas fa-ruler-combined"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Antropometri & Fisik</h4>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Hasil Pengukuran Dasar</p>
+                        </div>
+                    </div>
 
-                                    <div>
-                                        <p class="text-sm font-black text-emerald-800">Data dikunci</p>
-                                        <p class="mt-1 text-xs font-semibold leading-5 text-slate-600">
-                                            Data yang sudah tervalidasi tidak dapat diubah oleh Kader.
-                                        </p>
-                                    </div>
-                                </div>
+                    <div class="bg-white/50 rounded-2xl p-4 border border-slate-100 flex-1 flex flex-col justify-center">
+                        <div class="data-row">
+                            <span class="data-label">Berat Badan</span>
+                            <span class="data-value">{{ $metric($pemeriksaan->berat_badan, 'Kg') }}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Tinggi / Panjang</span>
+                            <span class="data-value">{{ $metric($pemeriksaan->tinggi_badan, 'Cm') }}</span>
+                        </div>
+
+                        {{-- Tampilkan IMT Khusus Remaja & Lansia --}}
+                        @if($kategori !== 'balita')
+                            <div class="data-row">
+                                <span class="data-label text-teal-600">IMT Estimasi</span>
+                                <span class="data-value {{ $pemeriksaan->imt ? 'text-teal-700 bg-teal-100/50 px-3 py-1 rounded-full' : 'text-slate-700' }}">
+                                    {{ $metric($pemeriksaan->imt, '') }}
+                                </span>
                             </div>
                         @endif
 
-                        <a href="{{ route('kader.pemeriksaan.index') }}"
-                           class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50">
-                            <i class="fa-solid fa-list"></i>
-                            Kembali ke Daftar
-                        </a>
+                        {{-- Tampilkan LK Khusus Balita --}}
+                        @if($kategori === 'balita')
+                            <div class="data-row border-0 pb-0">
+                                <span class="data-label">Lingkar Kepala</span>
+                                <span class="data-value">{{ $metric($pemeriksaan->lingkar_kepala, 'Cm') }}</span>
+                            </div>
+                        @endif
+
+                        {{-- Tampilkan LiLA Khusus Balita & Remaja --}}
+                        @if(in_array($kategori, ['balita', 'remaja']))
+                            <div class="data-row {{ $kategori === 'balita' ? 'border-0 pb-0' : '' }}">
+                                <span class="data-label">Lingkar Lengan (LiLA)</span>
+                                <span class="data-value">{{ $metric($pemeriksaan->lingkar_lengan, 'Cm') }}</span>
+                            </div>
+                        @endif
+
+                        {{-- Tampilkan LP & Tensi Khusus Remaja & Lansia --}}
+                        @if(in_array($kategori, ['remaja', 'lansia']))
+                            <div class="data-row">
+                                <span class="data-label">Lingkar Perut</span>
+                                <span class="data-value">{{ $metric($pemeriksaan->lingkar_perut, 'Cm') }}</span>
+                            </div>
+                            <div class="data-row {{ $kategori === 'remaja' ? 'border-0 pb-0' : '' }}">
+                                <span class="data-label text-rose-500">Tekanan Darah</span>
+                                <span class="data-value text-rose-600 bg-rose-50 px-3 py-1 rounded-full">{{ $metric($pemeriksaan->tekanan_darah, '') }}</span>
+                            </div>
+                        @endif
+
+                        {{-- Tampilkan Kemandirian Khusus Lansia --}}
+                        @if($kategori === 'lansia')
+                            <div class="data-row border-0 pb-0">
+                                <span class="data-label">Status Kemandirian</span>
+                                <span class="data-value uppercase text-sky-600 bg-sky-50 px-3 py-1 rounded-full text-[11px]">{{ $pemeriksaan->tingkat_kemandirian ? str_replace('_', ' ', $pemeriksaan->tingkat_kemandirian) : '-' }}</span>
+                            </div>
+                        @endif
                     </div>
-                </section>
-            </aside>
-        </section>
-    </div>
-
-    <div id="pcDeleteModal" class="pc-modal-backdrop" aria-hidden="true">
-        <div class="pc-modal-card p-6">
-            <div class="flex gap-4">
-                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-500/20">
-                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
                 </div>
 
-                <div class="min-w-0 flex-1">
-                    <p class="text-[11px] font-black uppercase tracking-[.18em] text-rose-700">Konfirmasi</p>
-                    <h3 class="mt-1 text-lg font-black text-slate-950">Hapus data pengukuran?</h3>
-                    <p class="mt-2 text-sm font-semibold leading-6 text-slate-600">
-                        Data yang belum direview Bidan dapat dihapus. Data tervalidasi tetap dikunci oleh sistem.
-                    </p>
+                {{-- Card Skrining Lab (Hanya untuk Remaja & Lansia) --}}
+                @if(in_array($kategori, ['remaja', 'lansia']))
+                    <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col flex-1">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                                <i class="fas fa-vial-circle-check"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Penunjang PTM</h4>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Hasil Laboratorium</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/50 rounded-2xl p-4 border border-slate-100 flex-1 flex flex-col justify-center">
+                            <div class="data-row">
+                                <span class="data-label">Gula Darah</span>
+                                <span class="data-value">{{ $metric($pemeriksaan->gula_darah, 'mg/dL') }}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Kolesterol</span>
+                                <span class="data-value">{{ $metric($pemeriksaan->kolesterol, 'mg/dL') }}</span>
+                            </div>
+                            <div class="data-row {{ $kategori === 'lansia' ? 'border-0 pb-0' : '' }}">
+                                <span class="data-label">Asam Urat</span>
+                                <span class="data-value">{{ $metric($pemeriksaan->asam_urat, 'mg/dL') }}</span>
+                            </div>
+                            @if($kategori === 'remaja')
+                                <div class="data-row border-0 pb-0">
+                                    <span class="data-label">Hemoglobin (Hb)</span>
+                                    <span class="data-value">{{ $metric($pemeriksaan->hemoglobin, 'g/dL') }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            {{-- KOLOM KANAN: Validasi & Anamnesis --}}
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                {{-- Card Validasi Bidan (Highlight Card) --}}
+                <div class="rounded-[2rem] p-6 sm:p-8 border {{ $statusMeta['bg_light'] }} shadow-sm relative overflow-hidden flex-none">
+                    {{-- Dekorasi Latar --}}
+                    <i class="fas {{ $statusMeta['icon'] }} absolute -right-6 -top-6 text-9xl opacity-5"></i>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-white {{ $statusMeta['text'] }} flex items-center justify-center text-lg shadow-sm">
+                                <i class="fas fa-user-nurse"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-[11px] font-black {{ $statusMeta['text'] }} uppercase tracking-widest">Validasi Bidan</h4>
+                                <p class="text-sm font-black text-slate-800 leading-tight">{{ $statusMeta['label'] }}</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/60 rounded-2xl p-5 border border-white/50">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-xs font-black text-slate-800">{{ $verifikator ?: 'Belum Direview' }}</span>
+                                @if($tanggalValidasi)
+                                    <span class="text-[10px] font-bold text-slate-500 bg-white px-2 py-1 rounded-md">{{ Carbon::parse($tanggalValidasi)->translatedFormat('d M Y') }}</span>
+                                @endif
+                            </div>
+                            
+                            <p class="text-xs font-semibold text-slate-600 leading-relaxed italic relative z-10">
+                                @if($catatanBidan)
+                                    "{{ $catatanBidan }}"
+                                @else
+                                    <span class="opacity-60">Tidak ada catatan klinis atau feedback dari Bidan terkait hasil pengukuran ini.</span>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
                 </div>
+
+                {{-- Card Keluhan & Catatan Kader --}}
+                <div class="pc-glass rounded-[2rem] p-6 sm:p-8 flex flex-col flex-1">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                            <i class="fas fa-clipboard-question"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Anamnesis</h4>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Keluhan & Catatan</p>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col gap-4">
+                        <div class="flex-1 flex flex-col">
+                            <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Riwayat Keluhan Saat Datang</span>
+                            <div class="bg-white/50 rounded-2xl p-4 border border-slate-100 text-xs font-semibold text-slate-700 leading-relaxed flex-1">
+                                {{ $pemeriksaan->keluhan ?: '-' }}
+                            </div>
+                        </div>
+
+                        <div class="flex-1 flex flex-col">
+                            <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Catatan Tambahan Kader</span>
+                            <div class="bg-white/50 rounded-2xl p-4 border border-slate-100 text-xs font-semibold text-slate-700 leading-relaxed flex-1">
+                                {{ $pemeriksaan->catatan_kader ?: '-' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
 
-            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button type="button"
-                        id="pcCancelDelete"
-                        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
-                    Batal
-                </button>
-
-                <button type="button"
-                        id="pcConfirmDelete"
-                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-400/20 transition hover:-translate-y-0.5">
-                    <i class="fa-solid fa-trash"></i>
-                    Hapus Data
-                </button>
-            </div>
         </div>
     </div>
+
+    {{-- Delete Modal (Nexus Premium) --}}
+    @if($statusMeta['editable'])
+        <div id="pcDeleteModal" class="pc-modal-backdrop" aria-hidden="true">
+            <div class="pc-modal-card p-6 text-center">
+                <div class="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-500 shadow-inner">
+                    <i class="fas fa-triangle-exclamation text-2xl"></i>
+                </div>
+                
+                <h3 class="text-xl font-black text-slate-800 mb-2">Hapus Data Pengukuran?</h3>
+                <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-2">
+                    Pengukuran fisik ini belum divalidasi dan dapat dihapus. Tindakan ini tidak dapat dibatalkan.
+                </p>
+                
+                <div class="flex gap-3">
+                    <button type="button" id="pcCancelDelete" class="w-full flex-1 rounded-xl border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                        Batal
+                    </button>
+                    <form action="{{ route('kader.pemeriksaan.destroy', $pemeriksaan->id) }}" method="POST" data-delete-form class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" id="pcConfirmDelete" class="w-full rounded-xl bg-gradient-to-r from-rose-500 to-rose-600 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-rose-600 hover:to-rose-700 transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     'use strict';
-
-    let targetDeleteForm = null;
-    let modal = document.querySelector('#pcDeleteModal');
-
-    if (modal && modal.parentElement !== document.body) {
-        document.body.appendChild(modal);
-    }
-
-    const cancelBtn = document.querySelector('#pcCancelDelete');
-    const confirmBtn = document.querySelector('#pcConfirmDelete');
+    
+    // Modal Delete Logic
+    const openBtn = document.getElementById('openDeleteModal');
+    const modal = document.getElementById('pcDeleteModal');
+    const cancelBtn = document.getElementById('pcCancelDelete');
+    const confirmBtn = document.getElementById('pcConfirmDelete');
 
     function lockBody() {
         document.documentElement.classList.add('pc-modal-open');
@@ -594,74 +511,40 @@ $parameterTitle = match ($kategori) {
         document.body.classList.remove('pc-modal-open');
     }
 
-    function openModal(form) {
-        targetDeleteForm = form;
-
-        if (!modal) {
-            return;
-        }
-
+    function openModal() {
+        if (!modal) return;
         lockBody();
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
     }
 
     function closeModal() {
-        targetDeleteForm = null;
-
-        if (!modal) {
-            return;
-        }
-
+        if (!modal) return;
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
         unlockBody();
     }
 
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('[data-delete-form]');
-
-        if (!form) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        openModal(form);
-    }, true);
-
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', closeModal);
-    }
-
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    
     if (modal) {
-        modal.addEventListener('click', function (event) {
-            if (event.target === modal) {
-                closeModal();
-            }
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeModal();
         });
     }
 
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            closeModal();
-        }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
     });
 
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', function () {
-            if (!targetDeleteForm) {
-                closeModal();
-                return;
-            }
-
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('[data-delete-form]');
+        if (form && confirmBtn) {
             confirmBtn.disabled = true;
-            confirmBtn.classList.add('opacity-70', 'cursor-not-allowed');
-            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
-
-            HTMLFormElement.prototype.submit.call(targetDeleteForm);
-        });
-    }
-})();
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
+        }
+    }, true);
+});
 </script>
 @endpush

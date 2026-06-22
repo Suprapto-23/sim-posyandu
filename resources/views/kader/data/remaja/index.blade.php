@@ -4,6 +4,7 @@
 @section('page-name', 'Data Remaja')
 @section('page-title', 'Data Remaja')
 
+@section('content')
 @php
     use Carbon\Carbon;
     use Illuminate\Support\Str;
@@ -56,716 +57,555 @@
     $statPerempuan = $statPerempuan ?? 0;
     $statTerhubung = $statTerhubung ?? 0;
     $statBelumTerhubung = $statBelumTerhubung ?? 0;
-    $statBulanIni = $statBulanIni ?? 0;
 
     $rangeText = method_exists($items, 'firstItem')
-        ? 'Menampilkan ' . (($items->firstItem() ?? 0)) . ' sampai ' . (($items->lastItem() ?? 0)) . ' dari ' . $items->total() . ' data'
-        : 'Menampilkan ' . $items->count() . ' data';
+        ? 'Menampilkan ' . (($items->firstItem() ?? 0)) . '-' . (($items->lastItem() ?? 0)) . ' dari ' . $items->total() . ' sasaran'
+        : 'Menampilkan ' . $items->count() . ' sasaran';
 
-    $formatDate = function ($value, $format = 'd M Y') {
-        return $value ? Carbon::parse($value)->translatedFormat($format) : '-';
+    $formatDate = function ($value) {
+        if (! $value) return '-';
+        return Carbon::parse($value)->translatedFormat('d M Y');
     };
 
-    $ageText = function ($remaja) {
-        if (! $remaja->tanggal_lahir) {
-            return '-';
-        }
+    $getAge = function ($remaja) {
+        if (isset($remaja->usia_label) && filled($remaja->usia_label)) return $remaja->usia_label;
+        if (! $remaja->tanggal_lahir) return '-';
 
-        $birth = Carbon::parse($remaja->tanggal_lahir);
-        $diff = $birth->diff(now());
-
-        return $diff->y > 0
-            ? $diff->y . ' tahun ' . $diff->m . ' bulan'
-            : $diff->m . ' bulan ' . $diff->d . ' hari';
+        $diff = Carbon::parse($remaja->tanggal_lahir)->diff(now());
+        return $diff->y > 0 ? $diff->y . ' thn ' . $diff->m . ' bln' : $diff->m . ' bln';
     };
 
-    $initial = fn ($name) => Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'R';
-
-    $genderLabel = fn ($gender) => match ($gender) {
-        'L' => 'Laki-laki',
-        'P' => 'Perempuan',
-        default => '-',
+    $initial = function ($name) {
+        return Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'R';
     };
 
-    $genderClass = fn ($gender) => match ($gender) {
-        'L' => 'bg-sky-50 text-sky-700 ring-sky-200',
-        'P' => 'bg-rose-50 text-rose-700 ring-rose-200',
-        default => 'bg-slate-50 text-slate-600 ring-slate-200',
+    $genderLabel = function ($gender) {
+        return match ($gender) {
+            'L' => 'Laki-laki',
+            'P' => 'Perempuan',
+            default => '-',
+        };
     };
 
-    $isConnected = fn ($remaja) => filled($remaja->user_id ?? null);
+    $genderClass = function ($gender) {
+        return match ($gender) {
+            'L' => 'text-sky-600 border-sky-200 bg-sky-50/50',
+            'P' => 'text-rose-600 border-rose-200 bg-rose-50/50',
+            default => 'text-slate-600 border-slate-200 bg-slate-50',
+        };
+    };
 
-    $accountLabel = fn ($remaja) => $isConnected($remaja) ? 'Terhubung' : 'Belum Terhubung';
+    $isConnected = function ($remaja) {
+        return filled($remaja->user_id ?? null);
+    };
 
-    $accountClass = fn ($remaja) => $isConnected($remaja)
-        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-        : 'bg-amber-50 text-amber-700 ring-amber-200';
+    $accountLabel = function ($remaja) use ($isConnected) {
+        return $isConnected($remaja) ? 'Terhubung' : 'Belum Terhubung';
+    };
 
+    $accountClass = function ($remaja) use ($isConnected) {
+        return $isConnected($remaja)
+            ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
+            : 'text-amber-700 border-amber-200 bg-amber-50';
+    };
+
+    // Helper Ekstraksi Data Pemeriksaan Remaja
     $lastCheckDate = function ($remaja) use ($formatDate) {
         $last = $remaja->pemeriksaan_terakhir ?? null;
-
-        if (! $last) {
-            return 'Belum Periksa';
-        }
-
+        if (! $last) return 'Belum Periksa';
         return $formatDate($last->tanggal_periksa ?? $last->created_at ?? null);
     };
 
-    $lastWeight = function ($remaja) {
-        $last = $remaja->pemeriksaan_terakhir ?? null;
+    $cleanNum = fn($val) => blank($val) ? '-' : rtrim(rtrim((string) $val, '0'), '.');
+    
+    // Penamaan kolom di-handle agar aman dari null error
+    $lastWeight = fn($r) => $cleanNum($r->pemeriksaan_terakhir->berat_badan ?? null);
+    $lastHeight = fn($r) => $cleanNum($r->pemeriksaan_terakhir->tinggi_badan ?? null);
+    $lastLp = fn($r) => $cleanNum($r->pemeriksaan_terakhir->lingkar_perut ?? null);
+    $lastTensi = fn($r) => ($r->pemeriksaan_terakhir->tekanan_darah_sistolik ?? $r->pemeriksaan_terakhir->tekanan_darah ?? '-');
+    $lastHb = fn($r) => $cleanNum($r->pemeriksaan_terakhir->hemoglobin ?? null);
 
-        if (! $last || blank($last->berat_badan ?? null)) {
-            return '-';
-        }
-
-        return rtrim(rtrim((string) $last->berat_badan, '0'), '.') . ' kg';
-    };
-
-    $lastHeight = function ($remaja) {
-        $last = $remaja->pemeriksaan_terakhir ?? null;
-
-        if (! $last || blank($last->tinggi_badan ?? null)) {
-            return '-';
-        }
-
-        return rtrim(rtrim((string) $last->tinggi_badan, '0'), '.') . ' cm';
-    };
+    $activeFilterCount = collect([$search, $statusAkun !== 'semua' ? $statusAkun : null, $jenisKelamin !== 'semua' ? $jenisKelamin : null])->filter(fn($v) => filled($v))->count();
 @endphp
 
 @push('styles')
 <style>
-    .nexus-bg {
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16, 185, 129, 0.16), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245, 158, 11, 0.14), transparent 26%),
-            radial-gradient(circle at 80% 82%, rgba(14, 165, 233, 0.12), transparent 30%),
-            linear-gradient(135deg, #f8fafc 0%, #ecfdf5 42%, #eff6ff 100%);
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
     }
 
-    .nexus-bg::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background-image:
-            linear-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-        background-size: 34px 34px;
-        mask-image: linear-gradient(to bottom, black, transparent 85%);
+    .animate-pop-in {
+        animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards;
+        opacity: 0;
     }
 
-    .nexus-glass {
-        border: 1px solid rgba(255, 255, 255, 0.72);
-        background: rgba(255, 255, 255, 0.76);
-        backdrop-filter: blur(22px);
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    .stat-card {
-        position: relative;
-        overflow: hidden;
-        border-radius: 28px;
-        border: 1px solid rgba(255, 255, 255, 0.72);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 55px rgba(15, 23, 42, 0.07);
+    .widget-card {
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 2rem; 
+        box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.05);
     }
 
-    .stat-card::after {
-        content: "";
-        position: absolute;
-        right: -34px;
-        top: -34px;
-        height: 120px;
-        width: 120px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.42);
+    .btn-pill {
+        border-radius: 9999px;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        cursor: pointer;
     }
+    .btn-pill:active { transform: scale(0.95); }
 
+    /* Custom Scrollbar */
+    .pc-scroll-container {
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(16, 185, 129, 0.4) transparent;
+        padding-right: 8px;
+    }
+    .pc-scroll-container::-webkit-scrollbar { width: 6px; }
+    .pc-scroll-container::-webkit-scrollbar-track { background: transparent; }
+    .pc-scroll-container::-webkit-scrollbar-thumb { background-color: rgba(16, 185, 129, 0.4); border-radius: 999px; }
+
+    /* Grid Layout - Persis seperti di gambar */
     .data-row {
         display: grid;
-        grid-template-columns: 36px minmax(240px, 1.1fr) minmax(150px, .65fr) minmax(210px, .9fr) minmax(160px, .7fr) 148px;
-        gap: 14px;
-        align-items: center;
+        grid-template-columns: 24px minmax(220px, 1.2fr) minmax(130px, 0.7fr) minmax(180px, 1fr) minmax(210px, 1.1fr) 130px;
+        gap: 16px;
+        align-items: start;
     }
 
-    .action-box {
-        width: 148px;
-        min-width: 148px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 7px;
+    /* CSS Line Clamp (Untuk Alamat) */
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 
+    /* Action Box */
     .row-action {
-        min-height: 38px;
+        height: 32px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 14px;
+        border-radius: 8px;
         border: 1px solid transparent;
-        padding: 0 10px;
-        font-size: 12px;
-        font-weight: 900;
-        line-height: 1;
-        white-space: nowrap;
-        transition: transform .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all .2s ease;
+        cursor: pointer;
+        text-decoration: none;
     }
+    .row-action:hover { transform: translateY(-1px); }
+    
+    .action-detail { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
+    .action-edit { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
+    .action-sync { background: #fffbeb; border-color: #fcd34d; color: #d97706; }
+    .action-delete { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
 
-    .row-action:hover {
-        transform: translateY(-1px);
+    /* Modal Full Screen */
+    .pc-modal-backdrop {
+        position: fixed; inset: 0; z-index: 999999; display: none; align-items: center; justify-content: center;
+        background: rgba(15, 23, 42, .65); backdrop-filter: blur(12px); padding: 1rem; width: 100vw; height: 100vh;
     }
-
-    .action-sync {
-        grid-column: span 2;
-        background: #fffbeb;
-        border-color: #fcd34d;
-        color: #92400e;
+    .pc-modal-backdrop.is-open { display: flex; }
+    .pc-modal-card {
+        width: 100%; max-width: 420px; background: white; border-radius: 2rem; padding: 0; overflow: hidden;
+        transform: scale(0.95) translateY(15px); opacity: 0; transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
     }
-
-    .action-detail {
-        background: #ecfdf5;
-        border-color: #a7f3d0;
-        color: #047857;
-    }
-
-    .action-edit {
-        background: #eff6ff;
-        border-color: #bfdbfe;
-        color: #1d4ed8;
-    }
-
-    .action-delete {
-        grid-column: span 2;
-        background: #fff1f2;
-        border-color: #fecdd3;
-        color: #be123c;
-    }
-
-    .live-loading {
-        opacity: .55;
-        pointer-events: none;
-        transition: opacity .18s ease;
-    }
-
-    .nexus-modal {
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity .22s ease;
-    }
-
-    .nexus-modal.is-open {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    .nexus-modal-card {
-        transform: translateY(16px) scale(.96);
-        opacity: 0;
-        transition: transform .24s ease, opacity .24s ease;
-    }
-
-    .nexus-modal.is-open .nexus-modal-card {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-
-    @media (max-width: 1536px) {
-        .data-row {
-            grid-template-columns: 36px minmax(230px, 1fr) minmax(150px, .7fr) minmax(210px, .9fr) 148px;
-        }
-
-        .col-checkup {
-            display: none;
-        }
-    }
+    .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
 
     @media (max-width: 1280px) {
-        .data-row {
-            grid-template-columns: 34px minmax(0, 1fr);
-            align-items: start;
-        }
-
-        .mobile-stack {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-
-        .action-box {
-            width: 100%;
-            min-width: 0;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-
-        .action-sync,
-        .action-delete {
-            grid-column: auto;
-        }
-    }
-
-    @media (max-width: 640px) {
-        .action-box {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .action-sync,
-        .action-delete {
-            grid-column: span 2;
-        }
+        .data-row { grid-template-columns: 24px minmax(0, 1fr); align-items: start; }
+        .col-hidden-mobile { display: none; }
+        .col-stack-mobile { display: flex; flex-direction: column; gap: 10px; }
     }
 </style>
 @endpush
 
-@section('content')
-<div class="nexus-bg relative min-h-[calc(100vh-96px)] px-4 py-6 sm:px-6 lg:px-8">
-    <div class="relative z-10 mx-auto max-w-7xl space-y-6">
+<div class="max-w-[1280px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 lg:px-8 mt-6">
 
-        <section class="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-800 shadow-[0_30px_90px_rgba(15,23,42,0.16)]">
-            <div class="absolute right-0 top-0 h-44 w-44 rounded-bl-[90px] bg-white/10"></div>
-            <div class="absolute -bottom-20 right-40 h-40 w-40 rounded-full bg-amber-300/10 blur-2xl"></div>
+    {{-- HERO WIDGET --}}
+    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[3rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-20"></div>
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
 
-            <div class="relative p-6 sm:p-8">
-                <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                    <div class="max-w-3xl">
-                        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-100 backdrop-blur-xl">
-                            <span class="h-2 w-2 rounded-full bg-emerald-300"></span>
-                            Master Data Sasaran
-                        </div>
-
-                        <h1 class="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl">
-                            Data Remaja
-                        </h1>
-
-                        <p class="mt-3 max-w-2xl text-sm font-semibold leading-7 text-emerald-50/80 sm:text-base">
-                            Kelola data Remaja untuk absensi, pengukuran fisik, pemantauan kesehatan, dan laporan Posyandu.
-                            Live search aktif dari huruf pertama, biar tidak klik-klik seperti mesin kasir jadul.
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-[460px]">
-                        @if($templateRoute)
-                            <a href="{{ $templateRoute }}"
-                               class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 text-sm font-black text-white backdrop-blur-xl transition hover:bg-white/15">
-                                Template Excel
-                            </a>
-                        @endif
-
-                        @if($importRoute)
-                            <a href="{{ $importRoute }}"
-                               class="rounded-2xl border border-emerald-300/25 bg-emerald-300/15 px-4 py-4 text-sm font-black text-emerald-50 backdrop-blur-xl transition hover:bg-emerald-300/20">
-                                Import Data
-                            </a>
-                        @endif
-
-                        <a href="{{ $createRoute }}"
-                           class="rounded-2xl bg-emerald-400 px-4 py-4 text-center text-sm font-black text-emerald-950 shadow-[0_18px_40px_rgba(52,211,153,0.24)] transition hover:bg-emerald-300">
-                            Tambah Remaja
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        @if(session('success') || session('error') || session('warning'))
-            @php
-                $flashType = session('error') ? 'error' : (session('warning') ? 'warning' : 'success');
-                $flashText = session('error') ?: (session('warning') ?: session('success'));
-
-                $flashClass = match ($flashType) {
-                    'error' => 'border-rose-200 bg-rose-50/90 text-rose-800',
-                    'warning' => 'border-amber-200 bg-amber-50/90 text-amber-800',
-                    default => 'border-emerald-200 bg-emerald-50/90 text-emerald-800',
-                };
-
-                $flashTitle = match ($flashType) {
-                    'error' => 'Aksi gagal',
-                    'warning' => 'Perhatian',
-                    default => 'Berhasil',
-                };
-            @endphp
-
-            <div class="rounded-[24px] border px-5 py-4 shadow-sm backdrop-blur-xl {{ $flashClass }}">
-                <p class="text-sm font-black">{{ $flashTitle }}</p>
-                <p class="mt-1 text-sm font-semibold leading-6">{{ $flashText }}</p>
-            </div>
-        @endif
-
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div class="stat-card bg-white/72 p-5">
-                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-slate-400">Total Remaja</p>
-                <p class="relative mt-3 text-4xl font-black text-slate-950">{{ number_format($statTotal) }}</p>
-                <p class="relative mt-1 text-sm font-bold text-slate-500">Seluruh data sasaran</p>
-            </div>
-
-            <div class="stat-card bg-sky-100/75 p-5">
-                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-sky-700">Laki-laki</p>
-                <p class="relative mt-3 text-4xl font-black text-sky-950">{{ number_format($statLaki) }}</p>
-                <p class="relative mt-1 text-sm font-bold text-sky-800/70">Data tercatat</p>
-            </div>
-
-            <div class="stat-card bg-rose-100/75 p-5">
-                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-rose-700">Perempuan</p>
-                <p class="relative mt-3 text-4xl font-black text-rose-950">{{ number_format($statPerempuan) }}</p>
-                <p class="relative mt-1 text-sm font-bold text-rose-800/70">Data tercatat</p>
-            </div>
-
-            <div class="stat-card bg-emerald-100/75 p-5">
-                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Terhubung</p>
-                <p class="relative mt-3 text-4xl font-black text-emerald-950">{{ number_format($statTerhubung) }}</p>
-                <p class="relative mt-1 text-sm font-bold text-emerald-800/70">Akun warga tersedia</p>
-            </div>
-
-            <div class="stat-card bg-amber-100/80 p-5">
-                <p class="relative text-xs font-black uppercase tracking-[0.18em] text-amber-700">Bulan Ini</p>
-                <p class="relative mt-3 text-4xl font-black text-amber-950">{{ number_format($statBulanIni) }}</p>
-                <p class="relative mt-1 text-sm font-bold text-amber-800/70">Data baru tercatat</p>
-            </div>
-        </section>
-
-        <section class="nexus-glass rounded-[30px] p-4 sm:p-5">
-            <form id="liveSearchForm"
-                  action="{{ $indexRoute }}"
-                  method="GET"
-                  class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_210px_230px_auto] xl:items-end">
-                <div>
-                    <label for="liveSearchInput" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                        Cari Remaja
-                    </label>
-
-                    <div class="relative">
-                        <input type="text"
-                               id="liveSearchInput"
-                               name="search"
-                               value="{{ $search }}"
-                               autocomplete="off"
-                               placeholder="Ketik nama, NIK, sekolah, kelas, atau alamat..."
-                               class="h-14 w-full rounded-[22px] border border-emerald-100 bg-emerald-50/70 px-5 pr-24 text-sm font-extrabold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-
-                        <div id="liveSearchState"
-                             class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-2xl bg-slate-950 px-3 py-2 text-[11px] font-black text-white">
-                            Mencari
-                        </div>
-                    </div>
-
-                    <p class="mt-2 text-xs font-bold text-slate-500">
-                        Ketik minimal 1 karakter. Sistem mencari dari data utama Remaja.
-                    </p>
+        <div class="relative z-10 flex flex-col lg:flex-row gap-8 lg:items-center justify-between">
+            <div class="flex-1 text-center lg:text-left">
+                <div class="inline-flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-widest mb-4">
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
+                        Master Data Sasaran
+                    </span>
                 </div>
 
-                <div>
-                    <label for="jenis_kelamin" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                        Gender
-                    </label>
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-3">
+                    Data Remaja
+                </h1>
 
-                    <select id="jenis_kelamin"
-                            name="jenis_kelamin"
-                            class="h-14 w-full rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-                        @foreach($genderOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($jenisKelamin === $key)>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                    Kelola data Remaja untuk absensi, pengukuran fisik, HB, dan pelaporan Posyandu. Lakukan sinkronisasi akun agar riwayat kesehatan terhubung ke aplikasi warga.
+                </p>
+            </div>
 
-                <div>
-                    <label for="status_akun" class="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                        Status Akun
-                    </label>
-
-                    <select id="status_akun"
-                            name="status_akun"
-                            class="h-14 w-full rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-                        @foreach($statusOptions as $key => $label)
-                            <option value="{{ $key }}" @selected($statusAkun === $key)>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button type="submit"
-                            class="h-14 rounded-[22px] bg-slate-950 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(15,23,42,0.18)] transition hover:bg-slate-800">
-                        Filter
-                    </button>
-
-                    <a href="{{ $indexRoute }}"
-                       id="resetSearchButton"
-                       class="inline-flex h-14 items-center justify-center rounded-[22px] border border-emerald-100 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-emerald-50">
-                        Reset
+            <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto shrink-0 justify-center">
+                @if($templateRoute)
+                    <a href="{{ $templateRoute }}" class="btn-pill bg-white/20 hover:bg-white/30 text-white border border-white/30 px-6 py-3.5 text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all shadow-sm">
+                        <i class="fa-solid fa-file-excel"></i> Template
                     </a>
-                </div>
-            </form>
-        </section>
+                @endif
+                @if($importRoute)
+                    <a href="{{ $importRoute }}" class="btn-pill bg-teal-800/40 hover:bg-teal-800/60 text-white border border-teal-300/30 px-6 py-3.5 text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all shadow-sm">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Import
+                    </a>
+                @endif
+                <a href="{{ $createRoute }}" class="btn-pill bg-white hover:bg-emerald-50 text-emerald-600 px-6 py-3.5 text-sm font-black shadow-[0_8px_20px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5">
+                    <i class="fa-solid fa-plus"></i> Tambah Data
+                </a>
+            </div>
+        </div>
+    </section>
 
-        <section id="remajaLiveRegion" data-live-region>
-            <div class="overflow-hidden rounded-[34px] border border-white/70 bg-white/78 shadow-[0_24px_85px_rgba(15,23,42,0.09)] backdrop-blur-xl">
-                <div class="border-b border-emerald-900/20 bg-gradient-to-r from-slate-950 via-emerald-950 to-teal-900 px-5 py-5 text-white sm:px-6">
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p class="text-xs font-black uppercase tracking-[0.22em] text-emerald-200">
-                                Daftar Remaja
-                            </p>
+    {{-- SYSTEM ALERT --}}
+    @if(session('success') || session('error') || session('warning'))
+        @php
+            $flashType = session('error') ? 'error' : (session('warning') ? 'warning' : 'success');
+            $flashClass = match ($flashType) {
+                'error' => 'border-rose-200 bg-rose-50 text-rose-800',
+                'warning' => 'border-amber-200 bg-amber-50 text-amber-800',
+                default => 'border-emerald-200 bg-emerald-50 text-emerald-800',
+            };
+            $flashIcon = match ($flashType) {
+                'error' => 'fa-triangle-exclamation text-rose-500',
+                'warning' => 'fa-circle-exclamation text-amber-500',
+                default => 'fa-circle-check text-emerald-500',
+            };
+        @endphp
+        <div class="rounded-[2rem] p-6 shadow-sm border-2 flex items-center gap-4 {{ $flashClass }} mb-8">
+            <div class="bg-white rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-inner">
+                <i class="fa-solid {{ $flashIcon }} text-xl"></i>
+            </div>
+            <div>
+                <h3 class="font-black text-lg">{{ ucfirst($flashType) }}</h3>
+                <p class="font-medium text-sm mt-1 opacity-80">{{ session($flashType) }}</p>
+            </div>
+        </div>
+    @endif
 
-                            <h2 class="mt-2 text-2xl font-black">
-                                Data Sasaran Remaja
-                            </h2>
+    {{-- STATISTIK GRID --}}
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
+        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Sasaran</p>
+                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statTotal) }}</p>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-sky-600">Laki-laki</p>
+                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statLaki) }}</p>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 text-sky-500 flex items-center justify-center text-2xl shadow-inner group-hover:-rotate-6 transition-transform">
+                <i class="fa-solid fa-mars"></i>
+            </div>
+        </div>
+        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-rose-600">Perempuan</p>
+                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statPerempuan) }}</p>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform">
+                <i class="fa-solid fa-venus"></i>
+            </div>
+        </div>
+        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Terhubung Akun</p>
+                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statTerhubung) }}</p>
+            </div>
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-500 flex items-center justify-center text-2xl shadow-inner group-hover:-rotate-6 transition-transform">
+                <i class="fa-solid fa-link"></i>
+            </div>
+        </div>
+    </section>
 
-                            <p class="mt-1 text-sm font-semibold text-white/65">
-                                {{ $rangeText }}
-                            </p>
+    {{-- FILTER WIDGET --}}
+    <form id="liveSearchForm" action="{{ $indexRoute }}" method="GET" class="widget-card p-4 sm:p-6 flex flex-col xl:flex-row gap-4 items-center z-20 relative mb-8">
+        <div class="w-full xl:flex-1 relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
+            <input type="text" id="liveSearchInput" name="search" value="{{ $search }}" autocomplete="off" placeholder="Ketik nama, NIK, atau sekolah..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3.5 pl-11 pr-12 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 shadow-inner">
+            <div id="liveSearchState" class="absolute right-4 top-1/2 -translate-y-1/2 hidden">
+                <i class="fa-solid fa-circle-notch fa-spin text-emerald-500"></i>
+            </div>
+        </div>
+
+        <select id="jenis_kelamin" name="jenis_kelamin" class="w-full xl:w-40 btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-emerald-400 shadow-inner appearance-none cursor-pointer">
+            @foreach($genderOptions as $key => $label)
+                <option value="{{ $key }}" @selected($jenisKelamin === $key)>{{ $label }}</option>
+            @endforeach
+        </select>
+
+        <select id="status_akun" name="status_akun" class="w-full xl:w-44 btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-emerald-400 shadow-inner appearance-none cursor-pointer">
+            @foreach($statusOptions as $key => $label)
+                <option value="{{ $key }}" @selected($statusAkun === $key)>{{ $label }}</option>
+            @endforeach
+        </select>
+
+        <div class="flex gap-2 w-full xl:w-auto">
+            <button type="submit" class="flex-1 xl:flex-none btn-pill bg-slate-800 hover:bg-slate-700 px-6 py-3.5 text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-filter"></i> Filter
+            </button>
+            @if($activeFilterCount > 0)
+                <a href="{{ $indexRoute }}" id="resetSearchButton" class="btn-pill border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 w-12 flex items-center justify-center text-slate-400 shadow-sm transition" title="Reset filter">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            @endif
+        </div>
+    </form>
+
+    {{-- MAIN DATA WIDGET (Live Region) --}}
+    <section id="remajaLiveRegion" data-live-region class="widget-card overflow-hidden">
+        
+        {{-- Header Data --}}
+        <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-black text-slate-900">Daftar Sasaran Remaja</h2>
+                <p id="listRangeText" class="mt-1 text-xs font-semibold text-slate-500">{{ $rangeText }}</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <label class="btn-pill border border-slate-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50">
+                    <input type="checkbox" id="selectAllRemaja" class="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 cursor-pointer">
+                    Pilih Semua
+                </label>
+
+                @if($routeHas('kader.data.remaja.bulk-delete'))
+                    <button type="button" id="bulkDeleteButton" disabled 
+                            data-confirm-submit data-confirm-form="bulkDeleteForm"
+                            data-confirm-title="Hapus Data Terpilih?" 
+                            data-confirm-message="Remaja yang dicentang akan dihapus secara permanen dari sistem. Pastikan pilihan sudah benar." 
+                            data-confirm-tone="danger" 
+                            class="btn-pill bg-rose-50 border border-rose-200 text-rose-600 px-4 py-2 text-[11px] font-black uppercase tracking-wider shadow-sm transition opacity-50 cursor-not-allowed hover:bg-rose-500 hover:text-white">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Hapus Terpilih
+                    </button>
+                @endif
+            </div>
+        </div>
+
+        {{-- CONTAINER DENGAN SCROLLBAR DAN BATAS TINGGI --}}
+        <div class="pc-scroll-container max-h-[600px] p-3 sm:p-5 space-y-3 bg-white/40">
+            @forelse($items as $item)
+                @php
+                    $name = $item->nama_lengkap ?? '-';
+                    $nik = $item->nik ?? '-';
+                    $connected = $isConnected($item);
+                @endphp
+
+                <article class="bg-white border border-emerald-100/70 rounded-[1.5rem] p-4 shadow-sm hover:shadow-md hover:border-emerald-300 transition duration-300">
+                    <div class="data-row col-stack-mobile">
+                        
+                        {{-- 1. Checkbox --}}
+                        <div class="pt-2 xl:pt-0 flex items-center justify-center relative z-10">
+                            <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="bulkDeleteForm" class="remaja-check h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
                         </div>
 
-                        <div class="flex flex-col gap-3 sm:flex-row">
-                            <label class="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-black text-white backdrop-blur-xl">
-                                <input type="checkbox"
-                                       id="selectAllRemaja"
-                                       class="h-4 w-4 rounded border-white/40 text-emerald-500 focus:ring-emerald-400">
-                                Pilih Semua
-                            </label>
+                        {{-- 2. Identitas (Sesuai Layout Gambar) --}}
+                        <div class="flex items-start gap-4 min-w-0 relative z-10">
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-slate-900 text-xl font-black text-emerald-400 shadow-md mt-0.5">
+                                {{ $initial($name) }}
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="truncate text-base font-black text-slate-900 leading-tight" title="{{ $name }}">{{ $name }}</h3>
+                                <p class="mt-1 truncate text-xs font-bold text-slate-500">NIK {{ $nik }}</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $genderClass($item->jenis_kelamin) }}">{{ $genderLabel($item->jenis_kelamin) }}</span>
+                                    <span class="rounded border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $accountClass($item) }}">{{ $accountLabel($item) }}</span>
+                                </div>
+                            </div>
+                        </div>
 
-                            @if($routeHas('kader.data.remaja.bulk-delete'))
-                                <button type="button"
-                                        id="bulkDeleteButton"
-                                        disabled
+                        {{-- 3. Pendidikan & Usia --}}
+                        <div class="col-hidden-mobile min-w-0 relative z-10 mt-1">
+                            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Pendidikan & Usia</p>
+                            <p class="text-xs font-black text-slate-800 leading-snug">{{ $item->sekolah ?: '-' }}</p>
+                            <p class="text-[11px] font-bold text-slate-500 mt-1">{{ $getAge($item) }}</p>
+                        </div>
+
+                        {{-- 4. Orang Tua & Domisili (ALAMAT MENGGUNAKAN LINE-CLAMP, BUKAN TRUNCATE) --}}
+                        <div class="col-hidden-mobile min-w-0 relative z-10 mt-1">
+                            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Orang Tua/Wali</p>
+                            <p class="text-xs font-black text-slate-800" title="{{ $item->nama_ortu }}">Wali: {{ $item->nama_ortu ?: '-' }}</p>
+                            <p class="text-[11px] font-bold text-slate-500 mt-1 line-clamp-2 leading-snug" title="{{ $item->alamat }}">{{ $item->alamat ?: '-' }}</p>
+                        </div>
+
+                        {{-- 5. Cek Terakhir Box (Sesuai Gambar) --}}
+                        <div class="col-hidden-mobile min-w-0 relative z-10 bg-slate-50 border border-slate-100 rounded-[14px] p-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-[10px] font-black uppercase tracking-wider text-emerald-600">Cek Terakhir</p>
+                                <p class="text-[9px] font-bold text-slate-400">{{ $lastCheckDate($item) }}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px]">
+                                <p class="font-bold text-slate-600">BB: <span class="text-slate-900">{{ $lastWeight($item) }}</span></p>
+                                <p class="font-bold text-slate-600">TB: <span class="text-slate-900">{{ $lastHeight($item) }}</span></p>
+                                <p class="font-bold text-slate-600">LP: <span class="text-slate-900">{{ $lastLp($item) }}</span></p>
+                                <p class="font-bold text-slate-600">Tensi: <span class="text-slate-900">{{ $lastTensi($item) }}</span></p>
+                                <p class="font-bold text-rose-500 col-span-2 mt-1">HB: <span class="text-rose-600">{{ $lastHb($item) }}</span></p>
+                            </div>
+                        </div>
+
+                        {{-- 6. Action Box (TIDAK ADA <FORM> SAMA SEKALI, MURNI EVENT DELEGATION ANTI-BUG) --}}
+                        <div class="grid grid-cols-2 gap-1.5 w-full relative z-20 mt-1 xl:mt-0">
+                            @if($routeHas('kader.data.remaja.show'))
+                                <a href="{{ route('kader.data.remaja.show', $item->id) }}" class="col-span-1 row-action action-detail" title="Lihat Detail"><i class="fa-solid fa-eye"></i></a>
+                            @endif
+
+                            @if($routeHas('kader.data.remaja.edit'))
+                                <a href="{{ route('kader.data.remaja.edit', $item->id) }}" class="col-span-1 row-action action-edit" title="Edit Data"><i class="fa-solid fa-pen"></i></a>
+                            @endif
+
+                            @if(! $connected && $routeHas('kader.data.remaja.sync'))
+                                <button type="button" 
+                                        class="col-span-2 row-action action-sync w-full" 
                                         data-confirm-submit
-                                        data-confirm-form="bulkDeleteForm"
-                                        data-confirm-title="Hapus Data Terpilih?"
-                                        data-confirm-message="Data Remaja yang dipilih akan dihapus jika belum memiliki riwayat layanan. Kalau sudah ada rekam medis, sistem akan menolak. Sistemnya lebih disiplin dari sebagian manusia."
-                                        data-confirm-tone="danger"
-                                        class="inline-flex h-11 items-center justify-center rounded-2xl border border-rose-300/40 bg-rose-400/15 px-4 text-sm font-black text-rose-100 opacity-50 transition hover:bg-rose-400/25 disabled:cursor-not-allowed">
-                                    Hapus Terpilih
+                                        data-action-url="{{ route('kader.data.remaja.sync', $item->id) }}"
+                                        data-action-method="POST"
+                                        data-confirm-title="Sinkronkan Akun?" 
+                                        data-confirm-message="Sistem akan mencoba menghubungkan data Remaja ini dengan akun warga berdasarkan NIK yang sama." 
+                                        data-confirm-tone="gold">
+                                    <i class="fa-solid fa-rotate mr-1"></i> Sinkron
+                                </button>
+                            @endif
+
+                            @if($routeHas('kader.data.remaja.destroy'))
+                                <button type="button" 
+                                        class="col-span-2 row-action action-delete w-full" 
+                                        data-confirm-submit
+                                        data-action-url="{{ route('kader.data.remaja.destroy', $item->id) }}"
+                                        data-action-method="DELETE"
+                                        data-confirm-title="Hapus Data Remaja?" 
+                                        data-confirm-message="Data Remaja ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan." 
+                                        data-confirm-tone="danger">
+                                    <i class="fa-solid fa-trash-can mr-1"></i> Hapus
                                 </button>
                             @endif
                         </div>
                     </div>
-                </div>
-
-                <div class="space-y-4 p-4 sm:p-5">
-                    @forelse($items as $item)
-                        @php
-                            $name = $item->nama_lengkap ?? '-';
-                            $nik = $item->nik ?? '-';
-                            $connected = $isConnected($item);
-                        @endphp
-
-                        <article class="group overflow-hidden rounded-[28px] border border-emerald-100/70 bg-gradient-to-br from-white/92 via-emerald-50/35 to-amber-50/30 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_22px_65px_rgba(15,23,42,0.08)]">
-                            <div class="data-row">
-                                <div class="pt-3 xl:pt-0">
-                                    <input type="checkbox"
-                                           name="ids[]"
-                                           value="{{ $item->id }}"
-                                           form="bulkDeleteForm"
-                                           class="remaja-check h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
-                                </div>
-
-                                <div class="mobile-stack min-w-0">
-                                    <div class="flex min-w-0 items-center gap-3">
-                                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-slate-950 text-lg font-black text-emerald-200 shadow-[0_14px_32px_rgba(15,23,42,0.18)]">
-                                            {{ $initial($name) }}
-                                        </div>
-
-                                        <div class="min-w-0">
-                                            <h3 class="truncate text-base font-black text-slate-950">
-                                                {{ $name }}
-                                            </h3>
-
-                                            <p class="mt-1 truncate text-sm font-extrabold text-slate-500">
-                                                NIK {{ $nik }}
-                                            </p>
-
-                                            <div class="mt-2 flex flex-wrap gap-2">
-                                                <span class="rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-white">
-                                                    Remaja
-                                                </span>
-
-                                                <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] ring-1 {{ $genderClass($item->jenis_kelamin) }}">
-                                                    {{ $genderLabel($item->jenis_kelamin) }}
-                                                </span>
-
-                                                <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] ring-1 {{ $accountClass($item) }}">
-                                                    {{ $accountLabel($item) }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="min-w-0 rounded-[20px] border border-emerald-100/80 bg-white/78 p-3 shadow-sm">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                        Usia
-                                    </p>
-
-                                    <p class="mt-1 truncate text-sm font-black text-slate-950">
-                                        {{ $ageText($item) }}
-                                    </p>
-
-                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">
-                                        {{ $formatDate($item->tanggal_lahir) }}
-                                    </p>
-                                </div>
-
-                                <div class="min-w-0 rounded-[20px] border border-emerald-100/80 bg-white/78 p-3 shadow-sm">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                        Pendidikan
-                                    </p>
-
-                                    <p class="mt-1 truncate text-sm font-black text-slate-950">
-                                        {{ $item->sekolah ?: 'Belum diisi' }}
-                                    </p>
-
-                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">
-                                        Kelas {{ $item->kelas ?: '-' }}
-                                    </p>
-                                </div>
-
-                                <div class="col-checkup min-w-0 rounded-[20px] border border-emerald-100/80 bg-white/78 p-3 shadow-sm">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                        Pemeriksaan
-                                    </p>
-
-                                    <p class="mt-1 truncate text-sm font-black text-slate-950">
-                                        {{ $lastCheckDate($item) }}
-                                    </p>
-
-                                    <p class="mt-1 truncate text-xs font-bold text-slate-500">
-                                        BB {{ $lastWeight($item) }} | TB {{ $lastHeight($item) }}
-                                    </p>
-                                </div>
-
-                                <div class="action-box">
-                                    @if(! $connected && $routeHas('kader.data.remaja.sync'))
-                                        <form action="{{ route('kader.data.remaja.sync', $item->id) }}"
-                                              method="POST"
-                                              class="contents">
-                                            @csrf
-
-                                            <button type="button"
-                                                    class="row-action action-sync"
-                                                    data-confirm-submit
-                                                    data-confirm-title="Sinkronkan Akun?"
-                                                    data-confirm-message="Sistem akan mencoba menghubungkan data Remaja ini dengan akun warga berdasarkan NIK yang sama."
-                                                    data-confirm-tone="gold">
-                                                Sinkron
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    @if($routeHas('kader.data.remaja.show'))
-                                        <a href="{{ route('kader.data.remaja.show', $item->id) }}"
-                                           class="row-action action-detail">
-                                            Detail
-                                        </a>
-                                    @endif
-
-                                    @if($routeHas('kader.data.remaja.edit'))
-                                        <a href="{{ route('kader.data.remaja.edit', $item->id) }}"
-                                           class="row-action action-edit">
-                                            Edit
-                                        </a>
-                                    @endif
-
-                                    @if($routeHas('kader.data.remaja.destroy'))
-                                        <form action="{{ route('kader.data.remaja.destroy', $item->id) }}"
-                                              method="POST"
-                                              class="contents">
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button type="button"
-                                                    class="row-action action-delete"
-                                                    data-confirm-submit
-                                                    data-confirm-title="Hapus Data Remaja?"
-                                                    data-confirm-message="Data Remaja ini akan dihapus jika belum memiliki riwayat layanan. Gunakan Edit kalau cuma mau memperbaiki data."
-                                                    data-confirm-tone="danger">
-                                                Hapus
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </div>
-                        </article>
-                    @empty
-                        <div class="rounded-[28px] border border-dashed border-emerald-300 bg-emerald-50/70 p-10 text-center">
-                            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-slate-950 text-2xl font-black text-emerald-200">
-                                R
-                            </div>
-
-                            <h3 class="mt-5 text-xl font-black text-slate-950">
-                                Data Remaja tidak ditemukan
-                            </h3>
-
-                            <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-600">
-                                Data dengan kata kunci tersebut belum ada. Tambahkan data baru kalau memang belum masuk.
-                            </p>
-
-                            <a href="{{ $createRoute }}"
-                               class="mt-5 inline-flex h-12 items-center justify-center rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800">
-                                Tambah Remaja
-                            </a>
-                        </div>
-                    @endforelse
-                </div>
-
-                @if(method_exists($items, 'links'))
-                    <div id="remajaPagination" class="border-t border-emerald-100/80 bg-emerald-50/45 px-5 py-4">
-                        {{ $items->links() }}
+                </article>
+            @empty
+                <div class="rounded-[2rem] border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-12 text-center">
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-3xl font-black text-emerald-300 shadow-sm mb-4">
+                        <i class="fa-solid fa-user-graduate"></i>
                     </div>
-                @endif
-            </div>
-        </section>
+                    <h3 class="text-xl font-black text-slate-800">Data Remaja Kosong</h3>
+                    <p class="mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-slate-500">Tidak ada sasaran yang cocok dengan pencarian, atau database masih kosong.</p>
+                    <a href="{{ $createRoute }}" class="btn-pill mt-6 inline-flex bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors">
+                        Tambah Remaja Baru
+                    </a>
+                </div>
+            @endforelse
+        </div>
 
-        @if($routeHas('kader.data.remaja.bulk-delete'))
-            <form id="bulkDeleteForm" action="{{ $bulkDeleteRoute }}" method="POST" class="hidden">
-                @csrf
-                @method('DELETE')
-            </form>
+        {{-- PAGINATION CUSTOM TERBARU --}}
+        @if(method_exists($items, 'hasPages') && $items->hasPages())
+            <div id="remajaPagination" class="border-t border-slate-100 bg-slate-50/50 px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    Halaman <span class="text-slate-900">{{ $items->currentPage() }}</span> dari <span class="text-slate-900">{{ $items->lastPage() }}</span>
+                </p>
+                
+                <div class="flex items-center gap-2">
+                    {{-- Previous Page --}}
+                    @if ($items->onFirstPage())
+                        <button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </button>
+                    @else
+                        <a href="{{ $items->previousPageUrl() }}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">
+                            <i class="fas fa-chevron-left text-xs"></i>
+                        </a>
+                    @endif
+
+                    {{-- Page Numbers (Max 5 pages visible around current) --}}
+                    @php
+                        $start = max(1, $items->currentPage() - 2);
+                        $end = min($items->lastPage(), $items->currentPage() + 2);
+                    @endphp
+                    @for ($page = $start; $page <= $end; $page++)
+                        @if ($page == $items->currentPage())
+                            <span class="btn-pill w-10 h-10 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-md pointer-events-none">
+                                {{ $page }}
+                            </span>
+                        @else
+                            <a href="{{ $items->url($page) }}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-sm shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">
+                                {{ $page }}
+                            </a>
+                        @endif
+                    @endfor
+
+                    {{-- Next Page --}}
+                    @if ($items->hasMorePages())
+                        <a href="{{ $items->nextPageUrl() }}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </a>
+                    @else
+                        <button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    @endif
+                </div>
+            </div>
         @endif
-    </div>
+    </section>
+
+    {{-- BULK DELETE FORM (Dipakai untuk tombol atas "Hapus Terpilih") --}}
+    @if($routeHas('kader.data.remaja.bulk-delete'))
+        <form id="bulkDeleteForm" action="{{ $bulkDeleteRoute }}" method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
+        </form>
+    @endif
+
+    {{-- GLOBAL ACTION FORM (Dipakai secara otomatis oleh JS untuk semua aksi di baris) --}}
+    <form id="globalActionForm" method="POST" class="hidden">
+        @csrf
+        <input type="hidden" name="_method" id="globalActionMethod" value="POST">
+    </form>
 </div>
 @endsection
 
 @push('modals')
-<div id="nexusConfirmModal"
-     class="nexus-modal fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
-    <div class="nexus-modal-card w-full max-w-md overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_30px_100px_rgba(15,23,42,0.28)] backdrop-blur-2xl">
-        <div id="nexusConfirmHeader" class="relative overflow-hidden px-6 py-6 text-white">
-            <div class="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-white/10"></div>
-            <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-t-[80px] bg-amber-300/15"></div>
+{{-- MODAL KONFIRMASI (Z-Index Absolut Menutupi Layar Penuh) --}}
+<div id="nexusConfirmModal" class="pc-modal-backdrop">
+    <div class="pc-modal-card">
+        <div id="nexusConfirmHeader" class="relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-emerald-600 to-teal-700">
+            <div class="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-white/10 pointer-events-none"></div>
+            <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-t-[80px] bg-amber-300/15 pointer-events-none"></div>
 
-            <div class="relative">
-                <div id="nexusConfirmBadge" class="mb-4 inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-emerald-50">
-                    Konfirmasi
-                </div>
-
-                <h3 id="nexusConfirmTitle" class="text-2xl font-black tracking-tight">
-                    Konfirmasi Aksi
-                </h3>
-
-                <p id="nexusConfirmMessage" class="mt-2 text-sm font-semibold leading-6 text-white/75">
+            <div class="relative z-10">
+                <i id="nexusConfirmIcon" class="fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90"></i>
+                <h3 id="nexusConfirmTitle" class="text-xl font-black tracking-tight mb-1">Konfirmasi Aksi</h3>
+                <p id="nexusConfirmMessage" class="text-xs font-semibold leading-relaxed opacity-80 px-4">
                     Pastikan data sudah benar sebelum melanjutkan.
                 </p>
             </div>
         </div>
 
-        <div class="bg-gradient-to-br from-white via-emerald-50/50 to-amber-50/35 px-6 py-5">
-            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">
-                Aksi ini akan langsung diproses oleh sistem setelah tombol konfirmasi ditekan.
-            </div>
-
-            <div class="mt-5 grid grid-cols-2 gap-3">
-                <button type="button"
-                        id="nexusConfirmCancel"
-                        class="h-12 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50">
-                    Batal
-                </button>
-
-                <button type="button"
-                        id="nexusConfirmOk"
-                        class="h-12 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800">
-                    Lanjutkan
-                </button>
+        <div class="p-6 bg-white text-center">
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" id="nexusConfirmCancel" class="btn-pill h-11 border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>
+                <button type="button" id="nexusConfirmOk" class="btn-pill h-11 bg-emerald-600 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors">Lanjutkan</button>
             </div>
         </div>
     </div>
@@ -774,105 +614,208 @@
 
 @push('scripts')
 <script>
+    // DEKLARASI GLOBAL SANGAT AMAN
+    window.nexusPendingForm = null;
+    window.nexusPendingUrl = null;
+    window.nexusPendingMethod = null;
+
     document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('liveSearchForm');
-        const searchInput = document.getElementById('liveSearchInput');
-        const genderInput = document.getElementById('jenis_kelamin');
-        const statusInput = document.getElementById('status_akun');
-        const resetButton = document.getElementById('resetSearchButton');
-        const liveRegion = document.querySelector('[data-live-region]');
-        const liveState = document.getElementById('liveSearchState');
+        var form = document.getElementById('liveSearchForm');
+        var searchInput = document.getElementById('liveSearchInput');
+        var genderInput = document.getElementById('jenis_kelamin');
+        var statusInput = document.getElementById('status_akun');
+        var resetButton = document.getElementById('resetSearchButton');
+        var liveRegion = document.querySelector('[data-live-region]');
+        var liveState = document.getElementById('liveSearchState');
+        
+        var confirmModal = document.getElementById('nexusConfirmModal');
+        var confirmHeader = document.getElementById('nexusConfirmHeader');
+        var confirmIcon = document.getElementById('nexusConfirmIcon');
+        var confirmTitle = document.getElementById('nexusConfirmTitle');
+        var confirmMessage = document.getElementById('nexusConfirmMessage');
+        var confirmCancel = document.getElementById('nexusConfirmCancel');
+        var confirmOk = document.getElementById('nexusConfirmOk');
 
-        const confirmModal = document.getElementById('nexusConfirmModal');
-        const confirmHeader = document.getElementById('nexusConfirmHeader');
-        const confirmBadge = document.getElementById('nexusConfirmBadge');
-        const confirmTitle = document.getElementById('nexusConfirmTitle');
-        const confirmMessage = document.getElementById('nexusConfirmMessage');
-        const confirmCancel = document.getElementById('nexusConfirmCancel');
-        const confirmOk = document.getElementById('nexusConfirmOk');
+        var liveTimer = null;
+        var liveController = null;
 
-        let liveTimer = null;
-        let liveController = null;
-        let pendingForm = null;
+        // Pindahkan Modal ke Body agar z-index max bekerja dan menutupi Sidebar
+        if (confirmModal && confirmModal.parentElement !== document.body) {
+            document.body.appendChild(confirmModal);
+        }
 
+        function openConfirm(options) {
+            if (!confirmModal) return;
+            
+            var tone = options.tone || 'emerald';
+            confirmTitle.textContent = options.title || 'Konfirmasi Aksi';
+            confirmMessage.textContent = options.message || 'Pastikan data sudah benar sebelum melanjutkan.';
+
+            if (tone === 'danger') {
+                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-rose-600 to-rose-800';
+                confirmIcon.className = 'fa-solid fa-trash-can text-4xl mb-3 opacity-90';
+                confirmOk.className = 'btn-pill h-11 bg-rose-600 text-sm font-bold text-white shadow-md hover:bg-rose-700 transition-colors';
+            } else if (tone === 'gold') {
+                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-amber-500 to-orange-600';
+                confirmIcon.className = 'fa-solid fa-rotate text-4xl mb-3 opacity-90';
+                confirmOk.className = 'btn-pill h-11 bg-amber-500 text-sm font-bold text-amber-950 shadow-md hover:bg-amber-400 transition-colors';
+            } else {
+                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-emerald-600 to-teal-700';
+                confirmIcon.className = 'fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90';
+                confirmOk.className = 'btn-pill h-11 bg-emerald-600 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors';
+            }
+
+            confirmModal.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeConfirm() {
+            window.nexusPendingForm = null;
+            window.nexusPendingUrl = null;
+            window.nexusPendingMethod = null;
+            
+            if (confirmModal) confirmModal.classList.remove('is-open');
+            document.body.style.overflow = '';
+        }
+
+        // ==========================================
+        // SISTEM EVENT DELEGATION ANTI-BUG
+        // ==========================================
+        document.addEventListener('click', function (event) {
+            // Deteksi jika yang diklik adalah tombol/icon ber-atribut data-confirm-submit
+            var trigger = event.target.closest('[data-confirm-submit]');
+            
+            if (!trigger || trigger.disabled) return;
+
+            // HENTIKAN aksi bawaan HTML
+            event.preventDefault();
+
+            // 1. Cek apakah ini tombol Dinamis (Delete/Sync di dalam baris)
+            var actionUrl = trigger.getAttribute('data-action-url');
+            if (actionUrl) {
+                window.nexusPendingUrl = actionUrl;
+                window.nexusPendingMethod = trigger.getAttribute('data-action-method') || 'POST';
+                window.nexusPendingForm = null;
+            } 
+            // 2. Jika bukan, berarti tombol Statis (Bulk Delete)
+            else {
+                var formId = trigger.getAttribute('data-confirm-form');
+                window.nexusPendingForm = formId ? document.getElementById(formId) : trigger.closest('form');
+                window.nexusPendingUrl = null;
+                
+                if (!window.nexusPendingForm) {
+                    alert('Sistem Error: Form tidak ditemukan!');
+                    return;
+                }
+            }
+
+            openConfirm({
+                title: trigger.getAttribute('data-confirm-title'),
+                message: trigger.getAttribute('data-confirm-message'),
+                tone: trigger.getAttribute('data-confirm-tone')
+            });
+        });
+
+        // Eksekusi Submit
+        if (confirmOk) {
+            confirmOk.addEventListener('click', function () {
+                // A. Submit Form Dinamis (Delete/Sync Baris)
+                if (window.nexusPendingUrl) {
+                    var globalForm = document.getElementById('globalActionForm');
+                    var globalMethod = document.getElementById('globalActionMethod');
+                    
+                    if (globalForm && globalMethod) {
+                        globalForm.action = window.nexusPendingUrl;
+                        globalMethod.value = window.nexusPendingMethod;
+                        
+                        closeConfirm();
+                        
+                        // Efek Loading Mencegah Double Click
+                        confirmOk.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
+                        confirmOk.disabled = true;
+                        
+                        HTMLFormElement.prototype.submit.call(globalForm);
+                    }
+                } 
+                // B. Submit Form Statis (Bulk Delete)
+                else if (window.nexusPendingForm) {
+                    var targetForm = window.nexusPendingForm;
+                    closeConfirm();
+                    HTMLFormElement.prototype.submit.call(targetForm);
+                }
+            });
+        }
+
+        // ==========================================
+        // SISTEM LIVE SEARCH & FILTER
+        // ==========================================
         function bindBulkSelection() {
-            const selectAll = document.getElementById('selectAllRemaja');
-            const checks = Array.from(document.querySelectorAll('.remaja-check'));
-            const bulkButton = document.getElementById('bulkDeleteButton');
+            var selectAll = document.getElementById('selectAllRemaja');
+            var checks = Array.from(document.querySelectorAll('.remaja-check'));
+            var bulkButton = document.getElementById('bulkDeleteButton');
 
             function refresh() {
-                const checkedCount = checks.filter(function (item) {
-                    return item.checked;
-                }).length;
-
+                var checkedCount = checks.filter(function(item) { return item.checked; }).length;
                 if (bulkButton) {
                     bulkButton.disabled = checkedCount === 0;
-                    bulkButton.classList.toggle('opacity-50', checkedCount === 0);
+                    if(checkedCount === 0) {
+                        bulkButton.classList.add('opacity-50', 'cursor-not-allowed');
+                        bulkButton.classList.remove('hover:bg-rose-500', 'hover:text-white', 'shadow-md');
+                    } else {
+                        bulkButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                        bulkButton.classList.add('hover:bg-rose-500', 'hover:text-white', 'shadow-md');
+                    }
                 }
-
                 if (selectAll) {
                     selectAll.checked = checks.length > 0 && checkedCount === checks.length;
                     selectAll.indeterminate = checkedCount > 0 && checkedCount < checks.length;
                 }
             }
 
-            selectAll?.addEventListener('change', function () {
-                checks.forEach(function (item) {
-                    item.checked = selectAll.checked;
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    checks.forEach(function(item) { item.checked = selectAll.checked; });
+                    refresh();
                 });
+            }
 
-                refresh();
-            });
-
-            checks.forEach(function (item) {
-                item.addEventListener('change', refresh);
-            });
-
+            checks.forEach(function(item) { item.addEventListener('change', refresh); });
             refresh();
         }
 
         function buildSearchUrl(pageUrl) {
-            const base = pageUrl || form.action;
-            const url = new URL(base, window.location.origin);
+            var base = pageUrl || form.action;
+            var url = new URL(base, window.location.origin);
+            var keyword = searchInput.value.trim();
+            var gender = genderInput.value || 'semua';
+            var status = statusInput.value || 'semua';
 
-            const keyword = searchInput.value.trim();
-            const gender = genderInput.value || 'semua';
-            const status = statusInput.value || 'semua';
-
-            keyword ? url.searchParams.set('search', keyword) : url.searchParams.delete('search');
-            gender !== 'semua' ? url.searchParams.set('jenis_kelamin', gender) : url.searchParams.delete('jenis_kelamin');
-            status !== 'semua' ? url.searchParams.set('status_akun', status) : url.searchParams.delete('status_akun');
-
+            if(keyword) url.searchParams.set('search', keyword); else url.searchParams.delete('search');
+            if(gender !== 'semua') url.searchParams.set('jenis_kelamin', gender); else url.searchParams.delete('jenis_kelamin');
+            if(status !== 'semua') url.searchParams.set('status_akun', status); else url.searchParams.delete('status_akun');
             return url;
         }
 
         async function loadLiveResults(pageUrl) {
             if (!form || !liveRegion) return;
-
-            if (liveController) {
-                liveController.abort();
-            }
-
+            if (liveController) liveController.abort();
+            
             liveController = new AbortController();
-
-            const url = buildSearchUrl(pageUrl);
+            var url = buildSearchUrl(pageUrl);
 
             liveRegion.classList.add('live-loading');
-            liveState?.classList.remove('hidden');
+            if (liveState) liveState.classList.remove('hidden');
 
             try {
-                const response = await fetch(url.toString(), {
+                var response = await fetch(url.toString(), {
                     method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'text/html'
-                    },
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
                     signal: liveController.signal
                 });
 
-                const html = await response.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-                const nextRegion = doc.querySelector('[data-live-region]');
+                var html = await response.text();
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var nextRegion = doc.querySelector('[data-live-region]');
 
                 if (!nextRegion) {
                     window.location.href = url.toString();
@@ -885,131 +828,54 @@
                 bindBulkSelection();
                 bindPaginationLinks();
             } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('Live search gagal:', error);
-                }
+                if (error.name !== 'AbortError') console.error('Live search gagal:', error);
             } finally {
                 liveRegion.classList.remove('live-loading');
-                liveState?.classList.add('hidden');
+                if (liveState) liveState.classList.add('hidden');
             }
         }
 
         function scheduleSearch() {
             clearTimeout(liveTimer);
-            liveTimer = setTimeout(function () {
-                loadLiveResults();
-            }, 260);
+            liveTimer = setTimeout(loadLiveResults, 260);
         }
 
         function bindPaginationLinks() {
-            document.querySelectorAll('#remajaPagination a').forEach(function (link) {
+            document.querySelectorAll('#remajaPagination a').forEach(function(link) {
                 link.addEventListener('click', function (event) {
                     event.preventDefault();
                     loadLiveResults(link.href);
+                    var reg = document.getElementById('remajaLiveRegion');
+                    if(reg) reg.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
             });
         }
 
-        function openConfirm(options) {
-            const tone = options.tone || 'emerald';
-
-            confirmTitle.textContent = options.title || 'Konfirmasi Aksi';
-            confirmMessage.textContent = options.message || 'Pastikan data sudah benar sebelum melanjutkan.';
-            confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white';
-
-            if (tone === 'danger') {
-                confirmHeader.classList.add('bg-gradient-to-br', 'from-rose-950', 'via-rose-800', 'to-orange-700');
-                confirmBadge.textContent = 'Aksi Hapus';
-                confirmOk.className = 'h-12 rounded-2xl bg-rose-600 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(225,29,72,0.22)] transition hover:bg-rose-700';
-            } else if (tone === 'gold') {
-                confirmHeader.classList.add('bg-gradient-to-br', 'from-amber-950', 'via-amber-700', 'to-emerald-800');
-                confirmBadge.textContent = 'Sinkronisasi';
-                confirmOk.className = 'h-12 rounded-2xl bg-amber-500 px-5 text-sm font-black text-amber-950 shadow-[0_14px_35px_rgba(245,158,11,0.22)] transition hover:bg-amber-400';
-            } else {
-                confirmHeader.classList.add('bg-gradient-to-br', 'from-emerald-950', 'via-emerald-800', 'to-teal-700');
-                confirmBadge.textContent = 'Konfirmasi';
-                confirmOk.className = 'h-12 rounded-2xl bg-emerald-700 px-5 text-sm font-black text-white shadow-[0_14px_35px_rgba(4,120,87,0.22)] transition hover:bg-emerald-800';
-            }
-
-            confirmModal.classList.add('is-open');
-            document.body.classList.add('overflow-hidden');
-        }
-
-        function closeConfirm() {
-            pendingForm = null;
-            confirmModal?.classList.remove('is-open');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        searchInput?.addEventListener('input', function () {
-            this.value = this.value.replace(/\s+/g, ' ');
-            scheduleSearch();
-        });
-
-        genderInput?.addEventListener('change', function () {
-            loadLiveResults();
-        });
-
-        statusInput?.addEventListener('change', function () {
-            loadLiveResults();
-        });
-
-        form?.addEventListener('submit', function (event) {
-            event.preventDefault();
-            loadLiveResults();
-        });
-
-        resetButton?.addEventListener('click', function (event) {
-            event.preventDefault();
-
-            searchInput.value = '';
-            genderInput.value = 'semua';
-            statusInput.value = 'semua';
-
-            loadLiveResults(form.action);
-        });
-
-        document.addEventListener('click', function (event) {
-            const trigger = event.target.closest('[data-confirm-submit]');
-
-            if (!trigger || trigger.disabled) return;
-
-            const formId = trigger.dataset.confirmForm;
-            pendingForm = formId ? document.getElementById(formId) : trigger.closest('form');
-
-            if (!pendingForm) return;
-
-            openConfirm({
-                title: trigger.dataset.confirmTitle,
-                message: trigger.dataset.confirmMessage,
-                tone: trigger.dataset.confirmTone
+        // Search & Filter Events
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                this.value = this.value.replace(/\s+/g, ' ');
+                scheduleSearch();
             });
-        });
+        }
+        if (genderInput) genderInput.addEventListener('change', loadLiveResults);
+        if (statusInput) statusInput.addEventListener('change', loadLiveResults);
+        if (form) form.addEventListener('submit', function(e) { e.preventDefault(); loadLiveResults(); });
+        
+        if (resetButton) {
+            resetButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                searchInput.value = '';
+                genderInput.value = 'semua';
+                statusInput.value = 'semua';
+                loadLiveResults(form.action);
+            });
+        }
 
-        confirmCancel?.addEventListener('click', closeConfirm);
-
-        confirmModal?.addEventListener('click', function (event) {
-            if (event.target === confirmModal) closeConfirm();
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && confirmModal?.classList.contains('is-open')) closeConfirm();
-        });
-
-        confirmOk?.addEventListener('click', function () {
-            if (!pendingForm) {
-                closeConfirm();
-                return;
-            }
-
-            const targetForm = pendingForm;
-            pendingForm = null;
-
-            confirmModal?.classList.remove('is-open');
-            document.body.classList.remove('overflow-hidden');
-
-            HTMLFormElement.prototype.submit.call(targetForm);
-        });
+        // Modal Events
+        if (confirmCancel) confirmCancel.addEventListener('click', closeConfirm);
+        if (confirmModal) confirmModal.addEventListener('click', function(e) { if (e.target === confirmModal) closeConfirm(); });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && confirmModal && confirmModal.classList.contains('is-open')) closeConfirm(); });
 
         bindBulkSelection();
         bindPaginationLinks();

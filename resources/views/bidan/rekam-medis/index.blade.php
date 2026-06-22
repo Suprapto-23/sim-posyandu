@@ -9,38 +9,39 @@
     $type = $type ?? request('type', 'balita');
     $search = $search ?? request('search', '');
 
+    // KONSISTENSI WARNA: Semua menggunakan identitas Emerald Posyandu
     $typeOptions = $typeOptions ?? [
-        'balita' => [
-            'label' => 'Balita',
-            'desc' => 'Riwayat pertumbuhan, pemeriksaan dasar, dan imunisasi.',
-            'icon' => 'ph-baby',
-            'theme' => 'sky',
-        ],
-        'remaja' => [
-            'label' => 'Remaja',
-            'desc' => 'Riwayat pemeriksaan kesehatan remaja.',
-            'icon' => 'ph-user-focus',
-            'theme' => 'indigo',
-        ],
-        'lansia' => [
-            'label' => 'Lansia',
-            'desc' => 'Riwayat pemeriksaan dasar dan pemantauan kesehatan lansia.',
-            'icon' => 'ph-heartbeat',
-            'theme' => 'emerald',
-        ],
+        'balita' => ['label' => 'Balita', 'desc' => 'Riwayat pertumbuhan, pemeriksaan dasar, dan imunisasi.'],
+        'remaja' => ['label' => 'Remaja', 'desc' => 'Riwayat pemeriksaan kesehatan dan pemantauan gizi remaja.'],
+        'lansia' => ['label' => 'Lansia', 'desc' => 'Riwayat pemeriksaan dasar dan pemantauan kesehatan lansia.'],
     ];
 
+    $getUiTheme = function ($key) {
+        return match ($key) {
+            'remaja' => [
+                'icon' => 'fa-user-graduate',
+                'theme' => 'emerald',
+                'gradient' => 'from-teal-500 via-emerald-500 to-green-500',
+                'shadow' => 'shadow-emerald-500/20'
+            ],
+            'lansia' => [
+                'icon' => 'fa-person-cane',
+                'theme' => 'emerald',
+                'gradient' => 'from-emerald-600 via-teal-500 to-emerald-500',
+                'shadow' => 'shadow-emerald-500/20'
+            ],
+            default => [
+                'icon' => 'fa-baby',
+                'theme' => 'emerald',
+                'gradient' => 'from-emerald-400 via-emerald-500 to-teal-500',
+                'shadow' => 'shadow-emerald-500/20'
+            ],
+        };
+    };
+
     $stats = $stats ?? [
-        'total' => [
-            'balita' => 0,
-            'remaja' => 0,
-            'lansia' => 0,
-        ],
-        'verified' => [
-            'balita' => 0,
-            'remaja' => 0,
-            'lansia' => 0,
-        ],
+        'total' => ['balita' => 0, 'remaja' => 0, 'lansia' => 0],
+        'verified' => ['balita' => 0, 'remaja' => 0, 'lansia' => 0],
         'total_semua' => 0,
         'verified_semua' => 0,
     ];
@@ -48,383 +49,216 @@
     $getValue = function ($item, array $keys, mixed $default = '-') {
         foreach ($keys as $key) {
             $value = data_get($item, $key);
-
-            if ($value !== null && $value !== '') {
-                return $value;
-            }
+            if ($value !== null && $value !== '') return $value;
         }
-
         return $default;
     };
 
-    $getNama = function ($item) use ($getValue) {
-        return $getValue($item, ['nama_lengkap', 'nama', 'nama_balita', 'nama_remaja', 'nama_lansia'], 'Nama tidak tersedia');
-    };
-
-    $getNik = function ($item) use ($getValue) {
-        return $getValue($item, ['nik', 'nik_anak', 'nik_remaja', 'nik_lansia'], '-');
-    };
-
-    $getAlamat = function ($item) use ($getValue) {
-        return $getValue($item, ['alamat', 'alamat_lengkap', 'dusun'], '-');
-    };
-
-    $getKontak = function ($item) use ($getValue) {
-        return $getValue($item, ['no_hp', 'nomor_hp', 'telepon', 'no_telepon'], '-');
-    };
-
+    $getNama = fn($item) => $getValue($item, ['nama_lengkap', 'nama', 'nama_balita', 'nama_remaja', 'nama_lansia'], 'Nama tidak tersedia');
+    $getNik = fn($item) => $getValue($item, ['nik', 'nik_anak', 'nik_remaja', 'nik_lansia'], '-');
+    $getAlamat = fn($item) => $getValue($item, ['alamat', 'alamat_lengkap', 'dusun'], '-');
+    $getKontak = fn($item) => $getValue($item, ['no_hp', 'nomor_hp', 'telepon', 'no_telepon'], '-');
+    
     $getWali = function ($item) use ($getValue, $type) {
-        if ($type === 'balita') {
-            return $getValue($item, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
-        }
-
-        if ($type === 'remaja') {
-            return $getValue($item, ['nama_orang_tua', 'nama_wali', 'sekolah'], '-');
-        }
-
+        if ($type === 'balita') return $getValue($item, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
+        if ($type === 'remaja') return $getValue($item, ['nama_orang_tua', 'nama_wali', 'sekolah'], '-');
         return $getValue($item, ['kontak_keluarga', 'nama_keluarga', 'nama_wali'], '-');
     };
 
     $getGender = function ($item) use ($getValue) {
         $gender = strtolower((string) $getValue($item, ['jenis_kelamin', 'jk', 'gender'], '-'));
-
         return match ($gender) {
-            'l', 'laki-laki', 'laki laki', 'male' => 'Laki-laki',
+            'l', 'laki-laki', 'male' => 'Laki-laki',
             'p', 'perempuan', 'female' => 'Perempuan',
             default => $gender === '-' ? '-' : ucfirst($gender),
         };
     };
 
     $formatDate = function ($date) {
-        if (!$date) {
-            return '-';
-        }
-
-        try {
-            return \Carbon\Carbon::parse($date)->translatedFormat('d M Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
+        if (!$date) return '-';
+        try { return \Carbon\Carbon::parse($date)->translatedFormat('d M Y'); } catch (\Throwable $e) { return '-'; }
     };
 
-    $getTanggalLahir = function ($item) use ($getValue, $formatDate) {
-        return $formatDate($getValue($item, ['tanggal_lahir', 'tgl_lahir', 'lahir'], null));
-    };
-
-    $themeMeta = function ($key) {
-        return match ($key) {
-            'remaja' => [
-                'badge' => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-                'iconBox' => 'bg-indigo-50 text-indigo-700 ring-indigo-100',
-                'active' => 'border-indigo-200 bg-indigo-50/80 text-indigo-700',
-            ],
-            'lansia' => [
-                'badge' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-                'iconBox' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-                'active' => 'border-emerald-200 bg-emerald-50/80 text-emerald-700',
-            ],
-            default => [
-                'badge' => 'bg-sky-50 text-sky-700 ring-sky-200',
-                'iconBox' => 'bg-sky-50 text-sky-700 ring-sky-100',
-                'active' => 'border-sky-200 bg-sky-50/80 text-sky-700',
-            ],
-        };
-    };
+    $getTanggalLahir = fn($item) => $formatDate($getValue($item, ['tanggal_lahir', 'tgl_lahir', 'lahir'], null));
 
     $currentTypeMeta = $typeOptions[$type] ?? $typeOptions['balita'];
-    $currentTheme = $themeMeta($type);
-
+    $currentUi = $getUiTheme($type);
+    
     $totalCurrent = (int) data_get($stats, "total.$type", 0);
     $verifiedCurrent = (int) data_get($stats, "verified.$type", 0);
-
     $visibleCount = method_exists($data, 'count') ? $data->count() : count($data);
 
     $summaryCards = [
-        [
-            'label' => 'Total Sasaran',
-            'value' => $totalCurrent,
-            'icon' => $currentTypeMeta['icon'] ?? 'ph-users-three',
-            'class' => $currentTheme['iconBox'],
-        ],
-        [
-            'label' => 'Rekam Medis',
-            'value' => $verifiedCurrent,
-            'icon' => 'ph-folder-simple-user',
-            'class' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
-        ],
-        [
-            'label' => 'Semua Sasaran',
-            'value' => data_get($stats, 'total_semua', 0),
-            'icon' => 'ph-users-three',
-            'class' => 'bg-slate-50 text-slate-700 ring-slate-100',
-        ],
-        [
-            'label' => 'Total Tervalidasi',
-            'value' => data_get($stats, 'verified_semua', 0),
-            'icon' => 'ph-check-circle',
-            'class' => 'bg-cyan-50 text-cyan-700 ring-cyan-100',
-        ],
+        ['label' => 'Total Sasaran', 'value' => $totalCurrent, 'icon' => $currentUi['icon'], 'theme' => $currentUi['theme']],
+        ['label' => 'Rekam Medis Tervalidasi', 'value' => $verifiedCurrent, 'icon' => 'fa-file-medical', 'theme' => 'emerald'],
+        ['label' => 'Semua Sasaran', 'value' => data_get($stats, 'total_semua', 0), 'icon' => 'fa-users', 'theme' => 'slate'],
+        ['label' => 'Total Tervalidasi', 'value' => data_get($stats, 'verified_semua', 0), 'icon' => 'fa-check-circle', 'theme' => 'teal'],
     ];
 @endphp
 
 @push('styles')
 <style>
-    .nexus-font {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    html { scroll-behavior: smooth; }
+    body { background-color: #f4f7f6; } 
+
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        pointer-events: none;
     }
 
-    .nexus-page-enter {
-        animation: nexusMainIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
+    .widget-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transform: translateZ(0); 
+        will-change: transform, box-shadow;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .widget-card:hover {
+        transform: translateY(-2px) translateZ(0);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
     }
 
-    .nexus-panel-enter {
-        animation: nexusPanelIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
-    }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
+    .btn-pill:active { transform: scale(0.97); }
 
-    .nexus-scroll {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(16, 185, 129, .35) transparent;
-    }
+    .slim-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    .slim-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 9999px; }
+    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(16, 185, 129, 0.5); }
 
-    .nexus-scroll::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    .nexus-scroll::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .nexus-scroll::-webkit-scrollbar-thumb {
-        background: rgba(16, 185, 129, .35);
-        border-radius: 999px;
-    }
-
-    .nexus-live-hidden {
-        display: none !important;
-    }
-
-    .nexus-list-stable {
-        min-height: 420px;
-        contain: layout paint;
-    }
-
-    @keyframes nexusMainIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 3px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @keyframes nexusPanelIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 2px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation-duration: .08s;
-        }
-
-        .nexus-list-stable {
-            min-height: 320px;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation: none !important;
-        }
-    }
+    .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 </style>
 @endpush
 
 @section('content')
-<div class="nexus-font nexus-page-enter space-y-5 pb-8 text-slate-800">
+<div class="bg-mesh-fixed"></div>
 
-    {{-- HEADER --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div class="min-w-0">
-                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
-                    <i class="ph ph-folder-simple-user text-base"></i>
-                    Arsip Kesehatan
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 animate-pop-in">
+
+    {{-- 1. HEADER BANNER DINAMIS --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r {{ $currentUi['gradient'] }} p-8 sm:p-10 shadow-2xl {{ $currentUi['shadow'] }} flex flex-col lg:flex-row justify-between items-center gap-8 border-[6px] border-white/40" style="transform: translateZ(0);">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-4 text-center lg:text-left">
+            <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+                    <i class="fa-solid fa-folder-tree"></i> Arsip Kesehatan
+                </span>
+            </div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                Rekam Medis {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
+            </h1>
+
+            <p class="text-white/90 text-sm font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+                Akses ringkas riwayat pemeriksaan klinis yang telah divalidasi oleh Bidan untuk sasaran {{ $currentTypeMeta['label'] ?? ucfirst($type) }}.
+            </p>
+        </div>
+
+        <div class="relative z-10 w-full lg:w-1/3 flex justify-center lg:justify-end">
+            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/20 border border-white/30 backdrop-blur-md px-6 py-4 flex items-center gap-5">
+                <div>
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-white/90">Total Tampil</span>
+                    <span class="block text-3xl font-black text-white mt-0.5" id="rekamMedisVisibleCount">{{ $visibleCount }}</span>
                 </div>
-
-                <h1 class="mt-4 max-w-4xl text-[26px] font-black leading-tight tracking-[-0.025em] text-slate-900 md:text-[30px]">
-                    Rekam Medis {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
-                </h1>
-
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Akses ringkas riwayat pemeriksaan tervalidasi untuk Balita, Remaja, dan Lansia. Data imunisasi hanya ditampilkan pada sasaran Balita.
-                </p>
-
-                <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-black ring-1 {{ $currentTheme['badge'] }}">
-                        <i class="ph {{ $currentTypeMeta['icon'] ?? 'ph-users-three' }}"></i>
-                        {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-database"></i>
-                        <span id="rekamMedisVisibleCount">{{ $visibleCount }}</span>
-                        data tampil
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-magnifying-glass"></i>
-                        Live search: nama / NIK
-                    </span>
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-{{ $currentUi['theme'] }}-500 shadow-lg">
+                    <i class="fa-solid fa-database text-2xl"></i>
                 </div>
             </div>
         </div>
     </section>
 
-    {{-- SUMMARY --}}
-    <section class="nexus-panel-enter grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {{-- 2. SUMMARY CARDS --}}
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         @foreach($summaryCards as $card)
-            <div class="rounded-[22px] border border-white/80 bg-white/85 p-4 shadow-sm shadow-slate-200/70 backdrop-blur">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="truncate text-xs font-black uppercase tracking-[0.12em] text-slate-400">
-                            {{ $card['label'] }}
-                        </p>
-
-                        <h2 class="mt-2 line-clamp-1 text-xl font-black tracking-tight text-slate-900">
-                            {{ $card['value'] }}
-                        </h2>
-                    </div>
-
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $card['class'] }}">
-                        <i class="ph {{ $card['icon'] }} text-lg"></i>
-                    </div>
+            <div class="widget-card p-5 group flex items-center justify-between">
+                <div>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 group-hover:text-{{ $card['theme'] }}-500 transition-colors">{{ $card['label'] }}</p>
+                    <h2 class="text-3xl font-black text-slate-800 leading-none">{{ $card['value'] }}</h2>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 border border-{{ $card['theme'] }}-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid {{ $card['icon'] }}"></i>
                 </div>
             </div>
         @endforeach
     </section>
 
-    {{-- TYPE SELECTOR --}}
-    <section class="nexus-panel-enter grid gap-3 md:grid-cols-3">
+    {{-- 3. TYPE SELECTOR (TABS) --}}
+    <section class="grid gap-4 md:grid-cols-3">
         @foreach($typeOptions as $key => $option)
-            @php
-                $theme = $themeMeta($key);
-                $active = $type === $key;
+            @php 
+                $active = $type === $key; 
+                $ui = $getUiTheme($key);
             @endphp
-
             <a href="{{ route('bidan.rekam-medis.index', ['type' => $key]) }}"
-               class="rounded-[22px] border p-4 shadow-sm shadow-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-md {{ $active ? $theme['active'] : 'border-white/80 bg-white/85 text-slate-600 hover:bg-slate-50' }}">
-                <div class="flex gap-3">
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $theme['iconBox'] }}">
-                        <i class="ph {{ $option['icon'] }} text-lg"></i>
+               class="widget-card p-5 border-2 transition-all {{ $active ? 'border-'.$ui['theme'].'-400 shadow-md shadow-'.$ui['theme'].'-500/10 bg-'.$ui['theme'].'-50/30' : 'border-transparent hover:border-emerald-200' }}">
+                <div class="flex gap-4 items-center">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border bg-white shadow-sm {{ $active ? 'text-'.$ui['theme'].'-500 border-'.$ui['theme'].'-200' : 'text-slate-400 border-slate-100' }}">
+                        <i class="fa-solid {{ $ui['icon'] }} text-2xl"></i>
                     </div>
-
                     <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-black text-slate-900">
-                                {{ $option['label'] }}
-                            </h3>
-
-                            <span class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-500 ring-1 ring-slate-100">
-                                {{ data_get($stats, "total.$key", 0) }}
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="text-base font-black text-slate-800">{{ $option['label'] }}</h3>
+                            <span class="rounded-md bg-white px-2 py-0.5 text-[10px] font-black border shadow-sm {{ $active ? 'text-'.$ui['theme'].'-600 border-'.$ui['theme'].'-200' : 'text-slate-400 border-slate-200' }}">
+                                {{ data_get($stats, "total.$key", 0) }} Data
                             </span>
                         </div>
-
-                        <p class="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">
-                            {{ $option['desc'] }}
-                        </p>
+                        <p class="truncate text-[11px] font-semibold text-slate-500">{{ $option['desc'] }}</p>
                     </div>
                 </div>
             </a>
         @endforeach
     </section>
 
-    {{-- CONTENT --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="mb-5 grid gap-4 xl:grid-cols-[170px_minmax(0,1fr)] xl:items-center">
-            <div class="min-w-0">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                    Direktori
-                </p>
-
-                <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                    Data {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
-                </h2>
+    {{-- 4. MAIN TABLE AREA (FIXED HEIGHT & SCROLLABLE) --}}
+    <section class="widget-card overflow-hidden flex flex-col relative">
+        
+        {{-- Header & Pencarian --}}
+        <div class="p-6 border-b border-slate-100 bg-white flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between shrink-0 z-20">
+            <div class="min-w-0 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-{{ $currentUi['theme'] }}-50 text-{{ $currentUi['theme'] }}-500 flex items-center justify-center text-lg shadow-sm border border-{{ $currentUi['theme'] }}-100"><i class="fa-solid fa-address-book"></i></div>
+                <div>
+                    <h2 class="text-base font-black tracking-tight text-slate-800 uppercase">Direktori Pasien</h2>
+                    <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Database {{ $currentTypeMeta['label'] ?? ucfirst($type) }}</p>
+                </div>
             </div>
 
-            <form method="GET"
-                  action="{{ route('bidan.rekam-medis.index') }}"
-                  class="grid w-full gap-2 md:grid-cols-[1fr_auto_auto]">
+            <form method="GET" action="{{ route('bidan.rekam-medis.index') }}" class="flex w-full gap-2 xl:max-w-md relative">
                 <input type="hidden" name="type" value="{{ $type }}">
-
-                <div class="relative">
-                    <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-
-                    <input type="text"
-                           id="rekamMedisLiveSearch"
-                           name="search"
-                           value="{{ $search }}"
-                           autocomplete="off"
-                           spellcheck="false"
-                           inputmode="search"
-                           placeholder="Cari nama atau NIK..."
-                           class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-11 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">
-
-                    <button type="button"
-                            id="rekamMedisClearSearch"
-                            class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-                        <i class="ph ph-x text-sm"></i>
-                    </button>
-                </div>
-
-                <button type="submit"
-                        class="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
-                    <i class="ph ph-funnel"></i>
-                    Filter
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="rekamMedisLiveSearch" name="search" value="{{ $search }}" autocomplete="off" placeholder="Cari nama atau NIK sasaran..."
+                       class="w-full rounded-[1.2rem] border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-{{ $currentUi['theme'] }}-400 focus:bg-white focus:ring-4 focus:ring-{{ $currentUi['theme'] }}-100 shadow-inner">
+                
+                <button type="button" id="rekamMedisClearSearch" class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
-
-                @if($search)
-                    <a href="{{ route('bidan.rekam-medis.index', ['type' => $type]) }}"
-                       class="inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
-                        Reset
-                    </a>
-                @endif
             </form>
         </div>
 
-        <div class="nexus-list-stable">
-
-            {{-- DESKTOP TABLE --}}
-            <div class="nexus-scroll hidden max-h-[620px] overflow-auto lg:block">
-                <table class="min-w-[1100px] w-full border-separate border-spacing-y-3">
-                    <thead class="sticky top-0 z-10 bg-white/95 backdrop-blur">
-                        <tr class="text-left text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
-                            <th class="px-4 py-3">Pasien</th>
-                            <th class="px-4 py-3">NIK</th>
-                            <th class="px-4 py-3">Jenis Kelamin</th>
-                            <th class="px-4 py-3">Tanggal Lahir</th>
-                            <th class="px-4 py-3">Wali / Kontak</th>
-                            <th class="px-4 py-3">Alamat</th>
-                            <th class="px-4 py-3 text-right">Aksi</th>
+        {{-- Tabel Scrollable Area (Kunci Presisi max-h-[600px]) --}}
+        <div class="min-h-[200px] max-h-[600px] overflow-y-auto overflow-x-auto slim-scroll relative bg-slate-50/30">
+            <div class="hidden lg:block w-full min-w-[1000px]">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
+                        <tr>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Pasien</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">NIK</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Gender / Usia</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Wali / Kontak</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">Alamat Domisili</th>
+                            <th class="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Aksi</th>
                         </tr>
                     </thead>
-
-                    <tbody>
+                    <tbody id="rekamMedisTableBody" class="divide-y divide-slate-100 bg-white">
                         @forelse($data as $pasien)
                             @php
                                 $nama = $getNama($pasien);
@@ -439,86 +273,46 @@
                                 $searchNik = mb_strtolower(trim((string) $nik), 'UTF-8');
                             @endphp
 
-                            <tr class="js-rekam-row"
-                                data-name="{{ $searchName }}"
-                                data-nik="{{ $searchNik }}">
-                                <td class="rounded-l-2xl border-y border-l border-slate-100 bg-slate-50/80 px-4 py-4">
+                            <tr class="js-rekam-row hover:bg-slate-50/80 transition-colors group" data-name="{{ $searchName }}" data-nik="{{ $searchNik }}">
+                                <td class="px-6 py-5 align-middle">
                                     <div class="flex items-center gap-3">
-                                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $currentTheme['iconBox'] }}">
-                                            <i class="ph {{ $currentTypeMeta['icon'] ?? 'ph-user' }} text-lg"></i>
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 border border-slate-200 group-hover:border-{{ $currentUi['theme'] }}-300 group-hover:text-{{ $currentUi['theme'] }}-500 transition-colors">
+                                            <i class="fa-solid fa-user text-sm"></i>
                                         </div>
-
                                         <div class="min-w-0">
-                                            <p class="max-w-[240px] truncate text-sm font-black text-slate-900">
-                                                {{ $nama }}
-                                            </p>
-
-                                            <p class="mt-1 text-xs font-semibold text-slate-500">
-                                                {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
-                                            </p>
+                                            <p class="text-sm font-bold text-slate-800 group-hover:text-{{ $currentUi['theme'] }}-600 transition-colors">{{ $nama }}</p>
+                                            <span class="mt-1 inline-flex rounded-md bg-{{ $currentUi['theme'] }}-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-{{ $currentUi['theme'] }}-600 border border-{{ $currentUi['theme'] }}-100">{{ $currentTypeMeta['label'] ?? ucfirst($type) }}</span>
                                         </div>
                                     </div>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <p class="whitespace-nowrap text-sm font-black text-slate-700">
-                                        {{ $nik }}
-                                    </p>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-xs font-bold text-slate-600 font-mono">{{ $nik }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <span class="inline-flex rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200">
-                                        {{ $gender }}
-                                    </span>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-xs font-black text-slate-700">{{ $gender }}</p>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5"><i class="fa-solid fa-cake-candles mr-1"></i> {{ $tanggalLahir }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <p class="whitespace-nowrap text-sm font-bold text-slate-600">
-                                        {{ $tanggalLahir }}
-                                    </p>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-xs font-bold text-slate-700">{{ $wali }}</p>
+                                    <p class="text-[10px] font-semibold text-slate-400 mt-0.5 flex items-center gap-1"><i class="fa-solid fa-phone"></i> {{ $kontak }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <div class="min-w-0">
-                                        <p class="max-w-[180px] truncate text-sm font-black text-slate-700">
-                                            {{ $wali }}
-                                        </p>
-
-                                        <p class="mt-1 max-w-[180px] truncate text-xs font-semibold text-slate-500">
-                                            {{ $kontak }}
-                                        </p>
-                                    </div>
+                                <td class="px-6 py-5 align-middle">
+                                    <p class="text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title="{{ $alamat }}"><i class="fa-solid fa-map-location-dot text-slate-400 mr-1"></i> {{ $alamat }}</p>
                                 </td>
-
-                                <td class="border-y border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <p class="max-w-[250px] truncate text-sm font-semibold text-slate-500">
-                                        {{ $alamat }}
-                                    </p>
-                                </td>
-
-                                <td class="rounded-r-2xl border-y border-r border-slate-100 bg-slate-50/80 px-4 py-4">
-                                    <div class="flex justify-end">
-                                        <a href="{{ route('bidan.rekam-medis.show', [$type, $pasien->id]) }}"
-                                           class="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-700">
-                                            Detail
-                                        </a>
-                                    </div>
+                                <td class="px-6 py-5 align-middle text-right">
+                                    <a href="{{ route('bidan.rekam-medis.show', [$type, $pasien->id]) }}" class="btn-pill inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 text-[10px] font-black uppercase tracking-widest shadow-md hover:bg-{{ $currentUi['theme'] }}-600 transition-colors">
+                                        <i class="fa-solid fa-folder-open"></i> Buka Berkas
+                                    </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                                        <i class="ph ph-folder-simple-dashed text-3xl"></i>
+                                <td colspan="6" class="p-14 text-center bg-white">
+                                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100 text-slate-300 mb-4 shadow-inner">
+                                        <i class="fa-solid fa-folder-open text-3xl"></i>
                                     </div>
-
-                                    <h3 class="mt-4 text-base font-black text-slate-800">
-                                        Data Tidak Ditemukan
-                                    </h3>
-
-                                    <p class="mt-2 text-sm text-slate-500">
-                                        Belum ada data {{ strtolower($currentTypeMeta['label'] ?? $type) }} yang cocok dengan pencarian.
-                                    </p>
+                                    <h3 class="text-sm font-black text-slate-700">Data Sasaran Kosong</h3>
+                                    <p class="text-xs font-medium text-slate-400 mt-1">Belum ada pasien {{ $currentTypeMeta['label'] ?? ucfirst($type) }} yang terdaftar.</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -526,9 +320,9 @@
                 </table>
             </div>
 
-            {{-- MOBILE CARD --}}
-            <div class="space-y-3 lg:hidden">
-                @forelse($data as $pasien)
+            {{-- MOBILE VIEW --}}
+            <div id="rekamMedisCardContainer" class="space-y-4 lg:hidden p-4">
+                @foreach($data as $pasien)
                     @php
                         $nama = $getNama($pasien);
                         $nik = $getNik($pasien);
@@ -541,126 +335,78 @@
                         $searchName = mb_strtolower(trim((string) $nama), 'UTF-8');
                         $searchNik = mb_strtolower(trim((string) $nik), 'UTF-8');
                     @endphp
-
-                    <article class="js-rekam-card rounded-2xl border border-slate-100 bg-slate-50/80 p-4"
-                             data-name="{{ $searchName }}"
-                             data-nik="{{ $searchNik }}">
-                        <div class="flex items-start gap-3">
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 {{ $currentTheme['iconBox'] }}">
-                                <i class="ph {{ $currentTypeMeta['icon'] ?? 'ph-user' }} text-lg"></i>
-                            </div>
-
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <h3 class="line-clamp-2 text-base font-black text-slate-900">
-                                            {{ $nama }}
-                                        </h3>
-
-                                        <p class="mt-1 text-xs font-semibold text-slate-500">
-                                            NIK: {{ $nik }}
-                                        </p>
-                                    </div>
-
-                                    <span class="shrink-0 rounded-full px-3 py-1 text-[11px] font-black ring-1 {{ $currentTheme['badge'] }}">
-                                        {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
-                                    </span>
+                    <article class="js-rekam-card rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm" data-name="{{ $searchName }}" data-nik="{{ $searchNik }}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center"><i class="fa-solid fa-user"></i></div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-900">{{ $nama }}</h3>
+                                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">{{ $nik }}</p>
                                 </div>
-
-                                <div class="mt-4 grid grid-cols-2 gap-2">
-                                    <div class="rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                        <p class="text-[10px] font-black uppercase text-slate-400">
-                                            Gender
-                                        </p>
-
-                                        <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                            {{ $gender }}
-                                        </p>
-                                    </div>
-
-                                    <div class="rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                        <p class="text-[10px] font-black uppercase text-slate-400">
-                                            Lahir
-                                        </p>
-
-                                        <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                            {{ $tanggalLahir }}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="mt-3 rounded-xl bg-white p-3 ring-1 ring-slate-100">
-                                    <p class="text-[10px] font-black uppercase text-slate-400">
-                                        Wali / Kontak
-                                    </p>
-
-                                    <p class="mt-1 truncate text-sm font-black text-slate-900">
-                                        {{ $wali }}
-                                    </p>
-
-                                    <p class="mt-1 truncate text-xs font-semibold text-slate-500">
-                                        {{ $kontak }}
-                                    </p>
-                                </div>
-
-                                <p class="mt-3 flex items-center gap-1 truncate text-xs font-semibold text-slate-500">
-                                    <i class="ph ph-map-pin"></i>
-                                    {{ $alamat }}
-                                </p>
-
-                                <a href="{{ route('bidan.rekam-medis.show', [$type, $pasien->id]) }}"
-                                   class="mt-4 inline-flex min-h-[42px] w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-emerald-700">
-                                    Detail Rekam Medis
-                                </a>
                             </div>
                         </div>
+                        <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-50 mb-4">
+                            <div class="bg-slate-50 rounded-lg p-2"><p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Gender</p><p class="text-xs font-bold text-slate-700">{{ $gender }}</p></div>
+                            <div class="bg-slate-50 rounded-lg p-2"><p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Lahir</p><p class="text-xs font-bold text-slate-700">{{ $tanggalLahir }}</p></div>
+                        </div>
+                        <a href="{{ route('bidan.rekam-medis.show', [$type, $pasien->id]) }}" class="btn-pill w-full inline-flex justify-center items-center bg-slate-900 text-white px-3 py-3 text-[10px] font-black uppercase tracking-widest shadow-sm">Buka Berkas Rekam Medis</a>
                     </article>
-                @empty
-                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                            <i class="ph ph-folder-simple-dashed text-3xl"></i>
-                        </div>
-
-                        <h3 class="mt-4 text-base font-black text-slate-800">
-                            Data Tidak Ditemukan
-                        </h3>
-
-                        <p class="mt-2 text-sm text-slate-500">
-                            Belum ada data {{ strtolower($currentTypeMeta['label'] ?? $type) }} yang cocok dengan pencarian.
-                        </p>
-                    </div>
-                @endforelse
+                @endforeach
             </div>
 
-            {{-- LIVE EMPTY --}}
-            <div id="rekamMedisLiveEmpty"
-                 class="hidden rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
-                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                    <i class="ph ph-magnifying-glass text-3xl"></i>
-                </div>
-
-                <h3 class="mt-4 text-base font-black text-slate-800">
-                    Data Tidak Cocok
-                </h3>
-
-                <p class="mt-2 text-sm text-slate-500">
-                    Tidak ada data pada halaman ini yang sesuai dengan nama atau NIK.
-                </p>
+            {{-- LIVE EMPTY STATE --}}
+            <div id="rekamMedisLiveEmpty" class="hidden rounded-[2rem] border border-dashed border-slate-300 bg-white/50 p-10 text-center m-6">
+                <i class="fa-solid fa-magnifying-glass text-4xl text-slate-300 mb-3"></i>
+                <h3 class="text-sm font-black text-slate-700">Data Tidak Ditemukan</h3>
+                <p class="text-xs font-medium text-slate-500 mt-1">Pencarian untuk NIK/Nama tersebut tidak cocok.</p>
             </div>
-
-            {{-- PAGINATION --}}
-            @if(method_exists($data, 'hasPages') && $data->hasPages())
-                <div id="rekamMedisPagination" class="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-5 md:flex-row md:items-center md:justify-between">
-                    <p class="text-sm font-semibold text-slate-500">
-                        Menampilkan {{ $data->firstItem() }} sampai {{ $data->lastItem() }} dari {{ $data->total() }} data
-                    </p>
-
-                    <div>
-                        {{ $data->links() }}
-                    </div>
-                </div>
-            @endif
         </div>
+
+        {{-- PAGINATION CUSTOM UI --}}
+        @if(method_exists($data, 'hasPages') && $data->hasPages())
+            <div id="rekamMedisPagination" class="bg-white p-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 rounded-b-[2rem]">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Menampilkan <span class="text-slate-700">{{ $data->firstItem() }}</span> - <span class="text-slate-700">{{ $data->lastItem() }}</span> dari <span class="text-slate-800">{{ $data->total() }}</span> data
+                </p>
+                
+                <div class="flex items-center gap-1.5">
+                    @if ($data->onFirstPage())
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 cursor-not-allowed"><i class="fa-solid fa-chevron-left text-xs"></i></span>
+                    @else
+                        <a href="{{ $data->previousPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-{{ $currentUi['theme'] }}-50 hover:text-{{ $currentUi['theme'] }}-600 hover:border-{{ $currentUi['theme'] }}-200 transition-all shadow-sm"><i class="fa-solid fa-chevron-left text-xs"></i></a>
+                    @endif
+
+                    @php
+                        $start = max(1, $data->currentPage() - 1);
+                        $end = min($data->lastPage(), $data->currentPage() + 1);
+                    @endphp
+
+                    @if($start > 1)
+                        <a href="{{ $data->url(1) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-{{ $currentUi['theme'] }}-50 hover:text-{{ $currentUi['theme'] }}-600 hover:border-{{ $currentUi['theme'] }}-200 transition-all shadow-sm text-xs font-bold">1</a>
+                        @if($start > 2)<span class="inline-flex h-8 w-8 items-center justify-center text-slate-400 text-xs font-bold">...</span>@endif
+                    @endif
+
+                    @for ($page = $start; $page <= $end; $page++)
+                        @if ($page == $data->currentPage())
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-{{ $currentUi['theme'] }}-500 text-white shadow-md shadow-{{ $currentUi['theme'] }}-500/30 text-xs font-black">{{ $page }}</span>
+                        @else
+                            <a href="{{ $data->url($page) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-{{ $currentUi['theme'] }}-50 hover:text-{{ $currentUi['theme'] }}-600 hover:border-{{ $currentUi['theme'] }}-200 transition-all shadow-sm text-xs font-bold">{{ $page }}</a>
+                        @endif
+                    @endfor
+
+                    @if($end < $data->lastPage())
+                        @if($end < $data->lastPage() - 1)<span class="inline-flex h-8 w-8 items-center justify-center text-slate-400 text-xs font-bold">...</span>@endif
+                        <a href="{{ $data->url($data->lastPage()) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-{{ $currentUi['theme'] }}-50 hover:text-{{ $currentUi['theme'] }}-600 hover:border-{{ $currentUi['theme'] }}-200 transition-all shadow-sm text-xs font-bold">{{ $data->lastPage() }}</a>
+                    @endif
+
+                    @if ($data->hasMorePages())
+                        <a href="{{ $data->nextPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-{{ $currentUi['theme'] }}-50 hover:text-{{ $currentUi['theme'] }}-600 hover:border-{{ $currentUi['theme'] }}-200 transition-all shadow-sm"><i class="fa-solid fa-chevron-right text-xs"></i></a>
+                    @else
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 cursor-not-allowed"><i class="fa-solid fa-chevron-right text-xs"></i></span>
+                    @endif
+                </div>
+            </div>
+        @endif
     </section>
 </div>
 @endsection
@@ -672,100 +418,51 @@
         const clearButton = document.getElementById('rekamMedisClearSearch');
         const visibleCountText = document.getElementById('rekamMedisVisibleCount');
         const liveEmpty = document.getElementById('rekamMedisLiveEmpty');
-
+        const pagination = document.getElementById('rekamMedisPagination');
         const rows = Array.from(document.querySelectorAll('.js-rekam-row'));
         const cards = Array.from(document.querySelectorAll('.js-rekam-card'));
 
-        const normalize = (value) => {
-            return String(value || '')
-                .toLowerCase()
-                .trim();
-        };
-
-        const isNumericKeyword = (keyword) => {
-            return /^[0-9]+$/.test(keyword);
-        };
+        const normalize = (value) => String(value || '').toLowerCase().trim();
+        const isNumericKeyword = (keyword) => /^[0-9]+$/.test(keyword);
 
         const itemMatches = (item, keyword) => {
-            const name = normalize(item.dataset.name);
-            const nik = normalize(item.dataset.nik);
-
-            if (keyword === '') {
-                return true;
-            }
-
-            if (isNumericKeyword(keyword)) {
-                return nik.includes(keyword);
-            }
-
-            return name.includes(keyword);
-        };
-
-        const setHidden = (element, hidden) => {
-            if (!element) {
-                return;
-            }
-
-            element.classList.toggle('nexus-live-hidden', hidden);
+            if (keyword === '') return true;
+            return normalize(item.dataset.name).includes(keyword) || 
+                   (isNumericKeyword(keyword) && normalize(item.dataset.nik).includes(keyword));
         };
 
         let frameId = null;
-
         const applyFilter = () => {
-            if (frameId) {
-                cancelAnimationFrame(frameId);
-            }
-
+            if (frameId) cancelAnimationFrame(frameId);
             frameId = requestAnimationFrame(() => {
                 const keyword = normalize(searchInput?.value);
                 let visibleCount = 0;
 
                 rows.forEach((row) => {
                     const visible = itemMatches(row, keyword);
-                    setHidden(row, !visible);
-
-                    if (visible) {
-                        visibleCount += 1;
-                    }
+                    row.classList.toggle('hidden', !visible);
+                    if (visible) visibleCount++;
                 });
 
                 cards.forEach((card) => {
-                    const visible = itemMatches(card, keyword);
-                    setHidden(card, !visible);
+                    card.classList.toggle('hidden', !itemMatches(card, keyword));
                 });
 
-                if (visibleCountText) {
-                    visibleCountText.textContent = String(visibleCount);
-                }
-
+                if (visibleCountText) visibleCountText.textContent = String(visibleCount);
                 if (liveEmpty) {
                     const hasData = rows.length > 0 || cards.length > 0;
                     liveEmpty.classList.toggle('hidden', !hasData || visibleCount > 0);
                 }
-
                 if (clearButton) {
                     const hasKeyword = keyword !== '';
                     clearButton.classList.toggle('hidden', !hasKeyword);
-                    clearButton.classList.toggle('inline-flex', hasKeyword);
                 }
+                if (pagination) pagination.classList.toggle('hidden', keyword !== '');
             });
         };
 
         searchInput?.addEventListener('input', applyFilter, { passive: true });
-        searchInput?.addEventListener('keyup', applyFilter, { passive: true });
-        searchInput?.addEventListener('search', applyFilter, { passive: true });
-
-        clearButton?.addEventListener('click', () => {
-            if (!searchInput) {
-                return;
-            }
-
-            searchInput.value = '';
-            searchInput.focus();
-            applyFilter();
-        });
-
-        applyFilter();
+        clearButton?.addEventListener('click', () => { if (searchInput) { searchInput.value = ''; searchInput.focus(); applyFilter(); } });
     })();
 </script>
 @endpush

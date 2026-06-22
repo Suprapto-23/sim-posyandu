@@ -9,241 +9,175 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
-    /**
-     * Menampilkan halaman login.
-     */
     public function showLoginForm()
     {
         if (Auth::check()) {
             return $this->redirectBasedOnRole(Auth::user()->role);
         }
-
         return view('auth.login');
     }
 
-    /**
-     * Proses login.
-     *
-     * Identitas login yang didukung:
-     * - Email untuk Admin, Bidan, Kader, atau User
-     * - NIK 16 digit untuk User/Warga
-     *
-     * Catatan:
-     * - Field input "username" tetap dibaca agar form lama tidak error.
-     * - Namun sistem tidak lagi mencari kolom username di database.
-     */
     public function login(Request $request)
     {
-        $identifier = $request->input('login')
-            ?? $request->input('email')
-            ?? $request->input('username')
-            ?? $request->input('identifier');
+        // Rate limiting
+        $this->ensureIsNotRateLimited($request);
 
-        $login = trim((string) $identifier);
+        $login = trim((string) ($request->input('login') ?? ''));
+        $request->merge(['login' => $login]);
 
-        $request->merge([
-            'login' => $login,
+        $request->validate([
+            'login'    => ['required', 'string', 'max:191'],
+            'password' => ['required', 'string'],
+        ], [
+            'login.required'    => 'Email atau NIK wajib diisi.',
+            'password.required' => 'Password wajib diisi.',
         ]);
 
-        $request->validate(
-            [
-                'login' => ['required', 'string', 'max:191'],
-                'password' => ['required', 'string'],
-            ],
-            [
-                'login.required' => 'Email atau NIK wajib diisi.',
-                'password.required' => 'Password wajib diisi.',
-            ]
-        );
-
         $loginType = $this->getLoginType($login);
-
-        if (! $loginType) {
+        if (!$loginType) {
+            RateLimiter::hit($this->throttleKey($request));
             return back()
-                ->withErrors([
-                    'login' => 'Format tidak valid. Gunakan email atau NIK 16 digit angka.',
-                ])
-                ->withInput($request->only('login'));
+                ->withErrors(['login' => 'Format tidak valid. Gunakan email atau NIK 16 digit.'])
+                ->withInput();
         }
 
         $user = $this->findUserByLogin($login, $loginType);
-
-        if (! $user) {
+        if (!$user) {
+            RateLimiter::hit($this->throttleKey($request));
             return back()
-                ->withErrors([
-                    'login' => 'Akun tidak ditemukan. Identitas yang Anda masukkan belum terdaftar di sistem.',
-                ])
-                ->withInput($request->only('login'));
+                ->withErrors(['login' => 'Akun tidak ditemukan.'])
+                ->withInput();
         }
 
-        if (($user->status ?? null) !== 'active') {
+        if ($user->status !== 'active') {
             return back()
-                ->withErrors([
-                    'login' => 'Akun Anda tidak aktif. Hubungi admin Posyandu untuk mengaktifkan akun.',
-                ])
-                ->withInput($request->only('login'));
+                ->withErrors(['login' => 'Akun tidak aktif. Hubungi admin.'])
+                ->withInput();
         }
 
-        if (! Hash::check($request->password, $user->password)) {
-            $this->writeLoginLog($user->id, $request, 'failed');
-
+        if (!Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($this->throttleKey($request));
+            $this->logLogin($user->id, $request, 'failed');
             return back()
-                ->withErrors([
-                    'password' => 'Password salah.',
-                ])
-                ->withInput($request->only('login'));
+                ->withErrors(['password' => 'Password salah.'])
+                ->withInput();
         }
 
+        // Login sukses
         Auth::login($user, $request->boolean('remember'));
-
         $request->session()->regenerate();
         $request->session()->put('login_role', $user->role);
         $request->session()->put('login_user_id', $user->id);
-        $request->session()->save();
 
-        $this->writeLoginLog($user->id, $request, 'success');
         $this->updateLastLogin($user);
+        $this->logLogin($user->id, $request, 'success');
+        RateLimiter::clear($this->throttleKey($request));
 
+        // Redirect langsung
         return redirect()->to($this->getRedirectUrl($user->role));
     }
 
-    /**
-     * Logout akun.
-     */
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect('/login')->with('info', 'Anda telah berhasil keluar dari sistem.');
+        return redirect('/login')->with('info', 'Anda telah keluar dari sistem.');
     }
 
-    /**
-     * Deteksi tipe login.
-     *
-     * Hanya mendukung:
-     * - email
-     * - nik 16 digit
-     */
+    // ========== PRIVATE HELPERS ==========
+
     private function getLoginType(string $login): ?string
     {
-        if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
-            return 'email';
-        }
-
-        if (preg_match('/^\d{16}$/', $login)) {
-            return 'nik';
-        }
-
+        if (filter_var($login, FILTER_VALIDATE_EMAIL)) return 'email';
+        if (preg_match('/^\d{16}$/', $login)) return 'nik';
         return null;
     }
 
-    /**
-     * Cari user berdasarkan email atau NIK.
-     */
     private function findUserByLogin(string $login, string $loginType): ?User
     {
-        return match ($loginType) {
-            'email' => User::where('email', $login)->first(),
-            'nik' => $this->findUserByNik($login),
-            default => null,
-        };
+        if ($loginType === 'email') {
+            return User::where('email', $login)->first();
+        }
+        return $this->findUserByNik($login);
     }
 
-    /**
-     * Cari user berdasarkan NIK.
-     *
-     * Urutan:
-     * 1. Cek kolom nik di tabel users.
-     * 2. Jika tidak ada, cek tabel profiles.
-     */
     private function findUserByNik(string $nik): ?User
     {
         $user = User::where('nik', $nik)->first();
-
-        if ($user) {
-            return $user;
-        }
+        if ($user) return $user;
 
         try {
             $profile = Profile::where('nik', $nik)->first();
-
             return $profile?->user;
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             return null;
         }
     }
 
-    /**
-     * URL redirect setelah login berhasil.
-     */
     private function getRedirectUrl(string $role): string
     {
         return match (strtolower($role)) {
             'admin' => '/admin/dashboard',
             'bidan' => '/bidan/dashboard',
             'kader' => '/kader/dashboard',
-            'user' => '/user/dashboard',
+            'user'  => '/user/dashboard',
             default => '/home',
         };
     }
 
-    /**
-     * Redirect user yang sudah login.
-     */
     private function redirectBasedOnRole(string $role)
     {
-        return match (strtolower($role)) {
-            'admin' => redirect()->route('admin.dashboard'),
-            'bidan' => redirect()->route('bidan.dashboard'),
-            'kader' => redirect()->route('kader.dashboard'),
-            'user' => redirect()->route('user.dashboard'),
-            default => redirect('/home'),
-        };
+        return redirect()->to($this->getRedirectUrl($role));
     }
 
-    /**
-     * Simpan log login.
-     *
-     * Jika tabel atau model log bermasalah, proses login tetap berjalan.
-     */
-    private function writeLoginLog(int $userId, Request $request, string $status): void
-    {
-        try {
-            if (! class_exists(LoginLog::class)) {
-                return;
-            }
-
-            LoginLog::create([
-                'user_id' => $userId,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'login_at' => now(),
-                'status' => $status,
-            ]);
-        } catch (\Throwable $e) {
-            // Jangan ganggu proses login hanya karena log gagal tersimpan.
-        }
-    }
-
-    /**
-     * Update waktu login terakhir.
-     *
-     * Jika kolom last_login_at tidak tersedia, login tetap aman.
-     */
     private function updateLastLogin(User $user): void
     {
         try {
-            $user->forceFill([
-                'last_login_at' => now(),
-            ])->save();
-        } catch (\Throwable $e) {
-            // Silent agar login tidak gagal karena kolom opsional.
+            $user->forceFill(['last_login_at' => now()])->save();
+        } catch (\Throwable) {
+            // Abaikan jika kolom tidak ada
         }
+    }
+
+    private function logLogin(int $userId, Request $request, string $status): void
+    {
+        try {
+            if (!class_exists(LoginLog::class)) return;
+            \DB::table('login_logs')->insert([
+                'user_id'     => $userId,
+                'ip_address'  => $request->ip(),
+                'user_agent'  => $request->userAgent(),
+                'login_at'    => now(),
+                'status'      => $status,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        } catch (\Throwable) {
+            // Silent
+        }
+    }
+
+    // === Rate Limiting ===
+    private function throttleKey(Request $request): string
+    {
+        return strtolower($request->input('login')) . '|' . $request->ip();
+    }
+
+    private function ensureIsNotRateLimited(Request $request): void
+    {
+        if (!RateLimiter::tooManyAttempts($this->throttleKey($request), 5)) {
+            return;
+        }
+
+        $seconds = RateLimiter::availableIn($this->throttleKey($request));
+        throw ValidationException::withMessages([
+            'login' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
+        ]);
     }
 }

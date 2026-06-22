@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -21,7 +22,13 @@ class RiwayatController extends Controller
     public function index(Request $request): View
     {
         try {
-            $context = $this->getUserContext(auth()->user());
+            $user = auth()->user();
+
+            // SINKRONISASI CACHE DENGAN DASHBOARD
+            $contextKey = 'user_dashboard_context_' . $user->id;
+            $context = Cache::remember($contextKey, 300, function () use ($user) {
+                return $this->getUserContext($user);
+            });
 
             $filters = [
                 'search' => trim((string) $request->input('search', '')),
@@ -54,7 +61,7 @@ class RiwayatController extends Controller
             $riwayat = $query
                 ->orderByDesc($dateColumn)
                 ->orderByDesc('created_at')
-                ->paginate(10)
+                ->paginate(5)
                 ->withQueryString();
 
             $riwayatCards = collect($riwayat->items())
@@ -442,7 +449,8 @@ class RiwayatController extends Controller
             return null;
         }
 
-        $height = (float) $value;
+        // PENINGKATAN: Gunakan Regex agar kebal terhadap teks seperti "160 cm" atau spasi
+        $height = (float) preg_replace('/[^0-9.]/', '', (string) $value);
 
         if ($height >= 1 && $height <= 2.5) {
             $height *= 100;

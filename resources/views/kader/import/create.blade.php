@@ -1,7 +1,7 @@
 @extends('layouts.kader')
 
-@section('title', 'Upload Data Import')
-@section('page-name', 'Upload Data Import')
+@section('title', 'Import Data Massal')
+@section('page-name', 'Import Data Massal')
 
 @php
     use Illuminate\Support\Facades\Route;
@@ -17,19 +17,31 @@
     $typeMeta = [
         'balita' => [
             'label' => 'Balita / Anak',
-            'desc' => 'Template berisi nama lengkap, NIK balita, nama ibu, NIK ibu, tanggal lahir, dan data lahir.',
+            'desc' => 'Template berisi NIK balita, nama, data orang tua, dan data lahir.',
             'icon' => 'fa-child-reaching',
+            'color' => 'text-emerald-600',
+            'bg' => 'bg-emerald-50',
+            'border' => 'border-emerald-200',
+            'ring' => 'peer-checked:ring-emerald-500',
         ],
         'remaja' => [
             'label' => 'Remaja',
-            'desc' => 'Template berisi NIK, nama lengkap, sekolah, kelas, orang tua, dan alamat.',
+            'desc' => 'Template berisi NIK, nama, sekolah, orang tua, dan domisili.',
             'icon' => 'fa-user-graduate',
+            'color' => 'text-sky-600',
+            'bg' => 'bg-sky-50',
+            'border' => 'border-sky-200',
+            'ring' => 'peer-checked:ring-sky-500',
         ],
         'lansia' => [
-    'label' => 'Lansia',
-    'desc' => 'Template berisi NIK, identitas, alamat, berat badan, tinggi badan, lingkar perut, tekanan darah, gula darah, kolesterol, asam urat, tingkat kemandirian, riwayat penyakit, dan keluhan.',
-    'icon' => 'fa-person-cane',
-],
+            'label' => 'Lansia',
+            'desc' => 'Template berisi NIK, identitas, metrik kesehatan dasar, dan keluarga.',
+            'icon' => 'fa-person-cane',
+            'color' => 'text-amber-600',
+            'bg' => 'bg-amber-50',
+            'border' => 'border-amber-200',
+            'ring' => 'peer-checked:ring-amber-500',
+        ],
     ];
 
     $templateBaseUrl = url('/kader/import/template');
@@ -37,475 +49,397 @@
 
 @push('styles')
 <style>
-    .import-create-page {
-        font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
-        position: relative;
-        isolation: isolate;
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
     }
 
-    .import-create-page::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.13), transparent 28%),
-            radial-gradient(circle at 92% 12%, rgba(245,158,11,.10), transparent 26%),
-            radial-gradient(circle at 50% 100%, rgba(14,165,233,.08), transparent 32%),
-            linear-gradient(135deg, #f8fffc 0%, #f8fafc 58%, #fffaf0 100%);
-    }
-
-    .glass-panel {
-        border: 1px solid rgba(255,255,255,.78);
-        background: rgba(255,255,255,.64);
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .hero-panel {
-        border: 1px solid rgba(167,243,208,.72);
-        background:
-            radial-gradient(circle at 12% 18%, rgba(16,185,129,.16), transparent 32%),
-            radial-gradient(circle at 88% 16%, rgba(245,158,11,.13), transparent 32%),
-            linear-gradient(135deg, rgba(255,255,255,.72), rgba(236,253,245,.70));
-        backdrop-filter: blur(18px);
-        box-shadow: 0 18px 42px rgba(15,23,42,.06);
-    }
-
-    .input-premium {
-        border: 1px solid rgba(226,232,240,.9);
-        background: rgba(255,255,255,.72);
-        outline: none;
-        transition: all .3s ease-in-out;
-    }
-
-    .input-premium:focus {
-        border-color: rgba(16,185,129,.42);
-        box-shadow: 0 0 0 4px rgba(16,185,129,.08);
-        background: rgba(255,255,255,.86);
-    }
-
-    .type-card {
-        border: 1px solid rgba(226,232,240,.78);
-        background: rgba(255,255,255,.58);
-        backdrop-filter: blur(14px);
-        transition: all .3s ease-in-out;
-    }
-
-    .type-card.active {
-        border-color: rgba(16,185,129,.35);
-        background: rgba(236,253,245,.82);
-        box-shadow: 0 14px 32px rgba(5,150,105,.08);
-    }
-
-    .type-card:hover,
-    .dropzone:hover {
-        transform: translateY(-2px);
-        border-color: rgba(16,185,129,.28);
-        box-shadow: 0 18px 38px rgba(15,23,42,.06);
-    }
-
-    .dropzone {
-        border: 2px dashed rgba(16,185,129,.32);
-        background: rgba(236,253,245,.34);
-        transition: all .3s ease-in-out;
-    }
-
-    .dropzone.dragging {
-        border-color: rgba(5,150,105,.72);
-        background: rgba(209,250,229,.72);
-        transform: translateY(-2px);
-    }
-
-    .toast-custom {
-        position: fixed;
-        right: 24px;
-        top: 96px;
-        z-index: 90;
-        width: min(390px, calc(100vw - 32px));
+    .animate-pop-in {
+        animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards;
         opacity: 0;
-        pointer-events: none;
-        transform: translateY(-10px);
-        transition: all .3s ease-in-out;
     }
 
-    .toast-custom.show {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateY(0);
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    @media (max-width: 640px) {
-        .toast-custom {
-            left: 16px;
-            right: 16px;
-            top: 82px;
-        }
+    /* Glass Card untuk Wrapper Utama */
+    .import-wrapper {
+        background: rgba(255, 255, 255, 0.90);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 1);
+        border-radius: 2.5rem; 
+        box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Style Khusus Dropzone */
+    .upload-dropzone {
+        border: 2px dashed #cbd5e1;
+        background: #f8fafc;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    .upload-dropzone:hover, .upload-dropzone.is-dragover {
+        border-color: #10b981;
+        background: #ecfdf5;
+        box-shadow: inset 0 0 0 4px rgba(16, 185, 129, 0.05);
+    }
+
+    /* Custom Radio Cards */
+    .radio-card {
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+    .radio-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.05);
+    }
+    
+    .btn-pill {
+        border-radius: 9999px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .btn-pill:active { transform: scale(0.96); }
+
+    /* Step Indicator Line */
+    .step-line::before {
+        content: '';
+        position: absolute;
+        left: 23px;
+        top: 48px;
+        bottom: -16px;
+        width: 2px;
+        background: #e2e8f0;
+        z-index: 0;
+    }
+    .step-item:last-child .step-line::before {
+        display: none;
     }
 </style>
 @endpush
 
 @section('content')
-<div class="import-create-page space-y-5">
+<div class="max-w-[1080px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 mt-6">
 
-    {{-- CUSTOM TOAST --}}
-    <div id="customToast" class="toast-custom">
-        <div class="rounded-[24px] border border-rose-100 bg-white/80 p-4 shadow-[0_22px_60px_rgba(15,23,42,.22)] backdrop-blur-xl">
-            <div class="flex gap-3">
-                <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-50 text-rose-600">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                </div>
-                <div>
-                    <p class="text-sm font-black text-slate-900">Import belum siap</p>
-                    <p id="customToastText" class="mt-1 text-xs font-bold leading-5 text-slate-500">
-                        Lengkapi data terlebih dahulu.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- HEADER TOOL IMPORT (Disamakan dengan Palet Dashboard) --}}
+    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[3rem] p-8 md:p-12 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] text-center border border-white/20">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-20 pointer-events-none"></div>
+        <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
+        <div class="absolute -left-16 -bottom-16 w-40 h-40 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
 
-    {{-- HERO --}}
-    <section class="hero-panel rounded-[30px] p-5 sm:p-6">
-        <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div>
-                <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-emerald-700">
-                    <i class="fa-solid fa-upload"></i>
-                    Upload Template Excel
-                </div>
-
-                <h1 class="text-2xl font-black tracking-[-.04em] text-slate-900 sm:text-3xl">
-                    Import Data Sasaran Posyandu
-                </h1>
-
-                <p class="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-                    Pilih kategori data, unduh template resmi, lalu unggah file Excel yang sudah diisi. Sistem akan memvalidasi format dan menolak data yang tidak sesuai.
-                </p>
+        <div class="relative z-10 flex flex-col items-center">
+            <div class="w-24 h-24 rounded-[2rem] bg-white border-4 border-white/50 text-emerald-500 flex items-center justify-center text-4xl shadow-xl mb-6">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
             </div>
 
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                @if($routeHas('kader.import.index'))
-                    <a href="{{ route('kader.import.index') }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-100 bg-white/60 px-5 py-3 text-sm font-black text-emerald-700 backdrop-blur-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-50">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Pusat Import
+            <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
+                Import Data Massal
+            </h1>
+
+            <p class="text-teal-50 text-sm font-medium max-w-xl mx-auto mt-3 leading-relaxed">
+                Alat khusus untuk memasukkan ratusan data sasaran sekaligus. Ikuti 3 langkah mudah di bawah ini untuk memulai proses sinkronisasi database.
+            </p>
+
+            <div class="mt-8 flex flex-wrap justify-center gap-3">
+                @if($routeHas('kader.import.history'))
+                    <a href="{{ route('kader.import.history') }}" class="btn-pill bg-white/20 hover:bg-white/30 text-white border border-white/30 px-6 py-3.5 text-xs font-bold uppercase tracking-widest backdrop-blur-md transition-all shadow-sm">
+                        <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Riwayat Import
                     </a>
                 @endif
-
-                @if($routeHas('kader.import.history'))
-                    <a href="{{ route('kader.import.history') }}"
-                       class="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(15,23,42,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-slate-800">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        Riwayat
+                @if($routeHas('kader.import.index'))
+                    <a href="{{ route('kader.import.index') }}" class="btn-pill bg-white hover:bg-emerald-50 text-emerald-600 px-6 py-3.5 text-xs font-bold uppercase tracking-widest transition-all shadow-[0_8px_20px_rgba(255,255,255,0.3)] hover:-translate-y-0.5">
+                        <i class="fa-solid fa-layer-group mr-1.5"></i> Pusat Import
                     </a>
                 @endif
             </div>
         </div>
     </section>
 
-    {{-- SERVER ERRORS --}}
+    {{-- ALERT PESAN ERROR --}}
     @if($errors->any() || session('error'))
-        <section class="rounded-[24px] border border-rose-100 bg-rose-50/80 p-4 text-sm font-bold text-rose-700">
-            <div class="mb-2 flex items-center gap-2 font-black">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                Import gagal diproses
+        <div class="bg-rose-50 border-2 border-rose-200 rounded-[2rem] p-6 mb-8 flex items-start gap-4 shadow-sm">
+            <div class="bg-white rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-xl"></i>
             </div>
-
-            @if(session('error'))
-                <p class="leading-6">{{ session('error') }}</p>
-            @endif
-
-            @if($errors->any())
-                <ul class="ml-5 list-disc space-y-1">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </section>
+            <div>
+                <h3 class="font-black text-base text-rose-800">Proses Import Gagal</h3>
+                <p class="text-sm font-bold text-rose-600 mt-1">{{ session('error') ?: 'Terdapat kesalahan pada file atau input Anda:' }}</p>
+                @if($errors->any())
+                    <ul class="text-xs font-bold mt-2 text-rose-700/80 space-y-1 list-disc list-inside bg-white/50 p-3 rounded-xl">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        </div>
     @endif
 
-    <form id="importForm" method="POST" action="{{ route('kader.import.store') }}" enctype="multipart/form-data" class="grid grid-cols-1 gap-5 xl:grid-cols-12" novalidate>
+    {{-- FORMULIR PIPELINE WIZARD --}}
+    <form id="importForm" method="POST" action="{{ route('kader.import.store') }}" enctype="multipart/form-data" class="import-wrapper p-6 sm:p-10">
         @csrf
 
-        {{-- LEFT --}}
-        <section class="glass-panel rounded-[30px] p-4 sm:p-5 xl:col-span-8">
-            <div class="mb-5">
-                <h2 class="text-lg font-black text-slate-900">1. Pilih Kategori Data</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Kategori harus sesuai dengan template yang diunggah.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                @foreach($typeMeta as $key => $item)
-                    <label class="type-card {{ $type === $key ? 'active' : '' }} cursor-pointer rounded-[24px] p-4" data-type-card="{{ $key }}">
-                        <input type="radio" name="jenis_data" value="{{ $key }}" class="sr-only type-radio" {{ $type === $key ? 'checked' : '' }}>
-
-                        <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50/90 text-emerald-700">
-                            <i class="fa-solid {{ $item['icon'] }}"></i>
-                        </div>
-
-                        <h3 class="text-sm font-black text-slate-900">{{ $item['label'] }}</h3>
-                        <p class="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                            {{ $item['desc'] }}
-                        </p>
-                    </label>
-                @endforeach
-            </div>
-
-            <div class="mt-6">
-                <h2 class="text-lg font-black text-slate-900">2. Unggah File Excel</h2>
-                <p class="mt-1 text-xs font-bold text-slate-400">
-                    Gunakan format .xlsx agar NIK tidak berubah menjadi notasi ilmiah Excel.
-                </p>
-
-                <label id="dropzone" for="fileInput" class="dropzone mt-4 flex min-h-[230px] cursor-pointer flex-col items-center justify-center rounded-[28px] p-6 text-center">
-                    <div class="grid h-16 w-16 place-items-center rounded-3xl bg-white/70 text-emerald-700 shadow-[0_12px_24px_rgba(5,150,105,.10)] backdrop-blur-md">
-                        <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
-                    </div>
-
-                    <h3 id="fileTitle" class="mt-4 text-lg font-black text-slate-900">
-                        Seret file ke sini atau klik untuk memilih
-                    </h3>
-
-                    <p id="fileDesc" class="mt-2 max-w-md text-sm font-bold leading-6 text-slate-500">
-                        Format yang didukung: xlsx, xls, csv. Maksimal 10 MB.
-                    </p>
-
-                    <input id="fileInput" type="file" name="file" class="hidden" accept=".xlsx,.xls,.csv">
-                </label>
-            </div>
-
-            <div class="mt-5 rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4">
-                <div class="flex items-start gap-3">
-                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-emerald-700">
-                        <i class="fa-solid fa-shield-halved"></i>
-                    </div>
-
-                    <div>
-                        <h3 class="text-sm font-black text-emerald-800">Validasi Import Aktif</h3>
-                        <p class="mt-1 text-xs font-bold leading-5 text-emerald-700">
-                            Sistem mengecek NIK 16 digit, jenis kelamin, tanggal lahir, dan duplikasi data sebelum menyimpan ke database.
-                        </p>
+        {{-- LANGKAH 1: UNDUH TEMPLATE --}}
+        <div class="step-item relative pb-10">
+            <div class="step-line flex items-start gap-5 relative z-10">
+                <div class="w-12 h-12 rounded-full bg-slate-900 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                    1
+                </div>
+                <div class="flex-1 pt-1">
+                    <h2 class="text-xl font-black text-slate-900">Siapkan File Template</h2>
+                    <p class="text-sm font-semibold text-slate-500 mt-1">Unduh format Excel resmi di bawah ini. Jangan mengubah struktur baris judul agar sistem dapat membacanya.</p>
+                    
+                    <div class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        @foreach($typeMeta as $key => $item)
+                            <button type="button" onclick="downloadTemplateInstan('{{ $templateBaseUrl }}/{{ $key }}')" class="flex flex-col items-center text-center gap-2 p-4 rounded-2xl border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-md transition-all group">
+                                <div class="w-10 h-10 rounded-full {{ $item['bg'] }} {{ $item['color'] }} flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-file-excel"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest">{{ $item['label'] }}</h4>
+                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5">Format .xlsx</p>
+                                </div>
+                            </button>
+                        @endforeach
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        {{-- RIGHT --}}
-        <aside class="space-y-5 xl:col-span-4">
-            <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-                <div class="mb-4 flex items-center gap-3">
-                    <div class="grid h-12 w-12 place-items-center rounded-2xl bg-amber-50/90 text-amber-700">
-                        <i class="fa-solid fa-file-excel"></i>
-                    </div>
+        {{-- LANGKAH 2: PILIH KATEGORI --}}
+        <div class="step-item relative pb-10">
+            <div class="step-line flex items-start gap-5 relative z-10">
+                <div class="w-12 h-12 rounded-full bg-slate-900 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                    2
+                </div>
+                <div class="flex-1 pt-1">
+                    <h2 class="text-xl font-black text-slate-900">Pilih Kategori Sasaran</h2>
+                    <p class="text-sm font-semibold text-slate-500 mt-1">Pilih jenis data yang ingin Anda masukkan. Pastikan pilihan ini sama dengan template yang Anda isi.</p>
+                    
+                    <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        @foreach($typeMeta as $key => $item)
+                            <label class="radio-card relative flex items-start gap-4 p-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                <input type="radio" name="jenis_data" value="{{ $key }}" class="peer sr-only" {{ $type === $key ? 'checked' : '' }}>
+                                
+                                {{-- Background Active Highlight --}}
+                                <div class="absolute inset-0 bg-emerald-50/50 opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
+                                <div class="absolute inset-0 border-2 border-emerald-500 rounded-2xl opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
 
-                    <div>
-                        <h2 class="text-lg font-black text-slate-900">Template Resmi</h2>
-                        <p class="mt-1 text-xs font-bold text-slate-400">
-                            Unduh sesuai kategori.
-                        </p>
+                                <div class="w-12 h-12 rounded-2xl {{ $item['bg'] }} {{ $item['color'] }} flex items-center justify-center text-xl shrink-0 relative z-10">
+                                    <i class="fa-solid {{ $item['icon'] }}"></i>
+                                </div>
+                                <div class="relative z-10 pt-0.5">
+                                    <h4 class="text-sm font-black text-slate-900">{{ $item['label'] }}</h4>
+                                    <p class="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed pr-2">{{ $item['desc'] }}</p>
+                                </div>
+                                
+                                {{-- Check Icon --}}
+                                <div class="absolute top-5 right-5 text-emerald-500 opacity-0 peer-checked:opacity-100 transform scale-50 peer-checked:scale-100 transition-all duration-300">
+                                    <i class="fa-solid fa-circle-check text-xl"></i>
+                                </div>
+                            </label>
+                        @endforeach
                     </div>
                 </div>
-
-                <div class="rounded-[24px] border border-amber-100 bg-amber-50/60 p-4">
-                    <p class="text-xs font-bold leading-5 text-amber-700">
-                        Jangan mengubah nama kolom pada baris ke-3. Isi data mulai baris ke-4.
-                    </p>
-                </div>
-
-                <a id="downloadTemplateBtn"
-                   href="{{ $templateBaseUrl }}/{{ $type }}"
-                   class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-100 bg-amber-500/90 px-5 py-3 text-sm font-black text-white shadow-[0_12px_24px_rgba(245,158,11,.16)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-amber-600">
-                    <i class="fa-solid fa-download"></i>
-                    Unduh Template
-                </a>
-            </section>
-
-            <section class="glass-panel rounded-[30px] p-4 sm:p-5">
-                <div class="mb-4 flex items-center gap-3">
-                    <div class="grid h-12 w-12 place-items-center rounded-2xl bg-sky-50/90 text-sky-700">
-                        <i class="fa-solid fa-list-check"></i>
-                    </div>
-
-                    <div>
-                        <h2 class="text-lg font-black text-slate-900">Checklist</h2>
-                        <p class="mt-1 text-xs font-bold text-slate-400">
-                            Cek dulu sebelum upload.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="space-y-3 text-xs font-bold text-slate-500">
-                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
-                        <i class="fa-solid fa-check text-emerald-600"></i>
-                        <p>NIK tidak berubah menjadi format angka ilmiah.</p>
-                    </div>
-
-                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
-                        <i class="fa-solid fa-check text-emerald-600"></i>
-                        <p>Tanggal lahir memakai format YYYY-MM-DD.</p>
-                    </div>
-
-                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
-                        <i class="fa-solid fa-check text-emerald-600"></i>
-                        <p>Kategori yang dipilih sama dengan template file.</p>
-                    </div>
-
-                    <div class="flex gap-3 rounded-2xl bg-slate-50/70 p-3">
-                        <i class="fa-solid fa-check text-emerald-600"></i>
-                        <p>Data yang sudah ada berdasarkan NIK akan dilewati agar tidak duplikat.</p>
-                    </div>
-                </div>
-            </section>
-        </aside>
-
-        {{-- ACTION --}}
-        <section class="glass-panel rounded-[26px] p-4 xl:col-span-12">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h3 class="text-sm font-black text-slate-900">Siap menjalankan import</h3>
-                    <p class="mt-1 text-xs font-bold text-slate-400">
-                        Pastikan kategori dan file sudah sesuai sebelum menekan tombol proses.
-                    </p>
-                </div>
-
-                <button type="submit"
-                        id="submitBtn"
-                        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-[0_14px_28px_rgba(5,150,105,.18)] transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:bg-emerald-700">
-                    <i class="fa-solid fa-database"></i>
-                    Proses Import Data
-                </button>
             </div>
-        </section>
+        </div>
+
+        {{-- LANGKAH 3: UPLOAD FILE --}}
+        <div class="step-item relative pb-6">
+            <div class="step-line flex items-start gap-5 relative z-10">
+                <div class="w-12 h-12 rounded-full bg-slate-900 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                    3
+                </div>
+                <div class="flex-1 pt-1">
+                    <h2 class="text-xl font-black text-slate-900">Unggah File Anda</h2>
+                    <p class="text-sm font-semibold text-slate-500 mt-1">Masukkan file template yang sudah diisi. Sistem akan otomatis mendeteksi jika ada NIK ganda.</p>
+                    
+                    <div class="mt-5">
+                        <label id="dropzoneBox" for="fileInput" class="upload-dropzone flex flex-col items-center justify-center min-h-[220px] rounded-3xl p-8 text-center relative overflow-hidden group">
+                            
+                            {{-- State Awal --}}
+                            <div id="uploadStateEmpty" class="flex flex-col items-center transition-all duration-300">
+                                <div class="w-16 h-16 rounded-3xl bg-white text-emerald-500 flex items-center justify-center text-2xl shadow-sm border border-slate-100 mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                                </div>
+                                <h3 class="text-lg font-black text-slate-800">Klik atau Seret file ke sini</h3>
+                                <p class="text-xs font-bold text-slate-500 mt-2">Hanya mendukung file <span class="text-slate-700">.xlsx, .xls, .csv</span> (Maks. 10MB)</p>
+                            </div>
+
+                            {{-- State File Terpilih --}}
+                            <div id="uploadStateFilled" class="flex flex-col items-center absolute inset-0 bg-emerald-50 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4">
+                                <div class="flex flex-col items-center justify-center h-full w-full">
+                                    <div class="w-16 h-16 rounded-3xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg mb-3">
+                                        <i class="fa-solid fa-file-excel"></i>
+                                    </div>
+                                    <h3 id="fileNameDisplay" class="text-lg font-black text-emerald-900 px-4 truncate max-w-sm">nama_file.xlsx</h3>
+                                    <p id="fileSizeDisplay" class="text-xs font-bold text-emerald-600 mt-1">0 MB • Siap diproses</p>
+                                    <div class="mt-4 px-4 py-1.5 rounded-full bg-white border border-emerald-200 text-[10px] font-black uppercase tracking-widest text-emerald-600 shadow-sm cursor-pointer hover:bg-emerald-100 transition-colors">
+                                        Ganti File
+                                    </div>
+                                </div>
+                            </div>
+
+                            <input id="fileInput" type="file" name="file" class="hidden" accept=".xlsx,.xls,.csv" required>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ACTION PANEL --}}
+        <div class="mt-8 ml-16 bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+                <h4 class="text-sm font-black text-slate-800"><i class="fa-solid fa-shield-halved text-emerald-500 mr-1.5"></i> Validasi Aman</h4>
+                <p class="text-[11px] font-bold text-slate-500 mt-0.5">Sistem memblokir data dengan format salah atau NIK duplikat.</p>
+            </div>
+            
+            <button type="submit" id="submitBtn" class="btn-pill w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 px-8 py-3.5 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-rocket"></i> Proses Import
+            </button>
+        </div>
     </form>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const templateBaseUrl = @json($templateBaseUrl);
-    const typeRadios = document.querySelectorAll('.type-radio');
-    const typeCards = document.querySelectorAll('[data-type-card]');
-    const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    const fileTitle = document.getElementById('fileTitle');
-    const fileDesc = document.getElementById('fileDesc');
-    const form = document.getElementById('importForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const toast = document.getElementById('customToast');
-    const toastText = document.getElementById('customToastText');
-
-    let toastTimer = null;
-
-    const showToast = (message) => {
-        toastText.textContent = message;
-        toast.classList.add('show');
-
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3600);
+    // FUNGSI SUPER CEPAT UNDUH TEMPLATE NATIVE
+    window.downloadTemplateInstan = function(url) {
+        let iframe = document.getElementById('instanDownloader');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'instanDownloader';
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+        }
+        iframe.src = url; // Langsung tembak link download (Native HTML5)
     };
 
-    const getSelectedType = () => {
-        return document.querySelector('.type-radio:checked')?.value || 'balita';
-    };
+    document.addEventListener('DOMContentLoaded', () => {
+        const dropzoneBox = document.getElementById('dropzoneBox');
+        const fileInput = document.getElementById('fileInput');
+        const stateEmpty = document.getElementById('uploadStateEmpty');
+        const stateFilled = document.getElementById('uploadStateFilled');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+        const form = document.getElementById('importForm');
+        const submitBtn = document.getElementById('submitBtn');
 
-    const updateTypeUI = () => {
-        const selected = getSelectedType();
-
-        typeCards.forEach(card => {
-            card.classList.toggle('active', card.dataset.typeCard === selected);
+        // Drag & Drop Styling
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzoneBox.addEventListener(eventName, preventDefaults, false);
         });
 
-        downloadTemplateBtn.href = `${templateBaseUrl}/${selected}`;
-    };
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
-    typeRadios.forEach(radio => {
-        radio.addEventListener('change', updateTypeUI);
-    });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzoneBox.addEventListener(eventName, highlight, false);
+        });
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, event => {
-            event.preventDefault();
-            dropzone.classList.add('dragging');
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzoneBox.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropzoneBox.classList.add('is-dragover');
+        }
+
+        function unhighlight(e) {
+            dropzoneBox.classList.remove('is-dragover');
+        }
+
+        // Handle Drop File
+        dropzoneBox.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length) {
+                fileInput.files = files; // Assign files to input
+                updateFileUI(files[0]);
+            }
+        }
+
+        // Handle Browse File
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) {
+                updateFileUI(this.files[0]);
+            }
+        });
+
+        // Update UI untuk File
+        function updateFileUI(file) {
+            // Validasi Format
+            const allowedExtensions = ['xlsx', 'xls', 'csv'];
+            const extension = file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedExtensions.includes(extension)) {
+                alert('Tolong pilih file Excel (.xlsx, .xls) atau CSV.');
+                fileInput.value = '';
+                resetFileUI();
+                return;
+            }
+
+            // Validasi Ukuran (Max 10MB)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('Ukuran file terlalu besar. Maksimal 10 MB.');
+                fileInput.value = '';
+                resetFileUI();
+                return;
+            }
+
+            // Ganti UI ke Mode Terisi
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+            fileNameDisplay.textContent = file.name;
+            fileSizeDisplay.textContent = sizeMb + ' MB • Format Sesuai';
+
+            stateEmpty.style.opacity = '0';
+            stateEmpty.style.pointerEvents = 'none';
+            stateEmpty.style.transform = 'translateY(-10px)';
+
+            stateFilled.style.opacity = '1';
+            stateFilled.style.pointerEvents = 'auto';
+            stateFilled.style.transform = 'translateY(0)';
+            
+            dropzoneBox.style.borderColor = '#10b981';
+            dropzoneBox.style.background = '#ecfdf5';
+        }
+
+        function resetFileUI() {
+            stateFilled.style.opacity = '0';
+            stateFilled.style.pointerEvents = 'none';
+            stateFilled.style.transform = 'translateY(10px)';
+
+            stateEmpty.style.opacity = '1';
+            stateEmpty.style.pointerEvents = 'auto';
+            stateEmpty.style.transform = 'translateY(0)';
+
+            dropzoneBox.style.borderColor = '#cbd5e1';
+            dropzoneBox.style.background = '#f8fafc';
+        }
+
+        // Form Submit Loading State
+        form.addEventListener('submit', function(e) {
+            if (!fileInput.files.length) {
+                e.preventDefault();
+                alert('Anda belum mengunggah file Excel.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses Import...';
         });
     });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, event => {
-            event.preventDefault();
-            dropzone.classList.remove('dragging');
-        });
-    });
-
-    dropzone.addEventListener('drop', event => {
-        const file = event.dataTransfer.files?.[0];
-
-        if (!file) {
-            return;
-        }
-
-        fileInput.files = event.dataTransfer.files;
-        updateFilePreview(file);
-    });
-
-    fileInput.addEventListener('change', () => {
-        const file = fileInput.files?.[0];
-
-        if (file) {
-            updateFilePreview(file);
-        }
-    });
-
-    const updateFilePreview = (file) => {
-        const sizeMb = (file.size / 1024 / 1024).toFixed(2);
-
-        fileTitle.textContent = file.name;
-        fileDesc.textContent = `${sizeMb} MB, siap diproses.`;
-    };
-
-    form.addEventListener('submit', event => {
-        const file = fileInput.files?.[0];
-
-        if (!getSelectedType()) {
-            event.preventDefault();
-            showToast('Pilih kategori data terlebih dahulu.');
-            return;
-        }
-
-        if (!file) {
-            event.preventDefault();
-            showToast('Pilih file Excel terlebih dahulu sebelum memproses import.');
-            return;
-        }
-
-        const allowed = ['xlsx', 'xls', 'csv'];
-        const extension = file.name.split('.').pop().toLowerCase();
-
-        if (!allowed.includes(extension)) {
-            event.preventDefault();
-            showToast('Format file harus xlsx, xls, atau csv.');
-            return;
-        }
-
-        if (file.size > 10 * 1024 * 1024) {
-            event.preventDefault();
-            showToast('Ukuran file maksimal 10 MB.');
-            return;
-        }
-
-        submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
-        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses Import...';
-    });
-
-    updateTypeUI();
-});
 </script>
 @endpush

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
@@ -21,7 +22,14 @@ class JadwalController extends Controller
     public function index(Request $request): View
     {
         try {
-            $context = $this->getUserContext(auth()->user());
+            $user = auth()->user();
+            
+            // SINKRONISASI CACHE AGAR SMART FILTERING BEKERJA CEPAT
+            $contextKey = 'user_dashboard_context_' . $user->id;
+            $context = Cache::remember($contextKey, 300, function () use ($user) {
+                return $this->getUserContext($user);
+            });
+
             $hakAkses = $this->resolveHakAkses($context);
 
             $filters = [

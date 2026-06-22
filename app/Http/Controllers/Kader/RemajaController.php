@@ -83,7 +83,8 @@ class RemajaController extends Controller
 
         $query = Remaja::query()
             ->select($selectColumns)
-            ->with(['pemeriksaan_terakhir'])
+            // PERBAIKAN DI SINI: Disesuaikan dengan nama relasi di Model
+            ->with(['pemeriksaanTerbaru']) 
             ->when($hasUserId, function ($q) {
                 $q->with(['user:id,name,nik,email,role,status']);
             })

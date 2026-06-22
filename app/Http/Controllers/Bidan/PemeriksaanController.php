@@ -47,7 +47,7 @@ class PemeriksaanController extends Controller
             $this->applyLatestOrder($query);
 
             $pemeriksaans = $query
-                ->paginate(10)
+                ->paginate(5)
                 ->withQueryString();
 
             $stats = $this->stats();

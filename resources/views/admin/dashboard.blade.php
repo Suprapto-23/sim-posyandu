@@ -31,12 +31,11 @@
         return array_pad(array_slice($data, 0, $chartCount), $chartCount, 0);
     };
 
-    $chartBidan = $normalizeSeries('bidan');
-    $chartKader = $normalizeSeries('kader');
-    $chartBalita = $normalizeSeries('balita');
-    $chartRemaja = $normalizeSeries('remaja');
-    $chartLansia = $normalizeSeries('lansia');
-    $chartMax = max(array_merge($chartBidan, $chartKader, $chartBalita, $chartRemaja, $chartLansia, [1]));
+    $chartBidan   = $normalizeSeries('bidan');
+    $chartKader   = $normalizeSeries('kader');
+    $chartBalita  = $normalizeSeries('balita');
+    $chartRemaja  = $normalizeSeries('remaja');
+    $chartLansia  = $normalizeSeries('lansia');
 
     $formatDate = fn ($date) => $date ? Carbon::parse($date)->translatedFormat('d M Y, H:i') : '-';
 
@@ -59,12 +58,14 @@
     $statusLabel = fn ($status) => $status === 'active' ? 'Aktif' : 'Nonaktif';
     $statusClass = fn ($status) => $status === 'active' ? 'bg-emerald-500' : 'bg-slate-300';
     $initial = fn ($name) => Str::upper(Str::substr(trim((string) $name), 0, 1)) ?: 'U';
-    $barHeight = fn ($value) => max(2, min(100, (((int) $value / $chartMax) * 100)));
 
     $sasaranTotal = max(1, $sasaranStats['total'] ?? 1);
     $balitaPercent = (($sasaranStats['balita'] ?? 0) / $sasaranTotal) * 100;
     $remajaPercent = (($sasaranStats['remaja'] ?? 0) / $sasaranTotal) * 100;
     $lansiaPercent = (($sasaranStats['lansia'] ?? 0) / $sasaranTotal) * 100;
+
+    // Warna untuk chart
+    $chartColors = ['#f59e0b', '#10b981', '#38bdf8', '#2563eb', '#14b8a6'];
 @endphp
 
 @push('styles')
@@ -190,55 +191,51 @@
         box-shadow: 0 12px 35px -8px rgba(15,23,42,.08);
     }
 
-    .chart-panel {
-        position: relative;
-        height: 220px;
-        display: flex;
-        align-items: flex-end;
-        gap: 8px;
-        padding-bottom: 4px;
-        border-bottom: 2px solid #E2E8F0;
-    }
-
-    .chart-grid-line {
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background-color: rgba(226,232,240,.8);
-        z-index: 0;
-    }
-
-    .chart-bar-column {
-        flex: 1;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: flex-end;
-        gap: 3px;
-        z-index: 10;
-    }
-
-    .bar-pill {
-        width: 8px;
-        border-radius: 3px 3px 0 0;
-        transition: all .28s cubic-bezier(.16, 1, .3, 1);
-    }
-
-    .bar-pill:hover {
-        filter: brightness(1.12);
-        transform: scaleY(1.05);
-        transform-origin: bottom;
-    }
-
     .premium-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
     .premium-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .premium-scrollbar::-webkit-scrollbar-thumb { background-color: #E2E8F0; border-radius: 10px; }
     .premium-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #CBD5E1; }
 
-    @media (min-width: 1024px) {
-        .bar-pill { width: 10px; }
-        .chart-bar-column { gap: 4px; }
+    /* ApexCharts custom */
+    #trendChart {
+        min-height: 280px;
+        width: 100%;
+    }
+    .apexcharts-canvas {
+        border-radius: 12px;
+    }
+    .apexcharts-tooltip {
+        border-radius: 12px !important;
+        box-shadow: 0 12px 30px rgba(15,23,42,.12) !important;
+        border: 1px solid rgba(226,232,240,.8) !important;
+        background: rgba(255,255,255,.98) !important;
+        backdrop-filter: blur(4px) !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    .apexcharts-tooltip-title {
+        font-weight: 800 !important;
+        color: #0f172a !important;
+    }
+    .apexcharts-tooltip-text-y-label {
+        font-weight: 700 !important;
+        color: #64748b !important;
+    }
+    .apexcharts-tooltip-text-y-value {
+        font-weight: 900 !important;
+        color: #0f172a !important;
+    }
+    .apexcharts-legend-text {
+        font-weight: 700 !important;
+        color: #475569 !important;
+        font-size: 12px !important;
+    }
+
+    /* Stat card icons */
+    .stat-icon {
+        transition: transform .2s cubic-bezier(.16, 1, .3, 1);
+    }
+    .group:hover .stat-icon {
+        transform: scale(1.08) rotate(-2deg);
     }
 
     @media (max-width: 768px) {
@@ -246,19 +243,27 @@
             padding: 28px 24px;
             border-radius: 22px;
         }
-
         .executive-title {
             margin-top: 18px;
             font-size: 30px;
         }
-
         .executive-desc {
             font-size: 13px;
             line-height: 1.65;
         }
-
         .clock-chip {
             margin-top: 8px;
+        }
+        #trendChart {
+            min-height: 220px;
+        }
+    }
+    @media (max-width: 640px) {
+        #trendChart {
+            min-height: 180px;
+        }
+        .premium-glass-card {
+            border-radius: 18px;
         }
     }
 </style>
@@ -267,6 +272,7 @@
 @section('content')
 <div class="px-4 py-6 sm:px-6 lg:px-8 max-w-[1360px] mx-auto space-y-6">
 
+    {{-- HEADER --}}
     <div class="executive-header nexus-animate-up">
         <div class="executive-mesh"></div>
         <div class="absolute -right-12 -bottom-12 w-72 h-72 bg-emerald-500/10 rounded-full filter blur-[80px] pointer-events-none"></div>
@@ -296,10 +302,11 @@
         </div>
     </div>
 
+    {{-- STATISTIK CARD (6 kartu) --}}
     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-5 nexus-animate-up d-1">
 
         <div class="premium-glass-card p-5 flex flex-col justify-start group">
-            <div class="w-12 h-12 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+            <div class="w-12 h-12 rounded-[14px] bg-blue-50 text-blue-600 flex items-center justify-center text-xl mb-3 stat-icon">
                 <i class="fas fa-users"></i>
             </div>
             <p class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Akun Warga</p>
@@ -307,7 +314,7 @@
         </div>
 
         <div class="premium-glass-card p-5 flex flex-col justify-start group">
-            <div class="w-12 h-12 rounded-[14px] bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+            <div class="w-12 h-12 rounded-[14px] bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl mb-3 stat-icon">
                 <i class="fas fa-user-nurse"></i>
             </div>
             <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Akun Kader</p>
@@ -315,7 +322,7 @@
         </div>
 
         <div class="premium-glass-card p-5 flex flex-col justify-start group">
-            <div class="w-12 h-12 rounded-[14px] bg-amber-50 text-amber-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+            <div class="w-12 h-12 rounded-[14px] bg-amber-50 text-amber-500 flex items-center justify-center text-xl mb-3 stat-icon">
                 <i class="fas fa-user-md"></i>
             </div>
             <p class="text-[10px] font-black text-amber-600 uppercase tracking-widest">Akun Bidan</p>
@@ -323,7 +330,7 @@
         </div>
 
         <div class="premium-glass-card p-5 flex flex-col justify-start group">
-            <div class="w-12 h-12 rounded-[14px] bg-emerald-500 text-white flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform shadow-lg shadow-emerald-500/30">
+            <div class="w-12 h-12 rounded-[14px] bg-emerald-500 text-white flex items-center justify-center text-xl mb-3 stat-icon shadow-lg shadow-emerald-500/30">
                 <i class="fas fa-user-check"></i>
             </div>
             <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Terverifikasi</p>
@@ -331,7 +338,7 @@
         </div>
 
         <div class="premium-glass-card p-5 flex flex-col justify-start group">
-            <div class="w-12 h-12 rounded-[14px] bg-rose-50 text-rose-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+            <div class="w-12 h-12 rounded-[14px] bg-rose-50 text-rose-500 flex items-center justify-center text-xl mb-3 stat-icon">
                 <i class="fas fa-user-lock"></i>
             </div>
             <p class="text-[10px] font-black text-rose-500 uppercase tracking-widest">Nonaktif</p>
@@ -339,7 +346,7 @@
         </div>
 
         <div class="premium-glass-card p-5 flex flex-col justify-start group">
-            <div class="w-12 h-12 rounded-[14px] bg-sky-50 text-sky-500 flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition-transform">
+            <div class="w-12 h-12 rounded-[14px] bg-sky-50 text-sky-500 flex items-center justify-center text-xl mb-3 stat-icon">
                 <i class="fas fa-users"></i>
             </div>
             <p class="text-[10px] font-black text-sky-600 uppercase tracking-widest">Total Sasaran</p>
@@ -348,68 +355,33 @@
 
     </div>
 
+    {{-- CHART + DEMOGRAFI --}}
     <div class="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 nexus-animate-up d-2">
 
-        <div class="premium-glass-card p-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        {{-- CHART (tanpa data label) --}}
+        <div class="premium-glass-card p-6 md:p-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
                     <h2 class="text-lg font-black text-slate-800 tracking-tight">Tren Pertumbuhan Pengguna</h2>
                     <p class="text-xs font-semibold text-slate-400 mt-1">
-                        Komparasi data registrasi per peran dalam 6 bulan terakhir.
+                        Komparasi data registrasi per peran dalam 6 bulan terakhir
                     </p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 bg-slate-50/80 rounded-2xl px-4 py-2 border border-slate-100 shadow-sm">
-                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-amber-400"></div> Bidan</span>
-                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div> Kader</span>
-                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-sky-400"></div> Balita</span>
-                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-blue-600"></div> Remaja</span>
-                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><div class="w-2.5 h-2.5 rounded-sm bg-teal-500"></div> Lansia</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span> Bidan</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span> Kader</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><span class="w-2.5 h-2.5 rounded-sm bg-sky-400"></span> Balita</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><span class="w-2.5 h-2.5 rounded-sm bg-blue-600"></span> Remaja</span>
+                    <span class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500"><span class="w-2.5 h-2.5 rounded-sm bg-teal-500"></span> Lansia</span>
                 </div>
             </div>
 
-            <div class="chart-panel">
-                <div class="chart-grid-line" style="bottom: 25%"></div>
-                <div class="chart-grid-line" style="bottom: 50%"></div>
-                <div class="chart-grid-line" style="bottom: 75%"></div>
-                <div class="chart-grid-line" style="bottom: 100%"></div>
-
-                @foreach($chartLabels as $index => $label)
-                    @php
-                        $tooltipPosition = 'left-1/2 -translate-x-1/2';
-                        if ($loop->first) $tooltipPosition = 'left-0 translate-x-0';
-                        elseif ($loop->last) $tooltipPosition = 'right-0 translate-x-0';
-                    @endphp
-
-                    <div class="chart-bar-column group relative">
-                        <div class="absolute -top-24 {{ $tooltipPosition }} opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white border border-slate-100 text-slate-700 text-[10px] py-2.5 px-3.5 rounded-xl font-black z-30 shadow-[0_10px_25px_rgba(0,0,0,0.15)] pointer-events-none text-left min-w-[170px]">
-                            <span class="text-slate-400 border-b border-slate-100 pb-1.5 mb-1.5 block">{{ $label }}</span>
-                            <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
-                                <div><span class="text-amber-500 mr-1">■</span> Bidan: {{ $chartBidan[$index] ?? 0 }}</div>
-                                <div><span class="text-emerald-500 mr-1">■</span> Kader: {{ $chartKader[$index] ?? 0 }}</div>
-                                <div><span class="text-sky-500 mr-1">■</span> Balita: {{ $chartBalita[$index] ?? 0 }}</div>
-                                <div><span class="text-blue-600 mr-1">■</span> Remaja: {{ $chartRemaja[$index] ?? 0 }}</div>
-                                <div class="col-span-2 pt-0.5"><span class="text-teal-500 mr-1">■</span> Lansia: {{ $chartLansia[$index] ?? 0 }}</div>
-                            </div>
-                        </div>
-
-                        <div class="bar-pill bg-gradient-to-t from-amber-500 to-amber-300" style="height: {{ $barHeight($chartBidan[$index] ?? 0) }}%;"></div>
-                        <div class="bar-pill bg-gradient-to-t from-emerald-600 to-emerald-400" style="height: {{ $barHeight($chartKader[$index] ?? 0) }}%;"></div>
-                        <div class="bar-pill bg-gradient-to-t from-sky-500 to-sky-300" style="height: {{ $barHeight($chartBalita[$index] ?? 0) }}%;"></div>
-                        <div class="bar-pill bg-gradient-to-t from-blue-700 to-blue-500" style="height: {{ $barHeight($chartRemaja[$index] ?? 0) }}%;"></div>
-                        <div class="bar-pill bg-gradient-to-t from-teal-600 to-teal-400" style="height: {{ $barHeight($chartLansia[$index] ?? 0) }}%;"></div>
-                    </div>
-                @endforeach
-            </div>
-
-            <div class="flex justify-between items-center mt-3 px-1">
-                @foreach($chartLabels as $label)
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex-1 text-center">{{ $label }}</div>
-                @endforeach
-            </div>
+            <div id="trendChart"></div>
         </div>
 
-        <div class="premium-glass-card p-8 flex flex-col">
+        {{-- DEMOGRAFI (dengan progress bar) --}}
+        <div class="premium-glass-card p-6 md:p-8 flex flex-col">
             <div class="mb-6">
                 <h2 class="text-lg font-black text-slate-800 tracking-tight">Kategori Demografi</h2>
                 <p class="text-xs font-semibold text-slate-400 mt-1">Penyebaran sasaran posyandu aktif</p>
@@ -419,48 +391,48 @@
                 <div>
                     <div class="flex justify-between items-end mb-2">
                         <span class="font-bold text-slate-600 text-sm flex items-center gap-2">
-                            <i class="fas fa-child text-sky-500"></i>
+                            <span class="w-3 h-3 rounded-full bg-sky-500"></span>
                             Balita
                         </span>
                         <span class="font-black text-slate-800 text-lg">
                             {{ number_format($sasaranStats['balita'] ?? 0) }}
-                            <span class="text-[10px] text-slate-400">Jiwa</span>
+                            <span class="text-[10px] text-slate-400">jiwa</span>
                         </span>
                     </div>
-                    <div class="w-full bg-slate-100/80 rounded-full h-2">
-                        <div class="bg-sky-500 h-full rounded-full" style="width: {{ $balitaPercent }}%"></div>
+                    <div class="w-full bg-slate-100/80 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-sky-500 h-full rounded-full transition-all duration-700" style="width: {{ $balitaPercent }}%"></div>
                     </div>
                 </div>
 
                 <div>
                     <div class="flex justify-between items-end mb-2">
                         <span class="font-bold text-slate-600 text-sm flex items-center gap-2">
-                            <i class="fas fa-user-graduate text-blue-600"></i>
+                            <span class="w-3 h-3 rounded-full bg-blue-600"></span>
                             Remaja
                         </span>
                         <span class="font-black text-slate-800 text-lg">
                             {{ number_format($sasaranStats['remaja'] ?? 0) }}
-                            <span class="text-[10px] text-slate-400">Jiwa</span>
+                            <span class="text-[10px] text-slate-400">jiwa</span>
                         </span>
                     </div>
-                    <div class="w-full bg-slate-100/80 rounded-full h-2">
-                        <div class="bg-blue-600 h-full rounded-full" style="width: {{ $remajaPercent }}%"></div>
+                    <div class="w-full bg-slate-100/80 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-blue-600 h-full rounded-full transition-all duration-700" style="width: {{ $remajaPercent }}%"></div>
                     </div>
                 </div>
 
                 <div>
                     <div class="flex justify-between items-end mb-2">
                         <span class="font-bold text-slate-600 text-sm flex items-center gap-2">
-                            <i class="fas fa-person-cane text-teal-500"></i>
+                            <span class="w-3 h-3 rounded-full bg-teal-500"></span>
                             Lansia
                         </span>
                         <span class="font-black text-slate-800 text-lg">
                             {{ number_format($sasaranStats['lansia'] ?? 0) }}
-                            <span class="text-[10px] text-slate-400">Jiwa</span>
+                            <span class="text-[10px] text-slate-400">jiwa</span>
                         </span>
                     </div>
-                    <div class="w-full bg-slate-100/80 rounded-full h-2">
-                        <div class="bg-teal-500 h-full rounded-full" style="width: {{ $lansiaPercent }}%"></div>
+                    <div class="w-full bg-slate-100/80 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-teal-500 h-full rounded-full transition-all duration-700" style="width: {{ $lansiaPercent }}%"></div>
                     </div>
                 </div>
             </div>
@@ -468,7 +440,8 @@
 
     </div>
 
-    <div class="premium-glass-card flex flex-col h-[450px] nexus-animate-up d-3">
+    {{-- TABLE --}}
+    <div class="premium-glass-card flex flex-col max-h-[480px] nexus-animate-up d-3">
         <div class="p-6 md:p-8 border-b border-slate-100/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <h2 class="text-lg font-black text-slate-800 tracking-tight">Log Registrasi Akun Baru</h2>
@@ -477,7 +450,7 @@
                 </p>
             </div>
 
-            <a href="{{ route('admin.users.index') }}" class="text-[10px] font-black text-white hover:bg-emerald-700 uppercase tracking-widest bg-emerald-600 px-5 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center gap-2">
+            <a href="{{ route('admin.users.index') }}" class="text-[10px] font-black text-white hover:bg-emerald-700 uppercase tracking-widest bg-emerald-600 px-5 py-2.5 rounded-xl transition-all shadow-md inline-flex items-center gap-2 flex-shrink-0">
                 Kelola Akses <i class="fas fa-arrow-right"></i>
             </a>
         </div>
@@ -485,7 +458,7 @@
         <div class="flex-1 overflow-auto premium-scrollbar p-0">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-slate-50/50">
+                    <tr class="bg-slate-50/50 sticky top-0 z-10">
                         <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Profil Pengguna</th>
                         <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Kontak</th>
                         <th class="py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Peran Akses</th>
@@ -553,8 +526,11 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // --- Clock & Greeting ---
     const clockEl = document.getElementById('realtime-clock');
     const greetingEl = document.getElementById('dynamic-greeting');
     const emojiEl = document.getElementById('dynamic-emoji');
@@ -599,6 +575,161 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateClockAndGreeting();
     setInterval(updateClockAndGreeting, 1000);
+
+    // --- ApexCharts ---
+    const chartLabels = @json($chartLabels);
+    const chartBidan   = @json($chartBidan);
+    const chartKader   = @json($chartKader);
+    const chartBalita  = @json($chartBalita);
+    const chartRemaja  = @json($chartRemaja);
+    const chartLansia  = @json($chartLansia);
+
+    const colors = ['#f59e0b', '#10b981', '#38bdf8', '#2563eb', '#14b8a6'];
+    const strokeColors = ['#f59e0b', '#10b981', '#38bdf8', '#2563eb', '#14b8a6'];
+
+    const options = {
+        series: [
+            { name: 'Bidan', data: chartBidan },
+            { name: 'Kader', data: chartKader },
+            { name: 'Balita', data: chartBalita },
+            { name: 'Remaja', data: chartRemaja },
+            { name: 'Lansia', data: chartLansia }
+        ],
+        chart: {
+            type: 'area',
+            height: 300,
+            fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif',
+            toolbar: { show: false },
+            zoom: { enabled: false },
+            background: 'transparent',
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 600,
+                dynamicAnimation: { speed: 300 }
+            }
+        },
+        colors: colors,
+        dataLabels: { enabled: false }, // <-- HAPUS ANGKA DI ATAS CHART
+        stroke: {
+            curve: 'smooth',
+            width: 2.5
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.35,
+                opacityTo: 0.02,
+                stops: [0, 90, 100]
+            }
+        },
+        grid: {
+            borderColor: 'rgba(226, 232, 240, 0.5)',
+            strokeDashArray: 5,
+            xaxis: { lines: { show: true } },
+            yaxis: { lines: { show: true } }
+        },
+        xaxis: {
+            categories: chartLabels,
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+            labels: {
+                style: {
+                    colors: '#64748b',
+                    fontSize: '12px',
+                    fontWeight: 700
+                },
+                rotate: 0,
+                trim: false
+            }
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    colors: '#64748b',
+                    fontSize: '12px',
+                    fontWeight: 700
+                },
+                formatter: function (val) {
+                    return Math.round(val);
+                }
+            },
+            forceNiceScale: true,
+            min: 0
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'center',
+            fontSize: '12px',
+            fontWeight: 700,
+            markers: {
+                radius: 4,
+                width: 10,
+                height: 10
+            },
+            itemMargin: {
+                horizontal: 12,
+                vertical: 4
+            },
+            offsetY: 8
+        },
+        tooltip: {
+            theme: 'light',
+            x: {
+                show: true,
+                format: 'dd MMM yyyy'
+            },
+            y: {
+                formatter: function (val, { series, seriesIndex, dataPointIndex, w }) {
+                    return val + ' registrasi';
+                }
+            },
+            marker: { show: true },
+            style: {
+                fontSize: '13px',
+                fontFamily: 'Plus Jakarta Sans, sans-serif'
+            }
+        },
+        markers: {
+            size: 4,
+            strokeWidth: 2,
+            strokeColors: strokeColors,
+            hover: {
+                size: 6,
+                sizeOffset: 2
+            }
+        },
+        responsive: [
+            {
+                breakpoint: 640,
+                options: {
+                    chart: { height: 220 },
+                    legend: { position: 'bottom', horizontalAlign: 'center' },
+                    xaxis: { labels: { fontSize: '10px' } },
+                    yaxis: { labels: { fontSize: '10px' } }
+                }
+            }
+        ]
+    };
+
+    const chart = new ApexCharts(document.querySelector("#trendChart"), options);
+    chart.render();
+
+    // Resize observer
+    let resizeTimer;
+    const resizeObserver = new ResizeObserver(() => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            const w = window.innerWidth;
+            const newHeight = w < 640 ? 220 : 300;
+            chart.updateOptions({ chart: { height: newHeight } });
+        }, 100);
+    });
+    const chartContainer = document.querySelector("#trendChart");
+    if (chartContainer) resizeObserver.observe(chartContainer);
+
+    window.addEventListener('beforeunload', () => resizeObserver.disconnect());
 });
 </script>
 @endpush

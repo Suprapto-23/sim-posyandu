@@ -16,6 +16,9 @@ use Illuminate\View\View;
 
 class NotifikasiController extends Controller
 {
+    /**
+     * Halaman utama notifikasi (Pesan Bidan)
+     */
     public function index(Request $request): View
     {
         try {
@@ -35,7 +38,7 @@ class NotifikasiController extends Controller
 
             $notifikasis = $query
                 ->latest()
-                ->paginate(10)
+                ->paginate(5)
                 ->withQueryString();
 
             $notifikasiCards = collect($notifikasis->items())
@@ -69,13 +72,15 @@ class NotifikasiController extends Controller
         }
     }
 
+    /**
+     * AJAX: ambil 5 notifikasi terbaru untuk dropdown (lonceng)
+     */
     public function fetchRecent(): JsonResponse
     {
         try {
             if (! $this->tableReady()) {
                 return response()->json([
                     'unreadCount' => 0,
-                    'html' => $this->emptyDropdownHtml(),
                     'items' => [],
                     'latest_title' => 'Tidak ada pesan',
                     'latest_body' => 'Belum ada pesan baru.',
@@ -88,16 +93,14 @@ class NotifikasiController extends Controller
                 ->latest()
                 ->limit(5)
                 ->get()
-                ->map(fn (Notifikasi $item) => $this->buildCard($item));
+                ->map(fn (Notifikasi $item) => $this->buildDropdownItem($item))
+                ->values();
 
             $latest = $recentItems->first();
 
             return response()->json([
                 'unreadCount' => $unreadCount,
-                'html' => $recentItems->isEmpty()
-                    ? $this->emptyDropdownHtml()
-                    : $this->buildDropdownHtml($recentItems),
-                'items' => $recentItems->values(),
+                'items' => $recentItems,
                 'latest_title' => $latest['judul'] ?? 'Tidak ada pesan',
                 'latest_body' => $latest['pesan'] ?? 'Belum ada pesan baru.',
             ]);
@@ -109,7 +112,6 @@ class NotifikasiController extends Controller
 
             return response()->json([
                 'unreadCount' => 0,
-                'html' => '<div class="p-4 text-sm font-semibold text-slate-500">Gagal memuat pesan.</div>',
                 'items' => [],
                 'latest_title' => 'Gagal memuat pesan',
                 'latest_body' => 'Silakan muat ulang halaman.',
@@ -117,6 +119,9 @@ class NotifikasiController extends Controller
         }
     }
 
+    /**
+     * Tandai satu notifikasi sebagai dibaca (dari tombol di halaman index)
+     */
     public function markRead(Request $request, int $id): RedirectResponse
     {
         try {
@@ -138,6 +143,9 @@ class NotifikasiController extends Controller
         }
     }
 
+    /**
+     * Tandai semua notifikasi sebagai dibaca
+     */
     public function markAllRead(): RedirectResponse
     {
         try {
@@ -155,6 +163,8 @@ class NotifikasiController extends Controller
             return back()->with('error', 'Gagal menandai semua pesan.');
         }
     }
+
+    // ========== QUERY HELPERS ==========
 
     private function baseQuery()
     {
@@ -197,6 +207,8 @@ class NotifikasiController extends Controller
         return Notifikasi::query()
             ->where('user_id', auth()->id());
     }
+
+    // ========== FILTER HELPERS ==========
 
     private function applyReadFilter($query, string $filter): void
     {
@@ -249,6 +261,8 @@ class NotifikasiController extends Controller
         });
     }
 
+    // ========== BUILDERS ==========
+
     private function buildCounts(): array
     {
         return [
@@ -258,6 +272,9 @@ class NotifikasiController extends Controller
         ];
     }
 
+    /**
+     * Build card untuk halaman index
+     */
     private function buildCard(Notifikasi $item): array
     {
         $isRead = $this->isRead($item);
@@ -280,6 +297,28 @@ class NotifikasiController extends Controller
             'tanggal_short' => $item->created_at
                 ? $item->created_at->translatedFormat('d M Y')
                 : '-',
+            'waktu' => $item->created_at
+                ? $item->created_at->diffForHumans()
+                : '-',
+        ];
+    }
+
+    /**
+     * Build item untuk dropdown (lonceng) – khusus untuk fetchRecent
+     */
+    private function buildDropdownItem(Notifikasi $item): array
+    {
+        $isRead = $this->isRead($item);
+        $tipe = $item->tipe ?: $this->guessType($item);
+
+        return [
+            'id' => $item->id,
+            'judul' => $item->judul ?: 'Informasi Posyandu',
+            'pesan' => Str::limit((string) ($item->pesan ?: 'Tidak ada isi pesan.'), 80),
+            'tipe' => $tipe,
+            'icon' => $this->typeIcon($tipe),
+            'link' => $item->link ?: route('user.notifikasi.index'),
+            'is_read' => $isRead,
             'waktu' => $item->created_at
                 ? $item->created_at->diffForHumans()
                 : '-',
@@ -313,6 +352,8 @@ class NotifikasiController extends Controller
 
         return $payload;
     }
+
+    // ========== UTILITY ==========
 
     private function normalizeFilter(?string $value): string
     {
@@ -366,49 +407,7 @@ class NotifikasiController extends Controller
         };
     }
 
-    private function buildDropdownHtml(Collection $items): string
-    {
-        return $items->map(function (array $item) {
-            $bg = $item['is_read']
-                ? 'bg-white/80'
-                : 'bg-emerald-50/80 border-emerald-100';
-
-            $dot = $item['is_read']
-                ? ''
-                : '<span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-rose-500"></span>';
-
-            return '
-                <a href="' . e($item['link']) . '" class="block border-b border-slate-100 p-4 transition hover:bg-emerald-50/60 ' . $bg . '">
-                    <div class="flex gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
-                            <i class="fas ' . e($item['icon']) . '"></i>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-start justify-between gap-2">
-                                <p class="line-clamp-1 text-sm font-black text-slate-800">' . e($item['judul']) . '</p>
-                                ' . $dot . '
-                            </div>
-                            <p class="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">' . e($item['pesan_ringkas']) . '</p>
-                            <p class="mt-2 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600">' . e($item['waktu']) . '</p>
-                        </div>
-                    </div>
-                </a>
-            ';
-        })->implode('');
-    }
-
-    private function emptyDropdownHtml(): string
-    {
-        return '
-            <div class="p-5 text-center">
-                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                    <i class="fas fa-check-double"></i>
-                </div>
-                <p class="mt-3 text-sm font-black text-slate-800">Kotak masuk bersih</p>
-                <p class="mt-1 text-xs font-semibold text-slate-500">Belum ada pesan baru.</p>
-            </div>
-        ';
-    }
+    // ========== EMPTY STATE ==========
 
     private function emptyViewData(Request $request, array $filters): array
     {
@@ -443,6 +442,8 @@ class NotifikasiController extends Controller
             ]
         );
     }
+
+    // ========== TABLE CHECK ==========
 
     private function tableReady(): bool
     {

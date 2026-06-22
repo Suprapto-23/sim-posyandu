@@ -1,1439 +1,861 @@
 <!DOCTYPE html>
-<html lang="id" class="pc-html">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#f8fffc">
-    <meta name="apple-mobile-web-app-capable" content="yes">
 
-    <title>@yield('title', 'Portal Warga') | PosyanduCare</title>
-
-    <link rel="icon" type="image/png" href="{{ asset('img/logo.webp') }}">
-    <link rel="apple-touch-icon" href="{{ asset('img/logo.webp') }}">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800;900&display=swap"
-          rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <title>@yield('title', 'Warga Workspace') | PosyanduCare</title>
 
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                        poppins: ['Poppins', 'sans-serif']
-                    }
-                }
+        try {
+            if (localStorage.getItem('pc_user_sidebar') !== '0' && matchMedia('(min-width:768px)').matches) {
+                document.documentElement.classList.add('sb-open');
             }
-        };
+        } catch (e) {}
     </script>
+
+    <link rel="icon" type="image/webp" href="{{ asset('img/logo.webp') }}">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
         :root {
-            --green-900: #064e3b;
-            --green-800: #065f46;
+            --sb-width: 280px;
             --green-700: #047857;
             --green-600: #059669;
             --green-500: #10b981;
-            --green-400: #34d399;
-
             --amber-500: #f59e0b;
-
-            --slate-950: #020617;
             --slate-900: #0f172a;
-            --slate-800: #1e293b;
             --slate-700: #334155;
-            --slate-600: #475569;
             --slate-500: #64748b;
             --slate-400: #94a3b8;
-            --slate-300: #cbd5e1;
-            --slate-200: #e2e8f0;
-            --slate-100: #f1f5f9;
-            --slate-50: #f8fafc;
-
-            --ease-premium: cubic-bezier(.16, 1, .3, 1);
-            --dock-height: 82px;
-            --topbar-height: 72px;
-            --user-sidebar-width: 292px;
+            --border: #f1f5f9;
+            --bg-app: #fcfcfd;
+            --transition-speed: 0.12s;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        [x-cloak] { display: none !important; }
 
-        html {
-            width: 100%;
-            min-height: 100%;
-            scroll-behavior: auto !important;
-        }
-
-        body {
-            width: 100%;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-
-            overflow-x: hidden;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: var(--slate-800);
-
-            background:
-                radial-gradient(circle at 0% 0%, rgba(16,185,129,.12), transparent 30%),
-                radial-gradient(circle at 100% 100%, rgba(20,184,166,.10), transparent 32%),
-                linear-gradient(135deg, #f8fffc 0%, #f8fafc 48%, #effbf6 100%);
-
+        html, body { 
+            margin: 0; 
+            height: 100vh; 
+            overflow: hidden; 
+            font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+            color: var(--slate-700);
+            background-color: var(--bg-app);
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
-        body.user-lock {
-            overflow: hidden !important;
-            height: 100dvh !important;
-            touch-action: none !important;
+        /* ── SIDEBAR (GPU) ── */
+        .user-sidebar {
+            position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; 
+            width: var(--sb-width); padding: 16px;
+            transform: translateX(-100%);
+            transition: transform var(--transition-speed) var(--ease-out);
+            will-change: transform;
+            backface-visibility: hidden;
         }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6,
-        .font-poppins {
-            font-family: 'Poppins', sans-serif;
+        html.sb-open .user-sidebar { transform: translateX(0); }
+        
+        .pc-sidebar {
+            height: 100%; 
+            border-radius: 24px; 
+            padding: 24px 16px; 
+            overflow-y: auto; overflow-x: hidden;
+            background: #ffffff;
+            border: 1px solid var(--border); 
+            box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+            scrollbar-width: none !important;
         }
+        .pc-sidebar::-webkit-scrollbar { display: none !important; }
 
-        button,
-        input,
-        textarea,
-        select {
-            font-family: inherit;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        ::selection {
-            background: rgba(16,185,129,.18);
-            color: var(--green-900);
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .user-bg-layer {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        .user-bg-layer::before {
-            content: "";
-            position: absolute;
-            width: 360px;
-            height: 360px;
-            top: -180px;
-            left: -160px;
-            border-radius: 999px;
-            background: rgba(16,185,129,.13);
-            filter: blur(58px);
-        }
-
-        .user-bg-layer::after {
-            content: "";
-            position: absolute;
-            width: 320px;
-            height: 320px;
-            right: -150px;
-            bottom: -150px;
-            border-radius: 999px;
-            background: rgba(20,184,166,.12);
-            filter: blur(56px);
-        }
-
-        .user-dot-pattern {
-            position: fixed;
-            top: 92px;
-            right: 18px;
-            width: 88px;
-            height: 88px;
-            opacity: .10;
-            z-index: 1;
-            pointer-events: none;
-            background-image: radial-gradient(rgba(16,185,129,.52) 1.1px, transparent 1.1px);
-            background-size: 9px 9px;
-        }
-
-        #pcUserLoader {
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-
+        /* ── SIDEBAR LINKS ── */
+        .pc-sidebar a {
             display: flex;
             align-items: center;
-            justify-content: center;
-
-            visibility: hidden;
-            opacity: 0;
-            pointer-events: none;
-
-            background: rgba(240,255,248,.78);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-
-            transition: opacity .16s ease, visibility .16s ease;
-        }
-
-        #pcUserLoader.show {
-            visibility: visible;
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .ld-panel {
-            min-width: 230px;
-            padding: 28px 34px 26px;
-            border-radius: 24px;
-
-            background: rgba(255,255,255,.96);
-            border: 1px solid rgba(16,185,129,.14);
-
-            box-shadow:
-                0 22px 54px rgba(15,23,42,.12),
-                inset 0 1px 0 rgba(255,255,255,.92);
-
-            text-align: center;
-
-            transform: translateY(10px) scale(.96);
-            opacity: 0;
-            transition: opacity .2s var(--ease-premium), transform .2s var(--ease-premium);
-        }
-
-        #pcUserLoader.show .ld-panel {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-        }
-
-        .ld-orbit {
-            position: relative;
-            width: 58px;
-            height: 58px;
-            margin: 0 auto 16px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ld-ring {
-            position: absolute;
-            inset: 0;
-            border-radius: 999px;
-            border: 2px solid transparent;
-        }
-
-        .ld-ring:nth-child(1) {
-            border-top-color: var(--green-500);
-            border-right-color: rgba(16,185,129,.25);
-            animation: spinR .82s linear infinite;
-        }
-
-        .ld-ring:nth-child(2) {
-            inset: 8px;
-            border-bottom-color: var(--green-400);
-            border-left-color: rgba(52,211,153,.25);
-            animation: spinR 1.15s linear infinite reverse;
-        }
-
-        .ld-ring:nth-child(3) {
-            inset: 17px;
-            border-top-color: var(--amber-500);
-            border-right-color: rgba(245,158,11,.22);
-            animation: spinR 1.55s linear infinite;
-        }
-
-        @keyframes spinR {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .ld-heart {
-            position: relative;
-            z-index: 2;
-            font-size: 17px;
-            color: var(--green-600);
-        }
-
-        .ld-name {
-            font-family: 'Poppins', sans-serif;
-            font-size: 15px;
-            font-weight: 900;
-            color: var(--slate-900);
-            margin-bottom: 2px;
-        }
-
-        .ld-label {
-            font-size: 10.5px;
-            font-weight: 800;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 12px;
             color: var(--slate-500);
-            text-transform: uppercase;
-            letter-spacing: .08em;
+            font-weight: 700;
+            font-size: 13px;
+            text-decoration: none;
+            transition: background-color 0.06s ease, color 0.06s ease;
+            cursor: pointer;
+        }
+        .pc-sidebar a:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .pc-sidebar a.active {
+            background: #ecfdf5;
+            color: var(--green-600);
+            font-weight: 800;
+        }
+        .pc-sidebar a i {
+            width: 20px;
+            text-align: center;
+            font-size: 14px;
         }
 
-        .user-shell {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            min-height: 100dvh;
+        /* ── LAYOUT ── */
+        .app-wrapper {
+            display: flex; flex-direction: column; 
+            height: 100vh;
+            padding-left: 0;
+            transition: padding-left var(--transition-speed) var(--ease-out);
+            will-change: padding-left;
+            backface-visibility: hidden;
+        }
+        @media (min-width: 768px) { 
+            html.sb-open .app-wrapper { padding-left: var(--sb-width); } 
         }
 
-        .user-app {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            min-height: 100dvh;
-
-            display: flex;
-            flex-direction: column;
-
-            opacity: 0;
-            transform: translateY(8px);
-            animation: userAppEnter .22s var(--ease-premium) forwards;
-        }
-
-        @keyframes userAppEnter {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        /* ── TOPBAR ── */
+        .topbar-wrapper {
+            padding: 16px 24px 0;
+            flex-shrink: 0; 
+            z-index: 50;
         }
 
         .user-topbar {
-            position: sticky;
-            top: 0;
-            z-index: 40;
-
-            flex-shrink: 0;
-            min-height: var(--topbar-height);
-
-            padding:
-                calc(10px + env(safe-area-inset-top))
-                14px
-                10px;
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-
-            background: rgba(255,255,255,.88);
-            border-bottom: 1px solid rgba(226,232,240,.78);
-
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-
-            box-shadow: 0 10px 26px rgba(15,23,42,.045);
+            min-height: 68px; 
+            padding: 8px 16px; 
+            border-radius: 24px; 
+            display: flex; align-items: center; gap: 12px; 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border); 
+            box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+        }
+        @media (max-width: 767px) {
+            .user-topbar {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                background: rgba(255,255,255,0.95);
+                min-height: 60px;
+                padding: 6px 12px;
+                border-radius: 18px;
+            }
         }
 
-        .user-topbar-left,
-        .user-topbar-right {
-            display: flex;
-            align-items: center;
+        .sidebar-toggle {
+            width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 14px;
+            background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0;
+            display: grid; place-items: center; transition: all 0.15s ease;
+            will-change: transform;
+        }
+        .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
+        .sidebar-toggle:active { transform: scale(0.92); }
+        @media (max-width: 767px) {
+            .sidebar-toggle { width: 38px; height: 38px; border-radius: 12px; }
         }
 
-        .user-topbar-left {
-            gap: 10px;
-            min-width: 0;
+        .topbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+
+        .btn-notif { 
+            width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 50%; 
+            background: #ffffff; color: var(--slate-500); cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; 
+            position: relative; transition: all 0.15s ease; 
         }
+        .btn-notif:hover { background: #f8fafc; color: var(--green-600); border-color: #e2e8f0; }
+        .btn-notif:active { transform: scale(0.92); }
 
-        .user-topbar-right {
-            gap: 8px;
-        }
-
-        .user-menu-button,
-        .user-icon-button {
-            width: 42px;
-            height: 42px;
-
-            border: 1px solid rgba(226,232,240,.86);
-            border-radius: 16px;
-
-            background: rgba(255,255,255,.90);
-            color: var(--slate-600);
-
+        /* Badge notifikasi */
+        .btn-notif .notif-badge {
+            position: absolute; top: 8px; right: 8px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 900;
             display: flex;
             align-items: center;
             justify-content: center;
-
-            box-shadow:
-                0 8px 20px rgba(15,23,42,.04),
-                inset 0 1px 0 rgba(255,255,255,.88);
-
-            transition:
-                transform .14s var(--ease-premium),
-                border-color .14s var(--ease-premium),
-                color .14s var(--ease-premium),
-                background .14s var(--ease-premium);
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(239,68,68,0.3);
         }
-
-        .user-menu-button:hover,
-        .user-icon-button:hover {
-            color: var(--green-700);
-            border-color: rgba(16,185,129,.28);
-            background: #ffffff;
-        }
-
-        .user-menu-button:active,
-        .user-icon-button:active {
-            transform: scale(.95);
-        }
-
-        .user-title-block {
-            min-width: 0;
-        }
-
-        .user-page-title {
-            margin: 0;
-            max-width: 190px;
-
-            color: var(--slate-900);
-            font-size: 16.5px;
-            font-family: 'Poppins', sans-serif;
-            font-weight: 900;
-            line-height: 1.05;
-            letter-spacing: -.035em;
-
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-page-subtitle {
-            margin-top: 4px;
-
-            color: var(--green-700);
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .14em;
-        }
-
-        .user-notif-area {
-            position: relative;
-        }
-
-        .notif-dot,
-        .notif-dot-pulse {
-            position: absolute;
-            top: 9px;
-            right: 9px;
-
-            width: 10px;
-            height: 10px;
-
-            border-radius: 999px;
-            background: #f43f5e;
-            border: 2px solid white;
-        }
-
-        .notif-dot-pulse {
+        .btn-notif .notif-pulse {
+            position: absolute; top: 8px; right: 8px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #ef4444;
             animation: notifPulse 1.4s infinite;
-            border: 0;
-            opacity: .55;
+            opacity: 0.4;
         }
-
         @keyframes notifPulse {
-            0% {
-                transform: scale(.85);
-                opacity: .65;
-            }
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+        @media (max-width: 767px) {
+            .btn-notif { width: 38px; height: 38px; }
+            .btn-notif .notif-badge { width: 16px; height: 16px; font-size: 8px; top: 6px; right: 6px; }
+            .btn-notif .notif-pulse { width: 16px; height: 16px; top: 6px; right: 6px; }
+        }
+        
+        .profile-button { 
+            height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border); 
+            border-radius: 50px; background: #ffffff; cursor: pointer; 
+            display: flex; align-items: center; gap: 10px; transition: all 0.15s ease; 
+        }
+        .profile-button:hover { background: #f8fafc; border-color: #e2e8f0; }
+        .profile-button:active { transform: scale(0.96); }
+        .profile-avatar { 
+            width: 34px; height: 34px; border-radius: 50%; 
+            background: linear-gradient(135deg, var(--green-700), var(--green-500));
+            color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 900; overflow: hidden; 
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-name { font-size: 13px; font-weight: 800; color: var(--slate-700); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        @media (max-width: 767px) {
+            .profile-button { height: 38px; padding: 2px 8px 2px 2px; gap: 6px; }
+            .profile-avatar { width: 30px; height: 30px; font-size: 10px; }
+            .profile-name { display: none; }
+        }
 
-            80%,
-            100% {
-                transform: scale(2);
-                opacity: 0;
+        /* ── DROPDOWN NOTIFIKASI (PERBAIKAN) ── */
+        .user-dropdown { 
+            position: absolute;
+            right: 0;
+            top: calc(100% + 12px);
+            width: 380px;
+            max-width: calc(100vw - 32px);
+            z-index: 90;
+            border-radius: 24px;
+            padding: 8px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04);
+            /* Hapus transition CSS, serahkan ke Alpine */
+            transform-origin: top right;
+        }
+
+        @media (max-width: 767px) {
+    .user-dropdown {
+        position: fixed;      /* Ubah dari absolute ke fixed */
+        top: 76px;            /* Berada pas di bawah topbar (12px padding + 60px tinggi bar + 4px jarak) */
+        left: 12px;           /* Memberikan jarak aman dari pinggir kiri layar */
+        right: 12px;          /* Memberikan jarak aman dari pinggir kanan layar */
+        margin: 0 auto;
+        width: auto;          /* Tidak perlu calc() lagi karena left & right sudah mengatur lebarnya */
+        max-width: 400px;
+        transform-origin: top center;
+        border-radius: 20px;
+        padding: 6px;
+    }
+}
+
+        /* ── DROPDOWN PROFILE ── */
+        .profile-dropdown {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 12px);
+            width: 260px;
+            z-index: 90;
+            border-radius: 24px;
+            padding: 8px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04);
+            transform-origin: top right;
+        }
+        @media (max-width: 767px) {
+            .profile-dropdown {
+                width: 220px;
+                right: -8px;
             }
         }
 
-        .mobile-profile-bubble {
-            width: 42px;
-            height: 42px;
+        .dropdown-head { padding: 12px; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
+        .dropdown-name { color: var(--slate-900); font-size: 14px; font-weight: 800; line-height: 1.2; }
+        .dropdown-role { color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;}
+        .dropdown-link, .dropdown-logout { 
+            width: 100%; border: 0; border-radius: 16px; padding: 12px 14px; 
+            background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; 
+            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.15s ease; 
+        }
+        .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
+        .dropdown-logout { color: #e11d48; }
+        .dropdown-logout:hover { background: #fff1f2; }
 
-            border-radius: 16px;
+        /* ── NOTIF DROPDOWN SCROLL ── */
+        .notif-scroll {
+            max-height: 340px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .notif-scroll::-webkit-scrollbar { width: 4px; }
+        .notif-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        .notif-scroll::-webkit-scrollbar-track { background: transparent; }
 
-            background: linear-gradient(135deg, var(--green-700), var(--green-500));
-            color: white;
-
+        .notif-item {
+            display: block;
+            padding: 12px 12px;
+            border-radius: 14px;
+            transition: background 0.1s ease;
+            border-bottom: 1px solid rgba(241,245,249,0.8);
+        }
+        .notif-item:last-child { border-bottom: 0; }
+        .notif-item:hover { background: #f8fafc; }
+        .notif-item .notif-icon {
+            flex-shrink: 0;
+            width: 36px; height: 36px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-
-            font-size: 13px;
-            font-weight: 900;
-
-            box-shadow:
-                0 12px 24px rgba(16,185,129,.22),
-                inset 0 1px 0 rgba(255,255,255,.22);
         }
-
-        .notif-dropdown {
-            position: fixed;
-
-            top: calc(76px + env(safe-area-inset-top));
-            left: 12px;
-            right: 12px;
-
-            z-index: 70;
-            max-height: min(440px, calc(100dvh - 110px));
-
-            border-radius: 26px;
-            background: rgba(255,255,255,.97);
-            border: 1px solid rgba(226,232,240,.90);
-
-            box-shadow:
-                0 28px 70px rgba(15,23,42,.16),
-                inset 0 1px 0 rgba(255,255,255,.88);
-
+        .notif-item .notif-icon.bg-emerald-50 { background: #ecfdf5; color: #10b981; }
+        .notif-item .notif-icon.bg-slate-100 { background: #f1f5f9; color: #94a3b8; }
+        .notif-item .notif-title {
+            font-size: 13px; font-weight: 800; color: #0f172a;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
             overflow: hidden;
-
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-
-            transform: translateY(10px) scale(.985);
-
-            transition:
-                opacity .16s var(--ease-premium),
-                transform .16s var(--ease-premium),
-                visibility .16s var(--ease-premium);
         }
-
-        .notif-dropdown.show {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-            transform: translateY(0) scale(1);
+        .notif-item .notif-body {
+            font-size: 12px; font-weight: 600; color: #64748b;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
         }
-
-        .notif-head {
-            padding: 16px;
-            border-bottom: 1px solid rgba(241,245,249,.95);
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-
-            background: rgba(248,250,252,.78);
-        }
-
-        .notif-head-title {
-            margin: 0;
-            color: var(--slate-900);
-            font-size: 14px;
-            font-weight: 900;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        .notif-status {
-            padding: 5px 9px;
-            border-radius: 999px;
-            background: var(--slate-100);
-            color: var(--slate-500);
-
-            font-size: 9px;
-            font-weight: 900;
+        .notif-item .notif-time {
+            font-size: 10px; font-weight: 800; color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: .08em;
-            white-space: nowrap;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+        .notif-item .notif-dot {
+            flex-shrink: 0;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+            margin-top: 4px;
         }
 
-        .notif-status.is-new {
-            background: #fff1f2;
-            color: #e11d48;
+        @media (max-width: 767px) {
+            .notif-item { padding: 10px 10px; }
+            .notif-item .notif-icon { width: 32px; height: 32px; font-size: 12px; }
+            .notif-item .notif-title { font-size: 12px; }
+            .notif-item .notif-body { font-size: 11px; }
+            .notif-item .notif-time { font-size: 9px; }
         }
 
-        .notif-list {
-            max-height: 330px;
+        /* ── MAIN CONTENT ── */
+        .main-scroll-area {
+            flex: 1;
             overflow-y: auto;
-            background: rgba(255,255,255,.58);
+            overflow-x: hidden;
+            padding: 24px 0 40px;
+            scroll-behavior: smooth;
         }
+        .main-scroll-area::-webkit-scrollbar { width: 6px; }
+        .main-scroll-area::-webkit-scrollbar-track { background: transparent; }
+        .main-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .main-scroll-area::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .notif-footer {
-            padding: 13px 16px;
-            border-top: 1px solid rgba(241,245,249,.95);
-            background: rgba(248,250,252,.78);
-            text-align: center;
+        .user-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 0 16px;
         }
-
-        .notif-footer a {
-            color: var(--green-700);
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .13em;
+        @media (min-width: 640px) {
+            .user-container { padding: 0 24px; }
         }
-
-        .user-sidebar-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 80;
-
-            background: rgba(2,6,23,.34);
-
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-
-            transition:
-                opacity .16s ease,
-                visibility .16s ease;
+        @media (min-width: 1024px) {
+            .user-container { padding: 0 32px; }
         }
-
-        .user-sidebar-overlay.show {
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-        }
-
-        .user-sidebar-wrap {
-            position: fixed;
-            inset: 10px auto 10px 10px;
-
-            width: min(292px, calc(100vw - 22px));
-            z-index: 90;
-
-            transform: translateX(calc(-100% - 18px));
-            opacity: .8;
-            pointer-events: none;
-
-            transition:
-                transform .2s var(--ease-premium),
-                opacity .16s ease;
-        }
-
-        .user-sidebar-wrap.show {
-            transform: translateX(0);
-            opacity: 1;
-            pointer-events: auto;
+        @media (max-width: 767px) {
+            .main-scroll-area {
+                padding: 16px 0 100px;
+            }
         }
 
         .user-main {
-            position: relative;
-            z-index: 10;
-
-            flex: 1;
-            min-height: 0;
-
-            width: 100%;
-
-            overflow-y: auto;
-            overflow-x: hidden;
-
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior-y: contain;
-
-            padding:
-                16px
-                14px
-                calc(var(--dock-height) + 38px + env(safe-area-inset-bottom));
-
-            scroll-behavior: auto !important;
-
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-
-        .user-main::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-            display: none;
-        }
-
-        .user-main-inner {
-            max-width: 1040px;
-            margin: 0 auto;
-
             opacity: 0;
-            transform: translateY(10px);
-            animation: contentIn .22s var(--ease-premium) .02s forwards;
+            animation: contentEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: opacity, transform;
+        }
+        @keyframes contentEnter {
+            0% { opacity: 0; transform: translateY(6px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .content-leave .user-main {
+            animation: contentLeave 0.12s ease-in forwards !important;
+        }
+        @keyframes contentLeave {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-5px); }
         }
 
-        @keyframes contentIn {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        /* ── MOBILE OVERLAY ── */
+        .mobile-overlay {
+            position: fixed; inset: 0; z-index: 90; border: 0; background: rgba(15,23,42,.3); backdrop-filter: blur(3px);
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.12s ease, visibility 0.12s ease;
+            will-change: opacity;
+        }
+        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; }
+        
+        @media (min-width: 768px) { .mobile-overlay { display: none !important; } }
+        @media (max-width: 767px) {
+            .app-wrapper { padding-left: 0 !important; }
+            .topbar-wrapper { padding: 12px 12px 0; }
         }
 
-        .mobile-card,
-        .user-card,
-        .dashboard-card,
-        .content-card,
-        .table-card {
-            border-radius: 24px;
-            background: rgba(255,255,255,.84);
-            border: 1px solid rgba(226,232,240,.82);
-            box-shadow:
-                0 16px 36px rgba(15,23,42,.05),
-                inset 0 1px 0 rgba(255,255,255,.84);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-        }
-
-        .mobile-dock {
-            position: fixed;
-
-            left: 12px;
-            right: 12px;
-            bottom: calc(10px + env(safe-area-inset-bottom));
-
+        /* ── BOTTOM NAV (Mobile) ── */
+        .bottom-nav {
+            display: none; 
+            position: fixed; 
+            left: 12px; right: 12px; bottom: 12px; 
             z-index: 60;
-
-            height: 72px;
-            padding: 8px 10px;
-
-            border-radius: 28px;
-
-            background: rgba(255,255,255,.92);
-            border: 1px solid rgba(255,255,255,.96);
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 6px;
-
-            box-shadow:
-                0 20px 52px rgba(15,23,42,.13),
-                0 6px 18px rgba(16,185,129,.06),
-                inset 0 1px 0 rgba(255,255,255,.95);
-
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            height: 64px; 
+            padding: 6px; 
+            border-radius: 20px;
+            align-items: center; 
+            justify-content: space-around;
+            background: rgba(255,255,255,.95); 
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px); 
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,.05);
+        }
+        .bn-link {
+            flex: 1; height: 100%; border-radius: 14px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+            color: var(--slate-400); font-size: 10px; font-weight: 700; transition: all 0.12s ease;
+        }
+        .bn-link i { font-size: 18px; }
+        .bn-link.active, .bn-link:hover { color: var(--green-600); background: #ecfdf5; }
+        .bn-center { flex: 1; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
+        .bn-fab {
+            position: absolute; top: -24px; width: 56px; height: 56px; border-radius: 16px;
+            background: linear-gradient(135deg, var(--green-700), var(--green-500)); 
+            color: #fff; display: grid; place-items: center; font-size: 20px;
+            border: 4px solid var(--slate-50); box-shadow: 0 8px 16px rgba(16,185,129,.25);
+        }
+        @media (max-width: 767px) { 
+            .bottom-nav { display: flex; } 
+            .bn-link { font-size: 9px; }
+            .bn-link i { font-size: 16px; }
+            .bn-fab { width: 50px; height: 50px; font-size: 18px; top: -22px; }
         }
 
-        .dock-link {
-            position: relative;
-            flex: 1;
-            min-width: 0;
-            height: 54px;
+        /* ── SWEETALERT ── */
+        .nexus-swal { border-radius: 32px !important; padding: 32px !important; font-family: "Plus Jakarta Sans", sans-serif !important; border: 1px solid var(--border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;}
+        .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important;}
+        .nexus-html { font-size: 14px !important; color: #64748b !important; }
 
-            border-radius: 18px;
-
-            color: var(--slate-400);
-
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-
-            transition:
-                transform .14s var(--ease-premium),
-                color .14s var(--ease-premium),
-                background .14s var(--ease-premium);
+        .nexus-ok {
+            border-radius: 16px !important;
+            background: linear-gradient(135deg, var(--green-700), var(--green-500)) !important;
+            color: #fff !important;
+            font-weight: 700 !important;
+            padding: 12px 24px !important;
+            box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important;
+            border: 0 !important;
+        }
+        .nexus-ok:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 16px rgba(5,150,105,0.4) !important;
         }
 
-        .dock-link:active {
-            transform: scale(.95);
+        .nexus-danger {
+            border-radius: 16px !important;
+            background: linear-gradient(135deg, #dc2626, #ef4444) !important;
+            color: #fff !important;
+            font-weight: 700 !important;
+            padding: 12px 24px !important;
+            box-shadow: 0 4px 12px rgba(220,38,38,0.3) !important;
+            border: 0 !important;
         }
 
-        .dock-link i {
-            font-size: 16px;
+        .nexus-cancel {
+            border-radius: 16px !important;
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #475569 !important;
+            font-weight: 700 !important;
+            padding: 12px 24px !important;
         }
 
-        .dock-link span {
-            font-size: 8.5px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            line-height: 1;
+        .swal2-icon.swal2-question {
+            border-color: var(--green-500) !important;
+            color: var(--green-500) !important;
         }
-
-        .dock-link.active {
-            color: var(--green-700);
-            background: #ecfdf5;
+        .swal2-icon.swal2-warning {
+            border-color: #f59e0b !important;
+            color: #f59e0b !important;
         }
-
-        .dock-link.active::before {
-            content: "";
-            position: absolute;
-            top: 5px;
-
-            width: 5px;
-            height: 5px;
-
-            border-radius: 999px;
-            background: var(--green-500);
-            box-shadow: 0 0 0 4px rgba(16,185,129,.10);
+        .swal2-icon.swal2-success {
+            border-color: var(--green-500) !important;
+            color: var(--green-500) !important;
         }
-
-        .dock-center {
-            position: relative;
-            flex: 1;
-            min-width: 0;
-            height: 54px;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .dock-action {
-            position: absolute;
-            top: -25px;
-
-            width: 58px;
-            height: 58px;
-
-            border-radius: 999px;
-
-            background: linear-gradient(135deg, var(--green-700), var(--green-500));
-            color: white;
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            border: 4px solid rgba(255,255,255,.96);
-
-            box-shadow:
-                0 18px 34px rgba(16,185,129,.30),
-                inset 0 1px 0 rgba(255,255,255,.24);
-
-            transition: transform .14s var(--ease-premium);
-        }
-
-        .dock-action:active {
-            transform: scale(.95);
-        }
-
-        .dock-action i {
-            font-size: 20px;
-        }
-
-        .dock-center-label {
-            position: absolute;
-            bottom: -5px;
-
-            color: var(--green-700);
-
-            font-size: 8.5px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            white-space: nowrap;
-        }
-
-        @media (min-width: 768px) {
-            body {
-                min-height: 100vh;
-                overflow-y: auto;
-            }
-
-            .user-sidebar-wrap {
-                position: fixed;
-
-                top: 14px;
-                left: 14px;
-                bottom: 14px;
-                right: auto;
-
-                width: var(--user-sidebar-width);
-                z-index: 70;
-
-                transform: translateX(0);
-                opacity: 1;
-                pointer-events: auto;
-            }
-
-            .user-sidebar-overlay {
-                display: none !important;
-            }
-
-            .user-shell {
-                min-height: 100vh;
-                padding-left: calc(var(--user-sidebar-width) + 28px);
-            }
-
-            .user-app {
-                min-height: 100vh;
-                overflow: visible;
-            }
-
-            .user-topbar {
-                min-height: 84px;
-
-                margin: 14px 18px 0 0;
-                padding: 14px 28px;
-
-                border-radius: 28px;
-                border: 1px solid rgba(226,232,240,.82);
-
-                background: rgba(255,255,255,.86);
-
-                box-shadow:
-                    0 18px 46px rgba(15,23,42,.058),
-                    inset 0 1px 0 rgba(255,255,255,.90);
-            }
-
-            .user-menu-button {
-                display: none;
-            }
-
-            .user-page-title {
-                max-width: 420px;
-                font-size: 21px;
-            }
-
-            .user-main {
-                flex: none;
-                min-height: calc(100vh - 98px);
-
-                overflow: visible;
-
-                padding: 34px 32px 52px 18px;
-            }
-
-            .user-main-inner {
-                max-width: 1180px;
-            }
-
-            .mobile-dock {
-                display: none;
-            }
-
-            .notif-dropdown {
-                position: absolute;
-                top: calc(100% + 12px);
-                left: auto;
-                right: 0;
-
-                width: 380px;
-                max-height: 480px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .user-main {
-                padding-left: 12px;
-                padding-right: 12px;
-            }
-
-            .mobile-dock {
-                left: 8px;
-                right: 8px;
-                height: 70px;
-                border-radius: 24px;
-                padding-left: 7px;
-                padding-right: 7px;
-            }
-
-            .dock-link span,
-            .dock-center-label {
-                font-size: 8px;
-            }
-
-            .dock-action {
-                width: 56px;
-                height: 56px;
-            }
-
-            .user-page-title {
-                max-width: 160px;
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 1ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 1ms !important;
-                scroll-behavior: auto !important;
-            }
+        div:where(.swal2-container) {
+            z-index: 99999 !important;
+            background: rgba(15,23,42,.36) !important;
+            backdrop-filter: blur(6px) !important;
         }
     </style>
-
     @stack('styles')
 </head>
 
-<body>
 @php
-    use Illuminate\Support\Facades\Auth;
-    use Illuminate\Support\Facades\Route;
-
-    $userName = Auth::user()->name ?? 'Warga';
-    $initial = strtoupper(substr($userName, 0, 1));
-
-    $notifIndexRoute = Route::has('user.notifikasi.index')
-        ? route('user.notifikasi.index')
-        : '#';
-
-    $profileRoute = Route::has('user.profile.edit')
-        ? route('user.profile.edit')
-        : '#';
-
-    $dashboardRoute = Route::has('user.dashboard')
-        ? route('user.dashboard')
-        : '#';
-
-    $jadwalRoute = Route::has('user.jadwal.index')
-        ? route('user.jadwal.index')
-        : '#';
-
-    $monitoringRoute = Route::has('user.monitoring.index')
-        ? route('user.monitoring.index')
-        : '#';
-
-    $riwayatRoute = Route::has('user.riwayat.index')
-        ? route('user.riwayat.index')
-        : '#';
+    $user = Auth::user();
+    $name = $user->name ?? 'Warga';
+    $initial = strtoupper(substr($name, 0, 1));
+    $photo = $user->foto ?? null;
+    $profileUrl = \Illuminate\Support\Facades\Route::has('user.profile.edit') ? route('user.profile.edit') : '#';
+    $unreadCount = class_exists('\App\Models\Notifikasi') && Auth::check() ? \App\Models\Notifikasi::where('user_id', Auth::id())->where('is_read', false)->count() : 0;
+    $routeName = request()->route()?->getName() ?? '';
 @endphp
 
-<div id="pcUserLoader" role="status" aria-label="Memuat, harap tunggu..." aria-live="polite">
-    <div class="ld-panel">
-        <div class="ld-orbit">
-            <div class="ld-ring"></div>
-            <div class="ld-ring"></div>
-            <div class="ld-ring"></div>
-            <i class="fa-solid fa-heart-pulse ld-heart"></i>
+<body x-data="layoutApp()" x-init="initApp()" class="antialiased">
+
+    <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
+
+    <aside class="user-sidebar">
+        <div class="pc-sidebar">
+            @include('partials.sidebar.user')
         </div>
+    </aside>
 
-        <div class="ld-name">PosyanduCare</div>
-        <div id="pcUserLoaderLabel" class="ld-label">Keluar Sistem</div>
-    </div>
-</div>
-
-<div class="user-bg-layer" aria-hidden="true"></div>
-<div class="user-dot-pattern" aria-hidden="true"></div>
-
-<div
-    id="sidebarOverlay"
-    class="user-sidebar-overlay"
-    onclick="closeUserSidebar()"
-    aria-hidden="true"
-></div>
-
-<div id="userSidebarWrap" class="user-sidebar-wrap">
-    @include('partials.sidebar.user')
-</div>
-
-<div class="user-shell">
-    <div class="user-app">
-
-        <header class="user-topbar">
-            <div class="user-topbar-left">
-                <button
-                    type="button"
-                    onclick="openUserSidebar()"
-                    class="user-menu-button"
-                    aria-label="Buka menu"
-                >
-                    <i class="fa-solid fa-bars-staggered text-[15px]"></i>
+    <div class="app-wrapper">
+        <div class="topbar-wrapper">
+            <header class="user-topbar">
+                <button type="button" class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars-staggered"></i>
                 </button>
 
-                <div class="user-title-block">
-                    <h1 class="user-page-title">
-                        @yield('page_title', 'Beranda')
-                    </h1>
+                <div class="topbar-right">
+                    <!-- NOTIFICATION BELL -->
+                    <div class="relative">
+                        <button @click="notifOpen = !notifOpen; profileOpen = false" class="btn-notif" aria-label="Notifikasi">
+                            <i class="fa-regular fa-bell text-[18px]"></i>
+                            <!-- Badge dengan x-if terpisah -->
+                            <template x-if="unreadCount > 0">
+                                <span class="notif-badge" x-text="unreadCount > 9 ? '9+' : unreadCount"></span>
+                            </template>
+                            <template x-if="unreadCount > 0">
+                                <span class="notif-pulse"></span>
+                            </template>
+                        </button>
 
-                    <div class="user-page-subtitle">
-                        Portal Warga Aktif
-                    </div>
-                </div>
-            </div>
-
-            <div class="user-topbar-right">
-                <div class="user-notif-area" id="notifArea">
-                    <button
-                        type="button"
-                        onclick="toggleNotif()"
-                        id="notifBtn"
-                        class="user-icon-button"
-                        aria-label="Buka notifikasi"
-                    >
-                        <i class="fa-regular fa-bell text-[16px]"></i>
-
-                        <span id="notifBadge" class="notif-dot hidden"></span>
-                        <span id="notifBadgePulse" class="notif-dot-pulse hidden"></span>
-                    </button>
-
-                    <div id="notifDropdown" class="notif-dropdown">
-                        <div class="notif-head">
-                            <h3 class="notif-head-title">
-                                Pemberitahuan
-                            </h3>
-
-                            <span id="notifStatus" class="notif-status">
-                                Sinkronisasi
-                            </span>
-                        </div>
-
-                        <div id="notifList" class="notif-list no-scrollbar">
-                            <div class="py-12 text-center flex flex-col items-center">
-                                <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-2xl mb-3"></i>
-                                <p class="text-[11px] font-semibold text-slate-400">
-                                    Memuat data...
-                                </p>
+                        <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false" 
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95 translate-y-3"
+                             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                             x-transition:leave-end="opacity-0 scale-95 translate-y-3" 
+                             class="user-dropdown">
+                            
+                            <div class="p-3 border-b border-slate-100 flex items-center justify-between">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notifikasi</p>
+                                <span class="text-[10px] font-bold text-emerald-600" x-text="unreadCount + ' baru'"></span>
+                            </div>
+                            
+                            <div class="notif-scroll">
+                                <template x-if="notifItems.length === 0">
+                                    <div class="text-center text-xs font-semibold text-slate-400 py-8">
+                                        <i class="fa-regular fa-circle-check text-2xl block mb-2 text-emerald-400"></i>
+                                        Belum ada notifikasi.
+                                    </div>
+                                </template>
+                                <template x-for="item in notifItems" :key="item.id">
+                                    <a :href="item.link" class="notif-item flex gap-3 items-start">
+                                        <div class="notif-icon" :class="item.is_read ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-600'">
+                                            <i class="fas" :class="item.icon || 'fa-bell'"></i>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-start justify-between gap-2">
+                                                <p class="notif-title" x-text="item.judul"></p>
+                                                <span x-show="!item.is_read" class="notif-dot"></span>
+                                            </div>
+                                            <p class="notif-body" x-text="item.pesan"></p>
+                                            <p class="notif-time" x-text="item.waktu"></p>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+                            
+                            <div class="p-3 border-t border-slate-100 text-center">
+                                <a href="{{ Route::has('user.notifikasi.index') ? route('user.notifikasi.index') : '#' }}" class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest hover:text-emerald-700">
+                                    Lihat Semua Notifikasi
+                                </a>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="notif-footer">
-                            <a href="{{ $notifIndexRoute }}">
-                                Lihat Semua Notifikasi
-                            </a>
+                    <!-- PROFILE -->
+                    <div class="relative">
+                        <button @click="profileOpen = !profileOpen; notifOpen = false" class="profile-button">
+                            <div class="profile-avatar">
+                                @if($photo) <img src="{{ asset('storage/'.$photo) }}" alt="Foto"> @else {{ $initial }} @endif
+                            </div>
+                            <span class="profile-name">{{ $name }}</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 pr-1 transition-transform duration-300" :class="profileOpen ? 'rotate-180' : ''"></i>
+                        </button>
+
+                        <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false" 
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 scale-95 translate-y-3"
+                             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                             x-transition:leave-end="opacity-0 scale-95 translate-y-3" 
+                             class="profile-dropdown">
+                            <div class="dropdown-head">
+                                <div class="profile-avatar w-12 h-12 text-lg">
+                                    @if($photo) <img src="{{ asset('storage/'.$photo) }}"> @else {{ $initial }} @endif
+                                </div>
+                                <div>
+                                    <div class="dropdown-name">{{ $name }}</div>
+                                    <div class="dropdown-role">Akses Warga</div>
+                                </div>
+                            </div>
+
+                            @if($profileUrl !== '#')
+                                <a href="{{ $profileUrl }}" class="dropdown-link">
+                                    <i class="fa-regular fa-user text-slate-400"></i> Profil Saya
+                                </a>
+                            @endif
+
+                            <form method="POST" action="{{ route('logout') }}" class="js-logout-form m-0 p-0 mt-2 border-t border-slate-100 pt-2">
+                                @csrf
+                                <button type="submit" class="dropdown-logout">
+                                    <i class="fa-solid fa-arrow-right-from-bracket text-rose-400"></i> Keluar Sistem
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
+            </header>
+        </div>
 
-                <a
-                    href="{{ $profileRoute }}"
-                    class="mobile-profile-bubble"
-                    aria-label="Profil"
-                >
-                    {{ $initial }}
-                </a>
+        <div class="main-scroll-area">
+            <div class="user-container">
+                <main class="user-main">
+                    @yield('content')
+                </main>
             </div>
-        </header>
+        </div>
 
-        <main class="user-main" id="userMainScrollArea">
-            <div class="user-main-inner">
-                @yield('content')
-            </div>
-        </main>
-
-        <nav class="mobile-dock" aria-label="Navigasi utama warga">
-            <a
-                href="{{ $dashboardRoute }}"
-                class="dock-link {{ request()->routeIs('user.dashboard*') ? 'active' : '' }}"
-            >
-                <i class="fa-solid fa-house"></i>
-                <span>Home</span>
-            </a>
-
-            <a
-                href="{{ $jadwalRoute }}"
-                class="dock-link {{ request()->routeIs('user.jadwal*') ? 'active' : '' }}"
-            >
-                <i class="fa-regular fa-calendar-days"></i>
-                <span>Jadwal</span>
-            </a>
-
-            <div class="dock-center">
-                <a
-                    href="{{ $monitoringRoute }}"
-                    class="dock-action"
-                    aria-label="Pantau kesehatan"
-                >
-                    <i class="fa-solid fa-chart-line"></i>
-                </a>
-
-                <span class="dock-center-label">
-                    Pantau
-                </span>
-            </div>
-
-            <a
-                href="{{ $riwayatRoute }}"
-                class="dock-link {{ request()->routeIs('user.riwayat*') ? 'active' : '' }}"
-            >
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <span>Riwayat</span>
-            </a>
-
-            <a
-                href="{{ $profileRoute }}"
-                class="dock-link {{ request()->routeIs('user.profile*') ? 'active' : '' }}"
-            >
-                <i class="fa-regular fa-user"></i>
-                <span>Profil</span>
-            </a>
-        </nav>
     </div>
-</div>
 
-<script>
-    const sidebarOverlay = document.getElementById('sidebarOverlay');
-    const userSidebarWrap = document.getElementById('userSidebarWrap');
+    <!-- Bottom Nav (Mobile) -->
+    @php
+        $dashboardRoute = Route::has('user.dashboard') ? route('user.dashboard') : '#';
+        $jadwalRoute = Route::has('user.jadwal.index') ? route('user.jadwal.index') : '#';
+        $monitoringRoute = Route::has('user.monitoring.index') ? route('user.monitoring.index') : '#';
+        $riwayatRoute = Route::has('user.riwayat.index') ? route('user.riwayat.index') : '#';
+        $profileRouteMobile = Route::has('user.profile.edit') ? route('user.profile.edit') : '#';
+    @endphp
+    <nav class="bottom-nav" aria-label="Navigasi bawah">
+        <a href="{{ $dashboardRoute }}" class="bn-link app-link {{ $routeName === 'user.dashboard' ? 'active' : '' }}">
+            <i class="fa-solid fa-house"></i> Beranda
+        </a>
+        <a href="{{ $jadwalRoute }}" class="bn-link app-link {{ str_starts_with($routeName, 'user.jadwal') ? 'active' : '' }}">
+            <i class="fa-regular fa-calendar-days"></i> Jadwal
+        </a>
+        <div class="bn-center">
+            <a href="{{ $monitoringRoute }}" class="bn-fab app-link" aria-label="Pantau Kesehatan">
+                <i class="fa-solid fa-chart-line"></i>
+            </a>
+        </div>
+        <a href="{{ $riwayatRoute }}" class="bn-link app-link {{ str_starts_with($routeName, 'user.riwayat') ? 'active' : '' }}">
+            <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+        </a>
+        <a href="{{ $profileRouteMobile }}" class="bn-link app-link {{ str_starts_with($routeName, 'user.profile') ? 'active' : '' }}">
+            <i class="fa-regular fa-user"></i> Profil
+        </a>
+    </nav>
 
-    function isMobileView() {
-        return window.innerWidth < 768;
-    }
+    @stack('modals')
 
-    function openUserSidebar() {
-        if (!sidebarOverlay || !userSidebarWrap || !isMobileView()) {
-            return;
-        }
+    <script>
+        const root = document.documentElement;
 
-        sidebarOverlay.classList.add('show');
-        userSidebarWrap.classList.add('show');
-        document.body.classList.add('user-lock');
-    }
-
-    function closeUserSidebar() {
-        if (!sidebarOverlay || !userSidebarWrap) {
-            return;
-        }
-
-        sidebarOverlay.classList.remove('show');
-
-        if (isMobileView()) {
-            userSidebarWrap.classList.remove('show');
-        }
-
-        document.body.classList.remove('user-lock');
-    }
-
-    function toggleSidebar() {
-        if (userSidebarWrap && userSidebarWrap.classList.contains('show')) {
-            closeUserSidebar();
-            return;
-        }
-
-        openUserSidebar();
-    }
-
-    function toggleNotif() {
-        const dropdown = document.getElementById('notifDropdown');
-
-        if (!dropdown) {
-            return;
-        }
-
-        dropdown.classList.toggle('show');
-    }
-
-    function closeNotif() {
-        const dropdown = document.getElementById('notifDropdown');
-
-        if (!dropdown) {
-            return;
-        }
-
-        dropdown.classList.remove('show');
-    }
-
-    function showUserLoader(label = 'Keluar Sistem') {
-        const loader = document.getElementById('pcUserLoader');
-        const labelEl = document.getElementById('pcUserLoaderLabel');
-
-        if (labelEl) {
-            labelEl.textContent = label;
-        }
-
-        if (loader) {
-            loader.classList.add('show');
-        }
-
-        document.body.classList.add('user-lock');
-    }
-
-    function hideUserLoader() {
-        const loader = document.getElementById('pcUserLoader');
-
-        if (loader) {
-            loader.classList.remove('show');
-        }
-
-        document.body.classList.remove('user-lock');
-    }
-
-    function clearFloatingState() {
-        closeNotif();
-
-        if (sidebarOverlay && userSidebarWrap) {
-            sidebarOverlay.classList.remove('show');
-
-            if (isMobileView()) {
-                userSidebarWrap.classList.remove('show');
+        function setSidebar(open, save = true) {
+            root.classList.toggle('sb-open', open);
+            if (matchMedia('(max-width:767px)').matches) {
+                root.classList.toggle('locked', open);
+            } else {
+                root.classList.remove('locked');
+            }
+            if (save && matchMedia('(min-width:768px)').matches) {
+                try { localStorage.setItem('pc_user_sidebar', open ? '1' : '0'); } catch (e) {}
             }
         }
 
-        document.body.classList.remove('user-lock');
-        hideUserLoader();
-    }
-
-    window.NexusToast = function (title, body, iconHtml = '') {
-        if (typeof Swal === 'undefined') {
-            return;
+        function toggleSidebar() {
+            setSidebar(!root.classList.contains('sb-open'));
         }
 
-        Swal.fire({
-            html: `
-                <div class="flex items-center gap-4 text-left p-1">
-                    <div class="w-12 h-12 rounded-[16px] bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-sm">
-                        ${iconHtml || '<i class="fa-solid fa-bell text-[16px]"></i>'}
-                    </div>
-
-                    <div class="flex-1 min-w-0">
-                        <p class="text-[13px] font-black text-slate-800 font-poppins leading-tight truncate">
-                            ${title}
-                        </p>
-
-                        <p class="text-[11px] font-medium text-slate-500 mt-0.5 leading-relaxed">
-                            ${body}
-                        </p>
-                    </div>
-                </div>
-            `,
-            position: 'top',
-            showConfirmButton: false,
-            timer: 3800,
-            timerProgressBar: true,
-            customClass: {
-                popup: 'rounded-[24px] border border-slate-100/70 shadow-[0_20px_50px_-10px_rgba(15,23,42,0.16)] !w-auto min-w-[320px] max-w-[92vw] mt-4 !bg-white/95'
-            }
-        });
-    };
-
-    document.addEventListener('click', function (event) {
-        if (!event.target.closest('#notifArea')) {
-            closeNotif();
-        }
-    });
-
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            clearFloatingState();
-        }
-    });
-
-    window.addEventListener('resize', function () {
-        if (!isMobileView()) {
-            closeUserSidebar();
-        }
-    });
-
-    window.addEventListener('pageshow', function () {
-        hideUserLoader();
-        document.body.classList.remove('user-lock');
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        try {
-            sessionStorage.removeItem('pc_from_login');
-        } catch (e) {}
-
-        hideUserLoader();
-
-        document.querySelectorAll('form').forEach(function (form) {
-            form.addEventListener('submit', function () {
-                const action = (form.getAttribute('action') || '').toLowerCase();
-                const isLogout =
-                    form.classList.contains('js-logout-form') ||
-                    action.includes('logout');
-
-                if (isLogout) {
-                    closeNotif();
-                    closeUserSidebar();
-                    showUserLoader('Keluar Sistem');
+        function nexusConfirm(options) {
+            return Swal.fire({
+                title: options.title || 'Konfirmasi',
+                html: options.text,
+                icon: options.icon || 'question',
+                iconColor: options.iconColor || '#10b981',
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: options.yes || 'Ya, Lanjutkan',
+                cancelButtonText: options.no || 'Batal',
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'nexus-swal',
+                    title: 'nexus-title',
+                    htmlContainer: 'nexus-html',
+                    confirmButton: options.danger ? 'nexus-danger' : 'nexus-ok',
+                    cancelButton: 'nexus-cancel'
                 }
             });
-        });
-
-        let currentCount = -1;
-
-        const badge = document.getElementById('notifBadge');
-        const pulse = document.getElementById('notifBadgePulse');
-        const list = document.getElementById('notifList');
-        const status = document.getElementById('notifStatus');
-
-        function syncNotif() {
-            @if(Route::has('user.notifikasi.fetch'))
-                fetch("{{ route('user.notifikasi.fetch') }}", {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                })
-                    .then(function (response) {
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        const unreadCount = Number(data.unreadCount || 0);
-
-                        if (unreadCount > 0) {
-                            badge?.classList.remove('hidden');
-                            pulse?.classList.remove('hidden');
-
-                            if (status) {
-                                status.innerText = unreadCount + ' Baru';
-                                status.classList.add('is-new');
-                            }
-                        } else {
-                            badge?.classList.add('hidden');
-                            pulse?.classList.add('hidden');
-
-                            if (status) {
-                                status.innerText = 'Terbaca';
-                                status.classList.remove('is-new');
-                            }
-                        }
-
-                        if (data.html && list) {
-                            list.innerHTML = data.html;
-                        }
-
-                        if (currentCount !== -1 && unreadCount > currentCount) {
-                            window.NexusToast(
-                                data.latest_title || 'Notifikasi Baru',
-                                data.latest_body || 'Ada pembaruan informasi.'
-                            );
-                        }
-
-                        currentCount = unreadCount;
-                    })
-                    .catch(function () {});
-            @endif
         }
 
-        syncNotif();
-        setInterval(syncNotif, 45000);
+        function nexusToast(title, text, icon) {
+            if (!window.Swal) return;
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                title: title,
+                html: text || '',
+                icon: icon || 'success',
+                showConfirmButton: false,
+                timer: 1400,
+                timerProgressBar: true,
+                customClass: { popup: 'nexus-swal' }
+            });
+        }
+        window.nexusConfirm = nexusConfirm;
+        window.nexusToast = nexusToast;
+
+        // ── NAVIGASI ──
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href && !link.target && link.host === window.location.host && !link.hasAttribute('download') && !link.hasAttribute('data-no-delay')) {
+                if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                e.preventDefault();
+                document.body.classList.add('content-leave');
+                setTimeout(() => {
+                    window.location.href = link.href;
+                }, 100);
+            }
+        });
+
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (form.dataset.confirmed === '1') return;
+
+            if (form.classList.contains('js-logout-form')) {
+                event.preventDefault();
+                nexusConfirm({
+                    title: 'Keluar dari sistem?',
+                    text: 'Sesi Anda saat ini akan diakhiri.',
+                    icon: 'question',
+                    iconColor: '#10b981',
+                    yes: 'Ya, Keluar'
+                }).then(r => {
+                    if (r.isConfirmed) {
+                        form.dataset.confirmed = '1';
+                        document.body.classList.add('content-leave');
+                        setTimeout(() => form.submit(), 100);
+                    }
+                });
+            }
+            
+            if (form.classList.contains('delete-form')) {
+                event.preventDefault();
+                nexusConfirm({
+                    title: 'Hapus Data?',
+                    text: 'Tindakan ini tidak bisa dibatalkan.',
+                    icon: 'warning',
+                    iconColor: '#f59e0b',
+                    yes: 'Ya, Hapus',
+                    danger: true
+                }).then(r => { if(r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); } });
+            }
+        });
+
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) { 
+                document.body.classList.remove('content-leave'); 
+            }
+        });
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('layoutApp', () => ({
+                profileOpen: false,
+                notifOpen: false,
+                unreadCount: {{ $unreadCount }},
+                notifItems: [],
+                initApp() {
+                    this.fetchNotifikasi();
+                    const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
+                    if (!url) return;
+                    setInterval(() => {
+                        this.fetchNotifikasi();
+                    }, 30000);
+                },
+                async fetchNotifikasi() {
+                    const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
+                    if (!url) return;
+                    try {
+                        const res = await fetch(url, { 
+                            headers: { 
+                                'Accept': 'application/json', 
+                                'X-Requested-With': 'XMLHttpRequest' 
+                            }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.unreadCount = data.unreadCount || 0;
+                            this.notifItems = data.items || [];
+                            
+                            // Update badge
+                            const badge = document.querySelector('.notif-badge');
+                            if (badge && this.unreadCount > 0) {
+                                badge.textContent = this.unreadCount > 9 ? '9+' : this.unreadCount;
+                            }
+                            // Update status di dropdown header
+                            const statusEl = document.querySelector('.user-dropdown .text-emerald-600');
+                            if (statusEl) {
+                                statusEl.textContent = this.unreadCount + ' baru';
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Gagal fetch notifikasi:', e);
+                    }
+                }
+            }));
+        });
 
         @if(session('success'))
-            window.NexusToast(
-                'Berhasil',
-                "{{ session('success') }}",
-                '<i class="fa-solid fa-circle-check text-[16px] text-emerald-600"></i>'
-            );
+            nexusToast('Berhasil', @json(session('success')), 'success');
         @endif
-
         @if(session('error'))
-            window.NexusToast(
-                'Perhatian',
-                "{{ session('error') }}",
-                '<i class="fa-solid fa-triangle-exclamation text-[16px] text-rose-600"></i>'
-            );
+            nexusToast('Perhatian', @json(session('error')), 'error');
         @endif
-    });
-</script>
-
-@stack('scripts')
+        @if(session('warning'))
+            nexusToast('Perhatian', @json(session('warning')), 'warning');
+        @endif
+    </script>
+    @stack('scripts')
 </body>
 </html>

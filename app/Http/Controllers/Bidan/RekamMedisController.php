@@ -33,7 +33,7 @@ class RekamMedisController extends Controller
 
             $data = $query
                 ->orderByDesc($this->orderColumn($modelClass))
-                ->paginate(12)
+                ->paginate(5)
                 ->withQueryString();
 
             $typeOptions = $this->typeOptions();

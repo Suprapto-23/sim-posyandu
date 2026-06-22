@@ -26,986 +26,471 @@
     $getValue = function ($item, array $keys, mixed $default = '-') {
         foreach ($keys as $key) {
             $value = data_get($item, $key);
-
             if ($value !== null && $value !== '') {
                 return $value;
             }
         }
-
         return $default;
     };
 
     $formatInputDate = function ($date) {
-        if (!$date || $date === '-') {
-            return now()->format('Y-m-d');
-        }
-
-        try {
-            return Carbon::parse($date)->format('Y-m-d');
-        } catch (\Throwable $e) {
-            return now()->format('Y-m-d');
-        }
+        if (!$date || $date === '-') return now()->format('Y-m-d');
+        try { return Carbon::parse($date)->format('Y-m-d'); } catch (\Throwable $e) { return now()->format('Y-m-d'); }
     };
 
-    $getBalitaName = function ($balita) use ($getValue) {
-        return $getValue($balita, ['nama_lengkap', 'nama', 'nama_balita'], 'Nama tidak tersedia');
-    };
+    $getBalitaName = fn($balita) => $getValue($balita, ['nama_lengkap', 'nama', 'nama_balita'], 'Nama tidak tersedia');
+    $getBalitaNik = fn($balita) => $getValue($balita, ['nik', 'nik_anak'], '-');
+    $getBalitaOrtu = fn($balita) => $getValue($balita, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
+    $getBalitaAlamat = fn($balita) => $getValue($balita, ['alamat', 'alamat_lengkap', 'dusun'], '-');
 
-    $getBalitaNik = function ($balita) use ($getValue) {
-        return $getValue($balita, ['nik', 'nik_anak'], '-');
-    };
+    $formAction = $isEdit ? route('bidan.imunisasi.update', $imunisasi->id) : route('bidan.imunisasi.store');
 
-    $getBalitaWali = function ($balita) use ($getValue) {
-        return $getValue($balita, ['nama_ibu', 'nama_ayah', 'nama_wali'], '-');
-    };
-
-    $getBalitaAlamat = function ($balita) use ($getValue) {
-        return $getValue($balita, ['alamat', 'alamat_lengkap', 'dusun'], '-');
-    };
-
-    $formAction = $isEdit
-        ? route('bidan.imunisasi.update', $imunisasi->id)
-        : route('bidan.imunisasi.store');
-
-    $selectedBalitaId = old(
-        'balita_id',
-        data_get($selectedBalita, 'id')
-            ?? data_get($imunisasi, 'balita_id')
-            ?? data_get($imunisasi, 'kunjungan.pasien_id')
-            ?? ''
-    );
-
-    $selectedJenis = old(
-        'jenis_imunisasi',
-        data_get($imunisasi, 'jenis_imunisasi')
-            ?? data_get($imunisasi, 'nama_imunisasi')
-            ?? ''
-    );
-
-    $selectedVaksin = old(
-        'vaksin',
-        data_get($imunisasi, 'vaksin')
-            ?? data_get($imunisasi, 'nama_vaksin')
-            ?? ''
-    );
-
-    $selectedDosis = old(
-        'dosis',
-        data_get($imunisasi, 'dosis')
-            ?? data_get($imunisasi, 'dosis_ke')
-            ?? ''
-    );
-
-    $selectedBatch = old(
-        'batch_number',
-        data_get($imunisasi, 'batch_number')
-            ?? data_get($imunisasi, 'no_batch')
-            ?? data_get($imunisasi, 'nomor_batch')
-            ?? ''
-    );
-
-    $selectedTanggal = old(
-        'tanggal_imunisasi',
-        $formatInputDate(
-            data_get($imunisasi, 'tanggal_imunisasi')
-                ?? data_get($imunisasi, 'tanggal')
-                ?? null
-        )
-    );
-
-    $selectedKeterangan = old(
-        'keterangan',
-        data_get($imunisasi, 'keterangan')
-            ?? data_get($imunisasi, 'catatan')
-            ?? ''
-    );
+    $selectedBalitaId = old('balita_id', data_get($selectedBalita, 'id') ?? data_get($imunisasi, 'balita_id') ?? data_get($imunisasi, 'kunjungan.pasien_id') ?? '');
+    $selectedJenis = old('jenis_imunisasi', data_get($imunisasi, 'jenis_imunisasi') ?? data_get($imunisasi, 'nama_imunisasi') ?? '');
+    $selectedVaksin = old('vaksin', data_get($imunisasi, 'vaksin') ?? data_get($imunisasi, 'nama_vaksin') ?? '');
+    $selectedDosis = old('dosis', data_get($imunisasi, 'dosis') ?? data_get($imunisasi, 'dosis_ke') ?? '');
+    $selectedBatch = old('batch_number', data_get($imunisasi, 'batch_number') ?? data_get($imunisasi, 'no_batch') ?? data_get($imunisasi, 'nomor_batch') ?? '');
+    $selectedTanggal = old('tanggal_imunisasi', $formatInputDate(data_get($imunisasi, 'tanggal_imunisasi') ?? data_get($imunisasi, 'tanggal') ?? null));
+    $selectedKeterangan = old('keterangan', data_get($imunisasi, 'keterangan') ?? data_get($imunisasi, 'catatan') ?? '');
 
     $selectedBalita = $selectedBalita ?? $balitas->firstWhere('id', $selectedBalitaId);
 
     $selectedBalitaName = $selectedBalita ? $getBalitaName($selectedBalita) : '-';
     $selectedBalitaNik = $selectedBalita ? $getBalitaNik($selectedBalita) : '-';
-    $selectedBalitaWali = $selectedBalita ? $getBalitaWali($selectedBalita) : '-';
+    $selectedBalitaOrtu = $selectedBalita ? $getBalitaOrtu($selectedBalita) : '-';
     $selectedBalitaAlamat = $selectedBalita ? $getBalitaAlamat($selectedBalita) : '-';
 
     $pageTitle = $isEdit ? 'Perbaiki Catatan Imunisasi' : 'Catat Imunisasi Balita';
-    $pageDesc = $isEdit
-        ? 'Perbaiki catatan imunisasi Balita yang sudah tersimpan.'
-        : 'Catat layanan imunisasi untuk sasaran Balita.';
-
-    $submitLabel = $isEdit ? 'Simpan Perbaikan Catatan' : 'Simpan Catatan Imunisasi';
+    $pageDesc = $isEdit ? 'Perbaiki catatan imunisasi Balita yang sudah tersimpan di sistem.' : 'Catat layanan imunisasi baru untuk Balita yang terdaftar.';
+    $submitLabel = $isEdit ? 'Simpan Perbaikan' : 'Simpan Imunisasi';
 @endphp
 
 @push('styles')
 <style>
-    .nexus-font {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    html { scroll-behavior: smooth; }
+    body { background-color: #f1f5f9; }
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
+        pointer-events: none;
     }
 
-    .nexus-page-enter {
-        animation: nexusMainIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
+    .widget-card {
+        background: #ffffff; 
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 2.5rem; 
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        transform: translateZ(0); 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .nexus-panel-enter {
-        animation: nexusPanelIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
+    .input-soft {
+        width: 100%; background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 1.2rem; padding: 14px 16px; font-size: 13px;
+        font-weight: 700; color: #1e293b; outline: none; transition: all .25s ease;
     }
-
-    .nexus-scroll {
-        scrollbar-width: thin;
-        scrollbar-color: rgba(6, 182, 212, .35) transparent;
+    .input-soft:focus {
+        background: #ffffff; border-color: #14b8a6; box-shadow: 0 0 0 4px rgba(20, 184, 166, .15);
     }
+    .input-soft.is-invalid { border-color: #f43f5e; background: #fff1f2; }
 
-    .nexus-scroll::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+    .form-label { display: block; margin-bottom: 0.5rem; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; }
+    .req-star { color: #f43f5e; margin-left: 2px; }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer;}
+    .btn-pill:active { transform: scale(0.97); }
+
+    .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(16px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+    /* Custom Live Search */
+    .slim-scroll::-webkit-scrollbar { width: 6px; }
+    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
+    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.3); border-radius: 9999px; }
+    
+    .balita-picker-result.is-selected { border-color: rgba(20, 184, 166, .45); background: rgba(240, 253, 250, .9); }
+    .balita-picker-result.is-hidden { display: none !important; }
+
+    /* Nexus Modal */
+    .pc-modal-backdrop {
+        position: fixed !important; inset: 0 !important; z-index: 9999 !important; display: none;
+        align-items: center; justify-content: center; background: rgba(15, 23, 42, .6); backdrop-filter: blur(10px); padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
     }
-
-    .nexus-scroll::-webkit-scrollbar-track {
-        background: transparent;
+    .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
+    .pc-modal-card {
+        width: 100%; max-width: 440px; background: white; border-radius: 2.5rem; padding: 2.5rem 2rem;
+        transform: scale(0.9) translateY(20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;
     }
-
-    .nexus-scroll::-webkit-scrollbar-thumb {
-        background: rgba(6, 182, 212, .35);
-        border-radius: 999px;
-    }
-
-    .balita-picker-result.is-selected {
-        border-color: rgba(6, 182, 212, .45);
-        background: rgba(236, 254, 255, .9);
-    }
-
-    .balita-picker-result.is-hidden {
-        display: none !important;
-    }
-
-    @keyframes nexusMainIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 3px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @keyframes nexusPanelIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 2px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation-duration: .08s;
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation: none !important;
-        }
-    }
+    .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
 </style>
 @endpush
 
 @section('content')
-<div class="nexus-font nexus-page-enter space-y-5 pb-8 text-slate-800">
+<div class="bg-mesh-fixed"></div>
 
-    {{-- HEADER --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div class="min-w-0">
-                <a href="{{ route('bidan.imunisasi.index') }}"
-                   class="mb-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
-                    <i class="ph ph-arrow-left"></i>
-                    Kembali
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1280px] mx-auto space-y-8 animate-pop-in">
+
+    {{-- HERO BANNER --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-8 sm:p-10 shadow-2xl shadow-teal-500/20 flex flex-col md:flex-row justify-between items-center gap-8 border-[6px] border-white/40">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 w-full flex flex-col gap-4 text-center md:text-left">
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <a href="{{ route('bidan.imunisasi.index') }}" class="btn-pill inline-flex items-center gap-2 border border-white/30 bg-white/20 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/30 shadow-sm backdrop-blur-md">
+                    <i class="fa-solid fa-arrow-left"></i> Batal / Kembali
                 </a>
-
-                <div class="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">
-                    <i class="ph ph-syringe text-base"></i>
-                    Layanan Imunisasi
-                </div>
-
-                <h1 class="mt-4 max-w-4xl text-[26px] font-black leading-tight tracking-[-0.025em] text-slate-900 md:text-[30px]">
-                    {{ $pageTitle }}
-                </h1>
-
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    {{ $pageDesc }} Data yang disimpan menjadi arsip layanan imunisasi Balita.
-                </p>
-
-                <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-3.5 py-2 text-xs font-black text-cyan-700">
-                        <i class="ph ph-baby"></i>
-                        Sasaran Balita
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-check-circle"></i>
-                        Output: catatan imunisasi
-                    </span>
-                </div>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm backdrop-blur-md">
+                    <i class="fa-solid fa-baby"></i> Khusus Balita
+                </span>
             </div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                {{ $pageTitle }}
+            </h1>
+            <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-xl mx-auto md:mx-0">
+                {{ $pageDesc }}
+            </p>
         </div>
     </section>
 
-    {{-- OUTPUT RINGKAS --}}
-    <section class="nexus-panel-enter rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4">
-        <div class="flex gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-cyan-700 ring-1 ring-cyan-100">
-                <i class="ph ph-info text-lg"></i>
+    {{-- System Alerts --}}
+    @if(session('error') || $errors->any())
+        <div class="bg-rose-50 border border-rose-200 rounded-3xl p-5 flex items-start gap-4 shadow-sm">
+            <div class="w-12 h-12 rounded-2xl bg-white text-rose-500 flex items-center justify-center text-xl shrink-0 shadow-sm border border-rose-100">
+                <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
-
             <div>
-                <h2 class="text-sm font-black text-slate-900">
-                    Output Halaman
-                </h2>
-
-                <p class="mt-1 text-sm leading-6 text-slate-600">
-                    Form ini menghasilkan catatan imunisasi Balita yang berisi identitas Balita, jenis imunisasi, vaksin, dosis, nomor batch, tanggal layanan, dan catatan tambahan.
-                </p>
+                <h4 class="text-sm font-black text-rose-800">Terdapat Kesalahan</h4>
+                <p class="text-xs font-semibold text-rose-600 mt-0.5 mb-2">{{ session('error') ?? 'Mohon periksa kembali isian formulir Anda di bawah.' }}</p>
+                @if($errors->any())
+                    <ul class="text-[11px] font-bold text-rose-500/80 list-disc list-inside space-y-0.5">
+                        @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+                    </ul>
+                @endif
             </div>
         </div>
-    </section>
+    @endif
 
-    {{-- FORM --}}
-    <form method="POST" action="{{ $formAction }}" class="space-y-5">
+    <form method="POST" action="{{ $formAction }}" id="imunisasiForm">
         @csrf
-
-        @if($isEdit)
-            @method('PUT')
-        @endif
-
+        @if($isEdit) @method('PUT') @endif
         <input type="hidden" name="kategori" value="balita">
         <input type="hidden" id="balita_id" name="balita_id" value="{{ $selectedBalitaId }}">
 
-        {{-- PILIH BALITA --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-600">
-                        Langkah 1
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Pilih Balita
-                    </h2>
-
-                    <p class="mt-1 text-xs font-semibold text-slate-500">
-                        Ketik nama atau NIK, lalu klik data Balita yang sesuai.
-                    </p>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
-                    <i class="ph ph-baby text-lg"></i>
-                </div>
-            </div>
-
-            @if($balitas->count() > 0)
-                <div class="space-y-4">
-                    <div>
-                        <label for="balitaSearchInput" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                            Pencarian Balita
-                        </label>
-
-                        <div class="relative">
-                            <i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-
-                            <input type="text"
-                                   id="balitaSearchInput"
-                                   autocomplete="off"
-                                   spellcheck="false"
-                                   inputmode="search"
-                                   placeholder="Contoh: Salsa / 3201..."
-                                   class="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-11 text-sm font-semibold text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100">
-
-                            <button type="button"
-                                    id="balitaSearchClear"
-                                    class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-                                <i class="ph ph-x text-sm"></i>
-                            </button>
+        {{-- GRID UTAMA: Presisi penuh dengan items-stretch --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            
+            {{-- KOLOM KIRI: Pilih Balita (Col 5) - Wajib memiliki h-full --}}
+            <div class="lg:col-span-5 flex flex-col gap-6 h-full">
+                
+                {{-- Card Pencarian Balita --}}
+                <section class="widget-card overflow-hidden flex flex-col shrink-0">
+                    <div class="bg-slate-50/70 px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-white text-sky-500 border border-slate-100 flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <div>
+                            <h5 class="font-black text-slate-800 text-sm uppercase tracking-widest">Pencarian Balita</h5>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ketik Nama atau NIK</p>
                         </div>
-
-                        @error('balita_id')
-                            <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
-                        @enderror
                     </div>
 
-                    <div class="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-                        <div class="rounded-[22px] border border-slate-100 bg-slate-50/70 p-3">
-                            <div class="mb-3 flex items-center justify-between gap-3 px-1">
-                                <p class="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
-                                    Hasil Pencarian
-                                </p>
-
-                                <p class="text-xs font-black text-cyan-700">
-                                    <span id="balitaResultCount">{{ $balitas->count() }}</span> data
-                                </p>
+                    <div class="p-6 flex flex-col">
+                        @if($balitas->count() > 0)
+                            <div class="relative mb-4">
+                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="balitaSearchInput" autocomplete="off" spellcheck="false" placeholder="Contoh: Salsa / 3201..."
+                                       class="w-full rounded-[1.2rem] border border-slate-200 bg-slate-50 py-3 pl-11 pr-11 text-xs font-bold text-slate-700 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100">
+                                <button type="button" id="balitaSearchClear" class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 transition"><i class="fa-solid fa-xmark"></i></button>
                             </div>
 
-                            <div id="balitaResults"
-                                 class="nexus-scroll max-h-[360px] space-y-2 overflow-y-auto pr-1">
-                                @foreach($balitas as $balita)
-                                    @php
-    $balitaId = data_get($balita, 'id');
-    $balitaNama = $getBalitaName($balita);
-    $balitaNik = $getBalitaNik($balita);
-    $balitaWali = $getBalitaWali($balita);
-    $balitaAlamat = $getBalitaAlamat($balita);
+                            <div class="bg-slate-50/50 border border-slate-100 rounded-[1.2rem] p-2">
+                                <div class="flex justify-between items-center px-2 py-2 mb-2 border-b border-slate-100">
+                                    <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Hasil Pencarian</span>
+                                    <span class="text-[9px] font-black text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md"><span id="balitaResultCount">{{ $balitas->count() }}</span> Data</span>
+                                </div>
 
-    $searchName = mb_strtolower(trim((string) $balitaNama), 'UTF-8');
-    $searchNik = mb_strtolower(trim((string) $balitaNik), 'UTF-8');
+                                <div id="balitaResults" class="max-h-[250px] overflow-y-auto slim-scroll space-y-1.5 pr-1">
+                                    @foreach($balitas as $balita)
+                                        @php
+                                            $bId = data_get($balita, 'id');
+                                            $bNama = $getBalitaName($balita);
+                                            $bNik = $getBalitaNik($balita);
+                                            $bOrtu = $getBalitaOrtu($balita);
+                                            $bAlamat = $getBalitaAlamat($balita);
+                                            $sName = mb_strtolower(trim((string) $bNama), 'UTF-8');
+                                            $sNik = mb_strtolower(trim((string) $bNik), 'UTF-8');
+                                            $isSelected = (string) $selectedBalitaId === (string) $bId;
+                                        @endphp
 
-    $isSelectedBalita = (string) $selectedBalitaId === (string) $balitaId;
-@endphp
-
-                                    <button type="button"
-        class="balita-picker-result w-full rounded-2xl border p-3 text-left transition hover:border-cyan-200 hover:bg-cyan-50/80 {{ $isSelectedBalita ? 'is-selected' : 'border-white bg-white' }}"
-        data-id="{{ $balitaId }}"
-        data-name="{{ $balitaNama }}"
-        data-nik="{{ $balitaNik }}"
-        data-wali="{{ $balitaWali }}"
-        data-alamat="{{ $balitaAlamat }}"
-        data-search-name="{{ $searchName }}"
-        data-search-nik="{{ $searchNik }}"
-        data-order="{{ $loop->index }}">
-                                        <div class="flex items-start gap-3">
-                                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
-                                                <i class="ph ph-baby text-lg"></i>
-                                            </div>
-
-                                            <div class="min-w-0 flex-1">
-                                                <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                                    <h3 class="truncate text-sm font-black text-slate-900">
-                                                        {{ $balitaNama }}
-                                                    </h3>
-
-                                                    @if($isSelectedBalita)
-                                                        <span class="selected-badge inline-flex w-fit rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700 ring-1 ring-cyan-200">
-                                                            Dipilih
-                                                        </span>
-                                                    @else
-                                                        <span class="selected-badge hidden w-fit rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black text-cyan-700 ring-1 ring-cyan-200">
-                                                            Dipilih
-                                                        </span>
-                                                    @endif
+                                        <button type="button" class="balita-picker-result w-full rounded-xl border p-3 text-left transition hover:border-teal-300 hover:bg-teal-50/50 {{ $isSelected ? 'is-selected' : 'border-white bg-white shadow-sm' }}"
+                                            data-id="{{ $bId }}" data-name="{{ $bNama }}" data-nik="{{ $bNik }}" data-ortu="{{ $bOrtu }}" data-alamat="{{ $bAlamat }}" data-search-name="{{ $sName }}" data-search-nik="{{ $sNik }}" data-order="{{ $loop->index }}">
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-500 border border-sky-100"><i class="fa-solid fa-baby"></i></div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex justify-between items-start">
+                                                        <h3 class="truncate text-xs font-black text-slate-800">{{ $bNama }}</h3>
+                                                        <span class="selected-badge {{ $isSelected ? 'inline-flex' : 'hidden' }} rounded-md bg-teal-500 px-1.5 py-0.5 text-[8px] font-black text-white">Terpilih</span>
+                                                    </div>
+                                                    <p class="mt-0.5 truncate text-[10px] font-bold text-slate-400 font-mono">{{ $bNik }}</p>
                                                 </div>
-
-                                                <p class="mt-1 truncate text-xs font-semibold text-slate-500">
-                                                    NIK: {{ $balitaNik }}
-                                                </p>
-
-                                                <p class="mt-1 truncate text-xs font-semibold text-slate-500">
-                                                    Wali: {{ $balitaWali }}
-                                                </p>
                                             </div>
-                                        </div>
-                                    </button>
-                                @endforeach
+                                        </button>
+                                    @endforeach
+                                </div>
+                                <div id="balitaEmptyResult" class="hidden py-8 text-center"><p class="text-xs font-bold text-slate-400">Pencarian tidak cocok.</p></div>
                             </div>
-
-                            <div id="balitaEmptyResult"
-                                 class="hidden rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center">
-                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
-                                    <i class="ph ph-magnifying-glass text-xl"></i>
-                                </div>
-
-                                <h3 class="mt-3 text-sm font-black text-slate-800">
-                                    Balita Tidak Ditemukan
-                                </h3>
-
-                                <p class="mt-1 text-xs font-semibold text-slate-500">
-                                    Periksa kembali nama atau NIK yang diketik.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="rounded-[22px] border border-cyan-100 bg-cyan-50/60 p-4">
-                            <div class="mb-4 flex items-center justify-between gap-3">
-                                <div>
-                                    <p class="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-700">
-                                        Data Terpilih
-                                    </p>
-
-                                    <h3 class="mt-1 text-base font-black text-slate-900">
-                                        Balita Imunisasi
-                                    </h3>
-                                </div>
-
-                                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-cyan-700 ring-1 ring-cyan-100">
-                                    <i class="ph ph-check-circle text-lg"></i>
-                                </div>
-                            </div>
-
-                            <div class="grid gap-3">
-                                <div class="rounded-2xl bg-white p-4 ring-1 ring-cyan-100">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                        Nama Balita
-                                    </p>
-
-                                    <p id="previewBalitaNama" class="mt-2 truncate text-sm font-black text-slate-900">
-                                        {{ $selectedBalitaName }}
-                                    </p>
-                                </div>
-
-                                <div class="rounded-2xl bg-white p-4 ring-1 ring-cyan-100">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                        NIK
-                                    </p>
-
-                                    <p id="previewBalitaNik" class="mt-2 truncate text-sm font-black text-slate-900">
-                                        {{ $selectedBalitaNik }}
-                                    </p>
-                                </div>
-
-                                <div class="rounded-2xl bg-white p-4 ring-1 ring-cyan-100">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                        Wali
-                                    </p>
-
-                                    <p id="previewBalitaWali" class="mt-2 truncate text-sm font-black text-slate-900">
-                                        {{ $selectedBalitaWali }}
-                                    </p>
-                                </div>
-
-                                <div class="rounded-2xl bg-white p-4 ring-1 ring-cyan-100">
-                                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                                        Alamat
-                                    </p>
-
-                                    <p id="previewBalitaAlamat" class="mt-2 line-clamp-2 text-sm font-black text-slate-900">
-                                        {{ $selectedBalitaAlamat }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <p id="balitaSelectionStatus" class="mt-4 rounded-2xl bg-white px-4 py-3 text-xs font-black text-cyan-700 ring-1 ring-cyan-100">
-                                {{ $selectedBalitaId ? 'Balita sudah dipilih. Lanjutkan mengisi data imunisasi.' : 'Pilih satu Balita dari hasil pencarian.' }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            @else
-                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-slate-400 shadow-sm">
-                        <i class="ph ph-baby text-2xl"></i>
-                    </div>
-
-                    <h3 class="mt-4 text-base font-black text-slate-800">
-                        Data Balita Belum Tersedia
-                    </h3>
-
-                    <p class="mt-2 text-sm text-slate-500">
-                        Catatan imunisasi baru dapat dibuat setelah data Balita tersedia.
-                    </p>
-                </div>
-            @endif
-        </section>
-
-        {{-- DATA IMUNISASI --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-600">
-                        Langkah 2
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Isi Data Imunisasi
-                    </h2>
-
-                    <p class="mt-1 text-xs font-semibold text-slate-500">
-                        Isi berdasarkan layanan imunisasi yang diberikan kepada Balita.
-                    </p>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100">
-                    <i class="ph ph-syringe text-lg"></i>
-                </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-                <div>
-                    <label for="jenis_imunisasi" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Jenis Imunisasi
-                    </label>
-
-                    <select id="jenis_imunisasi"
-                            name="jenis_imunisasi"
-                            required
-                            class="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 @error('jenis_imunisasi') border-red-300 ring-4 ring-red-100 @enderror">
-                        <option value="">Pilih jenis imunisasi</option>
-
-                        @foreach($programOptions as $value => $label)
-                            @php
-                                $optionValue = is_string($value) ? $value : $label;
-                            @endphp
-
-                            <option value="{{ $optionValue }}" @selected($selectedJenis === $optionValue)>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                    @error('jenis_imunisasi')
-                        <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="vaksin" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Nama Vaksin
-                    </label>
-
-                    <input type="text"
-                           id="vaksin"
-                           name="vaksin"
-                           value="{{ $selectedVaksin }}"
-                           required
-                           maxlength="100"
-                           placeholder="Contoh: BCG / Polio / MR"
-                           class="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 @error('vaksin') border-red-300 ring-4 ring-red-100 @enderror">
-
-                    @error('vaksin')
-                        <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="dosis" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Dosis
-                    </label>
-
-                    <input type="text"
-                           id="dosis"
-                           name="dosis"
-                           value="{{ $selectedDosis }}"
-                           required
-                           maxlength="50"
-                           placeholder="Contoh: Dosis 1 / 0,5 ml"
-                           class="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 @error('dosis') border-red-300 ring-4 ring-red-100 @enderror">
-
-                    @error('dosis')
-                        <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="batch_number" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Nomor Batch
-                    </label>
-
-                    <input type="text"
-                           id="batch_number"
-                           name="batch_number"
-                           value="{{ $selectedBatch }}"
-                           maxlength="100"
-                           placeholder="Opsional"
-                           class="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 @error('batch_number') border-red-300 ring-4 ring-red-100 @enderror">
-
-                    @error('batch_number')
-                        <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="tanggal_imunisasi" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Tanggal Imunisasi
-                    </label>
-
-                    <input type="date"
-                           id="tanggal_imunisasi"
-                           name="tanggal_imunisasi"
-                           value="{{ $selectedTanggal }}"
-                           max="{{ now()->format('Y-m-d') }}"
-                           required
-                           class="min-h-[48px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 @error('tanggal_imunisasi') border-red-300 ring-4 ring-red-100 @enderror">
-
-                    @error('tanggal_imunisasi')
-                        <p class="mt-2 text-sm font-semibold text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Kategori Sasaran
-                    </label>
-
-                    <div class="flex min-h-[48px] items-center rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">
-                        <i class="ph ph-baby mr-2"></i>
-                        Balita
-                    </div>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label for="keterangan" class="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                        Catatan Tambahan
-                    </label>
-
-                    <textarea id="keterangan"
-                              name="keterangan"
-                              rows="4"
-                              maxlength="1000"
-                              placeholder="Opsional, contoh: kondisi umum atau keterangan layanan."
-                              class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition focus:border-cyan-300 focus:bg-white focus:ring-4 focus:ring-cyan-100 @error('keterangan') border-red-300 ring-4 ring-red-100 @enderror">{{ $selectedKeterangan }}</textarea>
-
-                    <div class="mt-2 flex items-center justify-between gap-3">
-                        @error('keterangan')
-                            <p class="text-sm font-semibold text-red-600">{{ $message }}</p>
                         @else
-                            <p class="text-xs font-semibold text-slate-400">
-                                Catatan tambahan bersifat opsional.
-                            </p>
-                        @enderror
-
-                        <p id="keteranganCounter" class="text-xs font-black text-slate-400">
-                            0/1000
-                        </p>
+                            <div class="text-center py-10 bg-slate-50 border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+                                <i class="fa-solid fa-folder-open text-3xl text-slate-300 mb-3"></i>
+                                <p class="text-sm font-bold text-slate-600">Data Balita Kosong</p>
+                                <p class="text-xs text-slate-400 mt-1">Tidak ada balita yang terdaftar di sistem.</p>
+                            </div>
+                        @endif
                     </div>
-                </div>
-            </div>
-        </section>
+                </section>
 
-        {{-- RINGKASAN --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-600">
-                        Langkah 3
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Ringkasan Catatan
-                    </h2>
-
-                    <p class="mt-1 text-xs font-semibold text-slate-500">
-                        Pastikan ringkasan sudah sesuai sebelum menyimpan catatan imunisasi.
-                    </p>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                    <i class="ph ph-check-circle text-lg"></i>
-                </div>
+                {{-- Card Data Terpilih (Kunci Presisi: flex-1 mengisi sisa ruang bawah) --}}
+                <section class="widget-card overflow-hidden border-t-4 border-t-sky-500 flex flex-col flex-1">
+                    <div class="bg-sky-50/50 px-6 py-5 border-b border-sky-100 flex items-center gap-3 shrink-0">
+                        <div class="w-10 h-10 rounded-xl bg-white text-sky-600 border border-sky-100 flex items-center justify-center text-lg shadow-sm"><i class="fa-solid fa-address-card"></i></div>
+                        <div>
+                            <h5 class="font-black text-sky-800 text-sm uppercase tracking-widest">Data Terpilih</h5>
+                            <p class="text-[9px] font-bold text-sky-600 uppercase tracking-widest mt-0.5">Identitas Balita</p>
+                        </div>
+                    </div>
+                    
+                    {{-- flex-1 & justify-center memastikan isinya selalu rapi di tengah dan mengisi kotak sampai bawah --}}
+                    <div class="p-6 bg-white space-y-4 flex-1 flex flex-col justify-center">
+                        <div class="bg-slate-50 border border-slate-100 rounded-xl p-3"><p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Nama Balita</p><p id="previewBalitaNama" class="text-sm font-black text-slate-800">{{ $selectedBalitaName }}</p></div>
+                        <div class="bg-slate-50 border border-slate-100 rounded-xl p-3"><p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">NIK</p><p id="previewBalitaNik" class="text-sm font-bold text-slate-600 font-mono">{{ $selectedBalitaNik }}</p></div>
+                        <div class="bg-slate-50 border border-slate-100 rounded-xl p-3"><p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Nama Ibu / Orang Tua</p><p id="previewBalitaOrtu" class="text-sm font-bold text-slate-700">{{ $selectedBalitaOrtu }}</p></div>
+                        
+                        <p id="balitaSelectionStatus" class="text-[10px] font-bold text-center text-rose-500 mt-2 shrink-0">{{ $selectedBalitaId ? '' : '* Silakan pilih balita dari daftar di atas.' }}</p>
+                    </div>
+                </section>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        Balita
-                    </p>
+            {{-- KOLOM KANAN: Form Imunisasi (Col 7) --}}
+            <div class="lg:col-span-7 flex flex-col h-full">
+                <section class="widget-card overflow-hidden border-t-4 border-t-teal-500 flex flex-col h-full">
+                    
+                    {{-- Form Header --}}
+                    <div class="bg-slate-50/70 px-6 py-6 border-b border-slate-100 flex items-center gap-4 shrink-0">
+                        <div class="w-12 h-12 rounded-2xl bg-white border border-slate-100 text-teal-500 flex items-center justify-center text-xl shadow-sm"><i class="fa-solid fa-syringe"></i></div>
+                        <div>
+                            <h2 class="text-base font-black text-slate-800 uppercase tracking-tight">Formulir Layanan</h2>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Lengkapi Data Imunisasi</p>
+                        </div>
+                    </div>
 
-                    <p id="summaryBalita" class="mt-2 truncate text-sm font-black text-slate-900">
-                        {{ $selectedBalitaName }}
-                    </p>
-                </div>
+                    {{-- Form Inputs --}}
+                    <div class="p-6 md:p-8 space-y-6 flex-1">
+                        <div class="grid gap-6 sm:grid-cols-2">
+                            <div>
+                                <label for="jenis_imunisasi" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-teal-600">Jenis Program <span class="req-star">*</span></label>
+                                <select id="jenis_imunisasi" name="jenis_imunisasi" required class="input-soft cursor-pointer @error('jenis_imunisasi') is-invalid @enderror">
+                                    <option value="">Pilih Program...</option>
+                                    @foreach($programOptions as $value => $label)
+                                        <option value="{{ $value }}" @selected($selectedJenis === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        Jenis Imunisasi
-                    </p>
+                            <div>
+                                <label for="vaksin" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Nama Vaksin <span class="req-star">*</span></label>
+                                <input type="text" id="vaksin" name="vaksin" value="{{ $selectedVaksin }}" required maxlength="100" placeholder="Contoh: BCG / Polio Tetes" class="input-soft @error('vaksin') is-invalid @enderror">
+                            </div>
 
-                    <p id="summaryJenis" class="mt-2 truncate text-sm font-black text-slate-900">
-                        {{ $selectedJenis ?: '-' }}
-                    </p>
-                </div>
+                            <div>
+                                <label for="dosis" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Dosis (Ke / Jumlah) <span class="req-star">*</span></label>
+                                <input type="text" id="dosis" name="dosis" value="{{ $selectedDosis }}" required maxlength="50" placeholder="Contoh: Dosis 1 / 0,5 ml" class="input-soft @error('dosis') is-invalid @enderror">
+                            </div>
 
-                <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        Vaksin
-                    </p>
+                            <div>
+                                <label for="batch_number" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Nomor Batch Vaksin</label>
+                                <input type="text" id="batch_number" name="batch_number" value="{{ $selectedBatch }}" maxlength="100" placeholder="Opsional (Jika ada)" class="input-soft @error('batch_number') is-invalid @enderror">
+                            </div>
+                        </div>
 
-                    <p id="summaryVaksin" class="mt-2 truncate text-sm font-black text-slate-900">
-                        {{ $selectedVaksin ?: '-' }}
-                    </p>
-                </div>
+                        <div>
+                            <label for="tanggal_imunisasi" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Tanggal Dilakukan Layanan <span class="req-star">*</span></label>
+                            <input type="date" id="tanggal_imunisasi" name="tanggal_imunisasi" value="{{ $selectedTanggal }}" max="{{ now()->format('Y-m-d') }}" required class="input-soft cursor-pointer w-full sm:w-1/2 @error('tanggal_imunisasi') is-invalid @enderror">
+                        </div>
 
-                <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        Tanggal
-                    </p>
+                        <div>
+                            <label for="keterangan" class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Catatan Tambahan (Kondisi/KIPI)</label>
+                            <textarea id="keterangan" name="keterangan" rows="6" maxlength="1000" placeholder="Tuliskan keterangan mengenai kondisi anak, keluhan pasca imunisasi, atau pesan untuk kunjungan berikutnya." class="input-soft resize-none @error('keterangan') is-invalid @enderror">{{ $selectedKeterangan }}</textarea>
+                            <div class="flex justify-between mt-1 px-1">
+                                <p class="text-[10px] font-semibold text-slate-400">Opsional.</p>
+                                <p id="keteranganCounter" class="text-[10px] font-black text-slate-400">0/1000</p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <p id="summaryTanggal" class="mt-2 truncate text-sm font-black text-slate-900">
-                        {{ $selectedTanggal ?: '-' }}
-                    </p>
-                </div>
+                    {{-- Action Buttons Bottom (Presisi rapat di bawah karena mt-auto) --}}
+                    <div class="p-6 md:p-8 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-3 mt-auto shrink-0">
+                        <a href="{{ $isEdit ? route('bidan.imunisasi.show', $imunisasi->id) : route('bidan.imunisasi.index') }}" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
+                            Batal
+                        </a>
+                        <button type="button" id="openSubmitModalBtn" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 transition-all shadow-[0_4px_15px_rgba(16,185,129,.30)] hover:-translate-y-0.5 text-xs flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-save text-sm"></i> {{ $submitLabel }}
+                        </button>
+                    </div>
+                </section>
             </div>
-        </section>
-
-        {{-- ACTION --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur">
-            <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
-                <a href="{{ $isEdit ? route('bidan.imunisasi.show', $imunisasi->id) : route('bidan.imunisasi.index') }}"
-                   class="inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
-                    Batal
-                </a>
-
-                <button type="submit"
-                        id="submitButton"
-                        @disabled($balitas->count() === 0 || !$selectedBalitaId)
-                        class="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300">
-                    <i class="ph ph-floppy-disk"></i>
-                    {{ $submitLabel }}
-                </button>
-            </div>
-        </section>
+        </div>
     </form>
+
+    {{-- MODAL KONFIRMASI --}}
+    <div id="pcSubmitModal" class="pc-modal-backdrop">
+        <div class="pc-modal-card text-center">
+            <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="relative z-10">
+                <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Catatan?</h3>
+                <p class="text-sm font-medium text-slate-500 mb-6 leading-relaxed px-4">
+                    Pastikan jenis vaksin dan dosis yang dipilih sudah benar sebelum menyimpan ke arsip rekam medis.
+                </p>
+
+                <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-left">
+                    <div class="flex justify-between mb-1"><span class="text-[10px] font-black text-slate-400 uppercase">Balita</span><span id="summaryBalita" class="text-xs font-bold text-slate-700 truncate max-w-[150px]">-</span></div>
+                    <div class="flex justify-between mb-1"><span class="text-[10px] font-black text-slate-400 uppercase">Vaksin</span><span id="summaryVaksin" class="text-xs font-bold text-teal-600 truncate max-w-[150px]">-</span></div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                        Kembali
+                    </button>
+                    <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    (() => {
-        const balitaIdInput = document.getElementById('balita_id');
-        const searchInput = document.getElementById('balitaSearchInput');
-        const clearButton = document.getElementById('balitaSearchClear');
-        const resultCount = document.getElementById('balitaResultCount');
-        const emptyResult = document.getElementById('balitaEmptyResult');
-        const submitButton = document.getElementById('submitButton');
+(() => {
+    // Balita Picker Logic
+    const balitaIdInput = document.getElementById('balita_id');
+    const searchInput = document.getElementById('balitaSearchInput');
+    const clearButton = document.getElementById('balitaSearchClear');
+    const resultCount = document.getElementById('balitaResultCount');
+    const emptyResult = document.getElementById('balitaEmptyResult');
+    const resultButtons = Array.from(document.querySelectorAll('.balita-picker-result'));
+    
+    const previewBalitaNama = document.getElementById('previewBalitaNama');
+    const previewBalitaNik = document.getElementById('previewBalitaNik');
+    const previewBalitaOrtu = document.getElementById('previewBalitaOrtu');
+    const balitaSelectionStatus = document.getElementById('balitaSelectionStatus');
+    const summaryBalita = document.getElementById('summaryBalita');
 
-        const resultButtons = Array.from(document.querySelectorAll('.balita-picker-result'));
+    const form = document.getElementById('imunisasiForm');
+    const vaksinInput = document.getElementById('vaksin');
+    const summaryVaksin = document.getElementById('summaryVaksin');
+    const ketInput = document.getElementById('keterangan');
+    const ketCounter = document.getElementById('keteranganCounter');
 
-        const jenisInput = document.getElementById('jenis_imunisasi');
-        const vaksinInput = document.getElementById('vaksin');
-        const tanggalInput = document.getElementById('tanggal_imunisasi');
-        const keteranganInput = document.getElementById('keterangan');
+    const dash = (value) => String(value || '').trim() === '' ? '-' : String(value).trim();
+    const normalize = (value) => String(value || '').toLowerCase().trim();
+    const isNumericKeyword = (keyword) => /^[0-9]+$/.test(keyword);
 
-        const previewBalitaNama = document.getElementById('previewBalitaNama');
-        const previewBalitaNik = document.getElementById('previewBalitaNik');
-        const previewBalitaWali = document.getElementById('previewBalitaWali');
-        const previewBalitaAlamat = document.getElementById('previewBalitaAlamat');
-        const balitaSelectionStatus = document.getElementById('balitaSelectionStatus');
-
-        const summaryBalita = document.getElementById('summaryBalita');
-        const summaryJenis = document.getElementById('summaryJenis');
-        const summaryVaksin = document.getElementById('summaryVaksin');
-        const summaryTanggal = document.getElementById('summaryTanggal');
-        const keteranganCounter = document.getElementById('keteranganCounter');
-
-        const normalize = (value) => {
-            return String(value || '')
-                .toLowerCase()
-                .trim();
-        };
-
-        const dash = (value) => {
-            const text = String(value || '').trim();
-            return text === '' ? '-' : text;
-        };
-
-        const enableSubmitIfReady = () => {
-            if (!submitButton || !balitaIdInput) {
-                return;
-            }
-
-            submitButton.disabled = !balitaIdInput.value;
-        };
-
-        const setSelectedBalita = (button) => {
-            if (!button || !balitaIdInput) {
-                return;
-            }
-
-            const id = button.dataset.id || '';
-            const name = button.dataset.name || '';
-            const nik = button.dataset.nik || '';
-            const wali = button.dataset.wali || '';
-            const alamat = button.dataset.alamat || '';
-
-            balitaIdInput.value = id;
-
-            resultButtons.forEach((item) => {
-                item.classList.remove('is-selected');
-
-                const badge = item.querySelector('.selected-badge');
-                badge?.classList.add('hidden');
-                badge?.classList.remove('inline-flex');
-            });
-
-            button.classList.add('is-selected');
-
-            const activeBadge = button.querySelector('.selected-badge');
-            activeBadge?.classList.remove('hidden');
-            activeBadge?.classList.add('inline-flex');
-
-            if (previewBalitaNama) {
-                previewBalitaNama.textContent = dash(name);
-            }
-
-            if (previewBalitaNik) {
-                previewBalitaNik.textContent = dash(nik);
-            }
-
-            if (previewBalitaWali) {
-                previewBalitaWali.textContent = dash(wali);
-            }
-
-            if (previewBalitaAlamat) {
-                previewBalitaAlamat.textContent = dash(alamat);
-            }
-
-            if (summaryBalita) {
-                summaryBalita.textContent = dash(name);
-            }
-
-            if (balitaSelectionStatus) {
-                balitaSelectionStatus.textContent = 'Balita sudah dipilih. Lanjutkan mengisi data imunisasi.';
-            }
-
-            enableSubmitIfReady();
-        };
-
-        const isNumericKeyword = (keyword) => {
-    return /^[0-9]+$/.test(keyword);
-};
-
-const getMatchRank = (button, keyword) => {
-    if (keyword === '') {
-        return 10 + Number(button.dataset.order || 0);
-    }
-
-    const name = normalize(button.dataset.searchName);
-    const nik = normalize(button.dataset.searchNik);
-
-    if (isNumericKeyword(keyword)) {
-        if (nik.startsWith(keyword)) {
-            return 0;
-        }
-
-        if (nik.includes(keyword)) {
-            return 1;
-        }
-
-        return 999;
-    }
-
-    if (name.startsWith(keyword)) {
-        return 0;
-    }
-
-    if (name.includes(keyword)) {
-        return 1;
-    }
-
-    return 999;
-};
-
-const filterResults = () => {
-    const keyword = normalize(searchInput?.value);
-    let visible = 0;
-
-    const rankedButtons = resultButtons
-        .map((button) => {
-            return {
-                button,
-                rank: getMatchRank(button, keyword),
-                name: normalize(button.dataset.searchName),
-                order: Number(button.dataset.order || 0),
-            };
-        })
-        .sort((a, b) => {
-            if (a.rank !== b.rank) {
-                return a.rank - b.rank;
-            }
-
-            if (a.name !== b.name) {
-                return a.name.localeCompare(b.name);
-            }
-
-            return a.order - b.order;
+    const setSelectedBalita = (button) => {
+        if (!button || !balitaIdInput) return;
+        balitaIdInput.value = button.dataset.id || '';
+        
+        resultButtons.forEach(item => {
+            item.classList.remove('is-selected');
+            const badge = item.querySelector('.selected-badge');
+            if(badge) { badge.classList.add('hidden'); badge.classList.remove('inline-flex'); }
         });
 
-    rankedButtons.forEach((item) => {
-        const matched = item.rank < 999;
+        button.classList.add('is-selected');
+        const activeBadge = button.querySelector('.selected-badge');
+        if(activeBadge) { activeBadge.classList.remove('hidden'); activeBadge.classList.add('inline-flex'); }
 
-        item.button.classList.toggle('is-hidden', !matched);
+        if (previewBalitaNama) previewBalitaNama.textContent = dash(button.dataset.name);
+        if (previewBalitaNik) previewBalitaNik.textContent = dash(button.dataset.nik);
+        if (previewBalitaOrtu) previewBalitaOrtu.textContent = dash(button.dataset.ortu);
+        if (summaryBalita) summaryBalita.textContent = dash(button.dataset.name);
+        if (balitaSelectionStatus) balitaSelectionStatus.textContent = '';
+    };
 
-        if (matched) {
-            visible += 1;
-            item.button.parentElement?.appendChild(item.button);
+    resultButtons.forEach(button => button.addEventListener('click', () => setSelectedBalita(button)));
+
+    const filterResults = () => {
+        const keyword = normalize(searchInput?.value);
+        let visible = 0;
+
+        resultButtons.forEach(item => {
+            const name = normalize(item.dataset.searchName);
+            const nik = normalize(item.dataset.searchNik);
+            let matched = false;
+
+            if (keyword === '') matched = true;
+            else if (isNumericKeyword(keyword)) matched = nik.includes(keyword);
+            else matched = name.includes(keyword);
+
+            item.classList.toggle('is-hidden', !matched);
+            if (matched) visible++;
+        });
+
+        if (resultCount) resultCount.textContent = String(visible);
+        if (emptyResult) emptyResult.classList.toggle('hidden', visible > 0);
+        if (clearButton) {
+            clearButton.classList.toggle('hidden', keyword === '');
+            clearButton.classList.toggle('inline-flex', keyword !== '');
         }
+    };
+
+    searchInput?.addEventListener('input', filterResults);
+    clearButton?.addEventListener('click', () => { if (searchInput) { searchInput.value = ''; filterResults(); } });
+
+    // Pre-select if editing or returning from validation fail
+    const preselectedBtn = resultButtons.find(b => String(b.dataset.id) === String(balitaIdInput?.value));
+    if(preselectedBtn) setSelectedBalita(preselectedBtn);
+
+    vaksinInput?.addEventListener('input', () => { if(summaryVaksin) summaryVaksin.textContent = dash(vaksinInput.value); });
+    if(summaryVaksin) summaryVaksin.textContent = dash(vaksinInput?.value);
+
+    ketInput?.addEventListener('input', () => { if(ketCounter) ketCounter.textContent = `${ketInput.value.length}/1000`; });
+    if(ketCounter && ketInput) ketCounter.textContent = `${ketInput.value.length}/1000`;
+
+    // Modal Logic
+    const openBtn = document.getElementById('openSubmitModalBtn');
+    const modal = document.getElementById('pcSubmitModal');
+    const cancelBtn = document.getElementById('pcCancelSubmit');
+    const confirmBtn = document.getElementById('pcConfirmSubmit');
+
+    openBtn?.addEventListener('click', () => {
+        if (!balitaIdInput.value) {
+            alert('Silakan pilih Balita dari daftar pencarian terlebih dahulu!');
+            searchInput?.focus();
+            return;
+        }
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        modal.classList.add('is-open');
     });
 
-    if (resultCount) {
-        resultCount.textContent = String(visible);
-    }
+    cancelBtn?.addEventListener('click', () => modal.classList.remove('is-open'));
+    modal?.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('is-open'); });
 
-    if (emptyResult) {
-        emptyResult.classList.toggle('hidden', visible > 0);
-    }
-
-    if (clearButton) {
-        const hasKeyword = keyword !== '';
-        clearButton.classList.toggle('hidden', !hasKeyword);
-        clearButton.classList.toggle('inline-flex', hasKeyword);
-    }
-};
-
-        const updateSummary = () => {
-            if (summaryJenis) {
-                summaryJenis.textContent = dash(jenisInput?.value);
-            }
-
-            if (summaryVaksin) {
-                summaryVaksin.textContent = dash(vaksinInput?.value);
-            }
-
-            if (summaryTanggal) {
-                summaryTanggal.textContent = dash(tanggalInput?.value);
-            }
-        };
-
-        const updateCounter = () => {
-            if (!keteranganInput || !keteranganCounter) {
-                return;
-            }
-
-            keteranganCounter.textContent = `${keteranganInput.value.length}/1000`;
-        };
-
-        resultButtons.forEach((button) => {
-            button.addEventListener('click', () => setSelectedBalita(button));
-        });
-
-        searchInput?.addEventListener('input', filterResults, { passive: true });
-
-        clearButton?.addEventListener('click', () => {
-            if (!searchInput) {
-                return;
-            }
-
-            searchInput.value = '';
-            searchInput.focus();
-            filterResults();
-        });
-
-        jenisInput?.addEventListener('change', updateSummary, { passive: true });
-        vaksinInput?.addEventListener('input', updateSummary, { passive: true });
-        tanggalInput?.addEventListener('input', updateSummary, { passive: true });
-        keteranganInput?.addEventListener('input', updateCounter, { passive: true });
-
-        const selectedButton = resultButtons.find((button) => {
-            return String(button.dataset.id || '') === String(balitaIdInput?.value || '');
-        });
-
-        if (selectedButton) {
-            setSelectedBalita(selectedButton);
-        }
-
-        filterResults();
-        updateSummary();
-        updateCounter();
-        enableSubmitIfReady();
-    })();
+    confirmBtn?.addEventListener('click', () => {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+        form.submit();
+    });
+})();
 </script>
 @endpush

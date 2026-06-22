@@ -7,6 +7,7 @@ use App\Models\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class NotifikasiController extends Controller
 {
@@ -25,83 +26,63 @@ class NotifikasiController extends Controller
             $query->where('is_read', true);
         }
 
-        $notifikasis = $query->paginate(15)->withQueryString();
+        $notifikasis = $query->paginate(5)->withQueryString();
         $unreadCount = Notifikasi::where('user_id', Auth::id())->belumDibaca()->count();
                         
         return view('bidan.notifikasi.index', compact('notifikasis', 'filter', 'unreadCount'));
     }
 
     /**
-     * AJAX fetch untuk lonceng notifikasi Bidan (Mengatasi Loading Muter)
+     * AJAX fetch untuk lonceng notifikasi Bidan
+     * Mengembalikan format yang sama dengan User (items array)
      */
     public function fetchRecent()
     {
         try {
             $userId = Auth::id();
 
-            // Ambil jumlah yang belum dibaca menggunakan Scope Model
             $unreadCount = Notifikasi::where('user_id', $userId)->belumDibaca()->count();
 
-            // Ambil notifikasi terbaru
-            $recentNotifs = Notifikasi::where('user_id', $userId)->terbaru()->get();
+            $recentNotifs = Notifikasi::where('user_id', $userId)
+                ->latest()
+                ->limit(5)
+                ->get();
 
-            $html = '';
-            $latestUnread = Notifikasi::where('user_id', $userId)->belumDibaca()->latest()->first();
+            $items = $recentNotifs->map(function ($notif) {
+                $isRead = (bool) $notif->is_read;
+                $tipe = $notif->tipe ?? $this->guessType($notif);
 
-            if ($recentNotifs->isEmpty()) {
-                $html = '
-                    <div class="py-8 text-center flex flex-col items-center justify-center bg-white">
-                        <i class="fas fa-bell-slash text-3xl text-slate-200 mb-3"></i>
-                        <h4 class="text-[13px] font-black text-slate-800 uppercase tracking-widest mb-1">KOTAK MASUK KOSONG</h4>
-                        <p class="text-[11.5px] font-medium text-slate-400">Belum ada aktifitas atau laporan baru.</p>
-                    </div>';
-            } else {
-                foreach ($recentNotifs as $notif) {
-                    $nexus = $notif->toNexusFormat(); // Menggunakan fungsi dari Model Notifikasi.php
-                    
-                    // Aksen warna Indigo khusus untuk Bidan
-                    $bgClass     = $notif->is_read ? 'bg-white' : 'bg-indigo-50/50';
-                    $borderClass = $notif->is_read ? 'border-slate-100' : 'border-indigo-100';
-                    $iconBg      = $notif->is_read ? 'bg-slate-100 text-slate-400' : "bg-indigo-100 text-indigo-600";
-                    $dotNotif    = !$notif->is_read ? '<span class="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full bg-indigo-500 border-2 border-white"></span>' : '';
-                    
-                    // Arahkan link ke route bidan
-                    $linkRoute = route('bidan.notifikasi.index');
+                return [
+                    'id' => $notif->id,
+                    'judul' => $notif->judul ?: 'Pemberitahuan',
+                    'pesan' => Str::limit($notif->pesan ?? '', 80),
+                    'tipe' => $tipe,
+                    'icon' => $this->typeIcon($tipe),
+                    'link' => $notif->link ?: route('bidan.notifikasi.index'),
+                    'is_read' => $isRead,
+                    'waktu' => $notif->created_at ? $notif->created_at->diffForHumans() : '-',
+                ];
+            })->values();
 
-                    $html .= "
-                    <a href=\"{$linkRoute}\" class=\"flex items-start gap-4 p-4 border-b hover:bg-slate-50 transition-all duration-200 relative {$bgClass} {$borderClass}\">
-                        {$dotNotif}
-                        <div class=\"w-10 h-10 rounded-full flex items-center justify-center shrink-0 {$iconBg}\">
-                            <i class=\"{$nexus['icon']} text-lg\"></i>
-                        </div>
-                        <div class=\"flex-1 min-w-0 pt-0.5\">
-                            <div class=\"flex items-center justify-between gap-2 mb-1\">
-                                <h4 class=\"text-[13px] font-black text-slate-800 truncate font-poppins\">{$nexus['judul']}</h4>
-                                <span class=\"text-[9px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap pt-0.5\">{$nexus['waktu']}</span>
-                            </div>
-                            <p class=\"text-[12px] font-medium text-slate-500 line-clamp-1 leading-relaxed\">{$nexus['pesan']}</p>
-                        </div>
-                    </a>";
-                }
-            }
+            $latestUnread = Notifikasi::where('user_id', $userId)
+                ->belumDibaca()
+                ->latest()
+                ->first();
 
             return response()->json([
-                'unreadCount'  => $unreadCount,
-                'html'         => $html,
-                'latest_title' => $latestUnread ? $latestUnread->judul : null,
-                'latest_body'  => $latestUnread ? $latestUnread->pesan : null,
+                'unreadCount' => $unreadCount,
+                'items' => $items,
+                'latest_title' => $latestUnread?->judul,
+                'latest_body' => $latestUnread?->pesan,
             ]);
 
-        } catch (\Exception $e) {
-            Log::error('Bidan/NotifikasiController error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::error('Bidan NotifikasiController fetch error: ' . $e->getMessage());
             return response()->json([
                 'unreadCount' => 0,
-                'html' => '
-                    <div class="p-6 text-center text-rose-600 bg-rose-50">
-                        <i class="fas fa-bug text-3xl mb-3"></i>
-                        <h4 class="font-black text-[13px] uppercase tracking-widest mb-2">Error Backend:</h4>
-                        <p class="text-[11px] font-medium font-mono text-left bg-white p-3 rounded-lg border border-rose-200">Gagal memuat notifikasi.</p>
-                    </div>'
+                'items' => [],
+                'latest_title' => null,
+                'latest_body' => null,
             ]);
         }
     }
@@ -116,5 +97,37 @@ class NotifikasiController extends Controller
                   ->update(['is_read' => true]);
                   
         return back()->with('success', 'Semua laporan telah ditandai dibaca.');
+    }
+
+    // ========== PRIVATE HELPERS ==========
+
+    private function guessType(Notifikasi $item): string
+    {
+        $text = Str::lower(($item->judul ?? '') . ' ' . ($item->pesan ?? ''));
+
+        if (str_contains($text, 'jadwal') || str_contains($text, 'agenda')) {
+            return 'jadwal';
+        }
+        if (str_contains($text, 'imunisasi') || str_contains($text, 'vaksin')) {
+            return 'imunisasi';
+        }
+        if (str_contains($text, 'pemeriksaan') || str_contains($text, 'rekam medis')) {
+            return 'pemeriksaan';
+        }
+        if (str_contains($text, 'import') || str_contains($text, 'data')) {
+            return 'import';
+        }
+        return 'info';
+    }
+
+    private function typeIcon(string $type): string
+    {
+        return match ($type) {
+            'jadwal' => 'fa-calendar-check',
+            'imunisasi' => 'fa-syringe',
+            'pemeriksaan' => 'fa-stethoscope',
+            'import' => 'fa-file-excel',
+            default => 'fa-bell',
+        };
     }
 }

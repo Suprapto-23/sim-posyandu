@@ -11,11 +11,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Buat Akun Administrator (Tanpa menghapus data lain)
-        // firstOrCreate akan mencari email admin@posyandu.com, 
-        // jika belum ada, baru data di dalam array kedua akan di-insert.
+        // 1. Buat Akun Administrator (Sistem Inti)
+        // firstOrCreate memastikan jika di-run berulang kali, tidak akan duplikat
         $admin = User::firstOrCreate(
-            ['email' => 'admin@posyandu.com'], // Yang dicari
+            ['email' => 'admin@posyandu.com'], // Patokan pencarian
             [
                 'name'              => 'Administrator',
                 'nik'               => '0000000000000000',
@@ -26,9 +25,9 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 2. Buat Profile Admin agar tidak error saat masuk dashboard
+        // 2. Buat Profile Admin untuk relasi dashboard
         Profile::firstOrCreate(
-            ['user_id' => $admin->id], // Yang dicari berdasarkan user_id admin
+            ['user_id' => $admin->id],
             [
                 'full_name'     => 'Administrator Sistem Terpadu',
                 'nik'           => '0000000000000000',

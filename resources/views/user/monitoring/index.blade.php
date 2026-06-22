@@ -16,7 +16,6 @@
                 return route($name, $params);
             }
         }
-
         return '#';
     };
 
@@ -27,67 +26,78 @@
         'lansia' => isset($lansias) ? $lansias->count() : 0,
     ];
 
+    // TEMA DINAMIS UNTUK HERO BANNER
+    $heroTheme = 'emerald'; // Default jika campuran/kosong
+    if ($counts['total'] > 0) {
+        if ($counts['balita'] > 0 && $counts['remaja'] == 0 && $counts['lansia'] == 0) $heroTheme = 'rose';
+        elseif ($counts['remaja'] > 0 && $counts['balita'] == 0 && $counts['lansia'] == 0) $heroTheme = 'sky';
+        elseif ($counts['lansia'] > 0 && $counts['balita'] == 0 && $counts['remaja'] == 0) $heroTheme = 'amber';
+    }
+
+    $heroClasses = match($heroTheme) {
+        'rose' => 'from-rose-500 via-rose-400 to-pink-500 shadow-[0_20px_40px_-12px_rgba(244,63,94,.35)]',
+        'sky' => 'from-sky-500 via-sky-400 to-blue-500 shadow-[0_20px_40px_-12px_rgba(14,165,233,.35)]',
+        'amber' => 'from-amber-500 via-amber-400 to-yellow-500 shadow-[0_20px_40px_-12px_rgba(245,158,11,.35)]',
+        default => 'from-emerald-500 via-teal-500 to-teal-600 shadow-[0_20px_40px_-12px_rgba(20,184,166,.35)]',
+    };
+
     $formatDate = fn ($value, $format = 'd M Y') => $value
         ? Carbon::parse($value)->translatedFormat($format)
         : '-';
 
     $numberValue = function ($value, $unit = '') {
-        if (blank($value)) {
-            return '-';
-        }
+        if (blank($value)) return '-';
+        $formatted = rtrim(rtrim(number_format((float) $value, 1, '.', ''), '0'), '.');
+        return trim($formatted . ' ' . $unit);
+    };
 
-        $value = rtrim(rtrim((string) $value, '0'), '.');
+    // FUNGSI NORMALISASI TINGGI BADAN OTOMATIS (Fix 16 cm -> 160 cm)
+    $normalizeHeight = function ($value) {
+        if (blank($value)) return null;
+        $clean = preg_replace('/[^0-9.]/', '', (string) $value);
+        if (blank($clean)) return null;
+        $height = (float) $clean;
+        if ($height >= 1 && $height <= 2.5) $height *= 100;
+        if ($height >= 10 && $height < 50) $height *= 10;
+        if ($height < 35 || $height > 250) return null;
+        return round($height, 1);
+    };
 
-        return trim($value . ' ' . $unit);
+    $heightValue = function ($value) use ($normalizeHeight, $numberValue) {
+        $height = $normalizeHeight($value);
+        if (! $height) return '-';
+        return $numberValue($height, 'cm');
     };
 
     $ageText = function ($tanggalLahir) {
-        if (blank($tanggalLahir)) {
-            return '-';
-        }
-
+        if (blank($tanggalLahir)) return '-';
         $diff = Carbon::parse($tanggalLahir)->diff(now());
-
         return $diff->y > 0 ? $diff->y . ' tahun' : $diff->m . ' bulan';
-    };
-
-    $genderText = fn ($value) => match ($value) {
-        'L' => 'Laki-laki',
-        'P' => 'Perempuan',
-        default => 'Belum diisi',
     };
 
     $lastCheckDate = function ($item) use ($formatDate) {
         $date = data_get($item, 'pemeriksaan_terakhir.tanggal_periksa')
             ?? data_get($item, 'pemeriksaan_terakhir.created_at')
             ?? data_get($item, 'updated_at');
-
         return $formatDate($date);
     };
 
-    $getImt = function ($item) {
-        if (filled($item->imt ?? null)) {
-            return (float) $item->imt;
-        }
+    $getImt = function ($item) use ($normalizeHeight) {
+        if (filled(data_get($item, 'pemeriksaan_terakhir.imt'))) return (float) data_get($item, 'pemeriksaan_terakhir.imt');
+        $bb = data_get($item, 'pemeriksaan_terakhir.berat_badan') ?? $item->berat_badan ?? null;
+        $tbRaw = data_get($item, 'pemeriksaan_terakhir.tinggi_badan') ?? $item->tinggi_badan ?? null;
+        if (blank($bb) || blank($tbRaw)) return null;
 
-        if (blank($item->berat_badan ?? null) || blank($item->tinggi_badan ?? null)) {
-            return null;
-        }
+        $tbNormalized = $normalizeHeight($tbRaw);
+        if (!$tbNormalized) return null;
 
-        $meter = ((float) $item->tinggi_badan) / 100;
-
-        if ($meter <= 0) {
-            return null;
-        }
-
-        return round(((float) $item->berat_badan) / ($meter * $meter), 2);
+        $meter = $tbNormalized / 100;
+        if ($meter <= 0) return null;
+        return round(((float) $bb) / ($meter * $meter), 2);
     };
 
     $imtLabel = function ($imt) {
-        if (blank($imt)) {
-            return '-';
-        }
-
+        if (blank($imt)) return '-';
         return match (true) {
             $imt < 18.5 => 'Kurus',
             $imt < 25 => 'Normal',
@@ -96,315 +106,253 @@
         };
     };
 
-    $balitaShowRoute = fn ($id) => $routeTo(['user.balita.show', 'user.monitoring.balita.show'], [$id]);
-    $remajaShowRoute = fn ($id) => $routeTo(['user.remaja.show', 'user.monitoring.remaja.show'], [$id]);
-    $lansiaShowRoute = fn ($id) => $routeTo(['user.lansia.show', 'user.monitoring.lansia.show'], [$id]);
-
     $cards = collect();
 
+    // MENGISI DATA BALITA
     foreach(($balitas ?? collect()) as $item) {
         $cards->push([
             'kategori' => 'Balita',
             'nama' => $item->nama_lengkap ?? '-',
-            'meta' => $ageText($item->tanggal_lahir ?? null) . ' • ' . $genderText($item->jenis_kelamin ?? null),
-            'caption' => 'Pertumbuhan dan KMS',
-            'href' => $balitaShowRoute($item->id),
-            'icon' => 'child',
+            'meta' => $ageText($item->tanggal_lahir ?? null) . ' • NIK: ' . ($item->nik ?? '-'),
+            'href' => $routeTo(['user.balita.show', 'user.monitoring.balita.show'], [$item->id]),
+            'icon' => 'child-reaching',
             'tone' => 'rose',
             'search' => Str::lower('balita ' . ($item->nama_lengkap ?? '') . ' ' . ($item->nik ?? '')),
             'metrics' => [
-                ['label' => 'BB', 'value' => $numberValue($item->berat_badan ?? data_get($item, 'pemeriksaan_terakhir.berat_badan'), 'kg')],
-                ['label' => 'TB', 'value' => $numberValue($item->tinggi_badan ?? data_get($item, 'pemeriksaan_terakhir.tinggi_badan'), 'cm')],
-                ['label' => 'Update', 'value' => $lastCheckDate($item)],
+                ['label' => 'BB Terakhir', 'value' => $numberValue(data_get($item, 'pemeriksaan_terakhir.berat_badan'), 'kg')],
+                ['label' => 'TB Terakhir', 'value' => $heightValue(data_get($item, 'pemeriksaan_terakhir.tinggi_badan'))],
+                ['label' => 'L. Kepala', 'value' => $numberValue(data_get($item, 'pemeriksaan_terakhir.lingkar_kepala'), 'cm')],
+                ['label' => 'Kunjungan', 'value' => $lastCheckDate($item)],
             ],
         ]);
     }
 
+    // MENGISI DATA REMAJA
     foreach(($remajas ?? collect()) as $item) {
         $imt = $getImt($item);
-
         $cards->push([
             'kategori' => 'Remaja',
             'nama' => $item->nama_lengkap ?? '-',
-            'meta' => $ageText($item->tanggal_lahir ?? null) . ' • ' . ($item->sekolah ?: 'Sekolah belum diisi'),
-            'caption' => 'IMT dan kesehatan remaja',
-            'href' => $remajaShowRoute($item->id),
+            'meta' => $ageText($item->tanggal_lahir ?? null) . ' • NIK: ' . ($item->nik ?? '-'),
+            'href' => $routeTo(['user.remaja.show', 'user.monitoring.remaja.show'], [$item->id]),
             'icon' => 'user-graduate',
             'tone' => 'sky',
             'search' => Str::lower('remaja ' . ($item->nama_lengkap ?? '') . ' ' . ($item->nik ?? '')),
             'metrics' => [
-                ['label' => 'BB', 'value' => $numberValue($item->berat_badan ?? data_get($item, 'pemeriksaan_terakhir.berat_badan'), 'kg')],
-                ['label' => 'IMT', 'value' => filled($imt) ? $imt . ' ' . $imtLabel($imt) : '-'],
-                ['label' => 'Update', 'value' => $lastCheckDate($item)],
+                ['label' => 'Berat (BB)', 'value' => $numberValue(data_get($item, 'pemeriksaan_terakhir.berat_badan') ?? $item->berat_badan ?? null, 'kg')],
+                ['label' => 'Tinggi (TB)', 'value' => $heightValue(data_get($item, 'pemeriksaan_terakhir.tinggi_badan') ?? $item->tinggi_badan ?? null)],
+                ['label' => 'Status IMT', 'value' => filled($imt) ? $imtLabel($imt) : '-'],
+                ['label' => 'Tensi', 'value' => data_get($item, 'pemeriksaan_terakhir.tensi') ?: '-'],
             ],
         ]);
     }
 
+    // MENGISI DATA LANSIA
     foreach(($lansias ?? collect()) as $item) {
-        $imt = $getImt($item);
-
         $cards->push([
             'kategori' => 'Lansia',
             'nama' => $item->nama_lengkap ?? '-',
-            'meta' => $ageText($item->tanggal_lahir ?? null) . ' • ' . ucwords(str_replace('_', ' ', $item->tingkat_kemandirian ?: 'Belum diisi')),
-            'caption' => 'Tensi dan pemeriksaan dasar',
-            'href' => $lansiaShowRoute($item->id),
-            'icon' => 'heart-pulse',
+            'meta' => $ageText($item->tanggal_lahir ?? null) . ' • NIK: ' . ($item->nik ?? '-'),
+            'href' => $routeTo(['user.lansia.show', 'user.monitoring.lansia.show'], [$item->id]),
+            'icon' => 'person-cane',
             'tone' => 'amber',
             'search' => Str::lower('lansia ' . ($item->nama_lengkap ?? '') . ' ' . ($item->nik ?? '')),
             'metrics' => [
-                ['label' => 'Tensi', 'value' => $item->tekanan_darah ?: '-'],
-                ['label' => 'Gula', 'value' => $numberValue($item->gula_darah, 'mg/dL')],
-                ['label' => 'IMT', 'value' => filled($imt) ? $imt . ' ' . $imtLabel($imt) : '-'],
+                ['label' => 'Cek Tensi', 'value' => data_get($item, 'pemeriksaan_terakhir.tensi') ?? $item->tekanan_darah ?: '-'],
+                ['label' => 'Gula Darah', 'value' => $numberValue(data_get($item, 'pemeriksaan_terakhir.gula_darah') ?? data_get($item, 'pemeriksaan_terakhir.gula') ?? $item->gula_darah ?? null, 'mg/dL')],
+                ['label' => 'Kolesterol', 'value' => $numberValue(data_get($item, 'pemeriksaan_terakhir.kolesterol'), 'mg/dL')],
+                ['label' => 'Kunjungan', 'value' => $lastCheckDate($item)],
             ],
         ]);
     }
 
+    // MAP TEMA DINAMIS UNTUK LIST VIEW
     $toneMap = [
         'rose' => [
-            'icon' => 'border-rose-100 bg-rose-50 text-rose-500',
-            'badge' => 'border-rose-200 bg-rose-50 text-rose-700',
-            'button' => 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20',
+            'icon_bg' => 'bg-rose-50',
+            'icon_text' => 'text-rose-500',
+            'badge' => 'bg-rose-50 text-rose-600 border-rose-200',
+            'button' => 'bg-white text-rose-600 border-rose-200 hover:bg-rose-500 hover:text-white hover:border-rose-500',
+            'hover_row' => 'hover:bg-rose-50/40'
         ],
         'sky' => [
-            'icon' => 'border-sky-100 bg-sky-50 text-sky-500',
-            'badge' => 'border-sky-200 bg-sky-50 text-sky-700',
-            'button' => 'bg-sky-500 hover:bg-sky-600 shadow-sky-500/20',
+            'icon_bg' => 'bg-sky-50',
+            'icon_text' => 'text-sky-500',
+            'badge' => 'bg-sky-50 text-sky-600 border-sky-200',
+            'button' => 'bg-white text-sky-600 border-sky-200 hover:bg-sky-500 hover:text-white hover:border-sky-500',
+            'hover_row' => 'hover:bg-sky-50/40'
         ],
         'amber' => [
-            'icon' => 'border-amber-100 bg-amber-50 text-amber-500',
-            'badge' => 'border-amber-200 bg-amber-50 text-amber-700',
-            'button' => 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20',
+            'icon_bg' => 'bg-amber-50',
+            'icon_text' => 'text-amber-500',
+            'badge' => 'bg-amber-50 text-amber-600 border-amber-200',
+            'button' => 'bg-white text-amber-600 border-amber-200 hover:bg-amber-500 hover:text-white hover:border-amber-500',
+            'hover_row' => 'hover:bg-amber-50/40'
         ],
     ];
 @endphp
 
 @push('styles')
 <style>
-    .monitoring-enter {
+    body {
+        background-color: #f8fafc;
+        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-attachment: fixed;
+    }
+
+    .animate-pop-in {
+        animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards;
         opacity: 0;
-        animation: monitoringEnter .36s cubic-bezier(.16, 1, .3, 1) forwards;
     }
 
-    .monitoring-enter-2 {
-        opacity: 0;
-        animation: monitoringEnter .36s cubic-bezier(.16, 1, .3, 1) .06s forwards;
+    @keyframes popIn {
+        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    @keyframes monitoringEnter {
-        from {
-            opacity: 0;
-            transform: translateY(12px) scale(.99);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    .monitoring-page {
-        background:
-            radial-gradient(circle at 8% 8%, rgba(16,185,129,.14), transparent 28%),
-            radial-gradient(circle at 90% 12%, rgba(14,165,233,.11), transparent 26%),
-            radial-gradient(circle at 76% 88%, rgba(245,158,11,.11), transparent 28%),
-            linear-gradient(135deg,#f8fafc 0%,#ecfdf5 44%,#eff6ff 100%);
-    }
-
-    .monitoring-glass {
-        border: 1px solid rgba(255,255,255,.76);
-        background: rgba(255,255,255,.68);
-        backdrop-filter: blur(20px);
-        box-shadow: 0 16px 46px rgba(15,23,42,.055);
-    }
-
-    .monitoring-card {
-        border: 1px solid rgba(226,232,240,.78);
-        background: rgba(255,255,255,.72);
-        backdrop-filter: blur(16px);
-        box-shadow: 0 10px 28px rgba(15,23,42,.04);
-        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-    }
-
-    .monitoring-card:hover {
-        transform: translateY(-2px);
-        border-color: rgba(16,185,129,.28);
-        box-shadow: 0 16px 38px rgba(15,23,42,.065);
+    .hero-grid {
+        background-image: radial-gradient(rgba(255,255,255,.45) 1px, transparent 1px);
+        background-size: 24px 24px;
     }
 
     .is-hidden-by-search {
-        display: none;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .monitoring-enter,
-        .monitoring-enter-2 {
-            animation: none;
-            opacity: 1;
-        }
-
-        .monitoring-card,
-        .monitoring-card:hover {
-            transition: none;
-            transform: none;
-        }
+        display: none !important;
     }
 </style>
 @endpush
 
 @section('content')
-<div class="monitoring-page -mx-4 -my-4 min-h-[calc(100vh-96px)] px-4 py-5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-    <div class="mx-auto max-w-7xl space-y-5">
+<div class="max-w-[1280px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
 
-        <section class="monitoring-enter monitoring-glass relative overflow-hidden rounded-[30px] p-5 sm:p-6">
-            <div class="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl"></div>
-            <div class="pointer-events-none absolute -bottom-24 left-8 h-56 w-56 rounded-full bg-sky-300/14 blur-3xl"></div>
+    {{-- 1. HERO SECTION (DYNAMIC THEME) --}}
+    <section class="bg-gradient-to-br {{ $heroClasses }} rounded-[2.5rem] p-8 md:p-10 mb-6 relative overflow-hidden border border-white/20 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-500">
+        <div class="hero-grid absolute inset-0 opacity-20 pointer-events-none"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[70px] rounded-full pointer-events-none"></div>
 
-            <div class="relative grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_390px] xl:items-center">
-                <div>
-                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/90 px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
-                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                        Kesehatan Terpadu
-                    </span>
+        <div class="relative z-10 flex-1">
+            <div class="inline-flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-widest mb-4">
+                <span class="bg-white/20 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full shadow-sm">Kesehatan Terpadu</span>
+                <i class="fas fa-chevron-right text-[8px] opacity-70"></i>
+                <span>Semua Rekam Medis</span>
+            </div>
 
-                    <h1 class="mt-4 text-3xl font-black tracking-tight text-slate-800 sm:text-4xl">
-                        Pemantauan Keluarga
-                    </h1>
+            <h1 class="text-3xl md:text-4xl font-black text-white font-poppins tracking-tight">
+                Pemantauan Keluarga
+            </h1>
 
-                    <p class="mt-2 max-w-3xl text-sm font-semibold leading-7 text-slate-600">
-                        Ringkasan kesehatan Balita, Remaja, dan Lansia yang terhubung dengan akun warga.
-                    </p>
+            <p class="text-white/80 text-sm font-medium mt-3 leading-relaxed max-w-xl mx-auto md:mx-0">
+                Akses cepat seluruh buku rekam medis anggota keluarga Anda yang terdaftar pada sistem Posyandu.
+            </p>
+        </div>
 
-                    <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <div class="rounded-[20px] border border-emerald-100 bg-white/70 px-3 py-3">
-                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Total</p>
-                            <p class="mt-1 text-2xl font-black text-slate-800">{{ $counts['total'] }}</p>
-                        </div>
+        <div class="relative z-10 shrink-0">
+            <div class="bg-white/20 border border-white/30 backdrop-blur-md rounded-[1.5rem] px-6 py-5 text-center shadow-inner min-w-[140px]">
+                <p class="text-[10px] text-white/90 font-black uppercase tracking-widest mb-1">Total Akses</p>
+                <p class="text-4xl font-black text-white leading-none">{{ $counts['total'] }}</p>
+            </div>
+        </div>
+    </section>
 
-                        <div class="rounded-[20px] border border-rose-100 bg-white/70 px-3 py-3">
-                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Balita</p>
-                            <p class="mt-1 text-2xl font-black text-rose-600">{{ $counts['balita'] }}</p>
-                        </div>
+    @if($hasData)
+        {{-- 2. CONTAINER MASTER (ADMIN STYLE LIST) --}}
+        <section class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
+            
+            {{-- Header Kotak & Pencarian --}}
+            <div class="bg-slate-50/70 px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-users-viewfinder opacity-50 text-lg"></i>
+                    Daftar Anggota Keluarga
+                </h5>
 
-                        <div class="rounded-[20px] border border-sky-100 bg-white/70 px-3 py-3">
-                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Remaja</p>
-                            <p class="mt-1 text-2xl font-black text-sky-600">{{ $counts['remaja'] }}</p>
-                        </div>
-
-                        <div class="rounded-[20px] border border-amber-100 bg-white/70 px-3 py-3">
-                            <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Lansia</p>
-                            <p class="mt-1 text-2xl font-black text-amber-600">{{ $counts['lansia'] }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="rounded-[26px] border border-white/80 bg-gradient-to-br from-emerald-50/95 via-white/82 to-sky-50/90 p-5 shadow-[0_14px_40px_rgba(15,23,42,0.055)] backdrop-blur-xl">
-                    <label for="familySearch" class="block text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
-                        Cari Data Keluarga
-                    </label>
-
-                    <div class="relative mt-3">
+                @if($counts['total'] > 1)
+                    <div class="w-full md:w-72 relative">
                         <input type="text"
                                id="familySearch"
                                autocomplete="off"
-                               placeholder="Ketik nama, NIK, atau kategori..."
-                               class="h-12 w-full rounded-2xl border border-emerald-100 bg-white/78 px-4 pr-11 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-500/10">
-
-                        <div class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500">
+                               placeholder="Cari nama atau NIK..."
+                               class="w-full bg-white border border-slate-200 rounded-[14px] px-4 py-2.5 pl-10 text-xs font-bold text-slate-700 outline-none transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-500/10 shadow-sm">
+                        <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
                             <i class="fas fa-search"></i>
                         </div>
                     </div>
-
-                    <p class="mt-3 text-xs font-semibold leading-5 text-slate-500">
-                        Pencarian berjalan di browser, jadi ringan dan tidak membebani server.
-                    </p>
-                </div>
+                @endif
             </div>
-        </section>
 
-        @if($hasData)
-            <section class="monitoring-enter-2 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" id="familyGrid">
+            {{-- Isi Daftar --}}
+            <div class="flex flex-col divide-y divide-slate-100" id="familyGrid">
                 @foreach($cards as $card)
                     @php $tone = $toneMap[$card['tone']]; @endphp
 
-                    <article class="monitoring-card family-card group rounded-[26px] p-4"
-                             data-search="{{ $card['search'] }}">
-                        <div class="flex items-start gap-4">
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border text-lg {{ $tone['icon'] }}">
+                    <div class="family-row flex flex-col lg:flex-row lg:items-center p-6 sm:px-8 gap-5 transition-colors duration-200 {{ $tone['hover_row'] }}" data-search="{{ $card['search'] }}">
+                        
+                        {{-- Kolom 1: Ikon & Identitas --}}
+                        <div class="flex items-center gap-4 w-full lg:w-4/12 shrink-0">
+                            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl shadow-sm border border-slate-100 {{ $tone['icon_bg'] }} {{ $tone['icon_text'] }}">
                                 <i class="fas fa-{{ $card['icon'] }}"></i>
                             </div>
-
                             <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap gap-2">
-                                    <span class="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] {{ $tone['badge'] }}">
-                                        {{ $card['kategori'] }}
-                                    </span>
-
-                                    <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.10em] text-slate-600">
-                                        {{ $card['caption'] }}
-                                    </span>
-                                </div>
-
-                                <h3 class="mt-3 line-clamp-1 text-lg font-black text-slate-800">
+                                <span class="inline-block px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border {{ $tone['badge'] }} mb-1.5">
+                                    {{ $card['kategori'] }}
+                                </span>
+                                <h3 class="truncate text-base font-black text-slate-800 leading-tight" title="{{ $card['nama'] }}">
                                     {{ $card['nama'] }}
                                 </h3>
-
-                                <p class="mt-1 line-clamp-1 text-sm font-semibold text-slate-500">
+                                <p class="truncate text-[11px] font-semibold text-slate-500 mt-1">
                                     {{ $card['meta'] }}
                                 </p>
                             </div>
                         </div>
 
-                        <div class="mt-4 grid grid-cols-3 gap-2">
+                        {{-- Kolom 2: Metrik (Grid 4 Kolom Rapi) --}}
+                        <div class="flex-1 w-full lg:w-auto grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/50 lg:bg-transparent p-4 lg:p-0 rounded-xl lg:rounded-none lg:border-l lg:border-r border-slate-200/60 lg:px-6">
                             @foreach($card['metrics'] as $metric)
-                                <div class="rounded-[18px] border border-slate-100 bg-slate-50/70 px-3 py-3">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                <div class="text-center lg:text-left flex flex-col justify-center">
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5 truncate" title="{{ $metric['label'] }}">
                                         {{ $metric['label'] }}
                                     </p>
-                                    <p class="mt-1 truncate text-sm font-black text-slate-800">
+                                    <p class="text-[11px] font-black text-slate-700 truncate">
                                         {{ $metric['value'] }}
                                     </p>
                                 </div>
                             @endforeach
                         </div>
 
-                        <a href="{{ $card['href'] }}"
-                           class="smooth-route mt-4 inline-flex h-10 w-full items-center justify-center rounded-2xl text-xs font-black uppercase tracking-[0.12em] text-white shadow-lg transition {{ $tone['button'] }}">
-                            Lihat Detail
-                        </a>
-                    </article>
-                @endforeach
-            </section>
+                        {{-- Kolom 3: Tombol Aksi --}}
+                        <div class="w-full lg:w-2/12 flex justify-end shrink-0">
+                            <a href="{{ $card['href'] }}" data-no-delay="true" class="w-full lg:w-auto text-center px-5 py-3 rounded-[14px] text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all {{ $tone['button'] }}">
+                                <i class="fa-solid fa-folder-open md:mr-1"></i> <span class="hidden md:inline">Buka</span>
+                            </a>
+                        </div>
 
-            <section id="notFoundState" class="hidden rounded-[28px] border border-dashed border-emerald-300 bg-emerald-50/65 p-8 text-center">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] bg-white text-xl text-emerald-500 shadow-sm">
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- EMPTY STATE PENCARIAN --}}
+            <div id="notFoundState" class="hidden p-12 text-center bg-slate-50/50">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-xl text-slate-400 shadow-sm border border-slate-200 mb-4">
                     <i class="fas fa-search"></i>
                 </div>
-
-                <h3 class="mt-4 text-base font-black text-slate-800">
-                    Data Tidak Ditemukan
-                </h3>
-
-                <p class="mx-auto mt-1 max-w-md text-sm font-semibold leading-6 text-slate-500">
-                    Tidak ada data keluarga yang cocok dengan kata kunci tersebut.
+                <h3 class="text-sm font-black text-slate-800">Data Tidak Ditemukan</h3>
+                <p class="mx-auto mt-1 max-w-sm text-xs font-semibold leading-6 text-slate-500">
+                    Pencarian tidak membuahkan hasil. Pastikan nama atau NIK sudah benar.
                 </p>
-            </section>
-        @else
-            <section class="monitoring-enter-2 rounded-[28px] border border-dashed border-emerald-300 bg-emerald-50/65 p-10 text-center">
-                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-2xl text-emerald-500 shadow-sm">
-                    <i class="fas fa-user-shield"></i>
-                </div>
+            </div>
+        </section>
 
-                <h3 class="mt-5 text-xl font-black text-slate-800">
-                    Belum Ada Rekam Medis
-                </h3>
-
-                <p class="mx-auto mt-2 max-w-md text-sm font-semibold leading-6 text-slate-600">
-                    Data pemantauan akan muncul setelah akun warga tersinkron dengan data Balita, Remaja, atau Lansia di Posyandu.
-                </p>
-            </section>
-        @endif
-    </div>
+    @else
+        {{-- EMPTY STATE BELUM ADA DATA --}}
+        <section class="bg-white rounded-[2.5rem] border border-slate-100 p-16 text-center shadow-sm mt-8">
+            <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-slate-50 border border-slate-100 text-3xl text-slate-300 shadow-inner mb-6">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 mb-2">Belum Ada Data Terhubung</h3>
+            <p class="mx-auto max-w-md text-sm font-semibold leading-relaxed text-slate-500">
+                Data pemantauan akan otomatis muncul di sini setelah akun Anda tersinkron dengan data sasaran Posyandu oleh Bidan atau Kader.
+            </p>
+        </section>
+    @endif
 </div>
 @endsection
 
@@ -412,26 +360,25 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('familySearch');
-        const cards = Array.from(document.querySelectorAll('.family-card'));
+        const rows = Array.from(document.querySelectorAll('.family-row'));
         const notFoundState = document.getElementById('notFoundState');
 
-        if (!searchInput || !cards.length) return;
+        if (!searchInput || !rows.length) return;
 
         searchInput.addEventListener('input', function () {
             const keyword = this.value.trim().toLowerCase();
             let visible = 0;
 
-            cards.forEach(function (card) {
-                const haystack = card.dataset.search || '';
+            rows.forEach(function (row) {
+                const haystack = row.dataset.search || '';
                 const matched = !keyword || haystack.includes(keyword);
 
-                card.classList.toggle('is-hidden-by-search', !matched);
-
+                row.classList.toggle('is-hidden-by-search', !matched);
                 if (matched) visible++;
             });
 
             if (notFoundState) {
-                notFoundState.classList.toggle('hidden', visible > 0);
+                notFoundState.classList.toggle('hidden', visible === 0);
             }
         });
     });

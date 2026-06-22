@@ -1,954 +1,354 @@
 @extends('layouts.bidan')
 
 @section('title', 'Edit Jadwal Posyandu')
-@section('page-name', 'Edit Jadwal')
+@section('page-name', 'Kelola Jadwal')
 @section('page-title', 'Edit Jadwal Posyandu')
 
 @php
     use Carbon\Carbon;
 
-    $kategoriOptions = $kategoriOptions ?? [
-        'posyandu' => [
-            'label' => 'Posyandu Rutin',
-            'desc' => 'Agenda pelayanan umum Posyandu.',
-            'icon' => 'ph-house-line',
-        ],
-        'imunisasi' => [
-            'label' => 'Imunisasi Balita',
-            'desc' => 'Agenda imunisasi khusus Balita.',
-            'icon' => 'ph-syringe',
-        ],
-        'pemeriksaan' => [
-            'label' => 'Pemeriksaan Klinis',
-            'desc' => 'Agenda pemeriksaan lanjutan oleh Bidan.',
-            'icon' => 'ph-stethoscope',
-        ],
-        'lainnya' => [
-            'label' => 'Kegiatan Lainnya',
-            'desc' => 'Agenda tambahan Posyandu.',
-            'icon' => 'ph-calendar-plus',
-        ],
+    // Memastikan mode edit aktif
+    $mode = 'edit';
+    $isEdit = true;
+
+    $kategoriOptions = [
+        'posyandu'    => ['label' => 'Posyandu Rutin', 'desc' => 'Pelayanan umum', 'icon' => 'fa-house-medical'],
+        'imunisasi'   => ['label' => 'Imunisasi Balita', 'desc' => 'Khusus imunisasi', 'icon' => 'fa-syringe'],
+        'pemeriksaan' => ['label' => 'Pemeriksaan Klinis', 'desc' => 'Tinjauan Bidan', 'icon' => 'fa-stethoscope'],
+        'lainnya'     => ['label' => 'Kegiatan Lainnya', 'desc' => 'Agenda tambahan', 'icon' => 'fa-calendar-plus'],
     ];
 
-    $targetOptions = $targetOptions ?? [
-        'semua' => [
-            'label' => 'Semua Sasaran',
-            'desc' => 'Balita, Remaja, Lansia, dan warga terdaftar.',
-            'icon' => 'ph-users-three',
-        ],
-        'balita' => [
-            'label' => 'Balita',
-            'desc' => 'Jadwal untuk sasaran Balita.',
-            'icon' => 'ph-baby',
-        ],
-        'remaja' => [
-            'label' => 'Remaja',
-            'desc' => 'Jadwal untuk sasaran Remaja.',
-            'icon' => 'ph-user-focus',
-        ],
-        'lansia' => [
-            'label' => 'Lansia',
-            'desc' => 'Jadwal untuk sasaran Lansia.',
-            'icon' => 'ph-heartbeat',
-        ],
+    $targetOptions = [
+        'semua'  => ['label' => 'Semua Sasaran', 'desc' => 'Balita, Remaja, Lansia', 'icon' => 'fa-users'],
+        'balita' => ['label' => 'Balita', 'desc' => 'Khusus Balita', 'icon' => 'fa-baby'],
+        'remaja' => ['label' => 'Remaja', 'desc' => 'Khusus Remaja', 'icon' => 'fa-user-graduate'],
+        'lansia' => ['label' => 'Lansia', 'desc' => 'Khusus Lansia', 'icon' => 'fa-person-cane'],
     ];
 
-    $statusOptions = $statusOptions ?? [
-        'aktif' => [
-            'label' => 'Aktif',
-            'desc' => 'Jadwal masih berlaku.',
-            'icon' => 'ph-check-circle',
-        ],
-        'selesai' => [
-            'label' => 'Selesai',
-            'desc' => 'Jadwal sudah dilaksanakan.',
-            'icon' => 'ph-flag-checkered',
-        ],
-        'dibatalkan' => [
-            'label' => 'Dibatalkan',
-            'desc' => 'Jadwal dibatalkan atau ditunda.',
-            'icon' => 'ph-x-circle',
-        ],
+    $statusOptions = [
+        'aktif'      => ['label' => 'Aktif', 'desc' => 'Jadwal berlaku', 'icon' => 'fa-circle-check'],
+        'selesai'    => ['label' => 'Selesai', 'desc' => 'Telah terlaksana', 'icon' => 'fa-flag-checkered'],
+        'dibatalkan' => ['label' => 'Dibatalkan', 'desc' => 'Batal / Ditunda', 'icon' => 'fa-circle-xmark'],
     ];
 
-    $selectedKategori = old('kategori', $jadwal->kategori ?? 'posyandu');
-    $selectedTarget = old('target_peserta', $jadwal->target_peserta ?? 'semua');
-    $selectedStatus = old('status', $jadwal->status ?? 'aktif');
+    $selectedKategori = old('kategori', data_get($jadwal ?? [], 'kategori', 'posyandu'));
+    $selectedTarget = old('target_peserta', data_get($jadwal ?? [], 'target_peserta', 'semua'));
+    $selectedStatus = old('status', data_get($jadwal ?? [], 'status', 'aktif'));
 
-    if ($selectedKategori === 'imunisasi') {
-        $selectedTarget = 'balita';
-    }
+    if ($selectedKategori === 'imunisasi') $selectedTarget = 'balita';
 
-    $judulValue = old('judul', $jadwal->judul ?? '');
-    $tanggalValue = old('tanggal', $jadwal->tanggal ? Carbon::parse($jadwal->tanggal)->format('Y-m-d') : now()->format('Y-m-d'));
-    $mulaiValue = old('waktu_mulai', $jadwal->waktu_mulai ? Carbon::parse($jadwal->waktu_mulai)->format('H:i') : '08:00');
-    $selesaiValue = old('waktu_selesai', $jadwal->waktu_selesai ? Carbon::parse($jadwal->waktu_selesai)->format('H:i') : '10:00');
-    $lokasiValue = old('lokasi', $jadwal->lokasi ?? '');
-    $deskripsiValue = old('deskripsi', $jadwal->deskripsi ?? '');
+    $judulValue = old('judul', data_get($jadwal ?? [], 'judul', ''));
+    $tanggalValue = old('tanggal', data_get($jadwal ?? [], 'tanggal') ? Carbon::parse($jadwal->tanggal)->format('Y-m-d') : now()->format('Y-m-d'));
+    $mulaiValue = old('waktu_mulai', data_get($jadwal ?? [], 'waktu_mulai') ? Carbon::parse($jadwal->waktu_mulai)->format('H:i') : '08:00');
+    $selesaiValue = old('waktu_selesai', data_get($jadwal ?? [], 'waktu_selesai') ? Carbon::parse($jadwal->waktu_selesai)->format('H:i') : '10:00');
+    $lokasiValue = old('lokasi', data_get($jadwal ?? [], 'lokasi', ''));
+    $deskripsiValue = old('deskripsi', data_get($jadwal ?? [], 'deskripsi', ''));
 
-    $kategoriLabel = $kategoriOptions[$selectedKategori]['label'] ?? 'Posyandu Rutin';
-    $targetLabel = $targetOptions[$selectedTarget]['label'] ?? 'Semua Sasaran';
-    $statusLabel = $statusOptions[$selectedStatus]['label'] ?? 'Aktif';
-
-    $formatPreviewDate = function ($date) {
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $formatMetaDate = function ($date) {
-        if (!$date) {
-            return '-';
-        }
-
-        try {
-            return Carbon::parse($date)->translatedFormat('d M Y, H:i');
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
+    $pageTitle = 'Edit Jadwal Posyandu';
+    $pageDesc = 'Perbaiki rincian agenda pelayanan selama jadwal masih berstatus aktif.';
+    $formAction = route('bidan.jadwal.update', $jadwal->id);
+    $submitLabel = 'Simpan Perubahan';
 @endphp
 
 @push('styles')
 <style>
-    .nexus-font {
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+    html { scroll-behavior: smooth; }
+    body { background-color: #f4f7f6; } 
 
-    .nexus-page-enter {
-        animation: nexusMainIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
-    }
-
-    .nexus-panel-enter {
-        animation: nexusPanelIn .12s cubic-bezier(.22, 1, .36, 1) both;
-        will-change: transform, opacity;
-    }
-
-    .jadwal-choice {
-        border: 1px solid rgba(226, 232, 240, .95);
-        background: rgba(248, 250, 252, .8);
-        transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .15s ease;
-    }
-
-    .jadwal-choice:hover {
-        border-color: rgba(110, 231, 183, .85);
-        background: rgba(236, 253, 245, .48);
-    }
-
-    .jadwal-choice.is-active {
-        border-color: rgba(52, 211, 153, .9);
-        background: rgba(236, 253, 245, .86);
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, .09);
-    }
-
-    .jadwal-choice.is-disabled {
-        opacity: .45;
+    .bg-mesh-fixed {
+        position: fixed; inset: 0; z-index: -10;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
         pointer-events: none;
-        filter: grayscale(.25);
     }
 
-    .status-choice[data-status="dibatalkan"].is-active {
-        border-color: rgba(251, 113, 133, .9);
-        background: rgba(255, 241, 242, .9);
-        box-shadow: 0 0 0 3px rgba(244, 63, 94, .08);
+    .widget-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transform: translateZ(0); 
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .status-choice[data-status="selesai"].is-active {
-        border-color: rgba(148, 163, 184, .9);
-        background: rgba(248, 250, 252, .95);
-        box-shadow: 0 0 0 3px rgba(100, 116, 139, .08);
+    .input-soft {
+        width: 100%; background: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 1.2rem; padding: 14px 16px; font-size: 13px; font-weight: 700; color: #1e293b; outline: none; transition: all .25s ease;
     }
+    .input-soft:focus { background: #ffffff; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, .15); }
+    .input-soft.is-invalid { border-color: #f43f5e; background: #fff1f2; }
+    
+    .form-label { display: block; margin-bottom: 0.5rem; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; }
+    .req-star { color: #f43f5e; margin-left: 2px; }
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer;}
+    .btn-pill:active { transform: scale(0.97); }
 
-    @keyframes nexusMainIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 3px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
+    /* Tombol Pilihan Interaktif */
+    .jadwal-choice {
+        border: 2px solid #f1f5f9; background: #f8fafc;
+        transition: all .2s ease; cursor: pointer; text-align: left;
     }
-
-    @keyframes nexusPanelIn {
-        from {
-            opacity: 0;
-            transform: translate3d(0, 2px, 0);
-        }
-
-        to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-        }
+    .jadwal-choice:hover { border-color: rgba(16, 185, 129, .5); background: #ecfdf5; }
+    .jadwal-choice.is-active {
+        border-color: #10b981; background: #ecfdf5;
+        box-shadow: 0 4px 15px -3px rgba(16, 185, 129, .2);
     }
+    .jadwal-choice.is-disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
 
-    @media (max-width: 768px) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation-duration: .08s;
-        }
-    }
+    .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
+    @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-    @media (prefers-reduced-motion: reduce) {
-        .nexus-page-enter,
-        .nexus-panel-enter {
-            animation: none !important;
-        }
+    /* Nexus Modal */
+    .pc-modal-backdrop {
+        position: fixed !important; inset: 0 !important; z-index: 9999 !important; display: none;
+        align-items: center; justify-content: center; background: rgba(15, 23, 42, .6); backdrop-filter: blur(10px); padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
     }
+    .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
+    .pc-modal-card {
+        width: 100%; max-width: 440px; background: white; border-radius: 2.5rem; padding: 2.5rem 2rem;
+        transform: scale(0.9) translateY(20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;
+    }
+    .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
 </style>
 @endpush
 
 @section('content')
-<div class="nexus-font nexus-page-enter space-y-5 pb-8 text-slate-800">
+<div class="bg-mesh-fixed"></div>
 
-    {{-- HEADER --}}
-    <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div class="min-w-0">
-                <a href="{{ route('bidan.jadwal.show', $jadwal->id) }}"
-                   class="mb-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-50 hover:text-emerald-700">
-                    <i class="ph ph-arrow-left"></i>
-                    Kembali
+{{-- Wrapper difokuskan ke tengah (max-w-[1000px]) tanpa preview --}}
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1000px] mx-auto space-y-8 animate-pop-in">
+
+    {{-- HERO BANNER --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col md:flex-row justify-between items-center gap-8 border-[6px] border-white/40">
+        <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
+
+        <div class="relative z-10 w-full flex flex-col gap-4 text-center md:text-left">
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+                <a href="{{ route('bidan.jadwal.show', $jadwal->id) }}" class="btn-pill inline-flex items-center gap-2 border border-white/30 bg-white/20 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/30 shadow-sm backdrop-blur-md transition-colors">
+                    <i class="fa-solid fa-arrow-left"></i> Batal / Kembali
                 </a>
-
-                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">
-                    <i class="ph ph-pencil-simple text-base"></i>
-                    Edit Agenda
-                </div>
-
-                <h1 class="mt-4 max-w-4xl text-[26px] font-black leading-tight tracking-[-0.025em] text-slate-900 md:text-[30px]">
-                    Edit Jadwal Posyandu
-                </h1>
-
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Perbarui agenda selama jadwal masih aktif dan belum melewati waktu mulai.
-                </p>
-
-                <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-2 text-xs font-black text-emerald-700">
-                        <i class="ph ph-check-circle"></i>
-                        Mode edit aktif
-                    </span>
-
-                    <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-black text-slate-500">
-                        <i class="ph ph-bell-ringing"></i>
-                        Notifikasi dikirim jika jadwal berubah
-                    </span>
-                </div>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/20 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white shadow-sm backdrop-blur-md">
+                    <i class="fa-solid fa-pen"></i> Mode Edit
+                </span>
             </div>
-
-            <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row xl:pt-12">
-                <button type="submit"
-                        form="jadwalEditForm"
-                        class="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700">
-                    <i class="ph ph-floppy-disk"></i>
-                    Simpan Perubahan
-                </button>
-            </div>
+            
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                {{ $pageTitle }}
+            </h1>
+            <p class="text-emerald-50 text-sm font-medium leading-relaxed max-w-xl mx-auto md:mx-0">
+                {{ $pageDesc }}
+            </p>
         </div>
     </section>
 
     @if ($errors->any())
-        <section class="nexus-panel-enter rounded-[22px] border border-rose-100 bg-rose-50/80 p-4 text-rose-700">
-            <div class="flex gap-3">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-rose-600 ring-1 ring-rose-100">
-                    <i class="ph ph-warning-circle text-lg"></i>
-                </div>
-
-                <div>
-                    <h2 class="text-sm font-black text-rose-800">
-                        Periksa kembali input jadwal
-                    </h2>
-
-                    <ul class="mt-2 space-y-1 text-sm font-semibold leading-5">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
+        <div class="bg-rose-50 border border-rose-200 rounded-3xl p-5 flex items-start gap-4 shadow-sm">
+            <div class="w-12 h-12 rounded-2xl bg-white text-rose-500 flex items-center justify-center text-xl shrink-0 shadow-sm border border-rose-100"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <h4 class="text-sm font-black text-rose-800">Terdapat Kesalahan Input</h4>
+                <ul class="mt-1 text-[11px] font-bold text-rose-500/80 list-disc list-inside space-y-0.5">
+                    @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+                </ul>
             </div>
-        </section>
+        </div>
     @endif
 
-    <form id="jadwalEditForm"
-          method="POST"
-          action="{{ route('bidan.jadwal.update', $jadwal->id) }}"
-          class="space-y-5">
+    <form id="jadwalForm" method="POST" action="{{ $formAction }}">
         @csrf
         @method('PUT')
-
+        
         <input type="hidden" name="kategori" id="kategoriInput" value="{{ $selectedKategori }}">
         <input type="hidden" name="target_peserta" id="targetInput" value="{{ $selectedTarget }}">
         <input type="hidden" name="status" id="statusInput" value="{{ $selectedStatus }}">
 
-        {{-- RINGKASAN --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
+        {{-- FORMULIR UTAMA FOKUS TENGAH --}}
+        <section class="widget-card overflow-hidden flex flex-col w-full border-t-4 border-t-teal-500">
+            
+            {{-- Form Header --}}
+            <div class="bg-slate-50/70 px-6 py-6 border-b border-slate-100 flex items-center gap-4 shrink-0">
+                <div class="w-12 h-12 rounded-2xl bg-white border border-slate-100 text-teal-500 flex items-center justify-center text-xl shadow-sm"><i class="fa-solid fa-pen-to-square"></i></div>
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Ringkasan
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Preview Perubahan
-                    </h2>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                    <i class="ph ph-eye text-lg"></i>
+                    <h2 class="text-base font-black text-slate-800 uppercase tracking-tight">Formulir Perubahan</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Perbarui parameter jadwal di bawah</p>
                 </div>
             </div>
 
-            <div class="rounded-[22px] bg-gradient-to-br from-emerald-500 to-teal-500 p-5 text-white">
-                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div class="min-w-0">
-                        <p id="previewKategori" class="text-[11px] font-black uppercase tracking-[0.16em] text-white/80">
-                            {{ $kategoriLabel }}
-                        </p>
-
-                        <h3 id="previewJudul" class="mt-3 text-xl font-black tracking-[-0.025em] md:text-2xl">
-                            {{ $judulValue ?: 'Judul agenda belum diisi' }}
-                        </h3>
-
-                        <p id="previewTanggal" class="mt-2 text-sm font-semibold leading-6 text-white/85">
-                            {{ $formatPreviewDate($tanggalValue) }}
-                        </p>
-                    </div>
-
-                    <div class="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
-                        <span id="previewBulan" class="text-[10px] font-black uppercase text-white/80">
-                            {{ Carbon::parse($tanggalValue)->translatedFormat('M') }}
-                        </span>
-
-                        <span id="previewHari" class="text-xl font-black leading-none text-white">
-                            {{ Carbon::parse($tanggalValue)->format('d') }}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="mt-5 flex flex-wrap gap-2">
-                    <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11px] font-black text-white ring-1 ring-white/25">
-                        <i class="ph ph-clock mr-1"></i>
-                        <span id="previewWaktu">{{ $mulaiValue }} - {{ $selesaiValue }} WIB</span>
-                    </span>
-
-                    <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11px] font-black text-white ring-1 ring-white/25">
-                        <i class="ph ph-map-pin mr-1"></i>
-                        <span id="previewLokasi">{{ $lokasiValue ?: 'Lokasi belum diisi' }}</span>
-                    </span>
-
-                    <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11px] font-black text-white ring-1 ring-white/25">
-                        <i class="ph ph-users-three mr-1"></i>
-                        <span id="previewTarget">{{ $targetLabel }}</span>
-                    </span>
-
-                    <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[11px] font-black text-white ring-1 ring-white/25">
-                        <i class="ph ph-check-circle mr-1"></i>
-                        <span id="previewStatus">{{ $statusLabel }}</span>
-                    </span>
-                </div>
-            </div>
-        </section>
-
-        {{-- INFORMASI DASAR --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Informasi Dasar
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Detail Pelaksanaan
-                    </h2>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                    <i class="ph ph-clipboard-text text-lg"></i>
-                </div>
-            </div>
-
-            <div class="grid gap-4">
-                <div>
-                    <label for="judul" class="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                        Judul Kegiatan <span class="text-rose-500">*</span>
-                    </label>
-
-                    <input type="text"
-                           id="judul"
-                           name="judul"
-                           value="{{ $judulValue }}"
-                           maxlength="191"
-                           required
-                           spellcheck="false"
-                           placeholder="Contoh: Posyandu Balita Bulan Juni"
-                           class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">
-
-                    @error('judul')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="grid gap-4 md:grid-cols-3">
+            <div class="p-6 md:p-8 space-y-8">
+                
+                {{-- Kategori & Sasaran --}}
+                <div class="space-y-6 bg-slate-50/50 p-5 md:p-6 rounded-3xl border border-slate-100">
                     <div>
-                        <label for="tanggal" class="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                            Tanggal <span class="text-rose-500">*</span>
-                        </label>
-
-                        <input type="date"
-                               id="tanggal"
-                               name="tanggal"
-                               value="{{ $tanggalValue }}"
-                               required
-                               class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">
-
-                        @error('tanggal')
-                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                        @enderror
+                        <label class="form-label mb-3">1. Kategori Layanan <span class="req-star">*</span></label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            @foreach($kategoriOptions as $key => $option)
+                                <button type="button" data-kategori="{{ $key }}" class="js-kategori-btn jadwal-choice rounded-2xl p-4 flex flex-col items-center justify-center text-center {{ $selectedKategori === $key ? 'is-active' : '' }}">
+                                    <i class="fa-solid {{ $option['icon'] }} text-2xl mb-2 text-slate-300"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">{{ $option['label'] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
 
                     <div>
-                        <label for="waktu_mulai" class="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                            Jam Mulai <span class="text-rose-500">*</span>
-                        </label>
-
-                        <input type="time"
-                               id="waktu_mulai"
-                               name="waktu_mulai"
-                               value="{{ $mulaiValue }}"
-                               required
-                               class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">
-
-                        @error('waktu_mulai')
-                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                        @enderror
+                        <label class="form-label mb-3">2. Target Sasaran <span class="req-star">*</span> <span id="targetHint" class="text-rose-500 font-semibold normal-case float-right text-[10px]"></span></label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            @foreach($targetOptions as $key => $option)
+                                <button type="button" data-target="{{ $key }}" class="js-target-btn jadwal-choice rounded-2xl p-4 flex flex-col items-center justify-center text-center {{ $selectedTarget === $key ? 'is-active' : '' }}">
+                                    <i class="fa-solid {{ $option['icon'] }} text-2xl mb-2 text-slate-300"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">{{ $option['label'] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
+                </div>
 
+                {{-- Status Khusus Edit --}}
+                <div class="bg-amber-50/50 p-5 md:p-6 rounded-3xl border border-amber-100">
+                    <label class="form-label mb-3 text-amber-700">3. Status Pelaksanaan <span class="req-star">*</span></label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        @foreach($statusOptions as $key => $option)
+                            <button type="button" data-status="{{ $key }}" class="js-status-btn jadwal-choice rounded-2xl p-4 flex flex-col items-center justify-center text-center {{ $selectedStatus === $key ? 'is-active' : '' }}">
+                                <i class="fa-solid {{ $option['icon'] }} text-2xl mb-2 text-slate-400"></i>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-700">{{ $option['label'] }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Informasi Dasar --}}
+                <div class="space-y-6">
                     <div>
-                        <label for="waktu_selesai" class="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                            Jam Selesai <span class="text-rose-500">*</span>
-                        </label>
-
-                        <input type="time"
-                               id="waktu_selesai"
-                               name="waktu_selesai"
-                               value="{{ $selesaiValue }}"
-                               required
-                               class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">
-
-                        @error('waktu_selesai')
-                            <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                        @enderror
+                        <label class="form-label">Judul Kegiatan <span class="req-star">*</span></label>
+                        <input type="text" id="judul" name="judul" value="{{ $judulValue }}" maxlength="191" required placeholder="Contoh: Posyandu Balita Bulan Juni" class="input-soft @error('judul') is-invalid @enderror">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        <div>
+                            <label class="form-label">Tanggal Pelaksanaan <span class="req-star">*</span></label>
+                            <input type="date" id="tanggal" name="tanggal" value="{{ $tanggalValue }}" required class="input-soft cursor-pointer @error('tanggal') is-invalid @enderror">
+                        </div>
+                        <div>
+                            <label class="form-label">Jam Mulai <span class="req-star">*</span></label>
+                            <input type="time" id="waktu_mulai" name="waktu_mulai" value="{{ $mulaiValue }}" required class="input-soft cursor-pointer @error('waktu_mulai') is-invalid @enderror">
+                        </div>
+                        <div>
+                            <label class="form-label">Jam Selesai <span class="req-star">*</span></label>
+                            <input type="time" id="waktu_selesai" name="waktu_selesai" value="{{ $selesaiValue }}" required class="input-soft cursor-pointer @error('waktu_selesai') is-invalid @enderror">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">Lokasi / Tempat <span class="req-star">*</span></label>
+                        <input type="text" id="lokasi" name="lokasi" value="{{ $lokasiValue }}" maxlength="191" required placeholder="Contoh: Balai Desa Bantarkulon" class="input-soft @error('lokasi') is-invalid @enderror">
                     </div>
                 </div>
 
+                {{-- Deskripsi --}}
                 <div>
-                    <label for="lokasi" class="mb-2 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                        Lokasi <span class="text-rose-500">*</span>
-                    </label>
-
-                    <input type="text"
-                           id="lokasi"
-                           name="lokasi"
-                           value="{{ $lokasiValue }}"
-                           maxlength="191"
-                           required
-                           spellcheck="false"
-                           placeholder="Contoh: Balai Desa Bantarkulon"
-                           class="min-h-[46px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">
-
-                    @error('lokasi')
-                        <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-        </section>
-
-        {{-- STATUS --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Status
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Kondisi Jadwal
-                    </h2>
-
-                    <p class="mt-1 text-xs font-semibold text-slate-500">
-                        Gunakan status dibatalkan bila agenda tidak jadi dilaksanakan.
-                    </p>
+                    <label class="form-label">Deskripsi Tambahan (Opsional)</label>
+                    <textarea id="deskripsi" name="deskripsi" rows="3" maxlength="1000" placeholder="Keterangan tambahan untuk warga (misal: Bawa buku KIA)..." class="input-soft resize-none">{{ $deskripsiValue }}</textarea>
                 </div>
 
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-600 ring-1 ring-slate-100">
-                    <i class="ph ph-check-circle text-lg"></i>
-                </div>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-3">
-                @foreach($statusOptions as $key => $option)
-                    <button type="button"
-                            data-status="{{ $key }}"
-                            data-label="{{ $option['label'] }}"
-                            class="js-status-btn status-choice jadwal-choice rounded-2xl p-4 text-left {{ $selectedStatus === $key ? 'is-active' : '' }}">
-                        <div class="flex gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-100">
-                                <i class="ph {{ $option['icon'] }} text-lg"></i>
-                            </div>
-
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-black text-slate-900">
-                                    {{ $option['label'] }}
-                                </h3>
-
-                                <p class="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">
-                                    {{ $option['desc'] }}
-                                </p>
-                            </div>
-                        </div>
-                    </button>
-                @endforeach
-            </div>
-
-            @error('status')
-                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-            @enderror
-        </section>
-
-        {{-- KATEGORI --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Kategori
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Jenis Layanan
-                    </h2>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100">
-                    <i class="ph ph-squares-four text-lg"></i>
-                </div>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                @foreach($kategoriOptions as $key => $option)
-                    <button type="button"
-                            data-kategori="{{ $key }}"
-                            data-label="{{ $option['label'] }}"
-                            class="js-kategori-btn jadwal-choice rounded-2xl p-4 text-left {{ $selectedKategori === $key ? 'is-active' : '' }}">
-                        <div class="flex gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-100">
-                                <i class="ph {{ $option['icon'] }} text-lg"></i>
-                            </div>
-
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-black text-slate-900">
-                                    {{ $option['label'] }}
-                                </h3>
-
-                                <p class="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">
-                                    {{ $option['desc'] }}
-                                </p>
-                            </div>
-                        </div>
-                    </button>
-                @endforeach
-            </div>
-
-            @error('kategori')
-                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-            @enderror
-        </section>
-
-        {{-- TARGET --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Target
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Sasaran Peserta
-                    </h2>
-
-                    <p id="targetHint" class="mt-1 text-xs font-semibold text-slate-500">
-                        Pilih sasaran yang akan menerima jadwal.
-                    </p>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                    <i class="ph ph-users-three text-lg"></i>
-                </div>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                @foreach($targetOptions as $key => $option)
-                    <button type="button"
-                            data-target="{{ $key }}"
-                            data-label="{{ $option['label'] }}"
-                            class="js-target-btn jadwal-choice rounded-2xl p-4 text-left {{ $selectedTarget === $key ? 'is-active' : '' }}">
-                        <div class="flex gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-100">
-                                <i class="ph {{ $option['icon'] }} text-lg"></i>
-                            </div>
-
-                            <div class="min-w-0">
-                                <h3 class="text-sm font-black text-slate-900">
-                                    {{ $option['label'] }}
-                                </h3>
-
-                                <p class="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">
-                                    {{ $option['desc'] }}
-                                </p>
-                            </div>
-                        </div>
-                    </button>
-                @endforeach
-            </div>
-
-            @error('target_peserta')
-                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-            @enderror
-        </section>
-
-        {{-- CATATAN --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Catatan
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Deskripsi Tambahan
-                    </h2>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
-                    <i class="ph ph-note-pencil text-lg"></i>
-                </div>
-            </div>
-
-            <textarea id="deskripsi"
-                      name="deskripsi"
-                      rows="4"
-                      maxlength="1000"
-                      spellcheck="false"
-                      placeholder="Contoh: peserta membawa buku pemeriksaan atau kartu identitas masing-masing."
-                      class="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100">{{ $deskripsiValue }}</textarea>
-
-            @error('deskripsi')
-                <p class="mt-2 text-xs font-bold text-rose-600">{{ $message }}</p>
-            @enderror
-        </section>
-
-        {{-- RIWAYAT --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur md:p-6">
-            <div class="mb-5 flex items-center justify-between gap-4">
-                <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">
-                        Riwayat
-                    </p>
-
-                    <h2 class="mt-1 text-base font-black tracking-[-0.02em] text-slate-900 md:text-lg">
-                        Data Sistem
-                    </h2>
-                </div>
-
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-600 ring-1 ring-slate-100">
-                    <i class="ph ph-clock-counter-clockwise text-lg"></i>
-                </div>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-2">
-                <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        Dibuat
-                    </p>
-
-                    <p class="mt-1 text-sm font-black text-slate-900">
-                        {{ $formatMetaDate($jadwal->created_at ?? null) }}
-                    </p>
-                </div>
-
-                <div class="rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-100">
-                    <p class="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
-                        Diperbarui
-                    </p>
-
-                    <p class="mt-1 text-sm font-black text-slate-900">
-                        {{ $formatMetaDate($jadwal->updated_at ?? null) }}
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        {{-- ACTION --}}
-        <section class="nexus-panel-enter rounded-[26px] border border-white/80 bg-white/85 p-5 shadow-sm shadow-slate-200/70 backdrop-blur">
-            <div class="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-                <a href="{{ route('bidan.jadwal.show', $jadwal->id) }}"
-                   class="inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+            {{-- Action Buttons Bottom --}}
+            <div class="p-6 md:p-8 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-end gap-3 mt-auto shrink-0">
+                <a href="{{ route('bidan.jadwal.show', $jadwal->id) }}" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
                     Batal
                 </a>
-
-                <button type="reset"
-                        class="inline-flex min-h-[46px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-black text-slate-500 transition hover:bg-slate-100">
-                    Reset Form
-                </button>
-
-                <button type="submit"
-                        class="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700">
-                    <i class="ph ph-floppy-disk"></i>
-                    Simpan Perubahan
+                <button type="button" id="openSubmitModalBtn" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-black uppercase tracking-widest text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 transition-all shadow-[0_4px_15px_rgba(16,185,129,.30)] hover:-translate-y-0.5 text-xs flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-save text-sm"></i> {{ $submitLabel }}
                 </button>
             </div>
         </section>
     </form>
+
+    {{-- MODAL KONFIRMASI --}}
+    <div id="pcSubmitModal" class="pc-modal-backdrop">
+        <div class="pc-modal-card text-center">
+            <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="relative z-10">
+                <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Perubahan?</h3>
+                <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">Pastikan data tanggal, waktu, target, serta status jadwal sudah sesuai agar tidak membingungkan peserta Posyandu.</p>
+                <div class="flex gap-3">
+                    <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">Kembali</button>
+                    <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
-    (() => {
-        const kategoriInput = document.getElementById('kategoriInput');
-        const targetInput = document.getElementById('targetInput');
-        const statusInput = document.getElementById('statusInput');
+(() => {
+    // Variable Deklarasi
+    const form = document.getElementById('jadwalForm');
+    const kategoriInput = document.getElementById('kategoriInput');
+    const targetInput = document.getElementById('targetInput');
+    const statusInput = document.getElementById('statusInput');
 
-        const kategoriButtons = Array.from(document.querySelectorAll('.js-kategori-btn'));
-        const targetButtons = Array.from(document.querySelectorAll('.js-target-btn'));
-        const statusButtons = Array.from(document.querySelectorAll('.js-status-btn'));
+    const katBtns = Array.from(document.querySelectorAll('.js-kategori-btn'));
+    const targBtns = Array.from(document.querySelectorAll('.js-target-btn'));
+    const statBtns = Array.from(document.querySelectorAll('.js-status-btn'));
+    const targetHint = document.getElementById('targetHint');
 
-        const targetHint = document.getElementById('targetHint');
+    let sKat = kategoriInput.value || 'posyandu';
+    let sTarg = targetInput.value || 'semua';
+    let sStat = statusInput?.value || 'aktif';
 
-        const judulInput = document.getElementById('judul');
-        const tanggalInput = document.getElementById('tanggal');
-        const mulaiInput = document.getElementById('waktu_mulai');
-        const selesaiInput = document.getElementById('waktu_selesai');
-        const lokasiInput = document.getElementById('lokasi');
+    // Helpers
+    const setBtnActive = (btns, key, dataset) => btns.forEach(b => {
+        const isMatched = b.dataset[dataset] === key;
+        b.classList.toggle('is-active', isMatched);
+        const icon = b.querySelector('i');
+        if(icon) {
+            icon.classList.toggle('text-slate-300', !isMatched);
+            icon.classList.toggle('text-emerald-500', isMatched);
+        }
+    });
 
-        const previewKategori = document.getElementById('previewKategori');
-        const previewJudul = document.getElementById('previewJudul');
-        const previewTanggal = document.getElementById('previewTanggal');
-        const previewBulan = document.getElementById('previewBulan');
-        const previewHari = document.getElementById('previewHari');
-        const previewWaktu = document.getElementById('previewWaktu');
-        const previewLokasi = document.getElementById('previewLokasi');
-        const previewTarget = document.getElementById('previewTarget');
-        const previewStatus = document.getElementById('previewStatus');
-
-        const initialKategori = kategoriInput?.value || 'posyandu';
-        const initialTarget = targetInput?.value || 'semua';
-        const initialStatus = statusInput?.value || 'aktif';
-
-        let selectedKategori = initialKategori;
-        let selectedTarget = initialTarget;
-        let selectedStatus = initialStatus;
-
-        const formatDate = (value) => {
-            if (!value) {
-                return {
-                    full: '-',
-                    month: '-',
-                    day: '-',
-                };
-            }
-
-            const date = new Date(`${value}T00:00:00`);
-
-            if (Number.isNaN(date.getTime())) {
-                return {
-                    full: '-',
-                    month: '-',
-                    day: '-',
-                };
-            }
-
-            return {
-                full: date.toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                }),
-                month: date.toLocaleDateString('id-ID', {
-                    month: 'short',
-                }),
-                day: date.toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                }),
-            };
-        };
-
-        const setActiveButton = (buttons, key, dataName) => {
-            buttons.forEach((button) => {
-                button.classList.toggle('is-active', button.dataset[dataName] === key);
-            });
-        };
-
-        const syncTargetLock = () => {
-            const lockBalita = selectedKategori === 'imunisasi';
-
-            if (lockBalita) {
-                selectedTarget = 'balita';
-
-                if (targetInput) {
-                    targetInput.value = 'balita';
-                }
-            }
-
-            targetButtons.forEach((button) => {
-                const disabled = lockBalita && button.dataset.target !== 'balita';
-
-                button.classList.toggle('is-disabled', disabled);
-                button.disabled = disabled;
-            });
-
-            if (targetHint) {
-                targetHint.textContent = lockBalita
-                    ? 'Kategori Imunisasi Balita otomatis menggunakan target Balita.'
-                    : 'Pilih sasaran yang akan menerima jadwal.';
-            }
-
-            setActiveButton(targetButtons, selectedTarget, 'target');
-        };
-
-        const updatePreview = () => {
-            const activeKategori = kategoriButtons.find((button) => button.dataset.kategori === selectedKategori);
-            const activeTarget = targetButtons.find((button) => button.dataset.target === selectedTarget);
-            const activeStatus = statusButtons.find((button) => button.dataset.status === selectedStatus);
-
-            const date = formatDate(tanggalInput?.value);
-
-            if (previewKategori) {
-                previewKategori.textContent = activeKategori?.dataset.label || 'Posyandu Rutin';
-            }
-
-            if (previewJudul) {
-                previewJudul.textContent = judulInput?.value?.trim() || 'Judul agenda belum diisi';
-            }
-
-            if (previewTanggal) {
-                previewTanggal.textContent = date.full;
-            }
-
-            if (previewBulan) {
-                previewBulan.textContent = date.month;
-            }
-
-            if (previewHari) {
-                previewHari.textContent = date.day;
-            }
-
-            if (previewWaktu) {
-                previewWaktu.textContent = `${mulaiInput?.value || '--:--'} - ${selesaiInput?.value || '--:--'} WIB`;
-            }
-
-            if (previewLokasi) {
-                previewLokasi.textContent = lokasiInput?.value?.trim() || 'Lokasi belum diisi';
-            }
-
-            if (previewTarget) {
-                previewTarget.textContent = activeTarget?.dataset.label || 'Semua Sasaran';
-            }
-
-            if (previewStatus) {
-                previewStatus.textContent = activeStatus?.dataset.label || 'Aktif';
-            }
-        };
-
-        const selectKategori = (key) => {
-            selectedKategori = key || 'posyandu';
-
-            if (kategoriInput) {
-                kategoriInput.value = selectedKategori;
-            }
-
-            setActiveButton(kategoriButtons, selectedKategori, 'kategori');
-            syncTargetLock();
-            updatePreview();
-        };
-
-        const selectTarget = (key) => {
-            if (selectedKategori === 'imunisasi' && key !== 'balita') {
-                return;
-            }
-
-            selectedTarget = key || 'semua';
-
-            if (targetInput) {
-                targetInput.value = selectedTarget;
-            }
-
-            setActiveButton(targetButtons, selectedTarget, 'target');
-            updatePreview();
-        };
-
-        const selectStatus = (key) => {
-            selectedStatus = key || 'aktif';
-
-            if (statusInput) {
-                statusInput.value = selectedStatus;
-            }
-
-            setActiveButton(statusButtons, selectedStatus, 'status');
-            updatePreview();
-        };
-
-        kategoriButtons.forEach((button) => {
-            button.addEventListener('click', () => selectKategori(button.dataset.kategori));
+    const lockTarget = () => {
+        const isImun = sKat === 'imunisasi';
+        if (isImun) { sTarg = 'balita'; targetInput.value = 'balita'; }
+        targBtns.forEach(b => {
+            const dis = isImun && b.dataset.target !== 'balita';
+            b.classList.toggle('is-disabled', dis);
+            b.disabled = dis;
         });
+        if (targetHint) targetHint.textContent = isImun ? '(Terkunci untuk Imunisasi)' : '';
+        setBtnActive(targBtns, sTarg, 'target');
+    };
 
-        targetButtons.forEach((button) => {
-            button.addEventListener('click', () => selectTarget(button.dataset.target));
-        });
+    // Button Listeners
+    katBtns.forEach(b => b.addEventListener('click', () => { sKat = b.dataset.kategori; kategoriInput.value = sKat; setBtnActive(katBtns, sKat, 'kategori'); lockTarget(); }));
+    targBtns.forEach(b => b.addEventListener('click', () => { if(sKat==='imunisasi' && b.dataset.target!=='balita') return; sTarg = b.dataset.target; targetInput.value = sTarg; setBtnActive(targBtns, sTarg, 'target'); }));
+    statBtns.forEach(b => b.addEventListener('click', () => { sStat = b.dataset.status; statusInput.value = sStat; setBtnActive(statBtns, sStat, 'status'); }));
 
-        statusButtons.forEach((button) => {
-            button.addEventListener('click', () => selectStatus(button.dataset.status));
-        });
+    // Modal Logic
+    const modal = document.getElementById('pcSubmitModal');
+    document.getElementById('openSubmitModalBtn').addEventListener('click', () => { if(form.reportValidity()) modal.classList.add('is-open'); });
+    document.getElementById('pcCancelSubmit').addEventListener('click', () => modal.classList.remove('is-open'));
+    document.getElementById('pcConfirmSubmit').addEventListener('click', function() {
+        this.disabled = true; this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; form.submit();
+    });
 
-        [judulInput, tanggalInput, mulaiInput, selesaiInput, lokasiInput].forEach((input) => {
-            input?.addEventListener('input', updatePreview, { passive: true });
-            input?.addEventListener('change', updatePreview);
-        });
-
-        document.getElementById('jadwalEditForm')?.addEventListener('reset', () => {
-            window.setTimeout(() => {
-                selectedKategori = initialKategori;
-                selectedTarget = initialTarget;
-                selectedStatus = initialStatus;
-
-                if (kategoriInput) {
-                    kategoriInput.value = selectedKategori;
-                }
-
-                if (targetInput) {
-                    targetInput.value = selectedTarget;
-                }
-
-                if (statusInput) {
-                    statusInput.value = selectedStatus;
-                }
-
-                setActiveButton(kategoriButtons, selectedKategori, 'kategori');
-                setActiveButton(targetButtons, selectedTarget, 'target');
-                setActiveButton(statusButtons, selectedStatus, 'status');
-                syncTargetLock();
-                updatePreview();
-            }, 0);
-        });
-
-        selectKategori(selectedKategori);
-        selectTarget(selectedTarget);
-        selectStatus(selectedStatus);
-        updatePreview();
-    })();
+    // Initial Trigger
+    setBtnActive(katBtns, sKat, 'kategori');
+    setBtnActive(targBtns, sTarg, 'target');
+    if(statusInput) setBtnActive(statBtns, sStat, 'status');
+    lockTarget();
+})();
 </script>
 @endpush
