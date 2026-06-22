@@ -23,6 +23,9 @@
     <!-- SweetAlert2 (defer) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
+    <!-- PEMANGGIL FILE CSS & JS HASIL BUILD (WAJIB ADA) -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <style>
         /* ===== RESET & BASE ===== */
         :root {
