@@ -1,107 +1,46 @@
 @extends('layouts.kader')
 
-@section('title', 'Riwayat Absensi')
+@section('title', 'Riwayat Presensi')
+@section('page-name', 'Riwayat Presensi')
+@section('page-title', 'Riwayat Presensi')
 
 @php
     use Carbon\Carbon;
-    use Illuminate\Support\Facades\Route;
-
     Carbon::setLocale('id');
 
-    $riwayats = $riwayats ?? collect();
-    $bulanAktif = (int) ($bulan ?? now('Asia/Jakarta')->month);
-    $tahunAktif = (int) ($tahun ?? now('Asia/Jakarta')->year);
-    $kategoriAktif = $kategori ?? request('kategori', '');
-    $searchAktif = $search ?? request('search', '');
-
-    $bulanList = [
-        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
-    ];
-
-    $tahunSekarang = (int) now('Asia/Jakarta')->year;
-    $tahunList = range($tahunSekarang + 1, max(2024, $tahunSekarang - 4));
-
-    // Kategori disamakan dengan palette
-    $kategoriMenus = [
-        '' => [
-            'label' => 'Semua',
-            'icon' => 'fa-layer-group',
-            'tone' => 'slate',
-        ],
-        'balita' => [
-            'label' => 'Balita',
-            'icon' => 'fa-child-reaching',
-            'tone' => 'emerald',
-        ],
-        'remaja' => [
-            'label' => 'Remaja',
-            'icon' => 'fa-user-graduate',
-            'tone' => 'amber',
-        ],
-        'lansia' => [
-            'label' => 'Lansia',
-            'icon' => 'fa-person-cane',
-            'tone' => 'blue',
-        ],
-    ];
-
-    $routeHas = fn ($name) => Route::has($name);
-    $routeUrl = fn ($name, $params = []) => Route::has($name) ? route($name, $params) : '#';
-
-    $kategoriLabel = function ($kategori) {
-        return match ($kategori) {
-            'balita' => 'Balita',
-            'remaja' => 'Remaja',
-            'lansia' => 'Lansia',
-            default => 'Semua Kategori',
-        };
-    };
-
-    $formatTanggal = function ($date, $format = 'd M Y') {
-        if (!$date) return '-';
-        try {
-            return Carbon::parse($date)->translatedFormat($format);
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
-
-    $toneClass = function ($tone, $type = 'light') {
-        return match ($tone) {
-            'amber' => match ($type) {
-                'solid' => 'bg-amber-500 text-white',
-                'light' => 'bg-amber-50 text-amber-600 border-amber-200',
-                default => 'bg-amber-50 text-amber-600',
-            },
-            'blue' => match ($type) {
-                'solid' => 'bg-blue-500 text-white',
-                'light' => 'bg-blue-50 text-blue-600 border-blue-200',
-                default => 'bg-blue-50 text-blue-600',
-            },
-            'slate' => match ($type) {
-                'solid' => 'bg-slate-700 text-white',
-                'light' => 'bg-slate-100 text-slate-600 border-slate-200',
-                default => 'bg-slate-50 text-slate-600',
-            },
-            default => match ($type) {
-                'solid' => 'bg-emerald-500 text-white',
-                'light' => 'bg-emerald-50 text-emerald-600 border-emerald-200',
-                default => 'bg-emerald-50 text-emerald-600',
-            },
-        };
-    };
+    $kategoriAktif = $kategori ?? '';
+    $bulanAktif = $bulan ?? now('Asia/Jakarta')->month;
+    $tahunAktif = $tahun ?? now('Asia/Jakarta')->year;
+    $searchQuery = $search ?? '';
 
     $totalSesi = $riwayats->count();
-    $totalPeserta = $riwayats->sum(fn ($item) => (int) ($item->total_peserta ?? 0));
-    $totalHadir = $riwayats->sum(fn ($item) => (int) ($item->total_hadir ?? 0));
-    $persenHadir = $totalPeserta > 0 ? round(($totalHadir / $totalPeserta) * 100) : 0;
+    $totalSemuaPeserta = $riwayats->sum('total_peserta');
+    $totalSemuaHadir = $riwayats->sum('total_hadir');
+    $persentaseTotal = $totalSemuaPeserta > 0 ? round(($totalSemuaHadir / $totalSemuaPeserta) * 100) : 0;
+
+    $bulanOptions = [
+        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+    ];
+
+    $tahunMulai = 2024;
+    $tahunSekarang = now('Asia/Jakarta')->year + 1;
+    $tahunOptions = range($tahunMulai, $tahunSekarang);
+
+    $getTheme = function($kat) {
+        $kat = strtolower($kat);
+        return match($kat) {
+            'balita' => ['icon' => 'fa-child-reaching', 'color' => 'text-emerald-600', 'bg' => 'bg-emerald-50', 'border' => 'border-emerald-200', 'badge' => 'bg-emerald-100 text-emerald-700'],
+            'remaja' => ['icon' => 'fa-user-graduate', 'color' => 'text-violet-600', 'bg' => 'bg-violet-50', 'border' => 'border-violet-200', 'badge' => 'bg-violet-100 text-violet-700'],
+            'lansia' => ['icon' => 'fa-person-cane', 'color' => 'text-sky-600', 'bg' => 'bg-sky-50', 'border' => 'border-sky-200', 'badge' => 'bg-sky-100 text-sky-700'],
+            default => ['icon' => 'fa-users', 'color' => 'text-slate-600', 'bg' => 'bg-slate-50', 'border' => 'border-slate-200', 'badge' => 'bg-slate-100 text-slate-700'],
+        };
+    };
 @endphp
 
 @push('styles')
 <style>
-    /* Styling Identik dengan Index & Success */
     body { 
         background-color: #f1f5f9; 
         background-image: 
@@ -112,7 +51,7 @@
     }
     
     .widget-card {
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.6);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.9);
@@ -142,15 +81,38 @@
         transform: translateY(-2px);
     }
 
-    .slim-scroll::-webkit-scrollbar { width: 6px; }
-    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
-    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.3); border-radius: 9999px; }
-    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(20, 184, 166, 0.6); }
+    /* Input Native Clear Button Fix */
+    input[type="search"]::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        height: 14px;
+        width: 14px;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>') no-repeat 50% 50%;
+        cursor: pointer;
+        opacity: 0.7;
+    }
+
+    /* Modal Animation */
+    .nexus-modal {
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    .nexus-modal.is-open {
+        opacity: 1;
+        visibility: visible;
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 @endpush
 
 @section('content')
-<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 relative">
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 relative pb-32 animate-fade-in">
 
     {{-- SYSTEM ALERT --}}
     @if(session('success') || session('error'))
@@ -165,212 +127,284 @@
         </div>
     @endif
 
-    {{-- 1. HEADER & QUICK STATS (FULL WIDTH) --}}
-    <div class="widget-card p-6 lg:p-8 flex flex-col lg:flex-row justify-between items-center gap-8 bg-gradient-to-r from-white/90 to-white/50 relative overflow-hidden">
-        <div class="absolute -right-20 -top-20 w-64 h-64 bg-teal-400/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="flex-1 text-center lg:text-left z-10 w-full">
-            <div class="inline-flex items-center gap-2 mb-3">
-                <span class="btn-pill bg-teal-50 border border-teal-100 text-teal-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-inner flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 rounded-full bg-teal-500 relative"></span>
-                    Archive & History
-                </span>
+    {{-- 1. HEADER / HERO WIDGET --}}
+    <div class="widget-card p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div class="max-w-xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Archive & History
             </div>
-            <h1 class="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight">Riwayat Presensi.</h1>
-            <p class="text-sm font-medium text-slate-500 mt-2 max-w-lg mx-auto lg:mx-0">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight mb-2">Riwayat Presensi.</h1>
+            <p class="text-slate-500 text-sm font-medium leading-relaxed">
                 Tinjau kembali seluruh log presensi yang telah tersimpan. Data ditampilkan berdasarkan filter periode dan kategori.
             </p>
         </div>
-        
-        <div class="flex flex-col sm:flex-row gap-4 w-full lg:w-auto z-10 shrink-0">
-            <div class="bg-white/80 border border-slate-100 rounded-3xl p-5 flex items-center gap-5 shadow-sm flex-1 sm:flex-none">
-                <div class="w-12 h-12 rounded-full bg-teal-50 text-teal-500 flex items-center justify-center text-xl shrink-0">
+
+        <div class="flex gap-4 w-full md:w-auto">
+            <div class="widget-card !rounded-3xl !bg-white/90 p-4 px-6 border-slate-100 flex-1 md:flex-none flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center text-xl shadow-inner">
                     <i class="fa-solid fa-calendar-check"></i>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Sesi</p>
-                    <p class="text-2xl font-black text-slate-800 leading-none mt-1">{{ number_format($totalSesi) }}</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sesi</p>
+                    <p class="text-2xl font-black text-slate-800">{{ number_format($totalSesi) }}</p>
                 </div>
             </div>
-            <div class="bg-white/80 border border-slate-100 rounded-3xl p-5 flex items-center gap-5 shadow-sm flex-1 sm:flex-none">
-                <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+            
+            <div class="widget-card !rounded-3xl !bg-white/90 p-4 px-6 border-slate-100 flex-1 md:flex-none flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner">
                     <i class="fa-solid fa-chart-pie"></i>
                 </div>
                 <div>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kehadiran</p>
-                    <p class="text-2xl font-black text-slate-800 leading-none mt-1">{{ $persenHadir }}%</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kehadiran</p>
+                    <p class="text-2xl font-black text-slate-800">{{ $persentaseTotal }}<span class="text-lg text-slate-400">%</span></p>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- 2. HORIZONTAL FILTER BAR --}}
-    <form method="GET" action="{{ $routeUrl('kader.absensi.riwayat') }}" class="widget-card p-4 sm:p-6 flex flex-col xl:flex-row gap-4 items-center justify-between z-10 relative">
+    {{-- 2. FILTER WIDGET --}}
+    <form id="filterForm" method="GET" action="{{ route('kader.absensi.riwayat') }}" class="flex flex-col xl:flex-row gap-4 items-center z-20 relative">
         
-        {{-- Kategori Tabs --}}
-        <div class="flex flex-wrap gap-2 w-full xl:w-auto justify-center xl:justify-start">
-            @foreach($kategoriMenus as $key => $item)
-                <label class="cursor-pointer relative">
-                    <input type="radio" name="kategori" value="{{ $key }}" class="peer sr-only" {{ $kategoriAktif == $key ? 'checked' : '' }} onchange="this.form.submit()">
-                    <div class="btn-pill border border-slate-200 bg-white/50 px-4 py-2.5 text-xs font-bold text-slate-500 peer-checked:bg-teal-500 peer-checked:text-white peer-checked:border-teal-500 peer-checked:shadow-md transition-all flex items-center justify-center gap-2">
-                        <i class="fa-solid {{ $item['icon'] }}"></i> {{ $item['label'] }}
-                    </div>
-                </label>
-            @endforeach
+        {{-- Tabs Kategori --}}
+        <div class="flex flex-wrap gap-2 p-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full w-full xl:w-auto shadow-[0_8px_20px_-4px_rgba(0,0,0,0.05)]">
+            <label class="cursor-pointer relative flex-1 sm:flex-none">
+                <input type="radio" name="kategori" value="" class="peer sr-only" @checked($kategoriAktif === '')>
+                <div class="px-5 py-2.5 rounded-full text-sm font-bold text-slate-500 text-center peer-checked:bg-white peer-checked:text-slate-800 peer-checked:shadow-sm transition-all duration-300">
+                    <i class="fa-solid fa-layer-group mr-1 opacity-50"></i> Semua
+                </div>
+            </label>
+            <label class="cursor-pointer relative flex-1 sm:flex-none">
+                <input type="radio" name="kategori" value="balita" class="peer sr-only" @checked($kategoriAktif === 'balita')>
+                <div class="px-5 py-2.5 rounded-full text-sm font-bold text-slate-500 text-center peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:shadow-sm transition-all duration-300">
+                    <i class="fa-solid fa-child-reaching mr-1 opacity-50"></i> Balita
+                </div>
+            </label>
+            <label class="cursor-pointer relative flex-1 sm:flex-none">
+                <input type="radio" name="kategori" value="remaja" class="peer sr-only" @checked($kategoriAktif === 'remaja')>
+                <div class="px-5 py-2.5 rounded-full text-sm font-bold text-slate-500 text-center peer-checked:bg-violet-500 peer-checked:text-white peer-checked:shadow-sm transition-all duration-300">
+                    <i class="fa-solid fa-user-graduate mr-1 opacity-50"></i> Remaja
+                </div>
+            </label>
+            <label class="cursor-pointer relative flex-1 sm:flex-none">
+                <input type="radio" name="kategori" value="lansia" class="peer sr-only" @checked($kategoriAktif === 'lansia')>
+                <div class="px-5 py-2.5 rounded-full text-sm font-bold text-slate-500 text-center peer-checked:bg-sky-500 peer-checked:text-white peer-checked:shadow-sm transition-all duration-300">
+                    <i class="fa-solid fa-person-cane mr-1 opacity-50"></i> Lansia
+                </div>
+            </label>
         </div>
 
-        {{-- Input Filters --}}
-        <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-            <div class="relative flex-1 sm:w-64">
+        {{-- Search & Periode --}}
+        <div class="widget-card p-2 flex flex-col sm:flex-row gap-2 w-full xl:flex-1">
+            <div class="w-full sm:flex-1 relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <input type="text" name="search" value="{{ $searchAktif }}" placeholder="Cari kode atau nama..." class="w-full btn-pill border border-slate-200 bg-white/50 py-2.5 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner">
+                <input type="search" name="search" value="{{ $searchQuery }}" placeholder="Cari kode atau nama kader..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400">
             </div>
 
-            <div class="flex gap-2">
-                <select name="bulan" class="btn-pill border border-slate-200 bg-white/50 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner appearance-none cursor-pointer" onchange="this.form.submit()">
-                    @foreach($bulanList as $number => $label)
-                        <option value="{{ $number }}" @selected($bulanAktif === $number)>{{ $label }}</option>
-                    @endforeach
-                </select>
+            <select name="bulan" class="w-full sm:w-40 btn-pill border border-slate-200 bg-white/80 px-4 py-3 text-sm font-bold text-slate-700 outline-none cursor-pointer">
+                @foreach($bulanOptions as $num => $name)
+                    <option value="{{ $num }}" @selected($bulanAktif == $num)>{{ $name }}</option>
+                @endforeach
+            </select>
 
-                <select name="tahun" class="btn-pill border border-slate-200 bg-white/50 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner appearance-none cursor-pointer" onchange="this.form.submit()">
-                    @foreach($tahunList as $year)
-                        <option value="{{ $year }}" @selected($tahunAktif === $year)>{{ $year }}</option>
-                    @endforeach
-                </select>
-                
-                <a href="{{ $routeUrl('kader.absensi.riwayat') }}" class="btn-pill w-11 h-11 flex items-center justify-center border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-rose-500 shadow-sm" title="Reset Filter">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </a>
-            </div>
+            <select name="tahun" class="w-full sm:w-32 btn-pill border border-slate-200 bg-white/80 px-4 py-3 text-sm font-bold text-slate-700 outline-none cursor-pointer">
+                @foreach($tahunOptions as $thn)
+                    <option value="{{ $thn }}" @selected($tahunAktif == $thn)>{{ $thn }}</option>
+                @endforeach
+            </select>
+            
+            <button type="submit" class="w-full sm:w-12 h-11 flex shrink-0 items-center justify-center btn-pill bg-slate-100 text-slate-500 hover:bg-teal-50 hover:text-teal-600 transition border border-slate-200" title="Refresh/Filter">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
         </div>
     </form>
 
-    {{-- 3. MAIN LIST AREA --}}
-    <section class="widget-card p-6 flex flex-col">
-        <div class="flex justify-between items-center mb-6 px-2">
-            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Menampilkan {{ number_format($totalSesi) }} sesi presensi</p>
-            @if($routeHas('kader.absensi.index'))
-                <a href="{{ route('kader.absensi.index', ['kategori' => $kategoriAktif ?: 'balita']) }}" class="text-[11px] font-bold text-teal-600 hover:text-teal-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <i class="fa-solid fa-plus"></i> Input Baru
-                </a>
-            @endif
+    {{-- 3. DAFTAR RIWAYAT --}}
+    <div class="space-y-4">
+        <div class="flex items-center justify-between px-2">
+            <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Menampilkan {{ number_format($totalSesi) }} sesi presensi</p>
+            <a href="{{ route('kader.absensi.index', ['kategori' => $kategoriAktif ?: 'balita']) }}" class="text-xs font-bold text-teal-600 hover:text-teal-800"><i class="fa-solid fa-plus mr-1"></i> INPUT BARU</a>
         </div>
 
-        @if($riwayats->isNotEmpty())
-            <div class="space-y-3">
-                @foreach($riwayats as $index => $item)
-                    @php
-                        $peserta = (int) ($item->total_peserta ?? 0);
-                        $hadir = (int) ($item->total_hadir ?? 0);
-                        $persen = $peserta > 0 ? round(($hadir / $peserta) * 100) : 0;
-
-                        $kategoriItem = $item->kategori ?? '-';
-                        $kategoriTone = match ($kategoriItem) {
-                            'remaja' => 'amber',
-                            'lansia' => 'blue',
-                            default => 'emerald',
-                        };
-                    @endphp
-
-                    <div class="pc-row p-4 sm:p-5">
-                        <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-5">
-                            
-                            {{-- Info Kiri --}}
-                            <div class="flex items-center gap-4 flex-1">
-                                <div class="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full border {{ $toneClass($kategoriTone, 'light') }} shadow-inner">
-                                    <i class="fa-solid {{ $kategoriMenus[$kategoriItem]['icon'] ?? 'fa-users' }} text-lg sm:text-xl"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="flex flex-wrap items-center gap-2 mb-1">
-                                        <h3 class="text-base sm:text-lg font-black text-slate-800">{{ $item->kode_absensi ?? 'ABS-' . str_pad($item->id, 4, '0', STR_PAD_LEFT) }}</h3>
-                                        <span class="btn-pill border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $toneClass($kategoriTone, 'light') }}">{{ $kategoriLabel($kategoriItem) }}</span>
-                                    </div>
-                                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[11px] sm:text-xs font-semibold text-slate-500">
-                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-calendar-day text-slate-400"></i> {{ $formatTanggal($item->tanggal_posyandu ?? null, 'd M Y') }}</span>
-                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-hashtag text-slate-400"></i> Pertemuan ke-{{ $item->nomor_pertemuan ?? '-' }}</span>
-                                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-pen text-slate-400"></i> {{ $item->kader?->name ?? 'Kader' }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Stats & Aksi Kanan --}}
-                            <div class="flex flex-wrap sm:flex-nowrap justify-between sm:justify-end items-center gap-6 lg:gap-8 lg:pl-6 lg:border-l border-slate-100">
-                                
-                                <div class="flex gap-6 items-center">
-                                    <div class="text-center">
-                                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sasaran</p>
-                                        <p class="text-sm font-black text-slate-800">{{ number_format($peserta) }}</p>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Hadir</p>
-                                        <p class="text-sm font-black text-slate-800">{{ number_format($hadir) }}</p>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="text-[10px] font-bold uppercase tracking-wider text-teal-500">%</p>
-                                        <p class="text-sm font-black text-slate-800">{{ $persen }}%</p>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-2">
-                                    @if($routeHas('kader.absensi.show'))
-                                        <a href="{{ route('kader.absensi.show', $item->id) }}" class="btn-pill w-11 h-11 flex items-center justify-center border border-teal-200 bg-teal-50 text-teal-600 hover:bg-teal-500 hover:text-white transition-all shadow-sm" title="Lihat Detail">
-                                            <i class="fa-solid fa-eye text-sm"></i>
-                                        </a>
-                                    @endif
-
-                                    @if($routeHas('kader.absensi.destroy'))
-                                        <form method="POST" action="{{ route('kader.absensi.destroy', $item->id) }}" class="delete-history-form">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn-pill w-11 h-11 flex items-center justify-center border border-rose-200 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Hapus Riwayat">
-                                                <i class="fa-solid fa-trash-can text-sm"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-                                
-                            </div>
+        @forelse($riwayats as $item)
+            @php
+                $theme = $getTheme($item->kategori);
+                $persentase = $item->total_peserta > 0 ? round(($item->total_hadir / $item->total_peserta) * 100) : 0;
+            @endphp
+            
+            <article class="pc-row p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                {{-- Info Utama --}}
+                <div class="flex items-start sm:items-center gap-4">
+                    <div class="w-12 h-12 rounded-full {{ $theme['bg'] }} {{ $theme['border'] }} border flex items-center justify-center text-lg {{ $theme['color'] }} shrink-0 shadow-inner">
+                        <i class="fa-solid {{ $theme['icon'] }}"></i>
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <h3 class="text-base font-black text-slate-800 tracking-tight">{{ $item->kode_absensi }}</h3>
+                            <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider {{ $theme['badge'] }}">
+                                {{ $item->kategori }}
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-slate-500">
+                            <span title="Tanggal"><i class="fa-solid fa-calendar-day opacity-70 mr-1"></i> {{ \Carbon\Carbon::parse($item->tanggal_posyandu)->translatedFormat('d M Y') }}</span>
+                            <span title="Pertemuan"><i class="fa-solid fa-hashtag opacity-70 mr-1"></i> Pertemuan ke-{{ $item->nomor_pertemuan }}</span>
+                            <span title="Pencatat"><i class="fa-solid fa-user-pen opacity-70 mr-1"></i> {{ $item->kader->name ?? 'Sistem' }}</span>
                         </div>
                     </div>
-                @endforeach
-            </div>
-        @else
-            <div class="flex flex-col items-center justify-center btn-pill border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center rounded-[2.5rem]">
-                <div class="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-5 shadow-inner">
-                    <i class="fa-solid fa-folder-open text-3xl"></i>
                 </div>
-                <h3 class="font-black text-slate-800 text-xl">Tidak Ada Riwayat</h3>
-                <p class="text-sm font-medium text-slate-500 mt-2 max-w-sm">
-                    Belum ada sesi absensi yang tercatat untuk filter ini. Silakan ubah pencarian atau tambahkan presensi baru.
-                </p>
+
+                {{-- Stats & Aksi --}}
+                <div class="flex items-center justify-between lg:justify-end gap-6 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                    <div class="flex items-center gap-6 text-center">
+                        <div>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Sasaran</p>
+                            <p class="text-sm font-black text-slate-700">{{ $item->total_peserta }}</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Hadir</p>
+                            <p class="text-sm font-black text-emerald-600">{{ $item->total_hadir }}</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">%</p>
+                            <p class="text-sm font-black text-slate-800">{{ $persentase }}%</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 border-l border-slate-200 pl-4">
+                        <a href="{{ route('kader.absensi.show', $item->id) }}" class="w-9 h-9 flex items-center justify-center btn-pill border border-slate-200 bg-white text-slate-500 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50" title="Lihat Detail">
+                            <i class="fa-solid fa-eye text-sm"></i>
+                        </a>
+                        
+                        {{-- TOMBOL HAPUS DENGAN data-delete-form --}}
+                        <form action="{{ route('kader.absensi.destroy', $item->id) }}" method="POST" data-delete-form class="m-0 p-0">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="w-9 h-9 flex items-center justify-center btn-pill border border-rose-200 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition" title="Hapus Permanen">
+                                <i class="fa-solid fa-trash text-sm"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+        @empty
+            <div class="p-12 text-center border-2 border-dashed border-slate-200 rounded-[2rem] bg-white/50">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4 shadow-inner">
+                    <i class="fa-solid fa-folder-open text-2xl"></i>
+                </div>
+                <h3 class="font-black text-slate-800 text-lg">Belum Ada Presensi</h3>
+                <p class="text-sm font-medium text-slate-500 mt-1">Tidak ada data absensi yang ditemukan untuk filter periode ini.</p>
+                <a href="{{ route('kader.absensi.index') }}" class="inline-flex mt-6 btn-pill bg-teal-500 text-white px-6 py-2.5 text-sm font-bold shadow-md hover:bg-teal-600">
+                    Input Absensi Baru
+                </a>
             </div>
-        @endif
-    </section>
+        @endforelse
+    </div>
+
+    {{-- MODAL HAPUS DATA PREMIUM --}}
+    <div id="pcDeleteModal" class="nexus-modal fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="nexusAlertBackdrop"></div>
+        <div class="bg-white/90 backdrop-blur-xl border border-white/80 w-full max-w-sm p-6 relative z-10 scale-95 transform transition-all duration-300 rounded-[2rem] shadow-2xl">
+            <div class="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-500 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 text-center mb-2">Hapus Presensi?</h3>
+            <p class="text-sm font-medium text-slate-500 text-center mb-6 leading-relaxed">
+                Apakah Anda yakin ingin menghapus riwayat absensi ini? Seluruh detail kehadiran di dalamnya juga akan ikut terhapus permanen.
+            </p>
+            <div class="flex gap-3">
+                <button type="button" id="pcCancelDelete" class="w-full flex-1 rounded-full border border-slate-200 bg-white text-slate-700 px-4 py-3 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all cursor-pointer">
+                    Batal
+                </button>
+                <button type="button" id="pcConfirmDelete" class="w-full flex-1 rounded-full bg-gradient-to-r from-rose-500 to-rose-600 text-white px-4 py-3 text-sm font-bold shadow-md hover:from-rose-600 hover:to-rose-700 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-trash"></i> Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 @endsection
 
 @push('scripts')
 <script>
-(function () {
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('.delete-history-form');
-        if (!form) return;
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
 
-        const confirmed = confirm('Apakah Anda yakin ingin menghapus riwayat absensi ini? Seluruh detail kehadiran di dalamnya juga akan terhapus secara permanen.');
-
-        if (!confirmed) {
-            event.preventDefault();
-            return;
-        }
-
-        const button = form.querySelector('button[type="submit"]');
-        if (button) {
-            button.disabled = true;
-            button.classList.add('opacity-70', 'cursor-not-allowed');
-            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i>';
+    // 1. Auto-Submit Filter (Agar tab & dropdown langsung memuat data)
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('select[name="bulan"], select[name="tahun"], input[name="kategori"]')) {
+            document.getElementById('filterForm').submit();
         }
     });
-})();
+
+    // 2. Logic Modal Hapus Premium
+    let targetDeleteForm = null;
+    const modal = document.querySelector('#pcDeleteModal');
+
+    // Pindahkan modal ke luar agar z-index aman
+    if (modal && modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
+    const cancelBtn = document.querySelector('#pcCancelDelete');
+    const confirmBtn = document.querySelector('#pcConfirmDelete');
+    const backdrop = document.querySelector('#nexusAlertBackdrop');
+
+    function lockBody() { document.body.style.overflow = 'hidden'; }
+    function unlockBody() { document.body.style.overflow = ''; }
+
+    function openModal(form) {
+        targetDeleteForm = form;
+        if (!modal) return;
+        
+        modal.classList.add('is-open');
+        modal.querySelector('.bg-white\\/90').classList.remove('scale-95');
+        modal.querySelector('.bg-white\\/90').classList.add('scale-100');
+        lockBody();
+    }
+
+    function closeModal() {
+        targetDeleteForm = null;
+        if (!modal) return;
+
+        modal.classList.remove('is-open');
+        modal.querySelector('.bg-white\\/90').classList.remove('scale-100');
+        modal.querySelector('.bg-white\\/90').classList.add('scale-95');
+        unlockBody();
+    }
+
+    // Tangkap klik form tombol Hapus
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('[data-delete-form]');
+        if (!form) return;
+
+        event.preventDefault(); // Cegah submit bawaan
+        openModal(form);        // Buka modal custom
+    }, true);
+
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (backdrop) backdrop.addEventListener('click', closeModal);
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') closeModal();
+    });
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function () {
+            if (!targetDeleteForm) {
+                closeModal();
+                return;
+            }
+
+            // Animasi Loading
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menghapus...';
+
+            // Kirim form sesungguhnya ke database
+            HTMLFormElement.prototype.submit.call(targetDeleteForm);
+        });
+    }
+});
 </script>
 @endpush
