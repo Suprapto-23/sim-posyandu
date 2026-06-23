@@ -7,31 +7,20 @@
 
     <title>@yield('title', 'PosyanduCare')</title>
 
-    <!-- 1. PRELOAD LCP IMAGE (Sangat Bagus! Pastikan img/logo.webp sudah di-resize ke ukuran kecil) -->
     <link rel="preload" as="image" href="{{ asset('img/logo.webp') }}" type="image/webp" fetchpriority="high">
 
-    <!-- 2. PRECONNECT UNTUK FONT & RESOURCE PIHAK KETIGA -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
-    <!-- 3. PEMANGGILAN FONT UTAMA (Disederhanakan) -->
-    <!-- Menghapus trik media="print" karena bisa memicu pergeseran layout (CLS) saat teks muncul. -->
-    <!-- Cukup andalkan display=swap dan preconnect untuk font utama Plus Jakarta Sans. -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- 4. FONT AWESOME (Tetap Async karena file besar dan bukan prioritas teks utama) -->
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" crossorigin="anonymous" referrerpolicy="no-referrer">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"></noscript>
 
-    <!-- 5. ASSETS VITE (Wajib di sini agar di-preload oleh Laravel) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- 6. SWEETALERT2 (Defer, eksekusi paling akhir) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-    
-    @stack('styles')
-</head>
 
     <style>
         /* ===== RESET & BASE ===== */
@@ -134,8 +123,8 @@
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
-                animation-duration: 1ms !important !important;
-                transition-duration: 1ms !important !important;
+                animation-duration: 1ms !important;
+                transition-duration: 1ms !important;
             }
         }
     </style>
@@ -152,15 +141,15 @@
     </main>
 
     <script>
-        (function () {
-            // Tidak ada splash screen – langsung resolve
+        document.addEventListener("DOMContentLoaded", function() {
+            // Setup PosyanduAuthTransition
             window.PosyanduAuthTransition = {
                 show: function () {},
                 hide: function () {},
                 play: function () { return Promise.resolve(); }
             };
 
-            // Fungsi alert global – menggunakan SweetAlert2
+            // Setup SweetAlert Global Function
             window.showAuthAlert = function (title, message, icon = 'info') {
                 if (typeof Swal === 'undefined') {
                     alert(title + '\n' + message);
@@ -187,26 +176,22 @@
             window.addEventListener('pageshow', function () {
                 document.body.classList.remove('auth-submitting');
             });
-        })();
+
+            // Prevent Context Menu & Shortcuts
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                    (e.ctrlKey && e.key === 'U')) {
+                    e.preventDefault();
+                }
+            });
+        });
     </script>
 
     @stack('scripts')
-    <script>
-    // Mencegah klik kanan
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        return false;
-    });
-
-    // Mencegah shortcut inspect (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U)
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'F12' ||
-            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
-            (e.ctrlKey && e.key === 'U')) {
-            e.preventDefault();
-            return false;
-        }
-    });
-</script>
 </body>
 </html>
