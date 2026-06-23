@@ -300,8 +300,8 @@
         @endforelse
     </div>
 
-    {{-- MODAL HAPUS DATA PREMIUM --}}
-    <div id="pcDeleteModal" class="nexus-modal fixed inset-0 z-50 flex items-center justify-center px-4">
+   {{-- MODAL HAPUS DATA PREMIUM --}}
+    <div id="pcDeleteModal" class="nexus-modal fixed inset-0 z-[9999] flex items-center justify-center px-4">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="nexusAlertBackdrop"></div>
         <div class="bg-white/90 backdrop-blur-xl border border-white/80 w-full max-w-sm p-6 relative z-10 scale-95 transform transition-all duration-300 rounded-[2rem] shadow-2xl">
             <div class="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-500 shadow-inner">
