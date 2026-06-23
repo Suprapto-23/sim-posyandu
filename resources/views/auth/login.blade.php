@@ -268,7 +268,13 @@
     <!-- Brand (desktop) -->
     <section class="brand-side" aria-hidden="true">
         <div class="brand-content">
-            <img src="{{ asset('img/logo.webp') }}" alt="Logo PosyanduCare" class="brand-logo" width="390" height="160" loading="eager" fetchpriority="high" decoding="async">
+            <img
+    src="{{ asset('img/logo.webp') }}"
+    alt="Logo PosyanduCare"
+    width="160"  height="108" class="w-40 h-auto mx-auto" fetchpriority="high"
+    loading="eager"
+    decoding="sync"
+>
             <h2 class="brand-title">Sehat Bersama, Tumbuh Setiap Generasi</h2>
             <div class="brand-divider">
                 <span class="bdl l"></span><span class="bdd"></span><span class="bdl r"></span>

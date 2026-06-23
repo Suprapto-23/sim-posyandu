@@ -291,6 +291,105 @@
     input[type="search"]::-webkit-search-cancel-button:hover {
         opacity: 1;
     }
+
+    /* =========================================
+       CUSTOM PAGINATION (LINGKARAN HIJAU)
+       ========================================= */
+    /* Menyembunyikan tampilan mobile default */
+    .pc-pagination > nav > div:first-child {
+        display: none !important;
+    }
+    
+    /* Memaksa flexbox sejajar Kiri-Kanan */
+    .pc-pagination nav .hidden.sm\:flex-1 {
+        display: flex !important;
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: center;
+        width: 100%;
+    }
+    @media (min-width: 640px) {
+        .pc-pagination nav .hidden.sm\:flex-1 {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+    }
+
+    /* Styling Teks Keterangan (Kiri) */
+    .pc-pagination p.text-sm.text-gray-700 {
+        color: #64748b !important;
+        font-weight: 700 !important;
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+    }
+    .pc-pagination p.text-sm.text-gray-700 span.font-medium {
+        color: #0f172a !important;
+        font-weight: 900 !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Modifikasi wrapper tombol agar tidak saling menempel (Kanan) */
+    .pc-pagination .relative.z-0.inline-flex {
+        box-shadow: none !important;
+        gap: 0.5rem !important; /* Jarak antar tombol */
+    }
+
+    /* Styling Dasar Tombol (Lingkaran Sempurna) */
+    .pc-pagination .relative.inline-flex {
+        border-radius: 50% !important; /* Membuat bulat */
+        width: 40px !important;
+        height: 40px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        color: #334155 !important;
+        font-weight: 800 !important;
+        font-size: 0.875rem !important;
+        transition: all 0.2s ease !important;
+        margin-left: 0 !important; /* Hapus margin negatif bawaan Tailwind */
+    }
+
+    /* Hover State untuk tombol yang bisa diklik */
+    .pc-pagination a.relative.inline-flex:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        color: #10b981 !important;
+    }
+
+    /* Active State (Halaman saat ini - Hijau Solid) */
+    .pc-pagination span[aria-current="page"] > span {
+        background: #10b981 !important; /* Hijau solid sesuai gambar */
+        color: #ffffff !important;
+        border-color: #10b981 !important;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2) !important;
+    }
+
+    /* Disabled State (Tombol panah mati) */
+    .pc-pagination span[aria-disabled="true"] > span {
+        background: #f8fafc !important;
+        color: #cbd5e1 !important;
+        border-color: #f1f5f9 !important;
+        cursor: not-allowed !important;
+        box-shadow: none !important;
+    }
+
+    /* Sembunyikan pemisah "..." agar tidak berupa kotak */
+    .pc-pagination span[aria-disabled="true"]:not([aria-label]) > span {
+        border: none !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+    }
+
+    /* Perbaiki posisi icon panah SVG */
+    .pc-pagination .relative.inline-flex svg {
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+    }
 </style>
 @endpush
 
@@ -675,8 +774,9 @@
             @endforelse
         </div>
 
+        {{-- CUSTOM PC PAGINATION --}}
         @if(method_exists($pemeriksaans, 'links'))
-            <div class="mt-6">
+            <div class="mt-8 pt-6 border-t border-slate-100 pc-pagination">
                 {{ $pemeriksaans->links() }}
             </div>
         @endif

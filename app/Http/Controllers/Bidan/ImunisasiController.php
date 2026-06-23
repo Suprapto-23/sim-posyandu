@@ -33,7 +33,7 @@ class ImunisasiController extends Controller
             $this->applyLatestOrder($query);
 
             $imunisasis = $query
-                ->paginate(5)
+                ->paginate(2)
                 ->withQueryString();
 
             $stats = $this->stats();

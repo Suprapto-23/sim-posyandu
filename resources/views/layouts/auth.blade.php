@@ -7,24 +7,31 @@
 
     <title>@yield('title', 'PosyanduCare')</title>
 
-    <!-- Preload & Preconnect untuk performa -->
+    <!-- 1. PRELOAD LCP IMAGE (Sangat Bagus! Pastikan img/logo.webp sudah di-resize ke ukuran kecil) -->
     <link rel="preload" as="image" href="{{ asset('img/logo.webp') }}" type="image/webp" fetchpriority="high">
+
+    <!-- 2. PRECONNECT UNTUK FONT & RESOURCE PIHAK KETIGA -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
-    <!-- Font (async) -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <!-- 3. PEMANGGILAN FONT UTAMA (Disederhanakan) -->
+    <!-- Menghapus trik media="print" karena bisa memicu pergeseran layout (CLS) saat teks muncul. -->
+    <!-- Cukup andalkan display=swap dan preconnect untuk font utama Plus Jakarta Sans. -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome (preload + async) -->
+    <!-- 4. FONT AWESOME (Tetap Async karena file besar dan bukan prioritas teks utama) -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"></noscript>
 
-    <!-- SweetAlert2 (defer) -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-
-    <!-- PEMANGGIL FILE CSS & JS HASIL BUILD (WAJIB ADA) -->
+    <!-- 5. ASSETS VITE (Wajib di sini agar di-preload oleh Laravel) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <!-- 6. SWEETALERT2 (Defer, eksekusi paling akhir) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    
+    @stack('styles')
+</head>
 
     <style>
         /* ===== RESET & BASE ===== */

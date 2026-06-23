@@ -72,7 +72,7 @@ class PemeriksaanController extends Controller
             });
         }
 
-        $pemeriksaans = $query->paginate(15)->withQueryString();
+        $pemeriksaans = $query->paginate(5)->withQueryString();
 
         return view('kader.pemeriksaan.index', compact(
             'pemeriksaans',
