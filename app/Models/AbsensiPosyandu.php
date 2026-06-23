@@ -15,7 +15,9 @@ class AbsensiPosyandu extends Model
 
     protected $table = 'absensi_posyandu';
 
+    // 1. JADWAL_ID SUDAH DITAMBAHKAN DI SINI
     protected $fillable = [
+        'jadwal_id',
         'kode_absensi',
         'kategori',
         'tanggal_posyandu',
@@ -92,6 +94,12 @@ class AbsensiPosyandu extends Model
     | Relasi
     |--------------------------------------------------------------------------
     */
+
+    // 2. RELASI KE JADWAL DITAMBAHKAN DI SINI
+    public function jadwal(): BelongsTo
+    {
+        return $this->belongsTo(JadwalPosyandu::class, 'jadwal_id');
+    }
 
     public function details(): HasMany
     {
