@@ -11,26 +11,26 @@ class Lansia extends Model
     use HasFactory;
 
     protected $fillable = [
-    'user_id',
-    'kode_lansia',
-    'nik',
-    'nama_lengkap',
-    'tempat_lahir',
-    'tanggal_lahir',
-    'jenis_kelamin',
-    'alamat',
-    'penyakit_bawaan',
-    'berat_badan',
-    'tinggi_badan',
-    'imt',
-    'tingkat_kemandirian',
-    'tekanan_darah',
-    'gula_darah',
-    'kolesterol',
-    'asam_urat',
-    'lingkar_perut',
-    'keluhan',
-];
+        'user_id',
+        'kode_lansia',
+        'nik',
+        'nama_lengkap',
+        'tempat_lahir',
+        'tanggal_lahir',
+        'jenis_kelamin',
+        'alamat',
+        'penyakit_bawaan',
+        'berat_badan',
+        'tinggi_badan',
+        'imt',
+        'tingkat_kemandirian',
+        'tekanan_darah',
+        'gula_darah',
+        'kolesterol',
+        'asam_urat',
+        'lingkar_perut',
+        'keluhan',
+    ];
 
     protected $casts = [
         'tanggal_lahir' => 'date',
@@ -48,32 +48,27 @@ class Lansia extends Model
     public function getUsiaTahunAttribute()
     {
         if (!$this->tanggal_lahir) return 0;
-        return Carbon::parse($this->tanggal_lahir)->age;
+        
+        // PERBAIKAN: Langsung panggil properti age karena $this->tanggal_lahir sudah berupa Carbon
+        return $this->tanggal_lahir->age;
     }
 
     /**
      * Kategorikan otomatis berdasarkan SOP Kemenkes
-     * (Pra-Lansia, Lansia, Lansia Risiko Tinggi)
      */
-    public function getKategoriSopAttribute()
+    public function getKategoriUsiaAttribute()
     {
-        $tahun = $this->usia_tahun;
+        $usia = $this->usia_tahun;
 
-        if ($tahun >= 45 && $tahun < 60) {
-            return 'Pra-Lansia (45-59 Tahun)';
-        } elseif ($tahun >= 60 && $tahun < 70) {
-            return 'Lansia (60-69 Tahun)';
-        } elseif ($tahun >= 70) {
-            return 'Lansia Risiko Tinggi (≥ 70 Tahun)';
-        } else {
-            // Jika ada kasus khusus dimasukkan ke sistem sebelum usia 45
-            return 'Dewasa (< 45 Tahun)'; 
-        }
+        if ($usia >= 45 && $usia <= 59) return 'Pra-Lansia (45-59 Tahun)';
+        if ($usia >= 60 && $usia <= 69) return 'Lansia (60-69 Tahun)';
+        if ($usia >= 70) return 'Lansia Risiko Tinggi (>= 70 Tahun)';
+
+        return 'Bukan Sasaran Lansia';
     }
 
     /**
-     * Status IMT (Indeks Massa Tubuh) Spesifik Asia/Indonesia
-     * Dapat dipanggil dengan: $lansia->status_imt
+     * Label cantik untuk IMT (Indeks Massa Tubuh)
      */
     public function getStatusImtAttribute()
     {
@@ -93,7 +88,6 @@ class Lansia extends Model
     {
         return $this->penyakit_bawaan ? $this->penyakit_bawaan : 'Tidak Ada Penyakit Bawaan';
     }
-
 
     // ── RELASI DASAR ──────────────────────────────────────────────
     public function user()
@@ -116,13 +110,7 @@ class Lansia extends Model
     public function pemeriksaans()
     {
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')
-                    ->where('kategori_pasien', 'lansia');
-    }
-
-    public function pemeriksaan_terakhir()
-    {
-        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
                     ->where('kategori_pasien', 'lansia')
-                    ->latestOfMany();
+                    ->orderBy('tanggal_periksa', 'desc');
     }
 }
