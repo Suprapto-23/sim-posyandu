@@ -74,7 +74,6 @@ class AbsensiController extends Controller
             'kategori.required' => 'Kategori sasaran wajib dipilih.',
             'kategori.in' => 'Kategori sasaran tidak valid.',
             'tanggal.date' => 'Tanggal absensi tidak valid.',
-            'tanggal.before_or_equal' => 'Tanggal absensi tidak boleh melebihi hari ini.',
             'kehadiran.required' => 'Data kehadiran belum tersedia.',
             'kehadiran.array' => 'Format data kehadiran tidak valid.',
             'kehadiran.*.in' => 'Status kehadiran hanya boleh hadir atau tidak hadir.',
@@ -133,7 +132,6 @@ class AbsensiController extends Controller
 
         $pendingIds = $allPasienIds->filter(function ($pasienId) use ($submittedKehadiran) {
             $value = $submittedKehadiran->get($pasienId);
-
             return !in_array($value, ['0', '1'], true);
         });
 
@@ -196,6 +194,7 @@ class AbsensiController extends Controller
                     'success' => 'Presensi Posyandu berhasil disimpan lengkap.',
                     'last_absensi_id' => $absensi->id,
                 ]);
+                
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -208,9 +207,10 @@ class AbsensiController extends Controller
                 'file' => $e->getFile(),
             ]);
 
+            // KODE DEBUGGING DIAKTIFKAN: Akan menampilkan error database yang sebenarnya
             return back()
                 ->withInput()
-                ->with('error', 'Gagal menyimpan absensi. Periksa kembali data dan coba ulang.');
+                ->with('error', 'ERROR DATABASE: ' . $e->getMessage() . ' (Baris: ' . $e->getLine() . ')');
         }
     }
 
@@ -450,39 +450,39 @@ class AbsensiController extends Controller
     }
 
     private function generateKodeAbsensi(string $kategori, Carbon $tanggal, int $nomorPertemuan): string
-{
-    $kategori = $this->normalizeKategori($kategori);
+    {
+        $kategori = $this->normalizeKategori($kategori);
 
-    if (method_exists(AbsensiPosyandu::class, 'generateKodeAbsensi')) {
-        return AbsensiPosyandu::generateKodeAbsensi($kategori, $tanggal, $nomorPertemuan);
+        if (method_exists(AbsensiPosyandu::class, 'generateKodeAbsensi')) {
+            return AbsensiPosyandu::generateKodeAbsensi($kategori, $tanggal, $nomorPertemuan);
+        }
+
+        $prefix = match ($kategori) {
+            'balita' => 'BAL',
+            'remaja' => 'REM',
+            'lansia' => 'LAN',
+            default => 'POS',
+        };
+
+        $nomorPertemuan = max(1, (int) $nomorPertemuan);
+
+        $base = 'ABS-'
+            . $prefix
+            . '-'
+            . $tanggal->format('Ymd')
+            . '-P'
+            . str_pad((string)$nomorPertemuan, 2, '0', STR_PAD_LEFT);
+
+        $kode = $base;
+        $counter = 1;
+
+        while (AbsensiPosyandu::query()->where('kode_absensi', $kode)->exists()) {
+            $kode = $base . '-' . $counter;
+            $counter++;
+        }
+
+        return $kode;
     }
-
-    $prefix = match ($kategori) {
-        'balita' => 'BAL',
-        'remaja' => 'REM',
-        'lansia' => 'LAN',
-        default => 'POS',
-    };
-
-    $nomorPertemuan = max(1, (int) $nomorPertemuan);
-
-    $base = 'ABS-'
-        . $prefix
-        . '-'
-        . $tanggal->format('Ymd')
-        . '-P'
-        . str_pad($nomorPertemuan, 2, '0', STR_PAD_LEFT);
-
-    $kode = $base;
-    $counter = 1;
-
-    while (AbsensiPosyandu::query()->where('kode_absensi', $kode)->exists()) {
-        $kode = $base . '-' . $counter;
-        $counter++;
-    }
-
-    return $kode;
-}
 
     private function resolveTanggal(?string $tanggal): Carbon
     {
