@@ -1,4 +1,4 @@
-﻿@extends('layouts.auth')
+@extends('layouts.auth')
 
 @section('title', 'Login | PosyanduCare')
 
@@ -48,9 +48,11 @@
         width: 100%; max-width: 540px;
         display: flex; flex-direction: column; align-items: center; text-align: center;
     }
+    
+    /* Perbaikan CSS Logo Desktop */
     .brand-logo {
-        width: 390px; max-width: 100%; height: auto;
-        margin-bottom: 16px;
+        width: 160px; height: auto;
+        margin: 0 auto 16px;
         filter: drop-shadow(0 14px 24px rgba(5,150,105,.08));
         user-select: none; pointer-events: none;
     }
@@ -86,13 +88,6 @@
         box-shadow: 0 14px 28px rgba(15,23,42,.045), inset 0 1px 0 rgba(255,255,255,.82);
         backdrop-filter: blur(12px);
         display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px;
-        transition: transform .2s var(--ease), box-shadow .2s ease, background .2s ease;
-        will-change: transform;
-    }
-    .feature-box:hover {
-        transform: translateY(-4px);
-        background: rgba(255,255,255,.92);
-        box-shadow: 0 20px 36px rgba(16,185,129,.12);
     }
     .feature-icon {
         width: 40px; height: 40px; border-radius: 15px;
@@ -122,6 +117,8 @@
                     radial-gradient(circle at 94% 100%, rgba(245,158,11,.055), transparent 32%);
     }
     .card-inner { position: relative; z-index: 2; }
+    
+    /* Perbaikan CSS Logo Mobile */
     .mobile-brand { display: none; justify-content: center; margin-bottom: 18px; }
     .mobile-brand img { width: 156px; height: auto; filter: drop-shadow(0 8px 14px rgba(5,150,105,.07)); }
 
@@ -162,9 +159,6 @@
     }
     .pw-toggle:hover { color: var(--g600); background: var(--s100); }
 
-    /* Hapus Lupa Password */
-    .forgot-row { display: none; }
-
     .submit-wrap { padding-top: 10px; }
     .submit-btn {
         width: 100%; height: 59px; border: 0; border-radius: 17px; color: #fff; cursor: pointer;
@@ -172,15 +166,6 @@
         box-shadow: 0 16px 32px rgba(5,150,105,.27), inset 0 1px 0 rgba(255,255,255,.22);
         display: flex; align-items: center; justify-content: center; gap: 11px;
         font-size: 15.5px; font-weight: 900;
-        transition: transform .2s var(--ease), box-shadow .2s ease, filter .2s ease;
-    }
-    .submit-btn:hover {
-        transform: translateY(-2px);
-        filter: saturate(1.05);
-        box-shadow: 0 21px 38px rgba(5,150,105,.32), inset 0 1px 0 rgba(255,255,255,.26);
-    }
-    .submit-btn:disabled {
-        opacity: .88; cursor: wait; pointer-events: none; transform: none;
     }
 
     .info-note {
@@ -198,13 +183,9 @@
     .info-title { margin: 0 0 4px; color: var(--g900); font-size: 13.5px; font-weight: 900; line-height: 1.35; }
     .info-text { margin: 0; color: var(--s500); font-size: 12.4px; line-height: 1.58; font-weight: 650; }
 
-    /* ===== SEMUA ANIMASI DIHAPUS ===== */
-    /* Tidak ada animasi sama sekali, langsung tampil */
-
     /* ===== RESPONSIVE ===== */
     @media (max-width: 1180px) {
         .login-shell { grid-template-columns: minmax(0, 1fr) minmax(410px, .92fr); gap: 44px; padding: 0 24px; }
-        .brand-logo { width: 355px; }
         .brand-title { font-size: 23px; }
         .login-card { max-width: 480px; padding: 39px 42px 36px; }
     }
@@ -248,16 +229,9 @@
             max-width: 100%; width: min(100%, 388px);
             border-radius: 28px; padding: 24px 21px 22px;
         }
-        .mobile-brand img { width: 145px; }
         .login-title { font-size: 21px; }
         .login-subtitle { font-size: 12.4px; }
         .login-form { gap: 16px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration: 1ms !important;
-            transition-duration: 1ms !important;
-        }
     }
 </style>
 @endpush
@@ -265,16 +239,16 @@
 @section('content')
 <div class="login-shell">
 
-    <!-- Brand (desktop) -->
     <section class="brand-side" aria-hidden="true">
         <div class="brand-content">
-            <img
-    src="{{ asset('img/logo.webp') }}"
-    alt="Logo PosyanduCare"
-    width="160"  height="108" class="w-40 h-auto mx-auto" fetchpriority="high"
-    loading="eager"
-    decoding="sync"
->
+            <img 
+                src="{{ asset('img/logo.webp') }}" 
+                alt="Logo PosyanduCare" 
+                width="160" height="108" 
+                class="brand-logo" 
+                fetchpriority="high" 
+                loading="eager" 
+            >
             <h2 class="brand-title">Sehat Bersama, Tumbuh Setiap Generasi</h2>
             <div class="brand-divider">
                 <span class="bdl l"></span><span class="bdd"></span><span class="bdl r"></span>
@@ -291,13 +265,18 @@
         </div>
     </section>
 
-    <!-- Login card -->
     <section class="form-side">
         <div class="login-card">
             <div class="card-inner">
 
                 <div class="mobile-brand">
-                    <img src="{{ asset('img/logo.webp') }}" alt="Logo" width="156" height="70" loading="eager" fetchpriority="high">
+                    <img 
+                        src="{{ asset('img/logo.webp') }}" 
+                        alt="Logo PosyanduCare Mobile" 
+                        width="156" height="105" 
+                        loading="eager" 
+                        fetchpriority="high"
+                    >
                 </div>
 
                 <div class="login-header">
@@ -326,9 +305,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Lupa password dihapus -->
-                    <!-- <div class="forgot-row">...</div> -->
 
                     <div class="submit-wrap">
                         <button type="submit" id="submitBtn" class="submit-btn">
@@ -368,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- Form submit – LANGSUNG, tanpa delay ---
+    // --- Form submit ---
     const form = document.getElementById('loginForm');
     const submitBtn = document.getElementById('submitBtn');
     const submitTxt = document.getElementById('submitTxt');
@@ -381,16 +357,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!form.checkValidity()) { form.reportValidity(); return; }
         submitted = true;
 
-        // Loading state tombol
         submitBtn.disabled = true;
         submitTxt.textContent = 'Memverifikasi…';
         submitIco.className = 'fa-solid fa-spinner fa-spin';
 
-        // Submit langsung (tanpa setTimeout)
         form.submit();
     });
 
-    // --- Tampilkan error dari server ---
+    // --- Server Errors & Alerts ---
     @if($errors->any())
         window.showAuthAlert('Otentikasi Gagal', @json($errors->first()), 'error');
     @endif
