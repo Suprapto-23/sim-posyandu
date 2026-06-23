@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Balita extends Model
@@ -44,7 +43,8 @@ class Balita extends Model
             return 0;
         }
 
-        return (int) Carbon::parse($this->tanggal_lahir)->diffInMonths(now());
+        // PERBAIKAN: Langsung panggil diffInMonths karena $this->tanggal_lahir sudah berupa Carbon object
+        return (int) $this->tanggal_lahir->diffInMonths(now());
     }
 
     public function getUsiaLabelAttribute(): string
@@ -53,24 +53,6 @@ class Balita extends Model
 
         if ($bulan < 12) {
             return $bulan . ' bulan';
-        }
-
-        $tahun = intdiv($bulan, 12);
-        $sisaBulan = $bulan % 12;
-
-        if ($sisaBulan === 0) {
-            return $tahun . ' tahun';
-        }
-
-        return $tahun . ' tahun ' . $sisaBulan . ' bulan';
-    }
-
-    public function getKategoriSopAttribute(): string
-    {
-        $bulan = $this->usia_bulan;
-
-        if ($bulan >= 0 && $bulan <= 11) {
-            return 'Balita usia 0 sampai 11 bulan';
         }
 
         if ($bulan >= 12 && $bulan <= 59) {
@@ -120,12 +102,5 @@ class Balita extends Model
     {
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')
             ->where('kategori_pasien', 'balita');
-    }
-
-    public function pemeriksaan_terakhir(): HasOne
-    {
-        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
-            ->where('kategori_pasien', 'balita')
-            ->latestOfMany();
     }
 }
