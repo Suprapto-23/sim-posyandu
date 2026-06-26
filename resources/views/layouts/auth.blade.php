@@ -18,8 +18,8 @@
     <!-- 3. PEMANGGILAN FONT UTAMA (Disederhanakan) -->
     <!-- Menghapus trik media="print" karena bisa memicu pergeseran layout (CLS) saat teks muncul. -->
     <!-- Cukup andalkan display=swap dan preconnect untuk font utama Plus Jakarta Sans. -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional"></noscript>
 
     <!-- 4. FONT AWESOME (Tetap Async karena file besar dan bukan prioritas teks utama) -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
@@ -29,7 +29,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <!-- 6. SWEETALERT2 (Defer, eksekusi paling akhir) -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" async></script>
+    
+
 
     <style>
         /* ===== RESET & BASE ===== */
@@ -75,11 +77,13 @@
         }
         .auth-bg-soft::before {
             width: 430px; height: 430px; top: -190px; left: -180px;
-            background: rgba(16,185,129,.11); filter: blur(72px);
+            background: rgba(16,185,129,.11); filter: blur(60px);
+            will-change: filter;
         }
         .auth-bg-soft::after {
             width: 390px; height: 390px; right: -170px; bottom: -160px;
-            background: rgba(245,158,11,.105); filter: blur(74px);
+            background: rgba(245,158,11,.105); filter: blur(60px);
+            will-change: filter;
         }
         .auth-grid-soft {
             position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .07;
@@ -128,7 +132,7 @@
             }
             .auth-main { padding: 12px; }
             .auth-grid-soft { display: none; }
-            .auth-bg-soft::before, .auth-bg-soft::after { filter: blur(46px); }
+            .auth-bg-soft::before, .auth-bg-soft::after { filter: none; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
