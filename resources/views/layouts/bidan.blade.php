@@ -18,12 +18,14 @@
     <link rel="icon" type="image/webp" href="{{ asset('img/logo.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"></noscript>
 
     <style>
         :root {
@@ -152,7 +154,7 @@
         .sidebar-toggle {
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 14px;
             background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0;
-            display: grid; place-items: center; transition: all 0.15s ease;
+            display: grid; place-items: center; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
             will-change: transform;
         }
         .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
@@ -178,7 +180,7 @@
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 50%;
             background: #ffffff; color: var(--slate-500); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            position: relative; transition: all 0.15s ease;
+            position: relative; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
         }
         .btn-notif:hover { background: #f8fafc; color: var(--green-600); border-color: #e2e8f0; }
         .btn-notif:active { transform: scale(0.92); }
@@ -219,7 +221,7 @@
         .profile-button {
             height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border);
             border-radius: 50px; background: #ffffff; cursor: pointer;
-            display: flex; align-items: center; gap: 10px; transition: all 0.15s ease;
+            display: flex; align-items: center; gap: 10px; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
         }
         .profile-button:hover { background: #f8fafc; border-color: #e2e8f0; }
         .profile-button:active { transform: scale(0.96); }
@@ -287,7 +289,7 @@
         .dropdown-link, .dropdown-logout {
             width: 100%; border: 0; border-radius: 16px; padding: 12px 14px;
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px;
-            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.15s ease;
+            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
         }
         .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
         .dropdown-logout { color: #e11d48; }
@@ -411,10 +413,10 @@
             position: fixed; inset: 0; z-index: 90; border: 0;
             background: rgba(15,23,42,.3); backdrop-filter: blur(3px);
             opacity: 0; visibility: hidden;
-            transition: opacity 0.12s ease, visibility 0.12s ease;
+            transition: opacity 0.12s ease, visibility 0s 0.12s linear;
             will-change: opacity;
         }
-        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; }
+        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; transition: opacity 0.12s ease, visibility 0s linear; }
         @media (min-width: 1024px) { .mobile-overlay { display: none !important; } }
         @media (max-width: 1023px) {
             .app-wrapper { padding-left: 0 !important; }
@@ -440,7 +442,7 @@
         .bn-link {
             flex: 1; height: 100%; border-radius: 14px;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-            color: var(--slate-400); font-size: 10px; font-weight: 700; transition: all 0.12s ease;
+            color: var(--slate-400); font-size: 10px; font-weight: 700; transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
         }
         .bn-link i { font-size: 18px; }
         .bn-link.active, .bn-link:hover { color: var(--green-600); background: #ecfdf5; }
