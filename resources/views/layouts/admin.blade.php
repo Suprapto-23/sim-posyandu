@@ -19,8 +19,8 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -36,7 +36,7 @@
             --slate-500: #64748b;
             --border: #f1f5f9;
             --bg-app: #fcfcfd;
-            --transition-speed: 0.15s;
+            --transition-speed: 0.08s;
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             --emerald-600: #059669;
             --emerald-50: #ecfdf5;
@@ -136,11 +136,18 @@
             border: 1px solid var(--border); 
             box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
         }
+        @media (max-width: 1023px) {
+            .admin-topbar {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                background: rgba(255,255,255,.97);
+            }
+        }
 
         .sidebar-toggle {
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 14px;
             background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0;
-            display: grid; place-items: center; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            display: grid; place-items: center; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
         }
         .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
         .sidebar-toggle:active { transform: scale(0.92); }
@@ -157,7 +164,7 @@
         .profile-button { 
             height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border); 
             border-radius: 50px; background: #ffffff; cursor: pointer; 
-            display: flex; align-items: center; gap: 10px; transition: background-color 0.2s ease, border-color 0.2s ease; 
+            display: flex; align-items: center; gap: 10px; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
         }
         .profile-button:hover { background: #f8fafc; border-color: #e2e8f0; }
         .profile-button:active { transform: scale(0.96); }
@@ -183,7 +190,7 @@
         .dropdown-link, .dropdown-logout { 
             width: 100%; border: 0; border-radius: 16px; padding: 12px 14px; 
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; 
-            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.2s ease, color 0.2s ease; 
+            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
         }
         .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
         .dropdown-logout { color: #e11d48; }
@@ -206,7 +213,7 @@
         /* ── ANIMASI KONTEN (SPA) ── */
         .admin-main {
             opacity: 1;
-            transition: opacity 0.18s ease, transform 0.18s ease;
+            transition: opacity 0.08s ease, transform 0.08s ease;
         }
         .admin-main.is-leaving {
             opacity: 0;
@@ -223,11 +230,10 @@
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
-            position: fixed; inset: 0; z-index: 90; border: 0; background: rgba(15,23,42,.3); backdrop-filter: blur(4px);
-            opacity: 0; visibility: hidden;
-            transition: opacity 0.25s ease, visibility 0s 0.25s linear;
+            position: fixed; inset: 0; z-index: 90; border: 0; background: rgba(15,23,42,.3);
+            opacity: 0; visibility: hidden; transition: opacity 0.1s ease, visibility 0.1s ease;
         }
-        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; transition: opacity 0.25s ease, visibility 0s linear; }
+        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; }
         
         @media (min-width: 1024px) { .mobile-overlay { display: none !important; } }
         @media (max-width: 1023px) {
@@ -340,10 +346,10 @@
                         </button>
 
                         <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false" 
-                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter="transition ease-out duration-100"
                              x-transition:enter-start="opacity-0 scale-95 translate-y-3"
                              x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave="transition ease-in duration-75"
                              x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                              x-transition:leave-end="opacity-0 scale-95 translate-y-3" 
                              class="admin-dropdown">
