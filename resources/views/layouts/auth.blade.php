@@ -18,7 +18,8 @@
     <!-- 3. PEMANGGILAN FONT UTAMA (Disederhanakan) -->
     <!-- Menghapus trik media="print" karena bisa memicu pergeseran layout (CLS) saat teks muncul. -->
     <!-- Cukup andalkan display=swap dan preconnect untuk font utama Plus Jakarta Sans. -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
 
     <!-- 4. FONT AWESOME (Tetap Async karena file besar dan bukan prioritas teks utama) -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
@@ -29,9 +30,6 @@
 
     <!-- 6. SWEETALERT2 (Defer, eksekusi paling akhir) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-    
-    @stack('styles')
-</head>
 
     <style>
         /* ===== RESET & BASE ===== */
