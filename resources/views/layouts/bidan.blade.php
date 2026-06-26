@@ -18,8 +18,8 @@
     <link rel="icon" type="image/webp" href="{{ asset('img/logo.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -41,7 +41,7 @@
             --slate-300: #cbd5e1;
             --border: #f1f5f9;
             --bg-app: #fcfcfd;
-            --transition-speed: 0.12s;
+            --transition-speed: 0.08s;
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -154,7 +154,7 @@
         .sidebar-toggle {
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 14px;
             background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0;
-            display: grid; place-items: center; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            display: grid; place-items: center; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
             will-change: transform;
         }
         .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
@@ -180,7 +180,7 @@
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 50%;
             background: #ffffff; color: var(--slate-500); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            position: relative; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            position: relative; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
         }
         .btn-notif:hover { background: #f8fafc; color: var(--green-600); border-color: #e2e8f0; }
         .btn-notif:active { transform: scale(0.92); }
@@ -206,6 +206,7 @@
             background: #ef4444;
             animation: notifPulse 1.4s infinite;
             opacity: 0.4;
+            will-change: transform, opacity;
         }
         @keyframes notifPulse {
             0% { transform: scale(0.8); opacity: 0.6; }
@@ -221,7 +222,7 @@
         .profile-button {
             height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border);
             border-radius: 50px; background: #ffffff; cursor: pointer;
-            display: flex; align-items: center; gap: 10px; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            display: flex; align-items: center; gap: 10px; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
         }
         .profile-button:hover { background: #f8fafc; border-color: #e2e8f0; }
         .profile-button:active { transform: scale(0.96); }
@@ -289,7 +290,7 @@
         .dropdown-link, .dropdown-logout {
             width: 100%; border: 0; border-radius: 16px; padding: 12px 14px;
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px;
-            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
         }
         .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
         .dropdown-logout { color: #e11d48; }
@@ -393,7 +394,7 @@
 
         .main-inner {
             opacity: 0;
-            animation: contentEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: contentEnter 0.08s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             will-change: opacity, transform;
         }
         @keyframes contentEnter {
@@ -401,7 +402,7 @@
             100% { opacity: 1; transform: translateY(0); }
         }
         .content-leave .main-inner {
-            animation: contentLeave 0.12s ease-in forwards !important;
+            animation: contentLeave 0.05s ease-in forwards !important;
         }
         @keyframes contentLeave {
             0% { opacity: 1; transform: translateY(0); }
@@ -413,10 +414,10 @@
             position: fixed; inset: 0; z-index: 90; border: 0;
             background: rgba(15,23,42,.3); backdrop-filter: blur(3px);
             opacity: 0; visibility: hidden;
-            transition: opacity 0.12s ease, visibility 0s 0.12s linear;
+            transition: opacity 0.08s ease, visibility 0.08s ease;
             will-change: opacity;
         }
-        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; transition: opacity 0.12s ease, visibility 0s linear; }
+        html.sb-open .mobile-overlay { opacity: 1; visibility: visible; }
         @media (min-width: 1024px) { .mobile-overlay { display: none !important; } }
         @media (max-width: 1023px) {
             .app-wrapper { padding-left: 0 !important; }
@@ -442,7 +443,7 @@
         .bn-link {
             flex: 1; height: 100%; border-radius: 14px;
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-            color: var(--slate-400); font-size: 10px; font-weight: 700; transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+            color: var(--slate-400); font-size: 10px; font-weight: 700; transition: all 0.12s ease;
         }
         .bn-link i { font-size: 18px; }
         .bn-link.active, .bn-link:hover { color: var(--green-600); background: #ecfdf5; }
@@ -583,10 +584,10 @@
                         </button>
 
                         <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false"
-                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter="transition ease-out duration-100"
                              x-transition:enter-start="opacity-0 scale-95 translate-y-3"
                              x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave="transition ease-in duration-75"
                              x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                              x-transition:leave-end="opacity-0 scale-95 translate-y-3"
                              class="notif-dropdown">
@@ -639,10 +640,10 @@
                         </button>
 
                         <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false"
-                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter="transition ease-out duration-100"
                              x-transition:enter-start="opacity-0 scale-95 translate-y-3"
                              x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave="transition ease-in duration-75"
                              x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                              x-transition:leave-end="opacity-0 scale-95 translate-y-3"
                              class="profile-dropdown">
