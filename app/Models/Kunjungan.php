@@ -99,12 +99,14 @@ class Kunjungan extends Model
 
     public function getKategoriPasienAttribute(): string
     {
-        return match ($this->pasien_type) {
-            Balita::class => 'balita',
-            Remaja::class => 'remaja',
-            Lansia::class => 'lansia',
-            default => 'tidak_diketahui',
-        };
+        // FIX: Mengecek string secara dinamis untuk mengatasi konflik MorphMap vs ClassName
+        $type = strtolower((string) $this->pasien_type);
+        
+        if (str_contains($type, 'balita')) return 'balita';
+        if (str_contains($type, 'remaja')) return 'remaja';
+        if (str_contains($type, 'lansia')) return 'lansia';
+        
+        return 'tidak_diketahui';
     }
 
     public function getKategoriPasienLabelAttribute(): string
@@ -175,17 +177,18 @@ class Kunjungan extends Model
 
     public function scopeKategori($query, string $kategori)
     {
-        $model = match ($kategori) {
+        $modelClass = match ($kategori) {
             'balita' => Balita::class,
             'remaja' => Remaja::class,
             'lansia' => Lansia::class,
             default => null,
         };
 
-        if (!$model) {
+        if (!$modelClass) {
             return $query;
         }
 
-        return $query->where('pasien_type', $model);
+        // FIX: Query ganda agar database aman jika menggunakan ClassName maupun Alias MorphMap
+        return $query->whereIn('pasien_type', [$modelClass, $kategori]);
     }
 }

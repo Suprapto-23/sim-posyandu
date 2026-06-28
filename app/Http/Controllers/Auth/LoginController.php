@@ -83,12 +83,16 @@ class LoginController extends Controller
     }
 
     public function logout(Request $request)
-    {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/login')->with('info', 'Anda telah keluar dari sistem.');
-    }
+{
+    Auth::logout();
+
+    // Hapus sesi lama dan buat ulang token keamanan
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    // Wajib menambahkan ->with('success', '...') agar terbaca oleh SweetAlert
+    return redirect('/login')->with('success', 'Anda telah berhasil keluar dari sistem dengan aman.');
+}
 
     // ========== PRIVATE HELPERS ==========
 

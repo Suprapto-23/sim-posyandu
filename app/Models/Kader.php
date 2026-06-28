@@ -27,7 +27,7 @@ class Kader extends Model
 
     public function kunjungans()
     {
-        // PERBAIKAN: Menambahkan 'user_id' sebagai local key
+        // FIX: Menambahkan 'user_id' agar relasi mencari ID User, bukan ID Kader
         return $this->hasMany(Kunjungan::class, 'petugas_id', 'user_id');
     }
 }

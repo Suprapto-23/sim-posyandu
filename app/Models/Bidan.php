@@ -24,7 +24,7 @@ class Bidan extends Model
 
     public function pemeriksaans()
     {
-        // PERBAIKAN: Menambahkan 'user_id' sebagai local key
+        // FIX: Menambahkan 'user_id' agar relasi mencari ID User, bukan ID Bidan
         return $this->hasMany(Pemeriksaan::class, 'pemeriksa_id', 'user_id');
     }
 }
