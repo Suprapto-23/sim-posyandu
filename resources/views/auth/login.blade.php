@@ -14,35 +14,28 @@
         overflow: hidden; 
     }
 
-    /* [ANIMATION UPDATE] Kurva bezier lebih halus dan waktu dipersingkat ke 0.5s/0.4s */
     .brand-side, .form-side {
         transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-in-out;
         will-change: transform, opacity;
     }
 
-    body.is-splitting .brand-side {
-        transform: translateX(-150%);
-        opacity: 0;
-    }
-    body.is-splitting .form-side {
-        transform: translateX(150%);
-        opacity: 0;
-    }
+    body.is-splitting .brand-side { transform: translateX(-150%); opacity: 0; }
+    body.is-splitting .form-side { transform: translateX(150%); opacity: 0; }
 
     .brand-side { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    /* Memastikan gambar juga diprioritaskan preload-nya */
+    
     .brand-logo { width: 280px; height: auto; margin-bottom: 24px; user-select: none; pointer-events: none; }
     .brand-title { color: var(--slate-900); font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.02em; }
     .brand-divider { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
     .bdl { width: 40px; height: 2px; background: #e2e8f0; border-radius: 4px; }
     .bdd { width: 6px; height: 6px; background: var(--amber-500); transform: rotate(45deg); }
-    
-    /* [A11Y FIX] Kontras dinaikkan dari slate-500 ke slate-700 untuk keterbacaan (Aksesibilitas 100%) */
     .brand-desc { color: var(--slate-700); font-size: 15px; font-weight: 500; max-width: 380px; margin: 0 0 32px; line-height: 1.6; }
 
     .feature-grid { display: flex; gap: 16px; justify-content: center; width: 100%; max-width: 440px; }
     .feature-box { background: #ffffff; border: 1px solid #f1f5f9; border-radius: 16px; padding: 16px 12px; width: 90px; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); }
-    .feature-icon { width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: var(--green-600); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    
+    /* [A11Y FIX]: Ubah warna icon dari --green-600 menjadi --green-700 agar kontras dengan hijau muda */
+    .feature-icon { width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: var(--green-700); display: flex; align-items: center; justify-content: center; font-size: 16px; }
     .feature-text { color: var(--slate-700); font-size: 11px; font-weight: 700; }
 
     .form-side { display: flex; justify-content: flex-end; }
@@ -50,6 +43,7 @@
     .login-header { text-align: center; margin-bottom: 32px; }
     .login-title { color: var(--green-900); font-size: 26px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.03em; }
     .login-subtitle { color: var(--slate-700); font-size: 14px; margin: 0; font-weight: 500; }
+    
     .login-form { display: flex; flex-direction: column; gap: 20px; }
     .field-group { width: 100%; }
     .field-label { display: block; font-size: 13px; font-weight: 700; color: var(--slate-900); margin-bottom: 8px; }
@@ -58,24 +52,21 @@
     .field-input { width: 100%; height: 52px; padding: 0 44px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 14px; color: var(--slate-900); font-weight: 500; transition: all 0.2s ease; }
     .field-input:focus { border-color: var(--green-500); outline: none; box-shadow: 0 0 0 4px rgba(16,185,129,0.1); }
     
-    /* [A11Y FIX] Kontras Ikon form diperbaiki dari #94a3b8 ke #64748b (Slate-500) */
-    .field-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 16px; transition: color 0.2s; pointer-events: none; }
+    /* [A11Y FIX]: Memaksa warna dan opacity placeholder agar kontras jelas (standar WCAG AAA) */
+    .field-input::placeholder { color: var(--slate-600); opacity: 1; font-weight: 500; }
+    
+    /* [A11Y FIX]: Ubah warna icon field dari --slate-500 ke --slate-600 */
+    .field-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--slate-600); font-size: 16px; transition: color 0.2s; pointer-events: none; }
     .field-input:focus ~ .field-icon { color: var(--green-600); }
     
-    /* [A11Y FIX] Kontras ikon mata diperbaiki */
-    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #64748b; cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.2s; }
+    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--slate-600); cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.2s; }
     .pw-toggle:hover { background: #f1f5f9; color: var(--slate-900); }
     
-    .submit-btn {
-        width: 100%; height: 54px; background: var(--green-600); color: #fff;
-        border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
-        display: flex; align-items: center; justify-content: center; gap: 10px;
-        cursor: pointer; transition: all 0.2s; margin-top: 4px;
-    }
+    .submit-btn { width: 100%; height: 54px; background: var(--green-600); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
     .submit-btn:hover { background: var(--green-700); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); transform: translateY(-1px); }
     
     .info-note { margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; display: flex; align-items: flex-start; gap: 12px; }
-    .info-icon { color: var(--green-600); font-size: 20px; }
+    .info-icon { color: var(--green-700); font-size: 20px; }
     .info-title { color: var(--green-900); font-size: 13px; font-weight: 700; margin: 0 0 4px; }
     .info-text { color: var(--slate-700); font-size: 12px; margin: 0; line-height: 1.5; font-weight: 500; }
 
@@ -188,7 +179,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.body.classList.add('is-splitting');
 
-        // [ANIMATION UPDATE] Sinkronisasi waktu submit (400ms) dengan kecepatan transisi CSS yang baru (0.4s)
         setTimeout(() => {
             form.submit();
         }, 400); 
