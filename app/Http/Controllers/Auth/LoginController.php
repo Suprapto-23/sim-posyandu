@@ -78,8 +78,9 @@ class LoginController extends Controller
         $this->logLogin($user->id, $request, 'success');
         RateLimiter::clear($this->throttleKey($request));
 
-        // Redirect langsung
-        return redirect()->to($this->getRedirectUrl($user->role));
+        
+        // Menggunakan intended() agar user dikembalikan ke URL tujuan awal sebelum login
+        return redirect()->intended($this->getRedirectUrl($user->role));
     }
 
     public function logout(Request $request)

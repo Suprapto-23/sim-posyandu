@@ -84,21 +84,6 @@ Route::post('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-/*
-|--------------------------------------------------------------------------
-| Global Authenticated Routes
-|--------------------------------------------------------------------------
-*/
-
-Route::middleware(['auth', 'checkstatus'])->group(function () {
-    
-
-    Route::get('/profile', [UserProfileController::class, 'edit'])
-        ->name('profile.edit');
-
-    Route::patch('/profile', [UserProfileController::class, 'update'])
-        ->name('profile.update');
-});
 
 /*
 |--------------------------------------------------------------------------

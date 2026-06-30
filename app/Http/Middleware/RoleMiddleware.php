@@ -17,14 +17,7 @@ class RoleMiddleware
 
         $user = Auth::user();
 
-        // Cek status aktif
-        if ($user->status !== 'active') {
-            Auth::logout();
-            $request->session()->invalidate();
-            return redirect()->route('login')->withErrors([
-                'login' => 'Akun Anda tidak aktif. Hubungi admin.'
-            ]);
-        }
+        
 
         // Cek role - case insensitive
         if (strtolower($user->role) !== strtolower($role)) {
