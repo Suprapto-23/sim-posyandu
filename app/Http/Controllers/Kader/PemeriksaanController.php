@@ -393,14 +393,13 @@ class PemeriksaanController extends Controller
     private function storeModel($model, array $payload): void
     {
         foreach ($payload as $column => $value) {
-            if ($value !== null && Schema::hasColumn($model->getTable(), $column)) {
+            // Cukup pastikan kolomnya ada di database
+            if (Schema::hasColumn($model->getTable(), $column)) {
                 $model->{$column} = $value;
             }
         }
-
         $model->save();
     }
-
     private function guardRequiredColumns(array $validated): void
     {
         $required = ['pasien_id', 'kategori_pasien', 'tanggal_periksa', 'pemeriksa_id', 'berat_badan', 'tinggi_badan'];
