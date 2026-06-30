@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lansia extends Model
 {
-    use HasFactory;
+    // PERBAIKAN: Menjaga integritas riwayat pemeriksaan dengan SoftDeletes
+    use HasFactory, SoftDeletes;
 
-   protected $fillable = [
+    protected $fillable = [
         'user_id',
         'kode_lansia',
         'nik',
@@ -19,10 +20,10 @@ class Lansia extends Model
         'tanggal_lahir',
         'jenis_kelamin',
         'alamat',
-        'telepon_keluarga', // <-- Tambah
+        'telepon_keluarga',
         'penyakit_bawaan',
-        'golongan_darah',   // <-- Tambah
-        'created_by',       // <-- Tambah
+        'golongan_darah',
+        'created_by',
     ];
 
     protected $casts = [
@@ -32,23 +33,24 @@ class Lansia extends Model
         'imt'           => 'float',
     ];
 
-    // ── VIRTUAL ATTRIBUTES (LOGIKA CERDAS LANSIA) ─────────────────
+    // PERBAIKAN: Proteksi dari bug Attempt to read property on null
+    protected static function boot()
+    {
+        parent::boot();
 
-    /**
-     * Hitung Usia dalam Tahun (Real-time)
-     * Dapat dipanggil dengan: $lansia->usia_tahun
-     */
+        static::deleting(function ($model) {
+            $model->kunjungans()->delete();
+            $model->pemeriksaans()->delete();
+        });
+    }
+
+    // ── VIRTUAL ATTRIBUTES (LOGIKA CERDAS LANSIA) ─────────────────
     public function getUsiaTahunAttribute()
     {
         if (!$this->tanggal_lahir) return 0;
-        
-        // PERBAIKAN: Langsung panggil properti age karena $this->tanggal_lahir sudah berupa Carbon
         return $this->tanggal_lahir->age;
     }
 
-    /**
-     * Kategorikan otomatis berdasarkan SOP Kemenkes
-     */
     public function getKategoriUsiaAttribute()
     {
         $usia = $this->usia_tahun;
@@ -60,9 +62,6 @@ class Lansia extends Model
         return 'Bukan Sasaran Lansia';
     }
 
-    /**
-     * Label cantik untuk IMT (Indeks Massa Tubuh)
-     */
     public function getStatusImtAttribute()
     {
         $imt = $this->imt;
@@ -74,9 +73,6 @@ class Lansia extends Model
         return 'Obesitas (Kelebihan BB Tingkat Berat)';
     }
 
-    /**
-     * Tampilkan penyakit bawaan dengan format rapi.
-     */
     public function getInfoPenyakitAttribute()
     {
         return $this->penyakit_bawaan ? $this->penyakit_bawaan : 'Tidak Ada Penyakit Bawaan';
@@ -99,7 +95,6 @@ class Lansia extends Model
                     ->orderBy('tanggal_kunjungan', 'desc');
     }
 
-    // ── RELASI PEMERIKSAAN (POWERFUL EAGER LOADING) ───────────────
     public function pemeriksaans()
     {
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')

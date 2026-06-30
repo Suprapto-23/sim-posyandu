@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Balita extends Model
 {
+    // PERBAIKAN: Mencegah penghapusan permanen dari database
+    use SoftDeletes; 
+
     protected $table = 'balitas';
 
     protected $fillable = [
@@ -37,13 +40,22 @@ class Balita extends Model
         'updated_at' => 'datetime',
     ];
 
+    // PERBAIKAN: Menghapus relasi terkait jika data balita dihapus (mencegah orphan data)
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($model) {
+            $model->kunjungans()->delete();
+            $model->pemeriksaans()->delete();
+        });
+    }
+
     public function getUsiaBulanAttribute(): int
     {
         if (! $this->tanggal_lahir) {
             return 0;
         }
-
-        // PERBAIKAN: Langsung panggil diffInMonths karena $this->tanggal_lahir sudah berupa Carbon object
         return (int) $this->tanggal_lahir->diffInMonths(now());
     }
 
@@ -54,11 +66,9 @@ class Balita extends Model
         if ($bulan < 12) {
             return $bulan . ' bulan';
         }
-
         if ($bulan >= 12 && $bulan <= 59) {
             return 'Balita usia 12 sampai 59 bulan';
         }
-
         return 'Lewat usia sasaran Balita';
     }
 

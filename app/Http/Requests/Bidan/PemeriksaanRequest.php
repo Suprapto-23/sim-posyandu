@@ -1,6 +1,4 @@
 <?php
-?php
-
 namespace App\Http\Requests\Bidan;
 
 use Illuminate\Foundation\Http\FormRequest;
