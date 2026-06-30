@@ -26,7 +26,6 @@ class User extends Authenticatable
         'nik',
         'role',
         'status',
-        'last_login_at',
         'created_by',
     ];
 

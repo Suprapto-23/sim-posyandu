@@ -18,8 +18,10 @@ class Imunisasi extends Model
         'kunjungan_id',
         'jenis_imunisasi',
         'vaksin',
+        'dosis',         // <-- Tambah ini
         'batch_number',
         'tanggal_imunisasi',
+        'penyelenggara', // <-- Tambah ini
         'catatan',
     ];
 

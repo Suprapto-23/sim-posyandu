@@ -11,14 +11,16 @@ class Profile extends Model
     use HasFactory;
 
     protected $fillable = [
-    'user_id',
-    'full_name',
-    'nik',
-    'jenis_kelamin',
-    'tempat_lahir',
-    'tanggal_lahir',
-    'alamat',
-    'telepon'
+        'user_id',
+        'full_name',
+        'nik',
+        'jenis_kelamin',
+        'tempat_lahir',
+        'tanggal_lahir',
+        'alamat',
+        'telepon',
+        'pekerjaan',       // <-- Tambah ini
+        'golongan_darah'   // <-- Tambah ini
     ];
 
     protected $casts = [

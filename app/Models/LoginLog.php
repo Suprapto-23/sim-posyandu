@@ -16,6 +16,7 @@ class LoginLog extends Model
         'login_at',
         'logout_at',
         'status',
+        'failure_reason',
     ];
 
     protected $casts = [

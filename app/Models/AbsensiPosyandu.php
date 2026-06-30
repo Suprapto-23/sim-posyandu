@@ -24,8 +24,7 @@ class AbsensiPosyandu extends Model
         'bulan',
         'tahun',
         'nomor_pertemuan',
-        'dicatat_oleh',
-        'catatan',
+        'keterangan',
     ];
 
     protected $casts = [
@@ -73,9 +72,9 @@ class AbsensiPosyandu extends Model
                 );
             }
 
-            if (!$absensi->dicatat_oleh && auth()->check()) {
-                $absensi->dicatat_oleh = auth()->id();
-            }
+            // if (!$absensi->dicatat_oleh && auth()->check()) {
+            //     $absensi->dicatat_oleh = auth()->id();
+            // }
         });
 
         static::saving(function (self $absensi) {

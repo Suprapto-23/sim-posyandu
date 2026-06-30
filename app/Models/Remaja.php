@@ -15,17 +15,19 @@ class Remaja extends Model
 
     protected $table = 'remajas';
 
-    protected $fillable = [
+   protected $fillable = [
         'user_id',
+        'kode_remaja', 
         'nik',
         'nama_lengkap',
         'jenis_kelamin',
         'tanggal_lahir',
         'tempat_lahir',
         'alamat',
-        'nama_orang_tua',
-        'no_hp',
-        'status',
+        'sekolah',     
+        'kelas',       
+        'nama_ortu', 
+        'telepon_ortu',
         'created_by',
     ];
 

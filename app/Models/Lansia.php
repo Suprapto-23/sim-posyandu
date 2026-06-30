@@ -10,7 +10,7 @@ class Lansia extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+   protected $fillable = [
         'user_id',
         'kode_lansia',
         'nik',
@@ -19,17 +19,10 @@ class Lansia extends Model
         'tanggal_lahir',
         'jenis_kelamin',
         'alamat',
+        'telepon_keluarga', // <-- Tambah
         'penyakit_bawaan',
-        'berat_badan',
-        'tinggi_badan',
-        'imt',
-        'tingkat_kemandirian',
-        'tekanan_darah',
-        'gula_darah',
-        'kolesterol',
-        'asam_urat',
-        'lingkar_perut',
-        'keluhan',
+        'golongan_darah',   // <-- Tambah
+        'created_by',       // <-- Tambah
     ];
 
     protected $casts = [

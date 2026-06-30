@@ -17,7 +17,7 @@ class Pemeriksaan extends Model
         'tanggal_periksa',
 
         'pemeriksa_id',
-        'created_by',
+        
 
         'berat_badan',
         'tinggi_badan',
@@ -42,14 +42,11 @@ class Pemeriksaan extends Model
         'tindakan',
         'catatan',
         'catatan_kader',
-        'catatan_validasi',
         'catatan_bidan',
         'rekomendasi',
 
         'status_verifikasi',
         'verified_by',
-        'verified_at',
-        'user_id_verifikator',
     ];
 
     protected $casts = [

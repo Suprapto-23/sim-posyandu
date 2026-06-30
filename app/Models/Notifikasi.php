@@ -20,8 +20,6 @@ class Notifikasi extends Model
         'tipe',
         'is_read',
         'read_at',
-        'link',
-        'created_by',
     ];
 
     protected $casts = [
