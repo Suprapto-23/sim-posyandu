@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Carbon\Carbon;
 
 class Balita extends Model
 {
-    // PERBAIKAN: Mencegah penghapusan permanen dari database
-    use SoftDeletes; 
+    use HasFactory, SoftDeletes; 
 
     protected $table = 'balitas';
 
@@ -34,23 +35,26 @@ class Balita extends Model
 
     protected $casts = [
         'tanggal_lahir' => 'date',
-        'berat_lahir' => 'decimal:2',
+        'berat_lahir'   => 'decimal:2',
         'panjang_lahir' => 'decimal:2',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'created_at'    => 'datetime',
+        'updated_at'    => 'datetime',
     ];
 
-    // PERBAIKAN: Menghapus relasi terkait jika data balita dihapus (mencegah orphan data)
+    // ── EVENT LISTENERS (Mencegah Orphan Data) ───────────────────────────
     protected static function boot()
     {
         parent::boot();
 
         static::deleting(function ($model) {
+            // Hapus riwayat otomatis saat data balita dihapus
             $model->kunjungans()->delete();
             $model->pemeriksaans()->delete();
+            $model->absensiDetails()->delete();
         });
     }
 
+    // ── ACCESSORS & MUTATORS (Format Data Otomatis) ──────────────────────
     public function getUsiaBulanAttribute(): int
     {
         if (! $this->tanggal_lahir) {
@@ -67,16 +71,18 @@ class Balita extends Model
             return $bulan . ' bulan';
         }
         if ($bulan >= 12 && $bulan <= 59) {
-            return 'Balita usia 12 sampai 59 bulan';
+            $tahun = floor($bulan / 12);
+            $sisaBulan = $bulan % 12;
+            return $sisaBulan > 0 ? "{$tahun} tahun {$sisaBulan} bulan" : "{$tahun} tahun";
         }
         return 'Lewat usia sasaran Balita';
     }
 
     public function getJenisKelaminLabelAttribute(): string
     {
-        return match ($this->jenis_kelamin) {
-            'L' => 'Laki-laki',
-            'P' => 'Perempuan',
+        return match (strtolower((string) $this->jenis_kelamin)) {
+            'l', 'laki-laki' => 'Laki-laki',
+            'p', 'perempuan' => 'Perempuan',
             default => '-',
         };
     }
@@ -93,6 +99,7 @@ class Balita extends Model
             : 'border-amber-200 bg-amber-50 text-amber-700';
     }
 
+    // ── RELASI DATABASE ──────────────────────────────────────────────────
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -108,9 +115,25 @@ class Balita extends Model
         return $this->morphMany(Kunjungan::class, 'pasien');
     }
 
+    public function absensiDetails(): MorphMany
+    {
+        return $this->morphMany(AbsensiDetail::class, 'pasien');
+    }
+
     public function pemeriksaans(): HasMany
     {
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')
             ->where('kategori_pasien', 'balita');
+    }
+
+    /**
+     * PERBAIKAN: Fungsi ini mengambil SATU data pemeriksaan paling terakhir
+     * Nama fungsi disesuaikan dengan snake_case yang dipanggil oleh Controller
+     */
+    public function pemeriksaan_terakhir()
+    {
+        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
+            ->where('kategori_pasien', 'balita')
+            ->latestOfMany('tanggal_periksa');
     }
 }

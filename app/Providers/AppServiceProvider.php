@@ -43,16 +43,36 @@ class AppServiceProvider extends ServiceProvider
             'lansia' => \App\Models\Lansia::class,
         ]);
 
-        // 4. View Composer untuk Global Variable
-        View::composer('*', function ($view) {
-            $settings = cache()->remember('app_settings', 3600, function () {
-                try { 
-                    return Setting::getAll(); 
-                } catch (\Exception $e) { 
-                    return []; 
-                }
-            });
-            $view->with('settings', $settings);
+        // 4. OPTIMASI 1: View Share untuk Settings (Super Ringan)
+        // Mengeksekusi cache hanya SEKALI per request, lalu dibagikan ke seluruh view secara statis.
+        $settings = cache()->remember('app_settings', 3600, function () {
+            try { 
+                return Setting::getAll(); 
+            } catch (\Exception $e) { 
+                return []; 
+            }
+        });
+        View::share('settings', $settings);
+
+        // 5. OPTIMASI 2: View Composer Terarah & Static Caching
+        // Ganti '*' dengan spesifik layout utama agar tidak dieksekusi di partial view kecil
+        $viewTargets = [
+            'layouts.user',
+            'layouts.admin',
+            'layouts.bidan',
+            'layouts.kader',
+            'partials.sidebar.*' // Tambahkan ini jika sidebar Anda butuh data peran
+        ];
+
+        View::composer($viewTargets, function ($view) {
+            // TRIK RAHASIA: Gunakan static variable agar jika composer kepanggil 2x di satu halaman, 
+            // query database yang memakan memori tidak diulang.
+            static $peranUserCache = null;
+
+            if ($peranUserCache !== null) {
+                $view->with('peranUser', $peranUserCache);
+                return;
+            }
 
             $peranUser = ['umum'];
 
@@ -66,6 +86,7 @@ class AppServiceProvider extends ServiceProvider
 
                 $peranDitemukan = [];
 
+                // Cek Orang Tua
                 try {
                     if (!empty($nikUser)) {
                         $adaBalita = Balita::where(function ($q) use ($nikUser) {
@@ -86,12 +107,14 @@ class AppServiceProvider extends ServiceProvider
                     }
                 } catch (\Exception $e) {}
 
+                // Cek Remaja
                 try {
                     if (!empty($nikUser) && Remaja::where('nik', $nikUser)->exists()) {
                         $peranDitemukan[] = 'remaja';
                     }
                 } catch (\Exception $e) {}
 
+                // Cek Lansia
                 try {
                     if (!empty($nikUser) && Lansia::where('nik', $nikUser)->exists()) {
                         $peranDitemukan[] = 'lansia';
@@ -103,6 +126,9 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
+            // Simpan ke cache lokal agar eksekusi di sub-view tidak mengulang query
+            $peranUserCache = $peranUser; 
+            
             $view->with('peranUser', $peranUser);
         });
     }

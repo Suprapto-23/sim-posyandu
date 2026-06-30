@@ -20,6 +20,6 @@
         "bootstrap": "^5.3.8",
         "chart.js": "^4.5.1",
         "jquery": "^3.7.1",
-        "sweetalert2": "^11.26.3"
+        "sweetalert2": "^11.26.25"
     }
 }

@@ -222,13 +222,13 @@ class AbsensiController extends Controller
 
         if ($id) {
             $absensi = AbsensiPosyandu::query()
-                ->with(['kader', 'details.pasien'])
+                ->with(['pencatat', 'details.pasien']) // Sudah benar 'pencatat'
                 ->find($id);
         }
 
         if (!$absensi) {
             $absensi = AbsensiPosyandu::query()
-                ->with(['kader', 'details.pasien'])
+                ->with(['pencatat', 'details.pasien']) // <--- PERBAIKAN: Ubah 'kader' jadi 'pencatat' di sini juga
                 ->where('dicatat_oleh', auth()->id())
                 ->latest('updated_at')
                 ->first();

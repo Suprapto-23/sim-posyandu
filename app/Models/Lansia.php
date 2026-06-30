@@ -5,11 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Carbon\Carbon;
 
 class Lansia extends Model
 {
-    // PERBAIKAN: Menjaga integritas riwayat pemeriksaan dengan SoftDeletes
+    // Menggunakan perlindungan SoftDeletes agar data rekam medis lansia aman
     use HasFactory, SoftDeletes;
+
+    protected $table = 'lansias';
 
     protected $fillable = [
         'user_id',
@@ -28,30 +34,31 @@ class Lansia extends Model
 
     protected $casts = [
         'tanggal_lahir' => 'date',
-        'berat_badan'   => 'float',
-        'tinggi_badan'  => 'float',
-        'imt'           => 'float',
+        'created_at'    => 'datetime',
+        'updated_at'    => 'datetime',
     ];
 
-    // PERBAIKAN: Proteksi dari bug Attempt to read property on null
+    // ── EVENT LISTENERS (Mencegah Orphan Data) ───────────────────────────
     protected static function boot()
     {
         parent::boot();
 
         static::deleting(function ($model) {
+            // Mencegah data kunjungan, pemeriksaan, dan absensi tertinggal di database
             $model->kunjungans()->delete();
             $model->pemeriksaans()->delete();
+            $model->absensiDetails()->delete();
         });
     }
 
-    // ── VIRTUAL ATTRIBUTES (LOGIKA CERDAS LANSIA) ─────────────────
-    public function getUsiaTahunAttribute()
+    // ── VIRTUAL ATTRIBUTES (Logika Usia Lansia) ──────────────────────────
+    public function getUsiaTahunAttribute(): int
     {
         if (!$this->tanggal_lahir) return 0;
-        return $this->tanggal_lahir->age;
+        return (int) Carbon::parse($this->tanggal_lahir)->age;
     }
 
-    public function getKategoriUsiaAttribute()
+    public function getKategoriUsiaAttribute(): string
     {
         $usia = $this->usia_tahun;
 
@@ -62,43 +69,67 @@ class Lansia extends Model
         return 'Bukan Sasaran Lansia';
     }
 
-    public function getStatusImtAttribute()
+    public function getJenisKelaminLabelAttribute(): string
     {
-        $imt = $this->imt;
-        if (!$imt) return '-';
-
-        if ($imt < 18.5) return 'Kurus (Kekurangan BB)';
-        if ($imt >= 18.5 && $imt <= 24.9) return 'Normal';
-        if ($imt >= 25.0 && $imt <= 27.0) return 'Gemuk (Kelebihan BB Tingkat Ringan)';
-        return 'Obesitas (Kelebihan BB Tingkat Berat)';
+        return match (strtolower((string) $this->jenis_kelamin)) {
+            'l', 'laki-laki' => 'Laki-laki',
+            'p', 'perempuan' => 'Perempuan',
+            default => '-',
+        };
     }
 
-    public function getInfoPenyakitAttribute()
+    public function getInfoPenyakitAttribute(): string
     {
         return $this->penyakit_bawaan ? $this->penyakit_bawaan : 'Tidak Ada Penyakit Bawaan';
     }
 
-    // ── RELASI DASAR ──────────────────────────────────────────────
-    public function user()
+    public function getStatusAkunLabelAttribute(): string
+    {
+        return $this->user_id ? 'Terhubung' : 'Belum Terhubung';
+    }
+
+    public function getStatusAkunClassAttribute(): string
+    {
+        return $this->user_id
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : 'border-amber-200 bg-amber-50 text-amber-700';
+    }
+
+    // ── RELASI DATABASE ──────────────────────────────────────────────────
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function creator()
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function kunjungans()
+    public function kunjungans(): MorphMany
     {
-        return $this->morphMany(Kunjungan::class, 'pasien')
-                    ->orderBy('tanggal_kunjungan', 'desc');
+        return $this->morphMany(Kunjungan::class, 'pasien');
     }
 
-    public function pemeriksaans()
+    public function absensiDetails(): MorphMany
+    {
+        return $this->morphMany(AbsensiDetail::class, 'pasien');
+    }
+
+    public function pemeriksaans(): HasMany
     {
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')
-                    ->where('kategori_pasien', 'lansia')
-                    ->orderBy('tanggal_periksa', 'desc');
+                    ->where('kategori_pasien', 'lansia');
+    }
+
+    /**
+     * FUNGSI KRUSIAL: Mengambil SATU data pemeriksaan terakhir.
+     * Menggunakan snake_case untuk mengatasi error Call to undefined relationship.
+     */
+    public function pemeriksaan_terakhir()
+    {
+        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
+            ->where('kategori_pasien', 'lansia')
+            ->latestOfMany('tanggal_periksa');
     }
 }

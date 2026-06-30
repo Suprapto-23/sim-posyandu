@@ -73,7 +73,12 @@ class Remaja extends Model
         return $this->hasMany(Pemeriksaan::class, 'pasien_id')
             ->where('kategori_pasien', 'remaja');
     }
-
+public function pemeriksaanTerakhir()
+    {
+        return $this->hasOne(Pemeriksaan::class, 'pasien_id')
+            ->where('kategori_pasien', 'remaja')
+            ->latestOfMany('tanggal_periksa');
+    }
     public function pemeriksaanTerbaru()
     {
         return $this->hasOne(Pemeriksaan::class, 'pasien_id')

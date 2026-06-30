@@ -15,7 +15,6 @@ class AbsensiPosyandu extends Model
 
     protected $table = 'absensi_posyandu';
 
-    // 1. JADWAL_ID SUDAH DITAMBAHKAN DI SINI
     protected $fillable = [
         'jadwal_id',
         'kode_absensi',
@@ -25,16 +24,17 @@ class AbsensiPosyandu extends Model
         'tahun',
         'nomor_pertemuan',
         'keterangan',
+        'dicatat_oleh',
     ];
 
     protected $casts = [
         'tanggal_posyandu' => 'date',
-        'bulan' => 'integer',
-        'tahun' => 'integer',
+        'bulan'           => 'integer',
+        'tahun'           => 'integer',
         'nomor_pertemuan' => 'integer',
-        'dicatat_oleh' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'dicatat_oleh'    => 'integer',
+        'created_at'      => 'datetime',
+        'updated_at'      => 'datetime',
     ];
 
     public const KATEGORI = [
@@ -43,61 +43,43 @@ class AbsensiPosyandu extends Model
         'lansia' => 'Lansia',
     ];
 
+    // ── EVENT LISTENERS (LOGIKA OTOMATIS) ────────────────────────────────
+
     protected static function booted(): void
     {
+        // Pengisian data otomatis saat data absensi baru dibuat
         static::creating(function (self $absensi) {
             if (!$absensi->tanggal_posyandu) {
-                $absensi->tanggal_posyandu = now('Asia/Jakarta')->toDateString();
+                $absensi->tanggal_posyandu = now();
             }
-
-            $tanggal = Carbon::parse($absensi->tanggal_posyandu, 'Asia/Jakarta');
-
-            $absensi->kategori = self::normalizeKategori($absensi->kategori);
-            $absensi->bulan = $absensi->bulan ?: (int) $tanggal->month;
-            $absensi->tahun = $absensi->tahun ?: (int) $tanggal->year;
-
-            if (!$absensi->nomor_pertemuan) {
-                $absensi->nomor_pertemuan = self::getNextNomorPertemuan(
-                    $absensi->kategori,
-                    (int) $absensi->bulan,
-                    (int) $absensi->tahun
-                );
+            if (!$absensi->bulan) {
+                $absensi->bulan = Carbon::parse($absensi->tanggal_posyandu)->month;
             }
-
-            if (!$absensi->kode_absensi) {
-                $absensi->kode_absensi = self::generateKodeAbsensi(
-                    $absensi->kategori,
-                    $tanggal,
-                    (int) $absensi->nomor_pertemuan
-                );
+            if (!$absensi->tahun) {
+                $absensi->tahun = Carbon::parse($absensi->tanggal_posyandu)->year;
             }
-
-            // if (!$absensi->dicatat_oleh && auth()->check()) {
-            //     $absensi->dicatat_oleh = auth()->id();
-            // }
+            if (empty($absensi->kode_absensi)) {
+                $prefix = strtoupper(substr($absensi->kategori, 0, 3));
+                $absensi->kode_absensi = 'ABS-' . $prefix . '-' . now()->format('YmdHis');
+            }
         });
 
-        static::saving(function (self $absensi) {
-            $absensi->kategori = self::normalizeKategori($absensi->kategori);
-
-            if ($absensi->tanggal_posyandu) {
-                $tanggal = Carbon::parse($absensi->tanggal_posyandu, 'Asia/Jakarta');
-                $absensi->bulan = (int) $tanggal->month;
-                $absensi->tahun = (int) $tanggal->year;
-            }
+        // PERBAIKAN: Mencegah Orphan Data dengan menghapus detail saat absensi dihapus
+        static::deleting(function (self $absensi) {
+            $absensi->details()->delete();
         });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Relasi
-    |--------------------------------------------------------------------------
-    */
+    // ── RELASI ───────────────────────────────────────────────────────────
 
-    // 2. RELASI KE JADWAL DITAMBAHKAN DI SINI
     public function jadwal(): BelongsTo
     {
         return $this->belongsTo(JadwalPosyandu::class, 'jadwal_id');
+    }
+
+    public function pencatat(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dicatat_oleh');
     }
 
     public function details(): HasMany
@@ -105,281 +87,25 @@ class AbsensiPosyandu extends Model
         return $this->hasMany(AbsensiDetail::class, 'absensi_id');
     }
 
-    public function detailHadir(): HasMany
-    {
-        return $this->hasMany(AbsensiDetail::class, 'absensi_id')
-            ->where('hadir', true);
-    }
-
-    public function detailTidakHadir(): HasMany
-    {
-        return $this->hasMany(AbsensiDetail::class, 'absensi_id')
-            ->where('hadir', false);
-    }
-
-    public function kader(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'dicatat_oleh');
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Helper Kategori
-    |--------------------------------------------------------------------------
-    */
-
-    public static function normalizeKategori(?string $kategori): string
-    {
-        $value = strtolower(trim((string) $kategori));
-        $value = str_replace(['_', '-', ' '], '', $value);
-
-        return match ($value) {
-            'balita', 'balitas', 'anak' => 'balita',
-            'remaja', 'remajas' => 'remaja',
-            'lansia', 'lansias' => 'lansia',
-            default => 'balita',
-        };
-    }
-
-    public static function getModelClassByKategori(?string $kategori): ?string
-    {
-        $kategori = self::normalizeKategori($kategori);
-
-        return AbsensiDetail::PASIEN_TYPES[$kategori] ?? null;
-    }
-
-    public static function getNextNomorPertemuan(string $kategori, int $bulan, int $tahun): int
-    {
-        $kategori = self::normalizeKategori($kategori);
-
-        $lastNumber = self::query()
-            ->where('kategori', $kategori)
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->max('nomor_pertemuan');
-
-        return ((int) $lastNumber) + 1;
-    }
-
-    public static function generateKodeAbsensi(string $kategori, Carbon $tanggal, int $nomorPertemuan): string
-    {
-        $kategori = self::normalizeKategori($kategori);
-
-        $prefix = match ($kategori) {
-            'balita' => 'BAL',
-            'remaja' => 'REM',
-            'lansia' => 'LAN',
-            default => 'POS',
-        };
-
-        $base = 'ABS-' . $prefix . '-' . $tanggal->format('Ymd') . '-P'
-            . str_pad(max(1, $nomorPertemuan), 2, '0', STR_PAD_LEFT);
-
-        $kode = $base;
-        $counter = 1;
-
-        while (self::query()->where('kode_absensi', $kode)->exists()) {
-            $kode = $base . '-' . $counter;
-            $counter++;
-        }
-
-        return $kode;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Accessor Tampilan
-    |--------------------------------------------------------------------------
-    */
+    // ── MUTATORS & ACCESSORS ─────────────────────────────────────────────
 
     public function getKategoriLabelAttribute(): string
     {
-        return self::KATEGORI[self::normalizeKategori($this->kategori)] ?? 'Tidak Dikenal';
+        return self::KATEGORI[strtolower($this->kategori)] ?? ucfirst($this->kategori);
     }
 
-    public function getTanggalFormatAttribute(): string
+    // ── FUNGSI PENDUKUNG ABSENSI BATCH (BULK) ────────────────────────────
+
+    public function generateDetailAbsensi(bool $defaultHadir = false): int
     {
-        if (!$this->tanggal_posyandu) {
-            return '-';
-        }
-
-        return Carbon::parse($this->tanggal_posyandu, 'Asia/Jakarta')
-            ->translatedFormat('d F Y');
-    }
-
-    public function getTanggalPendekAttribute(): string
-    {
-        if (!$this->tanggal_posyandu) {
-            return '-';
-        }
-
-        return Carbon::parse($this->tanggal_posyandu, 'Asia/Jakarta')
-            ->translatedFormat('d M Y');
-    }
-
-    public function getBulanTahunAttribute(): string
-    {
-        if (!$this->bulan || !$this->tahun) {
-            return '-';
-        }
-
-        return Carbon::createFromDate(
-            (int) $this->tahun,
-            (int) $this->bulan,
-            1,
-            'Asia/Jakarta'
-        )->translatedFormat('F Y');
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Accessor Rekap
-    |--------------------------------------------------------------------------
-    */
-
-    public function getTotalPesertaAttribute(): int
-    {
-        return $this->relationLoaded('details')
-            ? $this->details->count()
-            : $this->details()->count();
-    }
-
-    public function getTotalHadirAttribute(): int
-    {
-        return $this->relationLoaded('details')
-            ? $this->details->where('hadir', true)->count()
-            : $this->detailHadir()->count();
-    }
-
-    public function getTotalTidakHadirAttribute(): int
-    {
-        return $this->relationLoaded('details')
-            ? $this->details->where('hadir', false)->count()
-            : $this->detailTidakHadir()->count();
-    }
-
-    public function getPersentaseHadirAttribute(): float
-    {
-        $total = (int) $this->total_peserta;
-
-        return $total > 0
-            ? round(((int) $this->total_hadir / $total) * 100, 1)
-            : 0;
-    }
-
-    public function getPersentaseTidakHadirAttribute(): float
-    {
-        $total = (int) $this->total_peserta;
-
-        return $total > 0
-            ? round(((int) $this->total_tidak_hadir / $total) * 100, 1)
-            : 0;
-    }
-
-    public function getStatusRekapTextAttribute(): string
-    {
-        $total = (int) $this->total_peserta;
-        $hadir = (int) $this->total_hadir;
-
-        if ($total <= 0) {
-            return 'Belum Ada Peserta';
-        }
-
-        if ($hadir <= 0) {
-            return 'Belum Ada Kehadiran';
-        }
-
-        if ($hadir === $total) {
-            return 'Semua Hadir';
-        }
-
-        return 'Sebagian Hadir';
-    }
-
-    public function getStatusRekapBadgeAttribute(): string
-    {
-        $total = (int) $this->total_peserta;
-        $hadir = (int) $this->total_hadir;
-
-        if ($total <= 0) {
-            return 'slate';
-        }
-
-        if ($hadir <= 0) {
-            return 'rose';
-        }
-
-        if ($hadir === $total) {
-            return 'emerald';
-        }
-
-        return 'amber';
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Scope
-    |--------------------------------------------------------------------------
-    */
-
-    public function scopeKategori(Builder $query, string $kategori): Builder
-    {
-        return $query->where('kategori', self::normalizeKategori($kategori));
-    }
-
-    public function scopeTanggal(Builder $query, string $tanggal): Builder
-    {
-        return $query->whereDate(
-            'tanggal_posyandu',
-            Carbon::parse($tanggal)->toDateString()
-        );
-    }
-
-    public function scopeHariIni(Builder $query): Builder
-    {
-        return $query->whereDate('tanggal_posyandu', now('Asia/Jakarta')->toDateString());
-    }
-
-    public function scopeBulan(Builder $query, int $bulan, ?int $tahun = null): Builder
-    {
-        $query->where('bulan', $bulan);
-
-        if ($tahun) {
-            $query->where('tahun', $tahun);
-        }
-
-        return $query;
-    }
-
-    public function scopePeriode(Builder $query, int $bulan, int $tahun): Builder
-    {
-        return $query
-            ->where('bulan', $bulan)
-            ->where('tahun', $tahun);
-    }
-
-    public function scopeTahun(Builder $query, int $tahun): Builder
-    {
-        return $query->where('tahun', $tahun);
-    }
-
-    public function scopeTerbaru(Builder $query): Builder
-    {
-        return $query
-            ->orderByDesc('tanggal_posyandu')
-            ->orderByDesc('created_at');
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Aksi Detail
-    |--------------------------------------------------------------------------
-    */
-
-    public function syncPesertaDariKategori(bool $defaultHadir = false): int
-    {
-        $kategori = self::normalizeKategori($this->kategori);
-        $modelClass = self::getModelClassByKategori($kategori);
+        $kategori = strtolower($this->kategori);
+        
+        $modelClass = match ($kategori) {
+            'balita' => Balita::class,
+            'remaja' => Remaja::class,
+            'lansia' => Lansia::class,
+            default  => null,
+        };
 
         if (!$modelClass || !class_exists($modelClass)) {
             return 0;
@@ -387,6 +113,7 @@ class AbsensiPosyandu extends Model
 
         $created = 0;
 
+        // Menggunakan chunk agar aplikasi tidak ngelag/crash jika data pasien mencapai ribuan
         $modelClass::query()
             ->select('id')
             ->orderBy('id')
@@ -394,11 +121,11 @@ class AbsensiPosyandu extends Model
                 foreach ($items as $item) {
                     $detail = $this->details()->firstOrCreate(
                         [
-                            'pasien_id' => (int) $item->id,
+                            'pasien_id'   => (int) $item->id,
                             'pasien_type' => $kategori,
                         ],
                         [
-                            'hadir' => $defaultHadir,
+                            'hadir'      => $defaultHadir,
                             'keterangan' => null,
                         ]
                     );
@@ -415,7 +142,7 @@ class AbsensiPosyandu extends Model
     public function tandaiSemuaHadir(?string $keterangan = null): int
     {
         return $this->details()->update([
-            'hadir' => true,
+            'hadir'      => true,
             'keterangan' => $keterangan,
         ]);
     }
@@ -423,7 +150,7 @@ class AbsensiPosyandu extends Model
     public function tandaiSemuaTidakHadir(?string $keterangan = null): int
     {
         return $this->details()->update([
-            'hadir' => false,
+            'hadir'      => false,
             'keterangan' => $keterangan,
         ]);
     }
@@ -431,7 +158,7 @@ class AbsensiPosyandu extends Model
     public function resetKehadiran(): int
     {
         return $this->details()->update([
-            'hadir' => false,
+            'hadir'      => false,
             'keterangan' => null,
         ]);
     }
