@@ -1,50 +1,31 @@
 <?php
 
-// Matikan error reporting di production agar response lebih cepat
-ini_set('display_errors', '0');
-
-/*
-|--------------------------------------------------------------------------
-| Vercel Writable Runtime Directories (Versi Super Ringan)
-|--------------------------------------------------------------------------
-| Kita pangkas dari 11 folder menjadi 3 folder krusial saja.
-| Session dan Cache tidak perlu folder lagi karena dialihkan ke Database.
-*/
-
-$paths = [
-    '/tmp/storage/framework/views', // Wajib untuk render tampilan HTML/Blade
-    '/tmp/storage/logs',            // Wajib agar Laravel tidak crash saat error
-    '/tmp/bootstrap/cache',         // Wajib untuk cache rute & config
+// 1. Siapkan folder Temporary (/tmp) untuk Vercel Read-Only Environment
+$storagePath = '/tmp/storage';
+$directories = [
+    "$storagePath/framework/views",
+    "$storagePath/framework/cache/data",
+    "$storagePath/framework/sessions",
+    "$storagePath/logs",
 ];
 
-// Pengecekan is_dir ini sekarang akan berjalan sangat cepat
-foreach ($paths as $path) {
-    if (! is_dir($path)) {
-        mkdir($path, 0777, true);
+foreach ($directories as $dir) {
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Force Laravel runtime paths to writable /tmp
-|--------------------------------------------------------------------------
-*/
+// 2. Set Env HANYA untuk View Compiled Path (Jangan utak-atik cache bawaan Vercel)
+putenv("VIEW_COMPILED_PATH=$storagePath/framework/views");
+$_ENV['VIEW_COMPILED_PATH'] = "$storagePath/framework/views";
+$_SERVER['VIEW_COMPILED_PATH'] = "$storagePath/framework/views";
 
-$runtimeEnv = [
-    'APP_STORAGE' => '/tmp/storage',
-    'VIEW_COMPILED_PATH' => '/tmp/storage/framework/views',
-    'APP_PACKAGES_CACHE' => '/tmp/bootstrap/cache/packages.php',
-    'APP_SERVICES_CACHE' => '/tmp/bootstrap/cache/services.php',
-    'APP_CONFIG_CACHE' => '/tmp/bootstrap/cache/config.php',
-    'APP_ROUTES_CACHE' => '/tmp/bootstrap/cache/routes.php',
-    'APP_EVENTS_CACHE' => '/tmp/bootstrap/cache/events.php',
-];
+// 3. Panggil Autoloader Composer & Bootstrap Laravel
+require __DIR__ . '/../vendor/autoload.php';
+$app = require_once __DIR__ . '/../bootstrap/app.php';
 
-foreach ($runtimeEnv as $key => $value) {
-    putenv("$key=$value");
-    $_ENV[$key] = $value;
-    $_SERVER[$key] = $value;
-}
+// 4. Paksa Laravel menggunakan /tmp sebagai folder storage utama
+$app->useStoragePath($storagePath);
 
-// Hapus blok Debugging bawaan yang memakan resource, langsung tembak ke aplikasi utama
-require __DIR__ . '/../public/index.php';
+// 5. Tangkap dan Jalankan Request
+$app->handleRequest(Illuminate\Http\Request::capture());
