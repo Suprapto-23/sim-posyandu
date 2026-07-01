@@ -3,16 +3,10 @@
 use Illuminate\Support\Str;
 
 return [
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Default Cache Store
-    |--------------------------------------------------------------------------
-    */
     'default' => env('CACHE_DRIVER', 'file'),
     
     'stores' => [
-        
+                
         'array' => [
             'driver' => 'array',
             'serialize' => false,
@@ -25,14 +19,6 @@ return [
             'lock_connection' => null,
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | BUG FIX: File Cache Driver
-        |--------------------------------------------------------------------------
-        | Duplikasi array 'file' sudah dihapus. Kita menggunakan versi ini
-        | karena memiliki opsi 'lock_path' yang krusial untuk mencegah
-        | race condition saat cache diakses secara bersamaan.
-        */
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
