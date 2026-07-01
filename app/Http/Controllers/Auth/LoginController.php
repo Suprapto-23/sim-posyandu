@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoginLog;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
@@ -24,11 +24,11 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-        // 1. Pengecekan Rate Limiting (Mencegah Bruteforce)
+        // Rate limiting
         $this->ensureIsNotRateLimited($request);
 
-        $loginField = trim((string) ($request->input('login') ?? ''));
-        $request->merge(['login' => $loginField]);
+        $login = trim((string) ($request->input('login') ?? ''));
+        $request->merge(['login' => $login]);
 
         $request->validate([
             'login'    => ['required', 'string', 'max:191'],
@@ -38,8 +38,7 @@ class LoginController extends Controller
             'password.required' => 'Password wajib diisi.',
         ]);
 
-        // 2. Deteksi Pintar: Email vs NIK
-        $loginType = $this->getLoginType($loginField);
+        $loginType = $this->getLoginType($login);
         if (!$loginType) {
             RateLimiter::hit($this->throttleKey($request));
             return back()
@@ -47,46 +46,40 @@ class LoginController extends Controller
                 ->withInput();
         }
 
-        // 3. PERBAIKAN BUG KEAMANAN: Single Source of Truth
-        // Hanya mencari di tabel 'users' untuk mencegah bypass jika ada perbedaan data NIK dengan profil
-        $user = null;
-        if ($loginType === 'email') {
-            $user = User::where('email', $loginField)->first();
-        } else {
-            $user = User::where('nik', $loginField)->first();
-        }
-
-        // 4. Verifikasi Akun & Password
-        if (!$user || !Hash::check($request->input('password'), $user->password)) {
+        $user = $this->findUserByLogin($login, $loginType);
+        if (!$user) {
             RateLimiter::hit($this->throttleKey($request));
-            
-            if ($user) {
-                $this->logLogin($user->id, $request, 'failed_password');
-            }
-
             return back()
-                ->withErrors(['login' => 'Kredensial tidak ditemukan atau password salah.'])
+                ->withErrors(['login' => 'Akun tidak ditemukan.'])
                 ->withInput();
         }
 
-        // 5. Verifikasi Status Aktif
-        if ($user->status !== 'active' && $user->status !== null) {
-            $this->logLogin($user->id, $request, 'failed_inactive');
-            return back()->withErrors(['login' => 'Akun Anda tidak aktif. Hubungi admin.'])->withInput();
+        if ($user->status !== 'active') {
+            return back()
+                ->withErrors(['login' => 'Akun tidak aktif. Hubungi admin.'])
+                ->withInput();
         }
 
-        // 6. Login Sukses
+        if (!Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($this->throttleKey($request));
+            $this->logLogin($user->id, $request, 'failed');
+            return back()
+                ->withErrors(['password' => 'Password salah.'])
+                ->withInput();
+        }
+
+        // Login sukses
         Auth::login($user, $request->boolean('remember'));
-        RateLimiter::clear($this->throttleKey($request));
+        $request->session()->regenerate();
+        $request->session()->put('login_role', $user->role);
+        $request->session()->put('login_user_id', $user->id);
 
         $this->updateLastLogin($user);
         $this->logLogin($user->id, $request, 'success');
+        RateLimiter::clear($this->throttleKey($request));
 
-        $request->session()->regenerate();
-
-        // 7. PERBAIKAN BUG UX: Menggunakan intended()
-        // Mengembalikan user ke URL yang mau dia buka sebelum kena potong halaman login
-        return redirect()->intended($this->getRedirectUrl($user->role));
+        // Redirect langsung
+        return redirect()->to($this->getRedirectUrl($user->role));
     }
 
     public function logout(Request $request)
@@ -94,37 +87,51 @@ class LoginController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
-        // PERBAIKAN: Kirimkan pesan sukses saat diarahkan kembali ke halaman login
-        return redirect('/login')->with('success', 'Anda telah berhasil keluar dari sistem.');
+        return redirect('/login')->with('info', 'Anda telah keluar dari sistem.');
     }
-    // === Fungsi Pendukung (Helpers) ===
+
+    // ========== PRIVATE HELPERS ==========
 
     private function getLoginType(string $login): ?string
     {
-        if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
-            return 'email';
-        }
-        
-        if (is_numeric($login) && strlen($login) === 16) {
-            return 'nik';
-        }
-        
+        if (filter_var($login, FILTER_VALIDATE_EMAIL)) return 'email';
+        if (preg_match('/^\d{16}$/', $login)) return 'nik';
         return null;
     }
 
-    private function getRedirectUrl(?string $role): string
+    private function findUserByLogin(string $login, string $loginType): ?User
     {
-        return match ($role) {
+        if ($loginType === 'email') {
+            return User::where('email', $login)->first();
+        }
+        return $this->findUserByNik($login);
+    }
+
+    private function findUserByNik(string $nik): ?User
+    {
+        $user = User::where('nik', $nik)->first();
+        if ($user) return $user;
+
+        try {
+            $profile = Profile::where('nik', $nik)->first();
+            return $profile?->user;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function getRedirectUrl(string $role): string
+    {
+        return match (strtolower($role)) {
             'admin' => '/admin/dashboard',
             'bidan' => '/bidan/dashboard',
             'kader' => '/kader/dashboard',
             'user'  => '/user/dashboard',
-            default => '/',
+            default => '/home',
         };
     }
 
-    private function redirectBasedOnRole(?string $role)
+    private function redirectBasedOnRole(string $role)
     {
         return redirect()->to($this->getRedirectUrl($role));
     }
@@ -134,7 +141,7 @@ class LoginController extends Controller
         try {
             $user->forceFill(['last_login_at' => now()])->save();
         } catch (\Throwable) {
-            // Abaikan secara logis jika kolom tidak ada
+            // Abaikan jika kolom tidak ada
         }
     }
 
@@ -142,8 +149,7 @@ class LoginController extends Controller
     {
         try {
             if (!class_exists(LoginLog::class)) return;
-            
-            DB::table('login_logs')->insert([
+            \DB::table('login_logs')->insert([
                 'user_id'     => $userId,
                 'ip_address'  => $request->ip(),
                 'user_agent'  => $request->userAgent(),
@@ -153,12 +159,11 @@ class LoginController extends Controller
                 'updated_at'  => now(),
             ]);
         } catch (\Throwable) {
-            // Silent error fail-safe
+            // Silent
         }
     }
 
-    // === Rate Limiting (Keamanan Anti-Spam) ===
-
+    // === Rate Limiting ===
     private function throttleKey(Request $request): string
     {
         return strtolower($request->input('login')) . '|' . $request->ip();
@@ -171,7 +176,6 @@ class LoginController extends Controller
         }
 
         $seconds = RateLimiter::availableIn($this->throttleKey($request));
-        
         throw ValidationException::withMessages([
             'login' => "Terlalu banyak percobaan. Coba lagi dalam {$seconds} detik.",
         ]);

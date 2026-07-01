@@ -1,36 +1,50 @@
 <?php
 
-use Illuminate\Http\Request;
+// Matikan error reporting di production agar response lebih cepat
+ini_set('display_errors', '0');
 
-define('LARAVEL_START', microtime(true));
+/*
+|--------------------------------------------------------------------------
+| Vercel Writable Runtime Directories (Versi Super Ringan)
+|--------------------------------------------------------------------------
+| Kita pangkas dari 11 folder menjadi 3 folder krusial saja.
+| Session dan Cache tidak perlu folder lagi karena dialihkan ke Database.
+*/
 
-// ==== FIX: Vercel filesystem read-only, storage harus diarahkan ke /tmp ====
-$storagePath = '/tmp/storage';
+$paths = [
+    '/tmp/storage/framework/views', // Wajib untuk render tampilan HTML/Blade
+    '/tmp/storage/logs',            // Wajib agar Laravel tidak crash saat error
+    '/tmp/bootstrap/cache',         // Wajib untuk cache rute & config
+];
 
-if (!is_dir($storagePath)) {
-    mkdir($storagePath, 0755, true);
-    mkdir($storagePath . '/framework/cache/data', 0755, true);
-    mkdir($storagePath . '/framework/sessions', 0755, true);
-    mkdir($storagePath . '/framework/testing', 0755, true);
-    mkdir($storagePath . '/framework/views', 0755, true);
-    mkdir($storagePath . '/logs', 0755, true);
+// Pengecekan is_dir ini sekarang akan berjalan sangat cepat
+foreach ($paths as $path) {
+    if (! is_dir($path)) {
+        mkdir($path, 0777, true);
+    }
 }
 
-// Register autoload composer
-require __DIR__ . '/../vendor/autoload.php';
+/*
+|--------------------------------------------------------------------------
+| Force Laravel runtime paths to writable /tmp
+|--------------------------------------------------------------------------
+*/
 
-// Bootstrap Laravel app
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+$runtimeEnv = [
+    'APP_STORAGE' => '/tmp/storage',
+    'VIEW_COMPILED_PATH' => '/tmp/storage/framework/views',
+    'APP_PACKAGES_CACHE' => '/tmp/bootstrap/cache/packages.php',
+    'APP_SERVICES_CACHE' => '/tmp/bootstrap/cache/services.php',
+    'APP_CONFIG_CACHE' => '/tmp/bootstrap/cache/config.php',
+    'APP_ROUTES_CACHE' => '/tmp/bootstrap/cache/routes.php',
+    'APP_EVENTS_CACHE' => '/tmp/bootstrap/cache/events.php',
+];
 
-// ==== FIX: override path storage secara paksa sebelum kernel jalan ====
-$app->useStoragePath($storagePath);
+foreach ($runtimeEnv as $key => $value) {
+    putenv("$key=$value");
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
 
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-
-$response = $kernel->handle(
-    $request = Request::capture()
-);
-
-$response->send();
-
-$kernel->terminate($request, $response);
+// Hapus blok Debugging bawaan yang memakan resource, langsung tembak ke aplikasi utama
+require __DIR__ . '/../public/index.php';
