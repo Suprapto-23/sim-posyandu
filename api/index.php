@@ -14,6 +14,7 @@ $paths = [
     '/tmp/storage/framework/sessions',
     '/tmp/storage/logs',
     '/tmp/bootstrap/cache',
+    '/tmp/storage/framework/cache/laravel-excel',
 ];
 
 foreach ($paths as $path) {

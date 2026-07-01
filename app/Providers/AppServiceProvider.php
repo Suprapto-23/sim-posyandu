@@ -131,5 +131,7 @@ class AppServiceProvider extends ServiceProvider
             
             $view->with('peranUser', $peranUser);
         });
+        // Memaksa path temporary file ke /tmp agar tidak error di Vercel
+    config(['excel.temporary_files.local_path' => '/tmp']);
     }
 }
