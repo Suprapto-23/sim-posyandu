@@ -5,19 +5,17 @@ ini_set('display_errors', '0');
 
 /*
 |--------------------------------------------------------------------------
-| Vercel Writable Runtime Directories (Versi Super Ringan)
+| Vercel Writable Runtime Directories
 |--------------------------------------------------------------------------
-| Kita pangkas dari 11 folder menjadi 3 folder krusial saja.
-| Session dan Cache tidak perlu folder lagi karena dialihkan ke Database.
 */
-
 $paths = [
-    '/tmp/storage/framework/views', // Wajib untuk render tampilan HTML/Blade
-    '/tmp/storage/logs',            // Wajib agar Laravel tidak crash saat error
-    '/tmp/bootstrap/cache',         // Wajib untuk cache rute & config
+    '/tmp/storage/framework/views',
+    '/tmp/storage/framework/cache/data',
+    '/tmp/storage/framework/sessions',
+    '/tmp/storage/logs',
+    '/tmp/bootstrap/cache',
 ];
 
-// Pengecekan is_dir ini sekarang akan berjalan sangat cepat
 foreach ($paths as $path) {
     if (! is_dir($path)) {
         mkdir($path, 0777, true);
@@ -26,25 +24,18 @@ foreach ($paths as $path) {
 
 /*
 |--------------------------------------------------------------------------
-| Force Laravel runtime paths to writable /tmp
+| Bootstrap Laravel manual (WAJIB, jangan diganti require public/index.php)
 |--------------------------------------------------------------------------
+| useStoragePath() harus dipanggil SEBELUM handleRequest(). public/index.php
+| standar tidak melakukan ini, sehingga Laravel menulis ke storage/ bawaan
+| project yang read-only di Vercel -> 500.
 */
+define('LARAVEL_START', microtime(true));
 
-$runtimeEnv = [
-    'APP_STORAGE' => '/tmp/storage',
-    'VIEW_COMPILED_PATH' => '/tmp/storage/framework/views',
-    'APP_PACKAGES_CACHE' => '/tmp/bootstrap/cache/packages.php',
-    'APP_SERVICES_CACHE' => '/tmp/bootstrap/cache/services.php',
-    'APP_CONFIG_CACHE' => '/tmp/bootstrap/cache/config.php',
-    'APP_ROUTES_CACHE' => '/tmp/bootstrap/cache/routes.php',
-    'APP_EVENTS_CACHE' => '/tmp/bootstrap/cache/events.php',
-];
+require __DIR__ . '/../vendor/autoload.php';
 
-foreach ($runtimeEnv as $key => $value) {
-    putenv("$key=$value");
-    $_ENV[$key] = $value;
-    $_SERVER[$key] = $value;
-}
+$app = require_once __DIR__ . '/../bootstrap/app.php';
 
-// Hapus blok Debugging bawaan yang memakan resource, langsung tembak ke aplikasi utama
-require __DIR__ . '/../public/index.php';
+$app->useStoragePath('/tmp/storage');
+
+$app->handleRequest(Illuminate\Http\Request::capture());
