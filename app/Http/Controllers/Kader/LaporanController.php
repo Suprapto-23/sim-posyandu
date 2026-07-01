@@ -64,6 +64,11 @@ class LaporanController extends Controller
         $payload = $this->buildReport($data['jenis_laporan'], $awal, $akhir);
         $user = Auth::user();
 
+        // 1. Convert Image to Base64 (Solusi Anti-Error Vercel)
+        $logo = $this->imageToBase64(public_path('img/logo.webp'));
+        $ttd_kades = $this->imageToBase64(public_path('uploads/ttd/ttd_kades.png'));
+        $ttd_bidan = $this->imageToBase64(public_path('uploads/ttd/ttd_bidan.png'));
+
         $payload = array_merge($payload, [
             'jenis_laporan' => $data['jenis_laporan'],
             'periode' => [
@@ -78,6 +83,10 @@ class LaporanController extends Controller
                 'alamat'  => $this->setting('posyandu_alamat', 'Desa Bantarkulon Kecamatan Lebakbarang'),
                 'telepon' => $this->setting('posyandu_telepon', '-'),
             ],
+            // Masukkan variabel base64 ke payload
+            'logo'      => $logo,
+            'ttd_kades' => $ttd_kades,
+            'ttd_bidan' => $ttd_bidan,
         ]);
 
         if (($data['mode'] ?? 'preview') === 'preview') {
@@ -86,9 +95,36 @@ class LaporanController extends Controller
 
         $filename = 'laporan-' . $data['jenis_laporan'] . '-' . $awal->format('Ymd') . '-' . $akhir->format('Ymd') . '.pdf';
 
-        return Pdf::loadView('kader.laporan.templates.pdf', $payload)
+        // 2. Setup Direktori Font Vercel di /tmp
+        if (!is_dir('/tmp/dompdf_fonts')) {
+            mkdir('/tmp/dompdf_fonts', 0777, true);
+        }
+
+        // 3. Render PDF dengan opsi mutlak Vercel
+        return Pdf::setOptions([
+                'fontDir' => '/tmp/dompdf_fonts',
+                'fontCache' => '/tmp/dompdf_fonts',
+                'tempDir' => '/tmp',
+                'chroot' => public_path(),
+                'isRemoteEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+            ])
+            ->loadView('kader.laporan.templates.pdf', $payload)
             ->setPaper('a4', 'landscape')
             ->download($filename);
+    }
+
+    /**
+     * Helper untuk mengubah gambar fisik menjadi Base64 Text
+     */
+    private function imageToBase64($path)
+    {
+        if (file_exists($path)) {
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+        }
+        return null;
     }
 
     private function monthlyArchive(int $limit = 6): array

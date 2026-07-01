@@ -95,9 +95,9 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect('/login');
+        // PERBAIKAN: Kirimkan pesan sukses saat diarahkan kembali ke halaman login
+        return redirect('/login')->with('success', 'Anda telah berhasil keluar dari sistem.');
     }
-
     // === Fungsi Pendukung (Helpers) ===
 
     private function getLoginType(string $login): ?string

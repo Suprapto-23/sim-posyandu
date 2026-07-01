@@ -1,23 +1,22 @@
 <?php
 
-// Matikan error reporting di production agar response lebih cepat
+// Aktifkan sementara menjadi '1' jika Anda ingin melihat pesan error di Vercel
 ini_set('display_errors', '0');
 
 /*
 |--------------------------------------------------------------------------
-| Vercel Writable Runtime Directories (Versi Super Ringan)
+| Buat Folder Temporary untuk Vercel (Read-Only Bypass)
 |--------------------------------------------------------------------------
-| Kita pangkas dari 11 folder menjadi 3 folder krusial saja.
-| Session dan Cache tidak perlu folder lagi karena dialihkan ke Database.
 */
-
 $paths = [
-    '/tmp/storage/framework/views', // Wajib untuk render tampilan HTML/Blade
-    '/tmp/storage/logs',            // Wajib agar Laravel tidak crash saat error
-    '/tmp/bootstrap/cache',         // Wajib untuk cache rute & config
+    '/tmp/storage/framework/views',
+    '/tmp/storage/framework/cache',
+    '/tmp/storage/framework/cache/data',
+    '/tmp/storage/framework/sessions',
+    '/tmp/storage/logs',
+    '/tmp/bootstrap/cache',
 ];
 
-// Pengecekan is_dir ini sekarang akan berjalan sangat cepat
 foreach ($paths as $path) {
     if (! is_dir($path)) {
         mkdir($path, 0777, true);
@@ -26,10 +25,9 @@ foreach ($paths as $path) {
 
 /*
 |--------------------------------------------------------------------------
-| Force Laravel runtime paths to writable /tmp
+| Arahkan Konfigurasi Runtime ke /tmp
 |--------------------------------------------------------------------------
 */
-
 $runtimeEnv = [
     'APP_STORAGE' => '/tmp/storage',
     'VIEW_COMPILED_PATH' => '/tmp/storage/framework/views',
@@ -46,5 +44,20 @@ foreach ($runtimeEnv as $key => $value) {
     $_SERVER[$key] = $value;
 }
 
-// Hapus blok Debugging bawaan yang memakan resource, langsung tembak ke aplikasi utama
-require __DIR__ . '/../public/index.php';
+/*
+|--------------------------------------------------------------------------
+| Jalankan Laravel 11
+|--------------------------------------------------------------------------
+*/
+define('LARAVEL_START', microtime(true));
+
+require __DIR__ . '/../vendor/autoload.php';
+
+// Bootstrap aplikasi dari app.php
+$app = require_once __DIR__ . '/../bootstrap/app.php';
+
+// BUG FIX: Hook paling krusial agar Laravel mau menulis di /tmp
+$app->useStoragePath('/tmp/storage');
+
+// Handle request ala Laravel 11
+$app->handleRequest(Illuminate\Http\Request::capture());
