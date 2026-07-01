@@ -12,12 +12,9 @@ ini_set('display_errors', '0');
 */
 
 $paths = [
-    '/tmp/storage/framework/views', 
-    '/tmp/storage/framework/cache',       // Wajib ditambahkan
-    '/tmp/storage/framework/cache/data',  // Wajib ditambahkan
-    '/tmp/storage/framework/sessions',    // Wajib ditambahkan
-    '/tmp/storage/logs',            
-    '/tmp/bootstrap/cache',         
+    '/tmp/storage/framework/views', // Wajib untuk render tampilan HTML/Blade
+    '/tmp/storage/logs',            // Wajib agar Laravel tidak crash saat error
+    '/tmp/bootstrap/cache',         // Wajib untuk cache rute & config
 ];
 
 // Pengecekan is_dir ini sekarang akan berjalan sangat cepat
