@@ -43,10 +43,6 @@ class LaporanController extends Controller
         return $this->handleReport($request);
     }
 
-    public function generate(Request $request)
-    {
-        return $this->handleReport($request);
-    }
 
     private function handleReport(Request $request)
     {

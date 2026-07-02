@@ -80,8 +80,7 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])
 Route::post('/login', [LoginController::class, 'login'])
     ->name('login.post');
 
-Route::post('/logout', [LoginController::class, 'logout'])
-    ->middleware('auth')
+Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])
     ->name('logout');
 
 
@@ -565,9 +564,11 @@ Route::middleware(['auth', 'checkstatus', 'role:user'])
 
         Route::get('/jadwal', [UserJadwalController::class, 'index'])
             ->name('jadwal.index');
+        Route::get('/jadwal/{id}', [User\JadwalController::class, 'show'])->name('jadwal.show');
 
         Route::get('/riwayat', [UserRiwayatController::class, 'index'])
             ->name('riwayat.index');
+        
 
         /*
         |--------------------------------------------------------------------------

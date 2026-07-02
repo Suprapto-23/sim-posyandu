@@ -82,30 +82,28 @@ class Notifikasi extends Model
         };
     }
 
-    public function getTipeColorAttribute()
+    public function getTipeStylesAttribute()
     {
         return match($this->tipe) {
-            'jadwal'      => 'indigo',
-            'imunisasi'   => 'emerald',
-            'pemeriksaan' => 'sky',
-            'import'      => 'amber',
-            default       => 'slate',
+            'jadwal'      => 'bg-indigo-100 text-indigo-600 border-indigo-200',
+            'imunisasi'   => 'bg-emerald-100 text-emerald-600 border-emerald-200',
+            'pemeriksaan' => 'bg-sky-100 text-sky-600 border-sky-200',
+            'import'      => 'bg-amber-100 text-amber-600 border-amber-200',
+            default       => 'bg-slate-100 text-slate-600 border-slate-200',
         };
     }
 
-    // WAJIB ADA: Menyiapkan data JSON AJAX untuk Anti-Reload Controller
     public function toNexusFormat()
     {
         return [
             'id'         => $this->id,
-            'judul'      => $this->judul,
-            'pesan'      => $this->pesan,
-            'waktu'      => $this->created_at->diffForHumans(),
+            'title'      => $this->judul,
+            'message'    => $this->pesan,
+            'styles'     => $this->tipe_styles, // UBAH: dari color menjadi styles
             'is_read'    => $this->is_read,
-            'icon'       => $this->tipe_icon,
-            'color'      => $this->tipe_color,
-            'label'      => $this->tipe_label,
-            'link'       => $this->link ?? '#',
+            'created_at' => $this->created_at->diffForHumans(),
+            'url'        => $this->tautan ?? '#',
+            'tipe'       => $this->tipe
         ];
     }
 }
