@@ -43,6 +43,7 @@
             --bg-app: #fcfcfd;
             --transition-speed: 0.08s;
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --blur-strength: 6px;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -63,10 +64,13 @@
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 100;
             width: var(--sb-width); max-width: 88vw; padding: 16px;
             transform: translateX(-100%);
-            transition: transform var(--transition-speed) var(--ease-out);
-            will-change: transform;
+            transition: transform var(--transition-speed) var(--ease-out), filter 0.18s var(--ease-out);
+            contain: layout style paint;
         }
         html.sb-open .bidan-sidebar { transform: translateX(0); }
+        /* will-change hanya aktif selama animasi buka/tutup berlangsung, bukan permanen,
+           supaya browser tidak terus-menerus menahan compositing layer di GPU. */
+        html.sb-animating .bidan-sidebar { will-change: transform; }
         @media (max-width: 360px) {
             .bidan-sidebar { padding: 10px; }
         }
@@ -105,10 +109,23 @@
             display: flex; flex-direction: column;
             height: 100vh;
             padding-left: 0;
-            transition: padding-left var(--transition-speed) var(--ease-out);
+            transition: padding-left var(--transition-speed) var(--ease-out), filter 0.18s var(--ease-out);
+            contain: layout style;
         }
         @media (min-width: 1024px) {
             html.sb-open .app-wrapper { padding-left: var(--sb-width); }
+        }
+
+        /* ── FULL PAGE BLUR SAAT MODAL KONFIRMASI TERBUKA ──
+           Sidebar + seluruh app-wrapper (topbar & konten) ikut diburamkan langsung
+           lewat filter, bukan mengandalkan backdrop-filter SweetAlert saja, karena
+           backdrop-filter tidak selalu menembus elemen yang punya will-change /
+           backdrop-filter sendiri di semua browser. Popup SweetAlert tetap tajam
+           karena berada di luar dua container ini. */
+        html.pc-blur-active .bidan-sidebar,
+        html.pc-blur-active .app-wrapper {
+            filter: blur(var(--blur-strength));
+            pointer-events: none;
         }
 
         /* ── TOPBAR ── */
@@ -124,6 +141,7 @@
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border);
             box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+            contain: layout style paint;
         }
         @media (max-width: 1023px) {
             .bidan-topbar {
@@ -287,7 +305,7 @@
         .main-scroll::-webkit-scrollbar-track { background: transparent; }
         .main-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .main-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
+
         .main-inner { width: 100%; min-height: 100%; opacity: 0; animation: contentEnter 0.08s ease-out forwards; }
         @keyframes contentEnter { 0% { opacity: 0; } 100% { opacity: 1; } }
         .content-leave .main-inner { animation: contentLeave 0.05s ease-in forwards !important; }
@@ -311,12 +329,14 @@
 
         .pc-modal-layer { position: relative; z-index: 300; }
 
-        /* ── SWEETALERT OVERLAY CONFIGURATION (IDENTIK DENGAN KADER) ── */
+        /* ── SWEETALERT OVERLAY CONFIGURATION ──
+           backdrop-filter dihapus dari sini karena kini blur dilakukan langsung
+           pada sidebar & app-wrapper (lebih konsisten lintas browser & lebih
+           murah secara render daripada backdrop-filter berlapis). Overlay cukup
+           meredupkan sebagai lapisan pemisah visual terhadap popup. */
         div.swal2-container {
             z-index: 9999999 !important;
-            background: rgba(15, 23, 42, 0.45) !important;
-            backdrop-filter: blur(8px) !important;
-            -webkit-backdrop-filter: blur(8px) !important;
+            background: rgba(15, 23, 42, 0.55) !important;
         }
 
         /* ── STYLING POPUP SWEETALERT ── */
@@ -352,12 +372,21 @@
         .swal2-icon.swal2-question { border-color: var(--green-500) !important; color: var(--green-500) !important; }
         .swal2-icon.swal2-warning { border-color: #f59e0b !important; color: #f59e0b !important; }
         .swal2-icon.swal2-success { border-color: var(--green-500) !important; color: var(--green-500) !important; }
+        .swal2-icon.swal2-error { border-color: #e11d48 !important; color: #e11d48 !important; }
 
         @media (max-width: 480px) {
             .nexus-swal { padding: 20px !important; border-radius: 20px !important; }
             .nexus-title { font-size: 18px !important; }
             .nexus-html { font-size: 13px !important; }
             .nexus-ok, .nexus-danger, .nexus-cancel { padding: 10px 18px !important; font-size: 13px !important; }
+        }
+
+        /* ── HORMATI PREFERENSI REDUCED MOTION (aksesibilitas + hemat resource) ── */
+        @media (prefers-reduced-motion: reduce) {
+            .bidan-sidebar, .app-wrapper, .main-inner, .notif-pulse, .mobile-overlay {
+                transition: none !important;
+                animation: none !important;
+            }
         }
     </style>
     @stack('styles')
@@ -388,10 +417,11 @@
     $pemeriksaanUrl = $safeRoute('bidan.pemeriksaan.index');
     $imunisasiUrl = $safeRoute('bidan.imunisasi.index');
     $jadwalUrl = $safeRoute('bidan.jadwal.index');
+    $notifFetchRoute = Route::has('bidan.notifikasi.fetch') ? route('bidan.notifikasi.fetch') : '';
 @endphp
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
-        
+
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
     <aside class="bidan-sidebar">
@@ -506,8 +536,10 @@
 
     <script>
         const root = document.documentElement;
+        const notifFetchUrl = @json($notifFetchRoute);
 
         function setSidebar(open, save = true) {
+            root.classList.add('sb-animating');
             root.classList.toggle('sb-open', open);
             if (matchMedia('(max-width:1023px)').matches) {
                 root.classList.toggle('locked', open);
@@ -515,6 +547,8 @@
             if (save && matchMedia('(min-width:1024px)').matches) {
                 try { localStorage.setItem('pc_bidan_sidebar', open ? '1' : '0'); } catch (e) {}
             }
+            clearTimeout(window.__sbAnimTimeout);
+            window.__sbAnimTimeout = setTimeout(() => root.classList.remove('sb-animating'), 150);
         }
 
         function toggleSidebar() { setSidebar(!root.classList.contains('sb-open')); }
@@ -530,6 +564,10 @@
                 confirmButtonText: options.yes || 'Ya, Lanjutkan',
                 cancelButtonText: options.no || 'Batal',
                 buttonsStyling: false,
+                // Blur seluruh sidebar + topbar + konten saat popup terbuka,
+                // dan lepas lagi begitu popup mulai ditutup.
+                didOpen: () => { root.classList.add('pc-blur-active'); },
+                willClose: () => { root.classList.remove('pc-blur-active'); },
                 customClass: {
                     popup: 'nexus-swal',
                     title: 'nexus-title',
@@ -554,8 +592,18 @@
             const link = e.target.closest('a');
             if (link && link.href && !link.target && link.host === window.location.host && !link.hasAttribute('download') && !link.hasAttribute('data-no-delay')) {
                 if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-                e.preventDefault(); document.body.classList.add('content-leave');
-                setTimeout(() => { window.location.href = link.href; }, 100);
+                e.preventDefault();
+
+                const targetHref = link.href;
+                const mainInner = document.querySelector('.main-inner');
+                let navigated = false;
+                const go = () => { if (!navigated) { navigated = true; window.location.href = targetHref; } };
+
+                document.body.classList.add('content-leave');
+                // Navigasi dipicu tepat saat animasi leave selesai (bukan angka tebakan),
+                // dengan fallback timeout sebagai jaring pengaman.
+                if (mainInner) mainInner.addEventListener('animationend', go, { once: true });
+                setTimeout(go, 90);
             }
         });
 
@@ -582,23 +630,29 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('layoutApp', () => ({
                 profileOpen: false, notifOpen: false, unreadCount: {{ $notifCount }}, notifItems: [],
+                _pollTimer: null,
                 initApp() {
+                    if (!notifFetchUrl) return;
                     this.fetchNotifikasi();
-                    const url = '{{ Route::has("bidan.notifikasi.fetch") ? route("bidan.notifikasi.fetch") : "" }}';
-                    if (!url) return;
-                    setInterval(() => { this.fetchNotifikasi(); }, 30000);
+                    // Polling berhenti otomatis saat tab tidak aktif, dan langsung
+                    // refresh begitu tab aktif kembali — hemat request & CPU.
+                    this._pollTimer = setInterval(() => {
+                        if (document.visibilityState === 'visible') this.fetchNotifikasi();
+                    }, 30000);
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'visible') this.fetchNotifikasi();
+                    });
                 },
                 async fetchNotifikasi() {
-                    const url = '{{ Route::has("bidan.notifikasi.fetch") ? route("bidan.notifikasi.fetch") : "" }}';
-                    if (!url) return;
+                    if (!notifFetchUrl) return;
                     try {
-                        const res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                        const res = await fetch(notifFetchUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
                         if (res.ok) {
                             const data = await res.json();
                             this.unreadCount = data.unreadCount || 0;
                             this.notifItems = data.items || [];
-                            const badge = document.querySelector('.notif-badge');
-                            if (badge && this.unreadCount > 0) badge.textContent = this.unreadCount > 9 ? '9+' : this.unreadCount;
+                            // Badge sudah reaktif lewat x-text di template, tidak perlu
+                            // manipulasi DOM manual tambahan di sini.
                         }
                     } catch (e) {}
                 }

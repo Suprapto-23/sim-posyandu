@@ -162,16 +162,29 @@
     .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
     @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-    /* Nexus Modal Styles */
+    /* Nexus Modal Styles (Disempurnakan untuk Full Screen Blur) */
     .pc-modal-backdrop {
-        position: fixed !important; inset: 0 !important; z-index: 9999 !important; display: none;
-        align-items: center; justify-content: center; background: rgba(15, 23, 42, .6); backdrop-filter: blur(10px); padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
+        position: fixed !important; 
+        inset: 0 !important; 
+        z-index: 9999999 !important; /* Ditingkatkan agar di atas sidebar/topbar */
+        display: none;
+        align-items: center; 
+        justify-content: center; 
+        background: rgba(15, 23, 42, 0.45) !important; /* Sedikit digelapkan agar blur kentara */
+        backdrop-filter: blur(8px) !important; 
+        -webkit-backdrop-filter: blur(8px) !important; 
+        padding: 1rem; 
+        opacity: 0; 
+        transition: opacity 0.3s ease;
     }
     .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
+    
     .pc-modal-card {
         width: 100%; max-width: 440px; background: white; border-radius: 2.5rem; padding: 2.5rem 2rem;
         transform: scale(0.9) translateY(20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;
+        backdrop-filter: none !important; /* Mencegah modal ikut nge-blur */
+        -webkit-backdrop-filter: none !important;
     }
     .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
 </style>
@@ -500,8 +513,10 @@
         @endif
     </section>
 </div>
+@endsection {{-- INI PENTING: @section('content') diakhiri di sini, SEBELUM MODAL --}}
 
-{{-- MODAL HAPUS --}}
+{{-- INI PENTING: Pindahkan modal ke @stack('modals') agar posisinya berada di lapisan terluar body --}}
+@push('modals')
 <div id="pcJadwalDeleteModal" class="pc-modal-backdrop">
     <div class="pc-modal-card text-center">
         <div class="w-20 h-20 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-5 text-rose-500 shadow-inner">
@@ -515,7 +530,7 @@
         </div>
     </div>
 </div>
-@endsection
+@endpush
 
 @push('scripts')
 <script>
