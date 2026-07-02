@@ -6,27 +6,30 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Portal layanan kesehatan terpadu PosyanduCare.">
     
+    <!-- OPTIMASI LCP TERTINGGI: Prioritas utama pemuatan logo -->
     <link rel="preload" as="image" href="{{ asset('img/logo.webp') }}" type="image/webp" fetchpriority="high">
     <title>@yield('title', 'PosyanduCare')</title>
     <link rel="icon" type="image/webp" href="{{ asset('img/logo.webp') }}">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/webfonts/fa-regular-400.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"></noscript>
+    <!-- 1. Google Fonts: Ganti display=optional menjadi display=swap -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.11.0/dist/sweetalert2.all.min.js" defer></script>
+<!-- 2. FontAwesome: Preload file woff2 agar tidak memblokir render (FCP) -->
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/webfonts/fa-regular-400.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"></noscript>
+
+    <!-- Gunakan versi spesifik agar Cache TTL menjadi 1 Tahun -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.11.0/dist/sweetalert2.all.min.js" defer></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
         :root {
             --green-900: #064e3b; --green-700: #047857; --green-600: #059669; --green-500: #10b981;
-            --slate-900: #0f172a; --slate-700: #334155; --slate-600: #475569; --slate-500: #64748b;
+            --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
         }
 
         * { box-sizing: border-box; }
@@ -83,12 +86,18 @@
             transform: translate(-50%, -50%) scale(1); 
         }
 
-        /* 4. PURE CSS PREMIUM SPINNER (Aman untuk GPU) */
+        /* 4. REDESAIN TOTAL: PURE CSS PREMIUM SPINNER */
         .fluent-spinner {
-            width: 46px; height: 46px; border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            /* Track abu-abu super transparan */
             border: 3.5px solid rgba(16, 185, 129, 0.12); 
+            /* Bagian "kepala" loading solid hijau */
             border-top-color: var(--green-600); 
+            /* Ekor loading memudar untuk efek 'sinteris/dinamis' */
             border-right-color: rgba(16, 185, 129, 0.6); 
+            /* Rotasi super cepat (0.55 detik) agar terasa langsung masuk */
             animation: fluentSpin 0.55s linear infinite;
         }
         
@@ -97,8 +106,13 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Tipografi Teks Loading */
         .bridge-loader p { 
-            color: var(--slate-900); font-weight: 800; font-size: 15px; margin: 0; letter-spacing: -0.3px;
+            color: var(--slate-900); 
+            font-weight: 800; 
+            font-size: 15px; 
+            margin: 0; 
+            letter-spacing: -0.3px;
         }
 
         /* 5. SWEETALERT: Desain Premium */
@@ -106,7 +120,7 @@
         .custom-swal-popup { border-radius: 24px !important; padding: 2rem !important; background: rgba(255, 255, 255, 0.98) !important; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1) !important; width: 24em !important; }
         .custom-swal-title { color: var(--slate-900) !important; font-size: 1.25rem !important; font-weight: 800 !important; margin-top: 10px !important;}
         .custom-swal-html { color: var(--slate-600) !important; font-size: 0.9rem !important; font-weight: 500 !important; margin-top: 0.25rem !important; }
-        .custom-swal-confirm-btn { border-radius: 12px !important; background: var(--slate-900) !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; width: 100% !important; margin-top: 1.5rem !important; transition: transform 0.1s ease-out !important; will-change: transform; }
+        .custom-swal-confirm-btn { border-radius: 12px !important; background: var(--slate-900) !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; width: 100% !important; margin-top: 1.5rem !important; transition: all 0.1s ease-out !important; }
         .custom-swal-confirm-btn:active { transform: scale(0.96) !important; }
         .swal2-icon.swal2-success { border-color: var(--green-500) !important; color: var(--green-500) !important; }
     </style>
@@ -116,6 +130,7 @@
     <div class="auth-bg"></div>
 
     <div class="bridge-loader">
+        <!-- Penggunaan FontAwesome dihapus, diganti dengan Div Pure CSS -->
         <div class="fluent-spinner"></div>
         <p>Memuat Dasbor...</p>
     </div>

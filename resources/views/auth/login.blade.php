@@ -6,8 +6,12 @@
 <style>
     .login-shell {
         width: 100%; max-width: 1140px; 
-        margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr;
-        align-items: center; gap: 60px; overflow: hidden; 
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 60px;
+        overflow: hidden; 
     }
 
     .brand-side, .form-side {
@@ -30,7 +34,7 @@
     .feature-grid { display: flex; gap: 16px; justify-content: center; width: 100%; max-width: 440px; }
     .feature-box { background: #ffffff; border: 1px solid #f1f5f9; border-radius: 16px; padding: 16px 12px; width: 90px; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); }
     
-    /* [A11Y FIX]: Kontras Hijau Gelap */
+    /* [A11Y FIX]: Ubah warna icon dari --green-600 menjadi --green-700 agar kontras dengan hijau muda */
     .feature-icon { width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: var(--green-700); display: flex; align-items: center; justify-content: center; font-size: 16px; }
     .feature-text { color: var(--slate-700); font-size: 11px; font-weight: 700; }
 
@@ -45,22 +49,21 @@
     .field-label { display: block; font-size: 13px; font-weight: 700; color: var(--slate-900); margin-bottom: 8px; }
     .field-wrap { position: relative; }
     
-    /* [PERFORMANCE FIX]: Menghapus animasi border-color & box-shadow. Perubahan dilakukan instan untuk GPU */
-    .field-input { width: 100%; height: 52px; padding: 0 44px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 14px; color: var(--slate-900); font-weight: 500; }
+    .field-input { width: 100%; height: 52px; padding: 0 44px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 14px; color: var(--slate-900); font-weight: 500; transition: all 0.2s ease; }
     .field-input:focus { border-color: var(--green-500); outline: none; box-shadow: 0 0 0 4px rgba(16,185,129,0.1); }
+    
+    /* [A11Y FIX]: Memaksa warna dan opacity placeholder agar kontras jelas (standar WCAG AAA) */
     .field-input::placeholder { color: var(--slate-600); opacity: 1; font-weight: 500; }
     
-    /* [PERFORMANCE FIX]: Menghapus transisi color. Perubahan warna saat focus akan instan */
-    .field-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--slate-600); font-size: 16px; pointer-events: none; }
+    /* [A11Y FIX]: Ubah warna icon field dari --slate-500 ke --slate-600 */
+    .field-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--slate-600); font-size: 16px; transition: color 0.2s; pointer-events: none; }
     .field-input:focus ~ .field-icon { color: var(--green-600); }
     
-    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--slate-600); cursor: pointer; padding: 4px; border-radius: 8px; }
+    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--slate-600); cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.2s; }
     .pw-toggle:hover { background: #f1f5f9; color: var(--slate-900); }
     
-    /* [PERFORMANCE FIX]: Menggunakan properti transform untuk animasi tombol (GPU Accelerated) */
-    .submit-btn { width: 100%; height: 54px; background: var(--green-600); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: transform 0.15s ease-out; will-change: transform; margin-top: 4px; }
-    .submit-btn:hover { background: var(--green-700); transform: translateY(-1px); }
-    .submit-btn:active { transform: translateY(1px); }
+    .submit-btn { width: 100%; height: 54px; background: var(--green-600); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
+    .submit-btn:hover { background: var(--green-700); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); transform: translateY(-1px); }
     
     .info-note { margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; display: flex; align-items: flex-start; gap: 12px; }
     .info-icon { color: var(--green-700); font-size: 20px; }
