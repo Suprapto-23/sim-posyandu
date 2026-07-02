@@ -396,7 +396,7 @@
 
         <div class="pc-bidan-menu-group">
             <p class="pc-bidan-menu-title">Sesi Akun</p>
-            <form method="POST" action="{{ route('logout') }}" class="pc-bidan-logout-form">
+            <form method="POST" action="{{ route('logout') }}" class="pc-bidan-logout-form js-logout-form">
                 @csrf
                 <button type="submit" class="pc-bidan-menu-item pc-bidan-logout">
                     <span class="pc-bidan-menu-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
