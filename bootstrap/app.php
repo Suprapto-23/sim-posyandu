@@ -20,7 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Fix 419 - exclude CSRF untuk login
         $middleware->validateCsrfTokens(except: [
-            'login',
         ]);
 
         $middleware->alias([
