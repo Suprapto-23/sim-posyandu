@@ -511,5 +511,23 @@
     </script>
     @stack('scripts')
     @stack('modals')
+    <script>
+    // Menonaktifkan Klik Kanan
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+
+    // Menonaktifkan tombol F12, Ctrl+Shift+I, Ctrl+Shift+J, dan Ctrl+U
+    document.onkeydown = function(e) {
+        if (
+            e.keyCode === 123 || // Tombol F12
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || // Tombol Ctrl+Shift+I / J
+            (e.ctrlKey && e.keyCode === 85) // Tombol Ctrl+U (View Source)
+        ) {
+            e.preventDefault();
+            return false;
+        }
+    };
+</script>
 </body>
 </html>
