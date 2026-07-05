@@ -112,7 +112,9 @@ Route::middleware(['auth', 'checkstatus', 'role:admin'])
         | Admin Kelola Akun Warga/User
         |--------------------------------------------------------------------------
         */
-
+        Route::patch('/users/{id}/toggle-status', [AdminUserController::class, 'toggleStatus'])
+            ->whereNumber('id')
+            ->name('users.toggle-status');
         Route::post('/users/{id}/generate-password', [AdminUserController::class, 'generatePassword'])
             ->whereNumber('id')
             ->name('users.generate-password');
@@ -128,7 +130,9 @@ Route::middleware(['auth', 'checkstatus', 'role:admin'])
         | Admin Kelola Akun Bidan
         |--------------------------------------------------------------------------
         */
-
+         Route::patch('/bidans/{id}/toggle-status', [AdminBidanController::class, 'toggleStatus'])
+            ->whereNumber('id')
+            ->name('bidans.toggle-status');
         Route::post('/bidans/{id}/reset-password', [AdminBidanController::class, 'resetPassword'])
             ->whereNumber('id')
             ->name('bidans.reset-password');
@@ -140,7 +144,9 @@ Route::middleware(['auth', 'checkstatus', 'role:admin'])
         | Admin Kelola Akun Kader
         |--------------------------------------------------------------------------
         */
-
+        Route::patch('/kaders/{id}/toggle-status', [AdminKaderController::class, 'toggleStatus'])
+            ->whereNumber('id')
+            ->name('kaders.toggle-status');
         Route::post('/kaders/{id}/reset-password', [AdminKaderController::class, 'resetPassword'])
             ->whereNumber('id')
             ->name('kaders.reset-password');

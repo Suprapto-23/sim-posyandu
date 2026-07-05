@@ -213,17 +213,14 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 p-6 sm:px-8">
                     <div class="sm:col-span-2">
-                        <label class="block text-[10px] font-black uppercase tracking-widest mb-1.5 pl-1 {{ $errors->has('nik') ? 'text-rose-500' : 'text-slate-500' }}">
+                        <label class="block text-[10px] font-black uppercase tracking-widest mb-1.5 pl-1 text-slate-500">
                             Nomor Induk Kependudukan (NIK)
                         </label>
-                        <input type="text" name="nik" value="{{ old('nik', $user->nik ?? $profile->nik ?? '') }}" maxlength="16" inputmode="numeric" autocomplete="off" class="input-soft w-full {{ $errors->has('nik') ? 'input-error' : '' }}" placeholder="Masukkan 16 digit NIK">
-                        @error('nik')
-                            <p class="mt-1.5 text-[10px] font-bold text-rose-500 pl-1"><i class="fas fa-circle-exclamation mr-1"></i>{{ $message }}</p>
-                        @else
-                            <p class="mt-1.5 text-[10px] font-bold text-slate-400 pl-1 leading-relaxed">
-                                Pastikan NIK benar agar terhubung otomatis dengan data Posyandu.
-                            </p>
-                        @enderror
+                        {{-- ATRIBUT READONLY DITAMBAHKAN DI SINI BESERTA WARNA LATAR ABU-ABU --}}
+                        <input type="text" name="nik" value="{{ $user->nik ?? $profile->nik ?? '' }}" class="input-soft w-full bg-slate-100 cursor-not-allowed text-slate-500 opacity-70" placeholder="Belum Terdaftar" readonly>
+                        <p class="mt-1.5 text-[10px] font-bold text-amber-500 pl-1 leading-relaxed">
+                            <i class="fas fa-lock mr-1"></i> Terkunci. Hubungi Kader atau Bidan jika Anda perlu melakukan perubahan NIK.
+                        </p>
                     </div>
 
                     <div class="sm:col-span-2">
@@ -272,7 +269,7 @@
                 {{-- ACTION FOOTER (Solusi agar tidak mengambang) --}}
                 <div class="mt-auto bg-slate-50/80 px-6 sm:px-8 py-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <p class="text-[10px] font-bold text-slate-400 leading-relaxed text-center sm:text-left max-w-xs">
-                        <i class="fas fa-info-circle mr-1 text-slate-300"></i> Pastikan data NIK dan domisili Anda sesuai dengan KTP.
+                        <i class="fas fa-info-circle mr-1 text-slate-300"></i> Pastikan alamat domisili Anda sesuai dengan KTP.
                     </p>
                     <button type="submit" class="btn-pill w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3.5 text-[11px] font-black uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">
                         <i class="fas fa-save"></i> Simpan Profil
@@ -379,14 +376,6 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Hanya membolehkan angka untuk NIK
-        const nikInput = document.querySelector('input[name="nik"]');
-        if (nikInput) {
-            nikInput.addEventListener('input', function () {
-                this.value = this.value.replace(/\D/g, '').slice(0, 16);
-            });
-        }
-
         // Toggle Mata Kata Sandi
         document.querySelectorAll('.toggle-password').forEach(function (button) {
             button.addEventListener('click', function () {

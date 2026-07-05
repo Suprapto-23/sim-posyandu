@@ -39,9 +39,10 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
+        // 1. OPTIMASI KEAMANAN (ANTI-IDOR): Validasi 'nik' dihapus sepenuhnya.
+        // Hal ini untuk mencegah warga memanipulasi akses terhadap data anggota keluarga lain.
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'nik' => ['nullable', 'digits:16'],
             'tempat_lahir' => ['nullable', 'string', 'max:100'],
             'tanggal_lahir' => ['nullable', 'date', 'before:today'],
             'jenis_kelamin' => ['nullable', 'in:L,P'],
@@ -49,48 +50,36 @@ class ProfileController extends Controller
             'telepon' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s]+$/'],
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
-            'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
             'tanggal_lahir.before' => 'Tanggal lahir harus sebelum hari ini.',
             'jenis_kelamin.in' => 'Jenis kelamin tidak valid.',
             'telepon.regex' => 'Nomor WhatsApp hanya boleh berisi angka, spasi, tanda plus, atau strip.',
         ]);
 
-        // DETEKSI PERUBAHAN NIK SEBELUM UPDATE
-        $oldNik = $this->normalizeNik($user->nik ?? data_get($user, 'profile.nik'));
-        $newNik = $this->normalizeNik($validated['nik'] ?? null);
-        $nikChanged = ($oldNik !== $newNik);
-
         try {
-            DB::transaction(function () use ($user, $validated, $newNik) {
-                $userPayload = [
-                    'name' => $validated['name'],
-                    'updated_at' => now(),
-                ];
-
-                if (Schema::hasColumn('users', 'nik')) {
-                    $userPayload['nik'] = $newNik;
-                }
-
+            DB::transaction(function () use ($user, $validated) {
+                // Update tabel users
                 DB::table('users')
                     ->where('id', $user->id)
-                    ->update($userPayload);
+                    ->update([
+                        'name' => $validated['name'],
+                        'updated_at' => now(),
+                    ]);
 
+                // Update tabel profiles
                 if (Schema::hasTable('profiles')) {
                     DB::table('profiles')->updateOrInsert(
                         ['user_id' => $user->id],
-                        $this->profilePayload($validated, $newNik, $user->id)
+                        $this->profilePayload($validated, $user->id) // NIK dihapus dari parameter dan logika
                     );
                 }
             });
 
-            // TRIGGER FLUSH CACHE AGAR DATA KELUARGA TER-REFRESH INSTAN
-            if ($nikChanged) {
-                Cache::forget('user_dashboard_context_' . $user->id);
-                Cache::forget('user_dashboard_jadwal_' . $user->id);
-                Cache::forget('user_jadwal_count_' . $user->id);
-                Cache::forget('user_dashboard_notif_' . $user->id);
-                Cache::forget('user_unread_notif_' . $user->id);
-            }
+            // Bersihkan Cache agar perubahan nama langsung terlihat
+            Cache::forget('user_dashboard_context_' . $user->id);
+            Cache::forget('user_dashboard_jadwal_' . $user->id);
+            Cache::forget('user_jadwal_count_' . $user->id);
+            Cache::forget('user_dashboard_notif_' . $user->id);
+            Cache::forget('user_unread_notif_' . $user->id);
 
             return back()->with('success', 'Profil berhasil diperbarui.');
         } catch (\Throwable $e) {
@@ -163,7 +152,8 @@ class ProfileController extends Controller
         }
     }
 
-    private function profilePayload(array $validated, ?string $nik, int $userId): array
+    // 2. OPTIMASI KEAMANAN: Membuang kemampuan warga untuk memasukkan NIK secara manual
+    private function profilePayload(array $validated, int $userId): array
     {
         $payload = [
             'updated_at' => now(),
@@ -176,7 +166,6 @@ class ProfileController extends Controller
         $map = [
             'user_id' => $userId,
             'full_name' => $validated['name'],
-            'nik' => $nik,
             'jenis_kelamin' => $validated['jenis_kelamin'] ?? null,
             'tempat_lahir' => $validated['tempat_lahir'] ?? null,
             'tanggal_lahir' => $validated['tanggal_lahir'] ?? null,
@@ -204,6 +193,8 @@ class ProfileController extends Controller
             ->exists();
     }
 
+    // Fungsi ini tidak lagi digunakan, tetapi disisakan agar mencegah error 
+    // jika diakses oleh bagian kode (trait) lain.
     private function normalizeNik(?string $nik): ?string
     {
         if (blank($nik)) {

@@ -36,7 +36,7 @@
             --slate-500: #64748b;
             --border: #f1f5f9;
             --bg-app: #fcfcfd;
-            --transition-speed: 0.08s;
+            --transition-speed: 0.12s; /* Dioptimasi untuk Snappy Feel */
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             --emerald-600: #059669;
             --emerald-50: #ecfdf5;
@@ -53,6 +53,7 @@
             color: var(--slate-700);
             background-color: var(--bg-app);
             -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
 
         /* ── SIDEBAR ── */
@@ -60,7 +61,7 @@
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; 
             width: var(--sb-width); padding: 16px;
             transform: translateX(-100%);
-            transition: transform var(--transition-speed) var(--ease-out);
+            transition: transform 0.2s var(--ease-out);
             will-change: transform; 
         }
         html.sb-open .admin-sidebar { transform: translateX(0); }
@@ -79,75 +80,43 @@
 
         /* ── SIDEBAR LINKS (SUPER CEPAT) ── */
         .pc-sidebar a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            border-radius: 12px;
-            color: var(--slate-500);
-            font-weight: 700;
-            font-size: 13px;
-            text-decoration: none;
-            transition: background-color 0.06s ease, color 0.06s ease;
-            cursor: pointer;
-            will-change: background-color, color;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 12px; color: var(--slate-500);
+            font-weight: 700; font-size: 13px; text-decoration: none;
+            transition: background-color 0.1s ease, color 0.1s ease;
+            cursor: pointer; will-change: background-color, color;
         }
-        .pc-sidebar a:hover {
-            background: #f1f5f9;
-            color: #0f172a;
-        }
-        .pc-sidebar a.active {
-            background: var(--emerald-50);
-            color: var(--emerald-600);
-            font-weight: 800;
-        }
-        .pc-sidebar a i {
-            width: 20px;
-            text-align: center;
-            font-size: 14px;
-        }
+        .pc-sidebar a:hover { background: #f1f5f9; color: #0f172a; }
+        .pc-sidebar a.active { background: var(--emerald-50); color: var(--emerald-600); font-weight: 800; }
+        .pc-sidebar a i { width: 20px; text-align: center; font-size: 14px; }
 
         /* ── LAYOUT CONTENT WRAPPER ── */
         .app-wrapper {
-            display: flex; flex-direction: column; 
-            height: 100vh;
-            padding-left: 0;
-            transition: padding-left var(--transition-speed) var(--ease-out);
+            display: flex; flex-direction: column; height: 100vh; padding-left: 0;
+            transition: padding-left 0.2s var(--ease-out);
+            will-change: padding-left;
         }
-        @media (min-width: 1024px) { 
-            html.sb-open .app-wrapper { padding-left: var(--sb-width); } 
-        }
+        @media (min-width: 1024px) { html.sb-open .app-wrapper { padding-left: var(--sb-width); } }
 
         /* ── TOPBAR ── */
-        .topbar-wrapper {
-            padding: 16px 24px 0;
-            flex-shrink: 0; 
-            z-index: 50;
-        }
+        .topbar-wrapper { padding: 16px 24px 0; flex-shrink: 0; z-index: 50; }
 
         .admin-topbar {
-            min-height: 68px; 
-            padding: 8px 16px; 
-            border-radius: 24px; 
+            min-height: 68px; padding: 8px 16px; border-radius: 24px; 
             display: flex; align-items: center; gap: 12px; 
             background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border); 
-            box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border); box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+            will-change: backdrop-filter;
         }
         @media (max-width: 1023px) {
-            .admin-topbar {
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                background: rgba(255,255,255,.97);
-            }
+            .admin-topbar { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.97); }
         }
 
         .sidebar-toggle {
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 14px;
-            background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0;
-            display: grid; place-items: center; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
+            background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0; display: grid; place-items: center; 
+            transition: all 0.1s ease; will-change: transform;
         }
         .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
         .sidebar-toggle:active { transform: scale(0.92); }
@@ -164,13 +133,12 @@
         .profile-button { 
             height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border); 
             border-radius: 50px; background: #ffffff; cursor: pointer; 
-            display: flex; align-items: center; gap: 10px; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
+            display: flex; align-items: center; gap: 10px; transition: all 0.1s ease; will-change: transform;
         }
         .profile-button:hover { background: #f8fafc; border-color: #e2e8f0; }
         .profile-button:active { transform: scale(0.96); }
         .profile-avatar { 
-            width: 34px; height: 34px; border-radius: 50%; 
-            background: linear-gradient(135deg, #0f172a, #334155);
+            width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #0f172a, #334155);
             color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 900; overflow: hidden; 
         }
         .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -179,10 +147,8 @@
         /* ── DROPDOWN ── */
         .admin-dropdown { 
             position: absolute; right: 0; top: calc(100% + 12px); width: 240px; z-index: 90; 
-            border-radius: 24px; padding: 8px; background: #ffffff; 
-            border: 1px solid var(--border); 
-            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04); 
-            transform-origin: top right; 
+            border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border); 
+            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04); transform-origin: top right; 
         }
         .dropdown-head { padding: 12px; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
         .dropdown-name { color: var(--slate-900); font-size: 14px; font-weight: 800; line-height: 1.2; }
@@ -190,19 +156,17 @@
         .dropdown-link, .dropdown-logout { 
             width: 100%; border: 0; border-radius: 16px; padding: 12px 14px; 
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; 
-            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
+            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.1s ease; 
         }
         .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
         .dropdown-logout { color: #e11d48; }
         .dropdown-logout:hover { background: #fff1f2; }
 
-        /* ── MAIN CONTENT ── */
+        /* ── MAIN CONTENT (Smooth Scroll Hardware Accelerated) ── */
         .main-scroll-area {
-            flex: 1; 
-            overflow-y: auto; 
-            overflow-x: hidden;
-            padding: 24px;
-            scroll-behavior: smooth;
+            flex: 1; overflow-y: auto; overflow-x: hidden;
+            padding: 24px; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
 
         .main-scroll-area::-webkit-scrollbar { width: 6px; }
@@ -210,98 +174,42 @@
         .main-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .main-scroll-area::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* ── ANIMASI KONTEN (SPA) ── */
+        /* ── ANIMASI KONTEN (SPA - Butter Smooth) ── */
         .admin-main {
-            opacity: 1;
-            transition: opacity 0.08s ease, transform 0.08s ease;
+            opacity: 1; transform: translateY(0);
+            transition: opacity var(--transition-speed) var(--ease-out), transform var(--transition-speed) var(--ease-out);
+            will-change: opacity, transform;
         }
-        .admin-main.is-leaving {
-            opacity: 0;
-            transform: translateY(-8px);
-        }
-        .admin-main.is-entering {
-            opacity: 0;
-            transform: translateY(8px);
-        }
-        .admin-main.is-enter-done {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .admin-main.is-leaving { opacity: 0; transform: translateY(-6px); }
+        .admin-main.is-entering { opacity: 0; transform: translateY(6px); }
+        .admin-main.is-enter-done { opacity: 1; transform: translateY(0); }
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
             position: fixed; inset: 0; z-index: 90; border: 0; background: rgba(15,23,42,.3);
-            opacity: 0; visibility: hidden; transition: opacity 0.1s ease, visibility 0.1s ease;
+            opacity: 0; visibility: hidden; transition: opacity 0.15s ease, visibility 0.15s ease;
         }
         html.sb-open .mobile-overlay { opacity: 1; visibility: visible; }
         
         @media (min-width: 1024px) { .mobile-overlay { display: none !important; } }
         @media (max-width: 1023px) {
             .app-wrapper { padding-left: 0 !important; }
-            .profile-name { display: none; }
-            .system-chip { display: none; }
+            .profile-name, .system-chip { display: none; }
             .topbar-wrapper { padding: 12px 16px 0; }
             .main-scroll-area { padding: 16px; }
         }
 
-        /* ── SWEETALERT ── PALETTE EMERALD */
+        /* ── SWEETALERT PALETTE EMERALD ── */
         .nexus-swal { border-radius: 32px !important; padding: 32px !important; font-family: "Plus Jakarta Sans", sans-serif !important; border: 1px solid var(--border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;}
         .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important;}
         .nexus-html { font-size: 14px !important; color: #64748b !important; }
 
-        .nexus-ok {
-            border-radius: 16px !important;
-            background: linear-gradient(135deg, #059669, #10b981) !important;
-            color: #fff !important;
-            font-weight: 700 !important;
-            padding: 12px 24px !important;
-            box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important;
-            border: 0 !important;
-        }
-        .nexus-ok:hover {
-            transform: translateY(-1px) !important;
-            box-shadow: 0 6px 16px rgba(5,150,105,0.4) !important;
-        }
-
-        .nexus-danger {
-            border-radius: 16px !important;
-            background: linear-gradient(135deg, #dc2626, #ef4444) !important;
-            color: #fff !important;
-            font-weight: 700 !important;
-            padding: 12px 24px !important;
-            box-shadow: 0 4px 12px rgba(220,38,38,0.3) !important;
-            border: 0 !important;
-        }
-        .nexus-danger:hover {
-            transform: translateY(-1px) !important;
-            box-shadow: 0 6px 16px rgba(220,38,38,0.4) !important;
-        }
-
-        .nexus-cancel {
-            border-radius: 16px !important;
-            background: #f8fafc !important;
-            border: 1px solid #e2e8f0 !important;
-            color: #475569 !important;
-            font-weight: 700 !important;
-            padding: 12px 24px !important;
-        }
-        .nexus-cancel:hover {
-            background: #f1f5f9 !important;
-        }
-
-        /* Ikon SweetAlert menggunakan emerald */
-        .swal2-icon.swal2-question {
-            border-color: #10b981 !important;
-            color: #10b981 !important;
-        }
-        .swal2-icon.swal2-warning {
-            border-color: #f59e0b !important;
-            color: #f59e0b !important;
-        }
-        .swal2-icon.swal2-success {
-            border-color: #10b981 !important;
-            color: #10b981 !important;
-        }
+        .nexus-ok { border-radius: 16px !important; background: linear-gradient(135deg, #059669, #10b981) !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; box-shadow: 0 4px 12px rgba(5,150,105,0.3) !important; border: 0 !important; transition: all 0.1s; }
+        .nexus-ok:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 16px rgba(5,150,105,0.4) !important; }
+        .nexus-danger { border-radius: 16px !important; background: linear-gradient(135deg, #dc2626, #ef4444) !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; box-shadow: 0 4px 12px rgba(220,38,38,0.3) !important; border: 0 !important; transition: all 0.1s; }
+        .nexus-danger:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 16px rgba(220,38,38,0.4) !important; }
+        .nexus-cancel { border-radius: 16px !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #475569 !important; font-weight: 700 !important; padding: 12px 24px !important; transition: all 0.1s; }
+        .nexus-cancel:hover { background: #f1f5f9 !important; }
     </style>
     @stack('styles')
 </head>
@@ -396,21 +304,16 @@
 
         function setSidebar(open, save = true) {
             root.classList.toggle('sb-open', open);
-            if (matchMedia('(max-width:1023px)').matches) {
-                root.classList.toggle('locked', open);
-            } else {
-                root.classList.remove('locked');
-            }
+            if (matchMedia('(max-width:1023px)').matches) root.classList.toggle('locked', open);
+            else root.classList.remove('locked');
             if (save && matchMedia('(min-width:1024px)').matches) {
                 try { localStorage.setItem('pc_admin_sidebar', open ? '1' : '0'); } catch (e) {}
             }
         }
 
-        function toggleSidebar() {
-            setSidebar(!root.classList.contains('sb-open'));
-        }
+        function toggleSidebar() { setSidebar(!root.classList.contains('sb-open')); }
 
-        // ── SweetAlert dengan warna emerald ──
+        // ── SweetAlert Configuration ──
         function nexusConfirm(options) {
             return Swal.fire({
                 title: options.title || 'Konfirmasi',
@@ -423,11 +326,8 @@
                 cancelButtonText: options.no || 'Batal',
                 buttonsStyling: false,
                 customClass: {
-                    popup: 'nexus-swal',
-                    title: 'nexus-title',
-                    htmlContainer: 'nexus-html',
-                    confirmButton: options.danger ? 'nexus-danger' : 'nexus-ok',
-                    cancelButton: 'nexus-cancel'
+                    popup: 'nexus-swal', title: 'nexus-title', htmlContainer: 'nexus-html',
+                    confirmButton: options.danger ? 'nexus-danger' : 'nexus-ok', cancelButton: 'nexus-cancel'
                 }
             });
         }
@@ -438,26 +338,20 @@
         function updateSidebarActive(currentUrl) {
             const url = currentUrl || window.location.href;
             const currentPath = new URL(url).pathname;
-            const links = document.querySelectorAll('.pc-sidebar a');
-            links.forEach(link => {
+            document.querySelectorAll('.pc-sidebar a').forEach(link => {
                 const href = link.getAttribute('href');
                 if (href) {
                     const linkPath = new URL(href, window.location.origin).pathname;
-                    if (linkPath === currentPath) {
-                        link.classList.add('active');
-                    } else {
-                        link.classList.remove('active');
-                    }
+                    link.classList.toggle('active', linkPath === currentPath);
                 }
             });
         }
 
         // ============================================================
-        // SPA NAVIGATION – HANYA MAIN CONTENT YANG BERUBAH
+        // SPA NAVIGATION (BUTTERY SMOOTH)
         // ============================================================
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
-            
             if (!link || !link.href || link.target || link.host !== window.location.host) return;
             if (link.hasAttribute('download') || link.hasAttribute('data-no-spa')) return;
             if (e.ctrlKey || e.metaKey || e.shiftKey) return;
@@ -486,118 +380,126 @@
             const mainEl = document.getElementById('adminMain');
             const scrollArea = document.getElementById('mainScrollArea');
 
-            mainEl.classList.remove('is-enter-done');
+            // Eksekusi Animasi Keluar
+            mainEl.classList.remove('is-enter-done', 'is-entering');
             mainEl.classList.add('is-leaving');
 
-            fetch(url, {
-                signal: controller.signal,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'text/html'
-                }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Network error');
-                return response.text();
-            })
+            fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+            .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
             .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-
+                const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
                 const newContent = doc.querySelector('#adminMain');
-                if (!newContent) {
-                    window.location.href = url;
-                    return;
-                }
+                if (!newContent) { window.location.href = url; return; }
 
+                // Swap Konten
                 mainEl.innerHTML = newContent.innerHTML;
+                
+                // Set Animasi Masuk
                 mainEl.classList.remove('is-leaving');
                 mainEl.classList.add('is-entering');
 
-                if (scrollArea) scrollArea.scrollTop = 0;
+                if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
 
+                // Eksekusi ulang tag <script> baru agar berfungsi
                 mainEl.querySelectorAll('script').forEach(oldScript => {
                     const newScript = document.createElement('script');
-                    Array.from(oldScript.attributes).forEach(attr => {
-                        newScript.setAttribute(attr.name, attr.value);
-                    });
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
                     newScript.textContent = oldScript.textContent;
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
 
-                setTimeout(() => {
-                    mainEl.classList.remove('is-entering');
-                    mainEl.classList.add('is-enter-done');
-                    document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                    updateSidebarActive(url);
-                }, 80);
+                // Tunggu sebentar lalu fade-in halus
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        mainEl.classList.remove('is-entering');
+                        mainEl.classList.add('is-enter-done');
+                        document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
+                        updateSidebarActive(url);
+                    }, 50); 
+                });
 
                 window.history.pushState({}, '', url);
             })
             .catch(err => {
                 if (err.name === 'AbortError') return;
-                console.warn('SPA fallback:', err);
                 window.location.href = url;
             })
             .finally(() => {
                 isNavigating = false;
                 currentAbortController = null;
-                mainEl.classList.remove('is-leaving');
-                if (!mainEl.classList.contains('is-enter-done') && !mainEl.classList.contains('is-entering')) {
-                    mainEl.classList.add('is-enter-done');
-                }
             });
         }
 
-        window.addEventListener('popstate', function() {
-            navigateTo(window.location.href);
-        });
+        window.addEventListener('popstate', function() { navigateTo(window.location.href); });
 
-        // ── FORM INTERCEPT ──
+        // ============================================================
+        // GLOBAL FORM INTERCEPTOR (SOLUSI BUG SWEETALERT)
+        // ============================================================
         document.addEventListener('submit', function (event) {
             const form = event.target;
+            
+            // Bypass jika sudah dikonfirmasi
             if (form.dataset.confirmed === '1') return;
 
+            // 1. Aksi Logout
             if (form.classList.contains('js-logout-form')) {
                 event.preventDefault();
                 nexusConfirm({
-                    title: 'Keluar dari sistem?',
-                    text: 'Sesi Anda saat ini akan diakhiri.',
-                    icon: 'question',
-                    iconColor: '#10b981',
-                    yes: 'Ya, Keluar'
+                    title: 'Keluar dari sistem?', text: 'Sesi Anda saat ini akan diakhiri.', icon: 'question', iconColor: '#10b981', yes: 'Ya, Keluar'
                 }).then(r => {
-                    if (r.isConfirmed) {
-                        form.dataset.confirmed = '1';
-                        document.body.classList.add('content-leave');
-                        setTimeout(() => form.submit(), 150);
-                    }
+                    if (r.isConfirmed) { form.dataset.confirmed = '1'; document.body.classList.add('content-leave'); setTimeout(() => form.submit(), 150); }
                 });
                 return;
             }
             
-            if (form.classList.contains('delete-form')) {
+            // 2. Aksi Hapus (Warga/Kader/Bidan)
+            if (form.classList.contains('dynamic-form-delete') || form.classList.contains('delete-form')) {
                 event.preventDefault();
+                const btn = form.querySelector('button');
+                const name = btn ? btn.dataset.name : 'Data ini';
                 nexusConfirm({
-                    title: 'Hapus Data?',
-                    text: 'Tindakan ini tidak bisa dibatalkan.',
-                    icon: 'warning',
-                    iconColor: '#f59e0b',
-                    yes: 'Ya, Hapus',
-                    danger: true
+                    title: 'Hapus Permanen?', text: `Apakah Anda yakin ingin menghapus <b>${name}</b>? Data yang terhapus tidak dapat dikembalikan.`, icon: 'warning', iconColor: '#f43f5e', yes: 'Ya, Hapus', danger: true
                 }).then(r => {
-                    if (r.isConfirmed) {
-                        form.dataset.confirmed = '1';
-                        form.submit();
-                    }
+                    if (r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); }
+                });
+                return;
+            }
+
+            // 3. Aksi Toggle Status (Aktif/Nonaktif)
+            if (form.classList.contains('dynamic-form-toggle')) {
+                event.preventDefault();
+                const btn = form.querySelector('button');
+                const name = btn ? btn.dataset.name : 'Akun ini';
+                const action = btn ? btn.dataset.action : 'ubah status';
+                const isActivating = action === 'aktifkan';
+
+                nexusConfirm({
+                    title: isActivating ? 'Aktifkan Akun?' : 'Nonaktifkan Akun?', text: `Anda akan <b>${action}</b> akun milik <b>${name}</b>.`, icon: 'question', iconColor: isActivating ? '#10b981' : '#f59e0b', yes: isActivating ? 'Ya, Aktifkan' : 'Ya, Nonaktifkan'
+                }).then(r => {
+                    if (r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); }
+                });
+                return;
+            }
+
+            // 4. Aksi Reset Password
+            if (form.classList.contains('dynamic-form-reset')) {
+                event.preventDefault();
+                const btn = form.querySelector('button');
+                const name = btn ? btn.dataset.name : 'Akun ini';
+
+                nexusConfirm({
+                    title: 'Reset Password?', text: `Sistem akan membuat password baru secara otomatis untuk <b>${name}</b>.`, icon: 'question', iconColor: '#3b82f6', yes: 'Ya, Reset'
+                }).then(r => {
+                    if (r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); }
                 });
                 return;
             }
         });
 
+        // ── FIX BROWSER BFCACHE (Back/Forward Cache) ──
         window.addEventListener('pageshow', function (event) {
             if (event.persisted) {
                 document.body.classList.remove('content-leave');
@@ -610,46 +512,36 @@
             }
         });
 
+        // ── ALPINE & INISIASI ──
         document.addEventListener('alpine:init', () => {
             Alpine.data('layoutApp', () => ({
                 profileOpen: false,
-                initApp() {
-                    setTimeout(() => {
-                        updateSidebarActive(window.location.href);
-                    }, 100);
-                }
+                initApp() { setTimeout(() => updateSidebarActive(window.location.href), 50); }
             }));
         });
 
         document.addEventListener('spa:loaded', function(e) {
-            const url = e.detail.url;
-            if (url.includes('/admin/dashboard')) {
-                document.dispatchEvent(new Event('DOMContentLoaded'));
-            }
+            if (e.detail.url.includes('/admin/dashboard')) document.dispatchEvent(new Event('DOMContentLoaded'));
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            updateSidebarActive(window.location.href);
-        });
+        document.addEventListener('DOMContentLoaded', () => updateSidebarActive(window.location.href));
     </script>
+    
     @stack('scripts')
+    
     <script>
-    // Menonaktifkan Klik Kanan
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-    });
-
-    // Menonaktifkan tombol F12, Ctrl+Shift+I, Ctrl+Shift+J, dan Ctrl+U
+    // Security: Anti Inspect & Right Click
+    document.addEventListener('contextmenu', e => e.preventDefault());
     document.onkeydown = function(e) {
         if (
-            e.keyCode === 123 || // Tombol F12
-            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || // Tombol Ctrl+Shift+I / J
-            (e.ctrlKey && e.keyCode === 85) // Tombol Ctrl+U (View Source)
+            e.keyCode === 123 || 
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
+            (e.ctrlKey && e.keyCode === 85) 
         ) {
             e.preventDefault();
             return false;
         }
     };
-</script>
+    </script>
 </body>
 </html>

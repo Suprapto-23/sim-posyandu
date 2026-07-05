@@ -118,7 +118,7 @@ class BalitaController extends Controller
         }
 
         $items = $query
-            ->latest('id')
+            ->orderBy('nama_lengkap', 'asc')
             ->paginate(10)
             ->withQueryString();
 

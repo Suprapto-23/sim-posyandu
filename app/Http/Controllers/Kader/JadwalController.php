@@ -81,7 +81,7 @@ class JadwalController extends Controller
     private function buildLivePayload(array $filters): array
     {
         $items = $this->baseQuery($filters)
-            ->limit(120)
+            ->limit(3)
             ->get()
             ->map(fn (JadwalPosyandu $jadwal) => $this->formatItem($jadwal))
             ->values();

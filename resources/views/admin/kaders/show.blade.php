@@ -97,13 +97,9 @@
                     <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Telepon / WhatsApp</span>
                     <span class="text-[13px] font-black text-slate-700">{{ $kader->profile?->telepon ?? '-' }}</span>
                 </div>
-                <div class="flex flex-col border-b border-slate-50 pb-3 gap-1">
+                <div class="flex flex-col gap-1">
                     <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Alamat Lengkap</span>
                     <span class="text-[13px] font-black text-slate-700 leading-relaxed">{{ $kader->profile?->alamat ?? '-' }}</span>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:justify-between border-b border-slate-50 pb-3 gap-1">
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Login Terakhir</span>
-                    <span class="text-[13px] font-black text-slate-500">{{ $kader->last_login_at ? \Carbon\Carbon::parse($kader->last_login_at)->translatedFormat('d M Y, H:i') : 'Belum Pernah' }}</span>
                 </div>
             </div>
         </div>

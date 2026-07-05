@@ -88,7 +88,7 @@ class RemajaController extends Controller
             ->when($hasUserId, function ($q) {
                 $q->with(['user:id,name,nik,email,role,status']);
             })
-            ->latest('id');
+            ->orderBy('nama_lengkap', 'asc');
 
         if ($hasUserId && $statusAkun === 'terhubung') {
             $query->whereNotNull('user_id');

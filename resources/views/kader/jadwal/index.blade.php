@@ -128,7 +128,6 @@
 </style>
 @endpush
 
-{{-- PERBAIKAN WRAPPER: Menggunakan struktur natural agar tidak tertabrak sidebar --}}
 <div class="relative z-10 mx-auto max-w-[1180px] pb-16 animate-fade-in space-y-6 pt-6">
 
     {{-- 1. HERO WIDGET --}}
@@ -271,7 +270,7 @@
         <div id="jadwal-card-list" class="kj-live-list grid gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch"></div>
 
         {{-- Pagination Container --}}
-        <div id="jadwal-pagination" class="flex flex-wrap items-center justify-center gap-2 mt-8"></div>
+        <div id="jadwal-pagination" class="w-full"></div>
 
         {{-- Empty State --}}
         <div id="jadwal-empty" class="hidden widget-card p-10 text-center flex-col items-center justify-center min-h-[300px]">
@@ -484,33 +483,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Fungsi Render Pagination Controls
+    // Fungsi Render Pagination Controls (Disesuaikan Membulat)
     const renderPaginationControls = (totalItems, totalPages) => {
         if (totalPages <= 1) {
             pagination.innerHTML = '';
             return;
         }
 
-        let html = '';
+        let html = `
+            <div class="px-2 py-6 mt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    Halaman <span class="text-slate-900">${currentPage}</span> dari <span class="text-slate-900">${totalPages}</span>
+                </p>
+                <div class="flex items-center gap-2">
+        `;
         
         // Prev Button
-        html += `<button type="button" data-page="${currentPage - 1}" class="btn-pill w-10 h-10 flex items-center justify-center border ${currentPage === 1 ? 'border-slate-100 text-slate-300 pointer-events-none bg-slate-50' : 'border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 bg-white shadow-sm'}"><i class="fas fa-chevron-left text-xs"></i></button>`;
+        if (currentPage === 1) {
+            html += `<button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"><i class="fas fa-chevron-left text-xs"></i></button>`;
+        } else {
+            html += `<button type="button" data-page="${currentPage - 1}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>`;
+        }
 
         // Number Buttons
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                if (i === currentPage) {
-                    html += `<button type="button" class="btn-pill w-10 h-10 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-md pointer-events-none">${i}</button>`;
-                } else {
-                    html += `<button type="button" data-page="${i}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-sm hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 shadow-sm">${i}</button>`;
-                }
-            } else if (i === currentPage - 2 || i === currentPage + 2) {
-                html += `<span class="w-10 h-10 flex items-center justify-center text-slate-400 font-black">...</span>`;
+        let start = Math.max(1, currentPage - 2);
+        let end = Math.min(totalPages, currentPage + 2);
+
+        for (let i = start; i <= end; i++) {
+            if (i === currentPage) {
+                html += `<button type="button" class="btn-pill w-10 h-10 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-md pointer-events-none">${i}</button>`;
+            } else {
+                html += `<button type="button" data-page="${i}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-sm shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">${i}</button>`;
             }
         }
 
         // Next Button
-        html += `<button type="button" data-page="${currentPage + 1}" class="btn-pill w-10 h-10 flex items-center justify-center border ${currentPage === totalPages ? 'border-slate-100 text-slate-300 pointer-events-none bg-slate-50' : 'border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 bg-white shadow-sm'}"><i class="fas fa-chevron-right text-xs"></i></button>`;
+        if (currentPage === totalPages) {
+            html += `<button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"><i class="fas fa-chevron-right text-xs"></i></button>`;
+        } else {
+            html += `<button type="button" data-page="${currentPage + 1}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>`;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
 
         pagination.innerHTML = html;
     };
@@ -631,8 +648,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 renderListContent();
                 list.classList.remove('is-loading');
-                // Scroll smooth ke atas area jadwal
-                document.getElementById('data-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 150);
         }
     });

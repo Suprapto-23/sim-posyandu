@@ -213,13 +213,6 @@
                         {{ $user->created_at ? $user->created_at->translatedFormat('d M Y, H:i') : '-' }}
                     </span>
                 </div>
-
-                <div class="info-row">
-                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Terakhir Login</span>
-                    <span class="text-[13px] font-black text-slate-500">
-                        {{ $user->last_login_at ? \Carbon\Carbon::parse($user->last_login_at)->translatedFormat('d M Y, H:i') : 'Belum Pernah' }}
-                    </span>
-                </div>
             </div>
         </div>
 

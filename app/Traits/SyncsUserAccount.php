@@ -3,44 +3,34 @@
 namespace App\Traits;
 
 use App\Models\User;
-use App\Models\Profile;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Hash;
 
-/**
- * Trait SyncsUserAccount
- * Digunakan oleh Kader untuk mencari dan menyambungkan data rekam medis 
- * (Balita, Lansia, dll) dengan Akun Login Warga (User) secara otomatis.
- */
 trait SyncsUserAccount
 {
-    public function findLinkedUser($nik, $nama_lengkap)
+    /**
+     * Mengeksekusi sinkronisasi akun tanpa memicu duplikasi NIK.
+     */
+    public function executeSync(array $data, string $kategoriDemografi)
     {
-        $cleanNik  = preg_replace('/[^0-9]/', '', (string)$nik);
-        $cleanName = trim((string)$nama_lengkap);
-
-        if (empty($cleanNik) && empty($cleanName)) return null;
-
-        // 1. TAHAP PERTAMA: Cari berdasarkan NIK (Sangat Akurat)
-        if (!empty($cleanNik)) {
-            // Cari di tabel users
-            $user = User::where('nik', $cleanNik)
-                        ->orWhere('email', $cleanNik)
-                        ->first();
-            if ($user) return $user;
-
-            // Cari di tabel profiles
-            if (Schema::hasTable('profiles')) {
-                $profile = Profile::where('nik', $cleanNik)->first();
-                if ($profile && $profile->user) return $profile->user;
-            }
+        // Cegah eksekusi jika NIK kosong (mencegah null constraint)
+        if (empty($data['nik'])) {
+            abort(400, 'NIK tidak valid atau kosong saat proses sinkronisasi.');
         }
 
-        // 2. TAHAP KEDUA: Cari berdasarkan Nama (Fuzzy Search)
-        if (!empty($cleanName)) {
-            $userByName = User::where('name', 'LIKE', "%{$cleanName}%")->first();
-            if ($userByName) return $userByName;
-        }
+        // firstOrCreate: Solusi mutlak untuk masalah sinkronisasi dua pintu (Admin & Kader)
+        $user = User::firstOrCreate(
+            // Parameter 1: Kondisi pencarian (Kolom Unique)
+            ['nik' => $data['nik']],
+            
+            // Parameter 2: Data yang akan dieksekusi HANYA jika NIK belum terdaftar
+            [
+                'name' => $data['nama_lengkap'],
+                'password' => Hash::make($data['nik']), // Default password menggunakan NIK
+                'role' => $kategoriDemografi // Kategorisasi demografi otomatis
+            ]
+        );
 
-        return null;
+        // Kembalikan primary key untuk ditautkan sebagai foreign key
+        return $user->id;
     }
 }
