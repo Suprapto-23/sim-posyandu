@@ -219,7 +219,7 @@
     $name = $user->name ?? 'Administrator';
     $initial = strtoupper(substr($name, 0, 1));
     $photo = $user->foto ?? null;
-    $profileUrl = \Illuminate\Support\Facades\Route::has('admin.profile.index') ? route('admin.profile.index') : '#';
+    // Admin tidak memiliki halaman profil (by design) — link "Profil Saya" dihapus.
 @endphp
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
@@ -270,12 +270,6 @@
                                     <div class="dropdown-role">Akses Admin</div>
                                 </div>
                             </div>
-
-                            @if($profileUrl !== '#')
-                                <a href="{{ $profileUrl }}" class="dropdown-link" data-no-spa>
-                                    <i class="fa-regular fa-user text-slate-400"></i> Profil Saya
-                                </a>
-                            @endif
 
                             <form method="POST" action="{{ route('logout') }}" class="js-logout-form m-0 p-0 mt-2 border-t border-slate-100 pt-2">
                                 @csrf

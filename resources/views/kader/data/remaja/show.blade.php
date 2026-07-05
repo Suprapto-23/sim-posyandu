@@ -375,11 +375,9 @@
                 </div>
             </div>
             
-            @if(Route::has('kader.pemeriksaan.remaja.create'))
-                <a href="{{ route('kader.pemeriksaan.remaja.create', ['remaja_id' => $remaja->id]) }}" class="btn-pill bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 border border-emerald-200 px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition-colors shadow-sm inline-flex items-center justify-center gap-2">
-                    <i class="fas fa-plus"></i> Tambah Kunjungan
-                </a>
-            @endif
+            <a href="{{ route('kader.pemeriksaan.create', ['kategori' => 'remaja', 'pasien_id' => $remaja->id]) }}" class="btn-pill bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 border border-emerald-200 px-5 py-2.5 text-[11px] font-black uppercase tracking-wider transition-colors shadow-sm inline-flex items-center justify-center gap-2">
+                <i class="fas fa-plus"></i> Tambah Kunjungan
+            </a>
         </div>
 
         <div class="space-y-3">

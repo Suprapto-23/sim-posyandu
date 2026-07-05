@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Pagination\Paginator; // <-- Tambahkan ini untuk Pagination
 use App\Models\Setting;
 use App\Models\Balita;
 use App\Models\Remaja;
@@ -28,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 0. Set Default Pagination View ke Custom (Bulat Hijau)
+        Paginator::defaultView('vendor.pagination.custom');
+
         // 1. Force HTTPS di Production
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
@@ -131,7 +135,8 @@ class AppServiceProvider extends ServiceProvider
             
             $view->with('peranUser', $peranUser);
         });
+        
         // Memaksa path temporary file ke /tmp agar tidak error di Vercel
-    config(['excel.temporary_files.local_path' => '/tmp']);
+        config(['excel.temporary_files.local_path' => '/tmp']);
     }
 }

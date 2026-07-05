@@ -456,4 +456,19 @@ class NotifikasiController extends Controller
     {
         return (new Notifikasi())->getTable();
     }
+    public function show($id)
+{
+    // 1. Ambil data notifikasi berdasarkan ID dan pastikan itu milik user yang sedang login
+    $notifikasi = \App\Models\Notifikasi::where('id', $id)
+                    ->where('user_id', auth()->user()->id)
+                    ->firstOrFail();
+
+    // 2. Ubah status menjadi 'sudah dibaca' jika masih baru
+    if (!$notifikasi->is_read) {
+        $notifikasi->update(['is_read' => true]);
+    }
+
+    // 3. TAMPILKAN VIEW (JANGAN PAKAI REDIRECT)
+    return view('user.notifikasi.show', compact('notifikasi'));
+}
 }

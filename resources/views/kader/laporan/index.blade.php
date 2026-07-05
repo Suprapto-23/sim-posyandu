@@ -32,10 +32,10 @@
             'label' => 'Lansia',
             'total' => $totalTahunan['lansia'] ?? 0,
             'desc' => 'Kesehatan lansia',
-            'pill' => 'bg-sky-50 text-sky-700 ring-sky-200',
-            'active' => 'bg-sky-500 text-white shadow-sky-200',
-            'muted' => 'text-sky-600',
-            'bg' => 'from-sky-500 to-blue-500',
+            'pill' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+            'active' => 'bg-emerald-600 text-white shadow-emerald-200',
+            'muted' => 'text-emerald-600',
+            'bg' => 'from-emerald-500 to-teal-500',
             'icon' => 'fa-person-cane',
         ],
     ];
@@ -78,12 +78,15 @@
 
     .btn-pill {
         border-radius: 9999px;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         cursor: pointer;
     }
     .btn-pill:active {
         transform: scale(0.95);
     }
+    
+    /* Menyembunyikan elemen sebelum Alpine termuat penuh */
+    [x-cloak] { display: none !important; }
 </style>
 @endpush
 
@@ -92,6 +95,7 @@
         activeTab: 'balita',
         yearType: 'balita',
         kategori: @js($kategori),
+        dropdownOpen: false,
         currentPage: 1,
         itemsPerPage: 5,
         totalItems: {{ $totalRiwayat }},
@@ -103,6 +107,24 @@
         },
         get totalPages() {
             return Math.max(1, Math.ceil(this.totalItems / this.itemsPerPage));
+        },
+        get paginationArray() {
+            let windowSize = 2;
+            let start = Math.max(1, this.currentPage - windowSize);
+            let end = Math.min(this.totalPages, this.currentPage + windowSize);
+
+            if (this.currentPage <= windowSize) {
+                end = Math.min(this.totalPages, 1 + (windowSize * 2));
+            }
+            if (this.currentPage > this.totalPages - windowSize) {
+                start = Math.max(1, this.totalPages - (windowSize * 2));
+            }
+
+            let pages = [];
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            return pages;
         },
         nextPage() {
             if (this.currentPage < this.totalPages) {
@@ -187,16 +209,49 @@
                 </div>
             </div>
 
-            {{-- Unduh Laporan Tahunan Form --}}
+            {{-- Unduh Laporan Tahunan Form (DENGAN DROPDOWN CUSTOM) --}}
             <form action="{{ route('kader.laporan.preview') }}" method="POST" class="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg border border-white/50 p-6 w-full lg:w-80 shrink-0">
                 @csrf
                 <p class="text-[11px] font-black uppercase tracking-widest text-teal-600 mb-4 text-center"><i class="fas fa-download mr-1"></i> Rekap Tahunan</p>
                 
-                <select name="jenis_laporan" x-model="yearType" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all mb-4 cursor-pointer">
-                    @foreach($kategori as $key => $item)
-                        <option value="{{ $key }}">{{ $item['label'] }}</option>
-                    @endforeach
-                </select>
+                {{-- Custom Alpine Dropdown --}}
+                <div class="relative w-full mb-4">
+                    <input type="hidden" name="jenis_laporan" :value="yearType">
+                    
+                    <button 
+                        type="button" 
+                        @click="dropdownOpen = !dropdownOpen" 
+                        @click.outside="dropdownOpen = false" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none hover:border-teal-500 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition-all cursor-pointer flex justify-between items-center shadow-sm"
+                    >
+                        <span x-text="kategori[yearType].label"></span>
+                        <i class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="dropdownOpen ? 'rotate-180' : ''"></i>
+                    </button>
+
+                    <div 
+                        x-cloak 
+                        x-show="dropdownOpen" 
+                        x-transition:enter="transition ease-out duration-200" 
+                        x-transition:enter-start="opacity-0 scale-95" 
+                        x-transition:enter-end="opacity-100 scale-100" 
+                        x-transition:leave="transition ease-in duration-100" 
+                        x-transition:leave-start="opacity-100 scale-100" 
+                        x-transition:leave-end="opacity-0 scale-95" 
+                        class="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 py-1.5 px-1.5 flex flex-col gap-1 origin-top"
+                    >
+                        <template x-for="(item, key) in kategori" :key="key">
+                            <button 
+                                type="button" 
+                                @click="yearType = key; dropdownOpen = false"
+                                class="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between"
+                                :class="yearType === key ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-600 font-semibold hover:bg-slate-50 hover:text-slate-900'"
+                            >
+                                <span x-text="item.label"></span>
+                                <i x-show="yearType === key" class="fas fa-check text-emerald-500 text-xs"></i>
+                            </button>
+                        </template>
+                    </div>
+                </div>
 
                 <input type="hidden" name="periode_tahun" value="{{ $tahun }}">
 
@@ -380,25 +435,29 @@
             @endforelse
         </div>
 
-        {{-- Pagination Controls --}}
-        <div x-show="totalPages > 1" x-transition class="mt-8 flex flex-col items-center justify-center gap-3 border-t border-slate-100 pt-6">
+        {{-- PAGINATION CUSTOM TERBATAS 5 ANGKA (PILL EMERALD) --}}
+        <div x-cloak x-show="totalPages > 1" x-transition class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-6">
             <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
                 Halaman <span x-text="currentPage" class="text-slate-700"></span> dari <span x-text="totalPages" class="text-slate-700"></span>
             </p>
+            
             <div class="flex items-center gap-2">
-                <button @click="prevPage()" :disabled="currentPage === 1" type="button" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all">
+                {{-- Tombol Previous --}}
+                <button @click="prevPage()" :disabled="currentPage === 1" type="button" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 hover:text-emerald-600 transition-all">
                     <i class="fas fa-chevron-left text-xs"></i>
                 </button>
 
-                <template x-for="page in totalPages" :key="page">
+                {{-- Nomor Halaman Dinamis (Maksimal 5) --}}
+                <template x-for="page in paginationArray" :key="page">
                     <button @click="setPage(page)" type="button"
                         class="btn-pill w-10 h-10 flex items-center justify-center text-sm font-bold transition-all shadow-sm"
-                        :class="page === currentPage ? 'bg-emerald-500 text-white border-transparent shadow-md' : 'border border-slate-200 bg-white text-slate-600 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200'">
+                        :class="page === currentPage ? 'bg-emerald-500 text-white border-transparent shadow-md pointer-events-none' : 'border border-slate-200 bg-white text-slate-600 hover:bg-emerald-50 hover:text-emerald-600'">
                         <span x-text="page"></span>
                     </button>
                 </template>
 
-                <button @click="nextPage()" :disabled="currentPage === totalPages" type="button" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all">
+                {{-- Tombol Next --}}
+                <button @click="nextPage()" :disabled="currentPage === totalPages" type="button" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 hover:text-emerald-600 transition-all">
                     <i class="fas fa-chevron-right text-xs"></i>
                 </button>
             </div>

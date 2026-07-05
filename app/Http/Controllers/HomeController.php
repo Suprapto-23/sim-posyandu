@@ -21,9 +21,8 @@ use App\Traits\DetectsUserPeran;
  *     Bidan  → /bidan/dashboard
  *     Kader  → /kader/dashboard
  *     User (warga) → DetectsUserPeran → redirect ke halaman spesifik:
- *       orang_tua → /user/balita   (KMS Anak)
- *       remaja    → /user/remaja
- *       lansia    → /user/lansia
+ *       orang_tua / remaja / lansia → /user/monitoring (menampilkan data
+ *         sesuai peran yang terdeteksi)
  *       multi-peran → /user/dashboard
  *       umum      → /user/dashboard (dengan pesan minta isi NIK)
  *
@@ -65,26 +64,28 @@ class HomeController extends Controller
      * Redirect warga ke halaman yang sesuai berdasarkan data mereka.
      * Menggunakan DetectsUserPeran untuk deteksi otomatis.
      */
-   private function redirectWarga($user)
-{
-    $ctx = $this->getUserContext($user);
+    private function redirectWarga($user)
+    {
+        $ctx = $this->getUserContext($user);
 
-    // Jika punya banyak peran (misal: punya balita sekaligus lansia)
-    if ($ctx['is_multi_peran']) {
-        return redirect()->route('user.dashboard');
+        // Jika punya banyak peran (misal: punya balita sekaligus lansia)
+        if ($ctx['is_multi_peran']) {
+            return redirect()->route('user.dashboard');
+        }
+
+        $peranUtama = $ctx['peran'][0] ?? 'umum';
+
+        switch ($peranUtama) {
+            case 'orang_tua':
+            case 'remaja':
+            case 'lansia':
+                // route user.balita.index / user.remaja.index / user.lansia.index
+                // TIDAK ADA di routes/web.php (yang ada cuma versi .show dengan {id}),
+                // jadi diarahkan ke halaman monitoring yang sudah menampilkan data
+                // balita/remaja/lansia sesuai peran user tersebut.
+                return redirect()->route('user.monitoring.index');
+            default:
+                return redirect()->route('user.dashboard'); // Baru ke dashboard jika 'umum'
+        }
     }
-
-    $peranUtama = $ctx['peran'][0] ?? 'umum';
-
-    switch ($peranUtama) {
-        case 'orang_tua':
-            return redirect()->route('user.balita.index'); // Langsung ke KMS
-        case 'remaja':
-            return redirect()->route('user.remaja.index');
-        case 'lansia':
-            return redirect()->route('user.lansia.index');
-        default:
-            return redirect()->route('user.dashboard'); // Baru ke dashboard jika 'umum'
-    }
-}
 }

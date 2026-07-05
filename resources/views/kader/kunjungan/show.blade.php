@@ -20,7 +20,6 @@
     $namaPasien = $kunjungan->pasien->nama_lengkap ?? 'Data Terhapus';
     $nikPasien = $kunjungan->pasien->nik ?? $kunjungan->pasien->kode_balita ?? 'Tanpa ID';
     
-    // Teks Keluhan yang lebih relevan dengan alur medis Posyandu
     $keluhan = $kunjungan->keluhan ?: 'Pemeriksaan rutin. Tidak ada keluhan medis khusus yang dicatat.';
     
     $waktuCheckIn = Carbon::parse($kunjungan->created_at)->timezone('Asia/Jakarta');
@@ -55,26 +54,16 @@
 
     .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
     @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-    /* CSS KHUSUS CETAK (PRINT) */
-    .print-watermark { display: none; }
-    @media print {
-        body { background: white !important; }
-        .bg-mesh-fixed, .no-print, .pc-sidebar, header { display: none !important; }
-        .widget-card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; break-inside: avoid; border-radius: 1rem !important; }
-        .print-area { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
-        .print-watermark { display: block; margin-top: 40px; text-align: center; font-size: 11px; color: #64748b; font-family: monospace; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
-    }
 </style>
 @endpush
 
 @section('content')
-<div class="bg-mesh-fixed no-print"></div>
+<div class="bg-mesh-fixed"></div>
 
-<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1200px] mx-auto space-y-6 animate-pop-in print-area">
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1200px] mx-auto space-y-6 animate-pop-in">
 
     {{-- 1. HERO BANNER (Profile Pasien) --}}
-    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col md:flex-row justify-between items-center gap-8 border-[6px] border-white/40 no-print">
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col md:flex-row justify-between items-center gap-8 border-[6px] border-white/40">
         <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
         <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
 
@@ -101,21 +90,9 @@
                 </span>
             </div>
         </div>
-
-        <div class="relative z-10 shrink-0">
-            <button onclick="window.print()" class="btn-pill bg-white text-emerald-600 hover:bg-emerald-50 px-6 py-3.5 text-[11px] font-black uppercase tracking-widest shadow-md flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 w-full sm:w-auto">
-                <i class="fa-solid fa-print text-sm"></i> Cetak Bukti
-            </button>
-        </div>
     </section>
 
-    {{-- HEADER PRINT ONLY (Hanya muncul saat dicetak) --}}
-    <div class="hidden print:block mb-8 text-center border-b-2 border-slate-800 pb-4">
-        <h1 class="text-2xl font-black text-slate-900 uppercase tracking-widest">BUKTI PELAYANAN POSYANDU</h1>
-        <p class="text-sm font-bold text-slate-600 mt-1">Nama: {{ $namaPasien }} | NIK/ID: {{ $nikPasien }} | Sasaran: {{ $badgeTheme['label'] }}</p>
-    </div>
-
-    {{-- 2. GRID UTAMA PRESISI (items-stretch untuk mengunci tinggi, flex-1 di kartu bawah) --}}
+    {{-- 2. GRID UTAMA PRESISI --}}
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
         
         {{-- KOLOM KIRI (Col 8) --}}
@@ -145,7 +122,7 @@
                 </div>
             </section>
 
-            {{-- Layanan Diterima (Menggunakan flex-1 agar merenggang rata dengan kolom kanan) --}}
+            {{-- Layanan Diterima --}}
             <section class="widget-card p-6 sm:p-8 flex flex-col flex-1 h-full">
                 <div class="flex items-center justify-between gap-4 mb-5 border-b border-slate-100 pb-4 shrink-0">
                     <div class="flex items-center gap-3">
@@ -167,7 +144,7 @@
                         <div>
                             <p class="text-sm font-black text-slate-800 mb-1">Cek Fisik & Medis Dasar</p>
                             <p class="text-[11px] font-medium text-slate-500 mb-2">Telah dilakukan pengukuran antropometri / tanda-tanda vital.</p>
-                            <a href="{{ route('kader.pemeriksaan.show', $kunjungan->pemeriksaan->id) }}" class="btn-pill inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-100 text-sky-700 text-[9px] font-black uppercase tracking-widest no-print hover:bg-sky-200">
+                            <a href="{{ route('kader.pemeriksaan.show', $kunjungan->pemeriksaan->id) }}" class="btn-pill inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-100 text-sky-700 text-[9px] font-black uppercase tracking-widest hover:bg-sky-200">
                                 Lihat Rekam Medis <i class="fa-solid fa-arrow-right"></i>
                             </a>
                         </div>
@@ -212,7 +189,7 @@
                 </div>
             </section>
 
-            {{-- Otoritas Petugas (Menggunakan flex-1 agar rata bawah dengan kolom kiri) --}}
+            {{-- Otoritas Petugas --}}
             <section class="widget-card p-6 flex flex-col flex-1 h-full">
                 <div class="flex items-center gap-3 mb-4 shrink-0">
                     <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center shrink-0 shadow-sm"><i class="fa-solid fa-user-shield text-sm"></i></div>
@@ -226,12 +203,6 @@
                         <p class="text-sm font-black text-slate-800">{{ $petugasName }}</p>
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Kader Bertugas</p>
                     </div>
-                </div>
-
-                {{-- Footer Print Area di dalam card agar selalu di bawah --}}
-                <div class="print-watermark mt-auto pt-6">
-                    DOKUMEN BUKTI LAYANAN POSYANDU TERPADU<br>
-                    Dicetak pada: {{ now()->timezone('Asia/Jakarta')->locale('id')->isoFormat('D MMMM Y HH:mm:ss') }} WIB | ID: {{ $kunjungan->kode_kunjungan ?? 'KJ-N/A' }}
                 </div>
             </section>
 

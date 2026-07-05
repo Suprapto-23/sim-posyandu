@@ -117,11 +117,6 @@
         cursor: pointer;
     }
     .btn-pill:active { transform: scale(0.96); }
-
-    .slim-scroll::-webkit-scrollbar { width: 6px; }
-    .slim-scroll::-webkit-scrollbar-track { background: transparent; }
-    .slim-scroll::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.2); border-radius: 10px; }
-    .slim-scroll::-webkit-scrollbar-thumb:hover { background: rgba(245, 158, 11, 0.5); }
 </style>
 @endpush
 
@@ -157,11 +152,11 @@
             </div>
         </div>
 
-        <div class="relative z-10 flex gap-2 shrink-0">
-            <a href="{{ $backRoute }}" data-no-delay="true" class="btn-pill bg-white/10 hover:bg-white/20 text-white border border-white/30 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md transition-all">
+        <div class="relative z-10 flex flex-wrap gap-2 shrink-0 w-full md:w-auto">
+            <a href="{{ $backRoute }}" data-no-delay="true" class="btn-pill flex-1 md:flex-none text-center bg-white/10 hover:bg-white/20 text-white border border-white/30 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md transition-all shadow-sm">
                 Kembali
             </a>
-            <a href="{{ $dashboardRoute }}" data-no-delay="true" class="btn-pill bg-white hover:bg-amber-50 text-amber-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5">
+            <a href="{{ $dashboardRoute }}" data-no-delay="true" class="btn-pill flex-1 md:flex-none text-center bg-white hover:bg-amber-50 text-amber-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5">
                 Dashboard
             </a>
         </div>
@@ -188,10 +183,10 @@
     </div>
 
     {{-- 3. AREA UTAMA: PROFIL, KESIMPULAN & METRIK TAMBAHAN --}}
-    <div class="grid grid-cols-1 gap-5 xl:grid-cols-12 items-start relative">
+    <div class="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:items-stretch relative">
 
         {{-- KOLOM KIRI (STICKY): Profil & Kesimpulan --}}
-        <div class="xl:col-span-5 flex flex-col gap-5 sticky top-6 z-10">
+        <div class="xl:col-span-5 flex flex-col gap-5 xl:sticky xl:top-6 z-10">
             <div class="widget-card flex flex-col overflow-hidden">
                 <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-amber-500 flex items-center justify-center shadow-sm shrink-0">
@@ -234,25 +229,25 @@
                             <div class="w-6 h-6 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-user text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Nama Lengkap</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5">{{ $dataLansia->nama_lengkap ?? '-' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 break-words">{{ $dataLansia->nama_lengkap ?? '-' }}</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3 border-b border-slate-100/50 pb-3">
                             <div class="w-6 h-6 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-id-card text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Nomor Induk (NIK)</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5">{{ $dataLansia->nik ?? '-' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 tracking-wider">{{ $dataLansia->nik ?? '-' }}</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3 border-b border-slate-100/50 pb-3">
                             <div class="w-6 h-6 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-calendar-day text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Tgl Lahir</p>
                                 <p class="text-xs font-black text-slate-800 mt-0.5">{{ $formatDate($dataLansia->tanggal_lahir ?? null) }}</p>
                             </div>
@@ -261,7 +256,7 @@
                             <div class="w-6 h-6 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-notes-medical text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Penyakit Bawaan</p>
                                 <p class="text-xs font-black text-slate-800 mt-0.5 leading-relaxed">{{ $dataLansia->penyakit_bawaan ?: 'Tidak ada catatan.' }}</p>
                             </div>
@@ -270,20 +265,20 @@
                             <div class="w-6 h-6 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-map-location-dot text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Alamat</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5 leading-relaxed">{{ $dataLansia->alamat ?? '-' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 leading-relaxed break-words">{{ $dataLansia->alamat ?? '-' }}</p>
                             </div>
                         </div>
                     </div>
 
                     {{-- Metrik Kesehatan Lanjutan (Grid Kecil) --}}
                     @if(isset($healthMetrics) && count($healthMetrics) > 0)
-                        <div class="grid grid-cols-3 gap-2 mt-auto">
+                        <div class="grid grid-cols-3 gap-2 mt-auto pt-2">
                             @foreach($healthMetrics as $metric)
-                                <div class="rounded-xl border border-slate-100 bg-white p-2.5 text-center shadow-sm">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5 truncate">{{ $metric['label'] }}</p>
-                                    <p class="text-sm font-black text-slate-800 truncate">{{ $metric['value'] }}</p>
+                                <div class="rounded-xl border border-slate-100 bg-white p-2.5 text-center shadow-sm flex flex-col justify-between min-w-0">
+                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1 truncate">{{ $metric['label'] }}</p>
+                                    <p class="text-[11px] font-black text-slate-800 leading-tight whitespace-normal break-words">{{ $metric['value'] }}</p>
                                 </div>
                             @endforeach
                         </div>
@@ -311,82 +306,87 @@
                     </span>
                 </div>
 
-                <div class="flex-1 overflow-y-auto slim-scroll p-5 bg-slate-50/30 space-y-4">
-                    @forelse($paginatedRiwayat as $item)
-                        <article class="rounded-[1.25rem] border border-slate-200/80 bg-white p-4 shadow-sm hover:border-amber-300 hover:shadow-md transition-all">
-                            <div class="flex items-start justify-between gap-3 mb-3 border-b border-slate-50 pb-3">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center text-slate-600 shrink-0">
-                                        <span class="text-sm font-black leading-none">{{ Carbon::parse($item['tanggal'] ?? '')->format('d') }}</span>
-                                        <span class="text-[8px] font-black uppercase">{{ Carbon::parse($item['tanggal'] ?? '')->translatedFormat('M') }}</span>
+                <div class="p-5 bg-slate-50/30 flex-1">
+                    {{-- Grid 2 Kolom Konsisten seperti Remaja & Balita --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch h-full">
+                        @forelse($paginatedRiwayat as $item)
+                            <article class="rounded-[1.25rem] border border-slate-200/80 bg-white p-4 shadow-sm hover:border-amber-300 transition-all flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-3 border-b border-slate-100/50 pb-3">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center text-slate-600 shrink-0">
+                                                <span class="text-sm font-black leading-none">{{ Carbon::parse($item['tanggal'] ?? '')->format('d') }}</span>
+                                                <span class="text-[8px] font-black uppercase">{{ Carbon::parse($item['tanggal'] ?? '')->translatedFormat('M') }}</span>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs font-black text-slate-800">{{ $item['tanggal'] ?? '-' }}</p>
+                                                <p class="mt-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pemeriksaan Rutin</p>
+                                            </div>
+                                        </div>
+                                        <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 shrink-0">
+                                            <i class="fa-solid fa-check mr-0.5"></i> {{ $item['status'] ?? 'Tervalidasi' }}
+                                        </span>
                                     </div>
-                                    <div>
-                                        <p class="text-xs font-black text-slate-800">{{ $item['tanggal'] ?? '-' }}</p>
-                                        <p class="mt-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pemeriksaan Rutin</p>
-                                    </div>
-                                </div>
-                                <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 shrink-0">
-                                    <i class="fa-solid fa-check mr-0.5"></i> {{ $item['status'] ?? 'Tervalidasi' }}
-                                </span>
-                            </div>
 
-                            {{-- Baris 1: Tensi, Gula, IMT --}}
-                            <div class="grid grid-cols-3 gap-2 mb-2">
-                                <div class="rounded-lg border border-rose-100 bg-rose-50/50 px-2 py-1.5 text-center">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-rose-600 mb-0.5">Tensi</p>
-                                    <p class="truncate text-xs font-black text-rose-700">{{ $item['tensi'] ?? '-' }}</p>
-                                </div>
-                                <div class="rounded-lg border border-sky-100 bg-sky-50/50 px-2 py-1.5 text-center">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-sky-600 mb-0.5">Gula Darah</p>
-                                    <p class="truncate text-xs font-black text-sky-700">{{ $item['gula'] ?? '-' }}</p>
-                                </div>
-                                <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">IMT</p>
-                                    <p class="truncate text-xs font-black text-slate-800">{{ $item['imt'] ?? '-' }}</p>
-                                </div>
-                            </div>
-
-                            {{-- Baris 2: Kolesterol, Asam Urat, L. Perut --}}
-                            <div class="grid grid-cols-3 gap-2 mb-3">
-                                <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Kolesterol</p>
-                                    <p class="truncate text-xs font-black text-slate-800">{{ $item['kolesterol'] ?? '-' }}</p>
-                                </div>
-                                <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Asam Urat</p>
-                                    <p class="truncate text-xs font-black text-slate-800">{{ $item['asam_urat'] ?? '-' }}</p>
-                                </div>
-                                <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">L. Perut</p>
-                                    <p class="truncate text-xs font-black text-slate-800">{{ $item['lingkar_perut'] ?? '-' }}</p>
-                                </div>
-                            </div>
-
-                            <div class="mt-auto flex flex-col gap-2">
-                                @if(!empty($item['keluhan']))
-                                    <div class="bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/50">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-amber-600 mb-0.5">Keluhan</p>
-                                        <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-2">{{ $item['keluhan'] }}</p>
+                                    {{-- Baris 1: Tensi, Gula, IMT --}}
+                                    <div class="grid grid-cols-3 gap-2 mb-2">
+                                        <div class="rounded-lg border border-rose-100 bg-rose-50/50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-rose-600 mb-0.5">Tensi</p>
+                                            <p class="text-[11px] font-black text-rose-700 tracking-tight leading-tight truncate">{{ $item['tensi'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-sky-100 bg-sky-50/50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-sky-600 mb-0.5">Gula Darah</p>
+                                            <p class="text-[11px] font-black text-sky-700 tracking-tight leading-tight truncate">{{ $item['gula'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">IMT</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight leading-tight truncate">{{ $item['imt'] ?? '-' }}</p>
+                                        </div>
                                     </div>
-                                @endif
-                                
-                                @if(!empty($item['edukasi']))
-                                    <div class="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100/50">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Edukasi Bidan</p>
-                                        <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-2">{{ $item['edukasi'] }}</p>
+
+                                    {{-- Baris 2: Kolesterol, Asam Urat, L. Perut --}}
+                                    <div class="grid grid-cols-3 gap-2 mb-3">
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Kolesterol</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight leading-tight truncate">{{ $item['kolesterol'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Asam Urat</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight leading-tight truncate">{{ $item['asam_urat'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">L. Perut</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight leading-tight truncate">{{ $item['lingkar_perut'] ?? '-' }}</p>
+                                        </div>
                                     </div>
-                                @endif
+                                </div>
+
+                                <div class="mt-auto flex flex-col gap-2 pt-2">
+                                    @if(!empty($item['keluhan']))
+                                        <div class="bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/50">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-amber-600 mb-0.5">Keluhan</p>
+                                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-2">{{ $item['keluhan'] }}</p>
+                                        </div>
+                                    @endif
+                                    
+                                    @if(!empty($item['edukasi']))
+                                        <div class="bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100/50">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Edukasi Bidan</p>
+                                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-2">{{ $item['edukasi'] }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            </article>
+                        @empty
+                            <div class="md:col-span-2 flex flex-col items-center justify-center text-center opacity-70 p-8 border border-dashed border-slate-200 rounded-[1.5rem] min-h-[250px]">
+                                <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center mb-3 text-2xl text-slate-300 border border-slate-100 shadow-sm">
+                                    <i class="fas fa-folder-open"></i>
+                                </div>
+                                <h3 class="text-xs font-black text-slate-700">Belum Ada Pemeriksaan</h3>
+                                <p class="text-[10px] font-semibold text-slate-500 mt-1 max-w-xs leading-relaxed">Catatan akan muncul setelah validasi Bidan.</p>
                             </div>
-                        </article>
-                    @empty
-                        <div class="flex flex-col items-center justify-center text-center opacity-70 p-8 border border-dashed border-slate-200 rounded-[1.5rem] min-h-[250px]">
-                            <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center mb-3 text-2xl text-slate-300 border border-slate-100 shadow-sm">
-                                <i class="fas fa-folder-open"></i>
-                            </div>
-                            <h3 class="text-xs font-black text-slate-700">Belum Ada Pemeriksaan</h3>
-                            <p class="text-[10px] font-semibold text-slate-500 mt-1 max-w-xs leading-relaxed">Catatan akan muncul setelah validasi Bidan.</p>
-                        </div>
-                    @endforelse
+                        @endforelse
+                    </div>
                 </div>
 
                 {{-- Pagination Riwayat Pemeriksaan --}}

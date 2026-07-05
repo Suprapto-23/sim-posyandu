@@ -783,7 +783,7 @@
     </section>
 
     {{-- 5. MODAL HAPUS DATA --}}
-    <div id="pcDeleteModal" class="nexus-modal fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div id="pcDeleteModal" class="nexus-modal fixed inset-0 z-[9999] flex items-center justify-center px-4">
         <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="nexusAlertBackdrop"></div>
         <div class="widget-card bg-white w-full max-w-sm p-6 relative z-10 scale-95 transform transition-transform duration-300">
             <div class="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-500 shadow-inner">

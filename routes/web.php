@@ -569,10 +569,8 @@ Route::middleware(['auth', 'checkstatus', 'role:user'])
         */
 
         Route::get('/jadwal', [UserJadwalController::class, 'index'])
-    ->name('jadwal.index');
-Route::get('/jadwal/{id}', [UserJadwalController::class, 'show'])
-    ->name('jadwal.show');
-
+        ->name('jadwal.index');
+        Route::get('/jadwal/{id}', [UserJadwalController::class, 'show'])->name('jadwal.show');
         Route::get('/riwayat', [UserRiwayatController::class, 'index'])
             ->name('riwayat.index');
         
@@ -585,6 +583,10 @@ Route::get('/jadwal/{id}', [UserJadwalController::class, 'show'])
 
         Route::get('/notifikasi', [UserNotifikasiController::class, 'index'])
             ->name('notifikasi.index');
+
+        Route::get('/notifikasi/{id}/show', [UserNotifikasiController::class, 'show'])
+            ->whereNumber('id')
+            ->name('notifikasi.show');
 
         Route::get('/notifikasi/fetch', [UserNotifikasiController::class, 'fetchRecent'])
             ->name('notifikasi.fetch');

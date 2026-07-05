@@ -60,6 +60,19 @@ class NotifikasiController extends Controller
     }
 
     // =====================================================================
+    // BUG FIX: endpoint ringan untuk polling badge notifikasi (setiap 30s).
+    // Sebelumnya route('kader.notifikasi.count') dipanggil dari
+    // layouts/kader.blade.php tapi tidak pernah didaftarkan, jadi badge
+    // unreadCount cuma ke-update saat halaman di-reload penuh.
+    // =====================================================================
+    public function count()
+    {
+        $unread = Notifikasi::where('user_id', Auth::id())->belumDibaca()->count();
+
+        return response()->json(['unread' => $unread]);
+    }
+
+    // =====================================================================
     // MESIN AJAX: REAL-TIME POLLING & PUSH NOTIFICATION (ANTI-RELOAD)
     // =====================================================================
     public function fetchRecent()

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\Concerns\ResolvesUserHealthContext;
 use App\Models\JadwalPosyandu;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -19,12 +20,15 @@ class JadwalController extends Controller
 {
     use ResolvesUserHealthContext;
 
+    // Menyimpan daftar kolom tabel agar tidak memanggil Schema berulang kali
+    private array $tableColumns = [];
+
     public function index(Request $request): View
     {
         try {
             $user = auth()->user();
-            
-            // SINKRONISASI CACHE AGAR SMART FILTERING BEKERJA CEPAT
+
+            // 1. Ambil Context User (Sasaran)
             $contextKey = 'user_dashboard_context_' . $user->id;
             $context = Cache::remember($contextKey, 300, function () use ($user) {
                 return $this->getUserContext($user);
@@ -32,23 +36,26 @@ class JadwalController extends Controller
 
             $hakAkses = $this->resolveHakAkses($context);
 
+            // 2. Load struktur kolom database (Sangat Aman)
+            $this->tableColumns = Schema::getColumnListing((new JadwalPosyandu())->getTable());
+
             $filters = [
                 'search' => trim((string) $request->input('search', '')),
                 'filter' => $this->normalizeFilter($request->input('filter', 'semua')),
                 'periode' => $this->normalizePeriode($request->input('periode', 'semua')),
             ];
 
-            $query = $this->baseQuery($hakAkses);
-
-            $this->applyTargetFilter($query, $hakAkses, $filters['filter']);
+            // 3. Bangun Query Utama
+            $query = JadwalPosyandu::query();
+            $this->applyBaseFilters($query, $hakAkses);
+            $this->applyTargetFilter($query, $filters['filter']);
             $this->applyPeriodeFilter($query, $filters['periode']);
             $this->applySearchFilter($query, $filters['search']);
             $this->applySmartOrdering($query);
 
-            $jadwalKegiatan = $query
-                ->paginate(8)
-                ->withQueryString();
+            $jadwalKegiatan = $query->paginate(8)->withQueryString();
 
+            // 4. Bangun UI Data
             $summary = $this->buildSummary($hakAkses);
             $jadwalCards = $this->buildCards(collect($jadwalKegiatan->items()));
             $jadwalUtama = $this->getJadwalTerdekat($hakAkses);
@@ -56,128 +63,133 @@ class JadwalController extends Controller
             return view('user.jadwal.index', [
                 'context' => $context,
                 'hakAkses' => $hakAkses,
-
                 'filters' => $filters,
                 'filterTarget' => $filters['filter'],
-
                 'summary' => $summary,
                 'jadwalUtama' => $jadwalUtama,
                 'jadwalKegiatan' => $jadwalKegiatan,
                 'jadwalCards' => $jadwalCards,
             ]);
+
         } catch (\Throwable $e) {
-            Log::error('User JadwalController@index error', [
-                'message' => $e->getMessage(),
-                'user_id' => auth()->id(),
-            ]);
+            Log::error('User JadwalController@index error: ' . $e->getMessage() . ' on line ' . $e->getLine());
 
             return view('user.jadwal.index', [
                 'context' => $this->emptyUserContext(),
                 'hakAkses' => ['semua'],
-                'filters' => [
-                    'search' => '',
-                    'filter' => 'semua',
-                    'periode' => 'semua',
-                ],
+                'filters' => ['search' => '', 'filter' => 'semua', 'periode' => 'semua'],
                 'filterTarget' => 'semua',
                 'summary' => $this->emptySummary(),
                 'jadwalUtama' => null,
                 'jadwalKegiatan' => $this->emptyPaginator($request),
                 'jadwalCards' => collect(),
-                'loadError' => 'Jadwal Posyandu belum dapat dimuat.',
+                'loadError' => 'Terjadi kesalahan sistem saat memuat jadwal.',
             ]);
         }
     }
 
-    private function resolveHakAkses(array $context): array
+    public function show(Request $request, int $id): View|RedirectResponse
     {
-        $targets = $context['targets'] ?? ['semua'];
+        $user = auth()->user();
 
-        if (! is_array($targets)) {
-            $targets = ['semua'];
-        }
+        $contextKey = 'user_dashboard_context_' . $user->id;
+        $context = Cache::remember($contextKey, 300, function () use ($user) {
+            return $this->getUserContext($user);
+        });
 
-        $targets[] = 'semua';
-
-        return collect($targets)
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-    }
-
-    private function normalizeFilter(?string $value): string
-    {
-        $value = $value ?: 'semua';
-
-        return in_array($value, ['semua', 'balita', 'remaja', 'lansia'], true)
-            ? $value
-            : 'semua';
-    }
-
-    private function normalizePeriode(?string $value): string
-    {
-        $value = $value ?: 'semua';
-
-        return in_array($value, ['semua', 'hari_ini', 'mendatang', 'bulan_ini'], true)
-            ? $value
-            : 'semua';
-    }
-
-    private function baseQuery(array $hakAkses): Builder
-    {
-        $table = $this->tableName();
+        $hakAkses = $this->resolveHakAkses($context);
+        $this->tableColumns = Schema::getColumnListing((new JadwalPosyandu())->getTable());
 
         $query = JadwalPosyandu::query();
+        $this->applyBaseFilters($query, $hakAkses);
+        $jadwal = $query->find($id);
 
-        if (Schema::hasColumn($table, 'status')) {
-            $query->where('status', 'aktif');
+        if (! $jadwal) {
+            return redirect()
+                ->route('user.jadwal.index')
+                ->withErrors(['jadwal' => 'Jadwal tidak ditemukan atau bukan untuk kategori Anda.']);
         }
 
-        if (Schema::hasColumn($table, 'target_peserta')) {
-            $query->whereIn('target_peserta', $hakAkses);
-        }
-
-        return $query;
+        return view('user.jadwal.show', [
+            'context' => $context,
+            'jadwal' => $jadwal,
+            'card' => $this->buildCard($jadwal),
+        ]);
     }
 
-    private function applyTargetFilter(Builder $query, array $hakAkses, string $filter): void
+    private function resolveHakAkses(array $context): array
     {
-        $table = $this->tableName();
+        $targets = $context['targets'] ?? [];
+        if (!is_array($targets)) {
+            $targets = [];
+        }
+        
+        // Memastikan jadwal "semua" dan "umum" selalu ikut terbaca
+        $targets[] = 'semua';
+        $targets[] = 'umum';
+        
+        return array_values(array_unique(array_filter($targets)));
+    }
 
-        if ($filter === 'semua' || ! Schema::hasColumn($table, 'target_peserta')) {
-            return;
+    private function getTargetColumnName(): ?string
+    {
+        $possibleCols = ['sasaran', 'target_peserta', 'target', 'kategori_sasaran'];
+        foreach ($possibleCols as $col) {
+            if (in_array($col, $this->tableColumns)) return $col;
+        }
+        return null;
+    }
+
+    private function applyBaseFilters(Builder $query, array $hakAkses): void
+    {
+        // 1. Filter Status (Aman untuk nilai NULL)
+        if (in_array('status', $this->tableColumns)) {
+            $query->where(function (Builder $q) {
+                $q->whereNull('status')
+                  ->orWhereNotIn('status', ['draft', 'batal', 'nonaktif', '0']);
+            });
         }
 
-        if (! in_array($filter, $hakAkses, true)) {
-            $query->whereRaw('1 = 0');
-            return;
+        // 2. Filter Hak Akses Sasaran (Aman & Fleksibel)
+        $targetCol = $this->getTargetColumnName();
+        if ($targetCol) {
+            $query->where(function (Builder $q) use ($targetCol, $hakAkses) {
+                // Looping semua hak akses user (termasuk 'semua' dan 'umum')
+                foreach ($hakAkses as $akses) {
+                    $q->orWhere($targetCol, 'LIKE', '%' . $akses . '%');
+                }
+                // Jika admin lupa mengisi sasaran (NULL), asumsikan itu untuk semua orang
+                $q->orWhereNull($targetCol);
+                $q->orWhere($targetCol, '=', ''); 
+            });
         }
+    }
 
-        $query->where('target_peserta', $filter);
+    private function applyTargetFilter(Builder $query, string $filter): void
+    {
+        if ($filter === 'semua') return;
+
+        $targetCol = $this->getTargetColumnName();
+        if (!$targetCol) return;
+
+        $query->where(function (Builder $q) use ($targetCol, $filter) {
+            $q->where($targetCol, 'LIKE', '%' . $filter . '%')
+              ->orWhere($targetCol, 'LIKE', '%semua%')
+              ->orWhere($targetCol, 'LIKE', '%umum%');
+        });
     }
 
     private function applyPeriodeFilter(Builder $query, string $periode): void
     {
-        $table = $this->tableName();
-
-        if (! Schema::hasColumn($table, 'tanggal')) {
-            return;
-        }
+        if (!in_array('tanggal', $this->tableColumns)) return;
 
         $today = now('Asia/Jakarta')->toDateString();
 
         if ($periode === 'hari_ini') {
             $query->whereDate('tanggal', $today);
-            return;
-        }
-
-        if ($periode === 'mendatang') {
+        } elseif ($periode === 'mendatang') {
             $query->whereDate('tanggal', '>=', $today);
-            return;
-        }
-
-        if ($periode === 'bulan_ini') {
+        } elseif ($periode === 'bulan_ini') {
             $query->whereBetween('tanggal', [
                 now('Asia/Jakarta')->startOfMonth()->toDateString(),
                 now('Asia/Jakarta')->endOfMonth()->toDateString(),
@@ -187,63 +199,34 @@ class JadwalController extends Controller
 
     private function applySearchFilter(Builder $query, string $search): void
     {
-        $table = $this->tableName();
+        if ($search === '') return;
 
-        if ($search === '') {
-            return;
-        }
+        $possibleCols = collect(['judul', 'lokasi', 'deskripsi', 'keterangan', 'kategori', 'sasaran', 'target_peserta', 'target'])
+            ->filter(fn ($col) => in_array($col, $this->tableColumns));
 
-        $columns = collect([
-            'judul',
-            'lokasi',
-            'deskripsi',
-            'keterangan',
-            'kategori',
-            'target_peserta',
-        ])->filter(fn ($column) => Schema::hasColumn($table, $column));
+        if ($possibleCols->isEmpty()) return;
 
-        if ($columns->isEmpty()) {
-            return;
-        }
-
-        $query->where(function (Builder $q) use ($columns, $search) {
-            foreach ($columns as $column) {
-                $q->orWhere($column, 'like', '%' . $search . '%');
+        $query->where(function (Builder $q) use ($possibleCols, $search) {
+            foreach ($possibleCols as $column) {
+                $q->orWhere($column, 'LIKE', '%' . $search . '%');
             }
         });
     }
 
     private function applySmartOrdering(Builder $query): void
     {
-        $table = $this->tableName();
-
-        if (! Schema::hasColumn($table, 'tanggal')) {
+        if (!in_array('tanggal', $this->tableColumns)) {
             $query->latest();
             return;
         }
 
-        $query->orderByRaw("
-            CASE
-                WHEN tanggal >= CURDATE() THEN 0
-                ELSE 1
-            END ASC
-        ");
+        $today = now('Asia/Jakarta')->toDateString();
 
-        $query->orderByRaw("
-            CASE
-                WHEN tanggal >= CURDATE() THEN tanggal
-                ELSE NULL
-            END ASC
-        ");
+        $query->orderByRaw("CASE WHEN tanggal >= '{$today}' THEN 0 ELSE 1 END ASC");
+        $query->orderByRaw("CASE WHEN tanggal >= '{$today}' THEN tanggal ELSE NULL END ASC");
+        $query->orderByRaw("CASE WHEN tanggal < '{$today}' THEN tanggal ELSE NULL END DESC");
 
-        $query->orderByRaw("
-            CASE
-                WHEN tanggal < CURDATE() THEN tanggal
-                ELSE NULL
-            END DESC
-        ");
-
-        if (Schema::hasColumn($table, 'waktu_mulai')) {
+        if (in_array('waktu_mulai', $this->tableColumns)) {
             $query->orderBy('waktu_mulai');
         }
     }
@@ -251,94 +234,93 @@ class JadwalController extends Controller
     private function buildSummary(array $hakAkses): array
     {
         try {
-            $base = $this->baseQuery($hakAkses);
+            $targetCol = $this->getTargetColumnName();
+            $today = now('Asia/Jakarta')->toDateString();
+
+            // Bangun Query Dasar Baru Untuk Summary
+            $baseQuery = JadwalPosyandu::query();
+            $this->applyBaseFilters($baseQuery, $hakAkses);
 
             return [
-                'semua' => (clone $base)->count(),
-                'balita' => in_array('balita', $hakAkses, true)
-                    ? (clone $base)->where('target_peserta', 'balita')->count()
-                    : 0,
-                'remaja' => in_array('remaja', $hakAkses, true)
-                    ? (clone $base)->where('target_peserta', 'remaja')->count()
-                    : 0,
-                'lansia' => in_array('lansia', $hakAkses, true)
-                    ? (clone $base)->where('target_peserta', 'lansia')->count()
-                    : 0,
-                'hari_ini' => (clone $base)->whereDate('tanggal', now('Asia/Jakarta')->toDateString())->count(),
-                'mendatang' => (clone $base)->whereDate('tanggal', '>=', now('Asia/Jakarta')->toDateString())->count(),
+                'semua' => (clone $baseQuery)->count(),
+                'balita' => $targetCol && in_array('balita', $hakAkses) 
+                    ? (clone $baseQuery)->where(function($q) use ($targetCol) {
+                        $q->where($targetCol, 'LIKE', '%balita%')->orWhere($targetCol, 'LIKE', '%semua%')->orWhere($targetCol, 'LIKE', '%umum%');
+                      })->count() : 0,
+                'remaja' => $targetCol && in_array('remaja', $hakAkses) 
+                    ? (clone $baseQuery)->where(function($q) use ($targetCol) {
+                        $q->where($targetCol, 'LIKE', '%remaja%')->orWhere($targetCol, 'LIKE', '%semua%')->orWhere($targetCol, 'LIKE', '%umum%');
+                      })->count() : 0,
+                'lansia' => $targetCol && in_array('lansia', $hakAkses) 
+                    ? (clone $baseQuery)->where(function($q) use ($targetCol) {
+                        $q->where($targetCol, 'LIKE', '%lansia%')->orWhere($targetCol, 'LIKE', '%semua%')->orWhere($targetCol, 'LIKE', '%umum%');
+                      })->count() : 0,
+                'hari_ini' => (clone $baseQuery)->whereDate('tanggal', $today)->count(),
+                'mendatang' => (clone $baseQuery)->whereDate('tanggal', '>=', $today)->count(),
             ];
         } catch (\Throwable $e) {
-            Log::warning('User jadwal summary skipped', [
-                'message' => $e->getMessage(),
-            ]);
-
+            Log::warning('User jadwal summary error: ' . $e->getMessage());
             return $this->emptySummary();
         }
     }
 
     private function emptySummary(): array
     {
-        return [
-            'semua' => 0,
-            'balita' => 0,
-            'remaja' => 0,
-            'lansia' => 0,
-            'hari_ini' => 0,
-            'mendatang' => 0,
-        ];
+        return ['semua' => 0, 'balita' => 0, 'remaja' => 0, 'lansia' => 0, 'hari_ini' => 0, 'mendatang' => 0];
     }
 
     private function getJadwalTerdekat(array $hakAkses): ?JadwalPosyandu
     {
         try {
-            $table = $this->tableName();
-
-            $query = $this->baseQuery($hakAkses);
-
-            if (Schema::hasColumn($table, 'tanggal')) {
-                $query->whereDate('tanggal', '>=', now('Asia/Jakarta')->toDateString())
-                    ->orderBy('tanggal');
+            $query = JadwalPosyandu::query();
+            $this->applyBaseFilters($query, $hakAkses);
+            
+            $today = now('Asia/Jakarta')->toDateString();
+            
+            if (in_array('tanggal', $this->tableColumns)) {
+                $query->whereDate('tanggal', '>=', $today)->orderBy('tanggal');
             }
-
-            if (Schema::hasColumn($table, 'waktu_mulai')) {
+            if (in_array('waktu_mulai', $this->tableColumns)) {
                 $query->orderBy('waktu_mulai');
             }
-
+            
             return $query->first();
         } catch (\Throwable $e) {
-            Log::warning('User jadwal terdekat skipped', [
-                'message' => $e->getMessage(),
-            ]);
-
+            Log::warning('User jadwal terdekat error: ' . $e->getMessage());
             return null;
         }
     }
 
+    private function normalizeFilter(?string $value): string
+    {
+        $value = $value ?: 'semua';
+        return in_array($value, ['semua', 'balita', 'remaja', 'lansia'], true) ? $value : 'semua';
+    }
+
+    private function normalizePeriode(?string $value): string
+    {
+        $value = $value ?: 'semua';
+        return in_array($value, ['semua', 'hari_ini', 'mendatang', 'bulan_ini'], true) ? $value : 'semua';
+    }
+
     private function buildCards(Collection $items): Collection
     {
-        return $items
-            ->map(fn (JadwalPosyandu $jadwal) => $this->buildCard($jadwal))
-            ->values();
+        return $items->map(fn (JadwalPosyandu $jadwal) => $this->buildCard($jadwal))->values();
     }
 
     private function buildCard(JadwalPosyandu $jadwal): array
     {
-        $tanggal = filled($jadwal->tanggal ?? null)
-            ? Carbon::parse($jadwal->tanggal)
-            : null;
-
-        $isToday = $tanggal?->isToday() ?? false;
-        $isTomorrow = $tanggal?->isTomorrow() ?? false;
+        $tanggal = filled($jadwal->tanggal ?? null) ? Carbon::parse($jadwal->tanggal) : null;
+        $isToday = $tanggal ? $tanggal->isSameDay(now('Asia/Jakarta')) : false;
+        $isTomorrow = $tanggal ? $tanggal->isSameDay(now('Asia/Jakarta')->addDay()) : false;
         $isPast = $tanggal ? $tanggal->lt(now('Asia/Jakarta')->startOfDay()) : false;
 
-        $target = $jadwal->target_peserta ?? 'semua';
+        $target = $jadwal->sasaran ?? $jadwal->target_peserta ?? $jadwal->target ?? 'semua';
 
         return [
             'id' => $jadwal->id,
             'judul' => $jadwal->judul ?? 'Agenda Posyandu',
-            'deskripsi' => $jadwal->deskripsi
-                ?? $jadwal->keterangan
-                ?? 'Tidak ada catatan tambahan.',
+            'deskripsi' => $jadwal->deskripsi ?? $jadwal->keterangan ?? 'Tidak ada catatan tambahan.',
             'tanggal' => $tanggal ? $tanggal->translatedFormat('l, d F Y') : '-',
             'tanggal_short' => $tanggal ? $tanggal->translatedFormat('d M Y') : '-',
             'bulan' => $tanggal ? $tanggal->translatedFormat('M') : '-',
@@ -358,41 +340,32 @@ class JadwalController extends Controller
 
     private function timeRange(JadwalPosyandu $jadwal): string
     {
-        $mulai = filled($jadwal->waktu_mulai ?? null)
-            ? Carbon::parse($jadwal->waktu_mulai)->format('H:i')
-            : '-';
-
-        $selesai = filled($jadwal->waktu_selesai ?? null)
-            ? Carbon::parse($jadwal->waktu_selesai)->format('H:i')
-            : 'Selesai';
-
+        $mulai = filled($jadwal->waktu_mulai ?? null) ? Carbon::parse($jadwal->waktu_mulai)->format('H:i') : '-';
+        $selesai = filled($jadwal->waktu_selesai ?? null) ? Carbon::parse($jadwal->waktu_selesai)->format('H:i') : 'Selesai';
         return $mulai . ' sampai ' . $selesai . ' WIB';
     }
 
     private function targetLabel(?string $target): string
     {
-        return match ($target) {
-            'balita' => 'Posyandu Balita',
-            'remaja' => 'Posyandu Remaja',
-            'lansia' => 'Posyandu Lansia',
-            'semua' => 'Semua Sasaran',
-            default => 'Agenda Umum',
-        };
+        $targetLower = strtolower((string) $target);
+        if (str_contains($targetLower, 'balita')) return 'Posyandu Balita';
+        if (str_contains($targetLower, 'remaja')) return 'Posyandu Remaja';
+        if (str_contains($targetLower, 'lansia')) return 'Posyandu Lansia';
+        return 'Semua Sasaran';
     }
 
     private function targetTone(?string $target): string
     {
-        return match ($target) {
-            'balita' => 'rose',
-            'remaja' => 'sky',
-            'lansia' => 'amber',
-            default => 'emerald',
-        };
+        $targetLower = strtolower((string) $target);
+        if (str_contains($targetLower, 'balita')) return 'rose';
+        if (str_contains($targetLower, 'remaja')) return 'sky';
+        if (str_contains($targetLower, 'lansia')) return 'amber';
+        return 'emerald';
     }
 
     private function kategoriLabel(?string $kategori): string
     {
-        return match ($kategori) {
+        return match (strtolower((string) $kategori)) {
             'posyandu' => 'Posyandu Rutin',
             'imunisasi' => 'Imunisasi',
             'pemeriksaan' => 'Pemeriksaan',
@@ -403,54 +376,25 @@ class JadwalController extends Controller
 
     private function statusLabel(bool $isToday, bool $isTomorrow, bool $isPast): string
     {
-        if ($isToday) {
-            return 'Hari Ini';
-        }
-
-        if ($isTomorrow) {
-            return 'Besok';
-        }
-
-        if ($isPast) {
-            return 'Selesai';
-        }
-
+        if ($isToday) return 'Hari Ini';
+        if ($isTomorrow) return 'Besok';
+        if ($isPast) return 'Selesai';
         return 'Mendatang';
     }
 
     private function statusTone(bool $isToday, bool $isTomorrow, bool $isPast): string
     {
-        if ($isToday) {
-            return 'emerald';
-        }
-
-        if ($isTomorrow) {
-            return 'sky';
-        }
-
-        if ($isPast) {
-            return 'slate';
-        }
-
+        if ($isToday) return 'emerald';
+        if ($isTomorrow) return 'sky';
+        if ($isPast) return 'slate';
         return 'amber';
-    }
-
-    private function tableName(): string
-    {
-        return (new JadwalPosyandu())->getTable();
     }
 
     private function emptyPaginator(Request $request): LengthAwarePaginator
     {
-        return new LengthAwarePaginator(
-            [],
-            0,
-            8,
-            LengthAwarePaginator::resolveCurrentPage(),
-            [
-                'path' => $request->url(),
-                'query' => $request->query(),
-            ]
-        );
+        return new LengthAwarePaginator([], 0, 8, LengthAwarePaginator::resolveCurrentPage(), [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
     }
 }

@@ -48,11 +48,10 @@
         'selesai' => 'Selesai',
     ];
 
-    $activeFilterCount = collect([
-        $filters['search'], 
-        $filters['kategori'] !== 'semua' ? $filters['kategori'] : null, 
-        $filters['periode'] !== 'semua' ? $filters['periode'] : null
-    ])->filter(fn ($value) => filled($value))->count();
+    // Optimasi Filter Count
+    $activeFilterCount = collect($filters)
+        ->filter(fn($val, $key) => $key === 'search' ? filled($val) : $val !== 'semua')
+        ->count();
 @endphp
 
 @push('styles')
@@ -73,58 +72,47 @@
         border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 2rem; 
         box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .btn-pill {
         border-radius: 9999px;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         cursor: pointer;
     }
-    .btn-pill:active {
-        transform: scale(0.95);
-    }
+    .btn-pill:active { transform: scale(0.95); }
 
     /* Live List Transitions */
-    .kj-live-list {
-        transition: opacity .3s ease, transform .3s ease;
-    }
-    .kj-live-list.is-loading {
-        opacity: .5;
-        transform: translateY(4px);
-    }
+    .kj-live-list { transition: opacity .25s ease, transform .25s ease; will-change: opacity, transform; }
+    .kj-live-list.is-loading { opacity: 0.4; transform: translateY(4px); pointer-events: none; }
 
     /* Custom Search Cancel Button */
     input[type="text"]::-webkit-search-cancel-button {
         -webkit-appearance: none;
-        height: 14px;
-        width: 14px;
+        height: 14px; width: 14px;
         background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>') no-repeat 50% 50%;
-        cursor: pointer;
-        opacity: 0.7;
+        cursor: pointer; opacity: 0.7;
     }
     input[type="text"]::-webkit-search-cancel-button:hover { opacity: 1; }
 
-    .animate-fade-in {
-        animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
+    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(15px); }
+        from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Hilangkan scrollbar di menu dropdown */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
     /* Toast */
     .kj-toast {
-        opacity: 0;
-        pointer-events: none;
+        opacity: 0; pointer-events: none;
         transform: translateY(20px) scale(0.95);
         transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        will-change: transform, opacity;
     }
-    .kj-toast.show {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateY(0) scale(1);
-    }
+    .kj-toast.show { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
 </style>
 @endpush
 
@@ -132,14 +120,14 @@
 
     {{-- 1. HERO WIDGET --}}
     <div class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-6 sm:p-10 shadow-2xl shadow-teal-500/30 flex flex-col xl:flex-row justify-between items-center gap-8 border-[4px] border-white/50">
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
         
         <div class="relative z-10 w-full xl:w-1/2 flex flex-col gap-4 text-center xl:text-left">
             <div class="inline-flex justify-center xl:justify-start items-center gap-2 mb-1">
                 <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse relative"></span>
-                    Mode Baca Saja (Read-Only)
+                    Mode Baca Saja
                 </span>
             </div>
             
@@ -152,7 +140,7 @@
             </p>
 
             <div class="flex flex-wrap justify-center xl:justify-start gap-3 mt-2">
-                <a href="{{ route('kader.dashboard') }}" class="btn-pill bg-white text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-6 py-3 text-sm font-bold shadow-[0_8px_20px_rgba(255,255,255,0.3)] flex items-center gap-2 transition-all">
+                <a href="{{ route('kader.dashboard') }}" class="btn-pill bg-white text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-6 py-3 text-sm font-bold shadow-lg flex items-center gap-2">
                     <i class="fa-solid fa-chart-line"></i> Dashboard
                 </a>
             </div>
@@ -204,41 +192,76 @@
         </div>
     </section>
 
-    {{-- 3. FILTER WIDGET --}}
+    {{-- 3. FILTER WIDGET (DROPDOWN SUDAH CUSTOM TAILWIND) --}}
     <form method="GET" action="{{ route('kader.jadwal.index') }}" id="filterForm" class="widget-card p-4 sm:p-6 flex flex-col lg:flex-row gap-4 items-center z-20 relative">
+        
+        {{-- Pencarian --}}
         <div class="w-full lg:flex-1 relative">
             <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
-            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Cari judul, lokasi, atau kategori..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner">
+            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="Cari judul, lokasi, atau kategori..." aria-label="Pencarian" class="w-full btn-pill border border-slate-200 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner">
         </div>
 
-        <select name="kategori" class="w-full lg:w-48 btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner appearance-none cursor-pointer">
-            @foreach($kategoriOptions as $value => $label)
-                <option value="{{ $value }}" @selected(($filters['kategori'] ?? 'semua') === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
+        {{-- Custom Dropdown Kategori --}}
+        <div class="relative w-full lg:w-48 custom-dropdown-container">
+            <input type="hidden" name="kategori" id="kategoriInput" value="{{ $filters['kategori'] ?? 'semua' }}">
+            
+            <button type="button" onclick="toggleCustomDropdown('menuKategori', 'iconKategori')" class="w-full btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner flex justify-between items-center cursor-pointer">
+                <span id="textKategori">{{ $kategoriOptions[$filters['kategori'] ?? 'semua'] ?? 'Semua Kategori' }}</span>
+                <i id="iconKategori" class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-200 custom-dropdown-icon"></i>
+            </button>
+            
+            <div id="menuKategori" class="custom-dropdown-menu absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-100 opacity-0 invisible transform scale-95 transition-all duration-200 origin-top">
+                <div class="p-2 flex flex-col gap-1 max-h-64 overflow-y-auto no-scrollbar">
+                    @foreach($kategoriOptions as $value => $label)
+                        <button type="button" onclick="selectDropdownOption('kategori', '{{ $value }}')" class="w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between {{ ($filters['kategori'] ?? 'semua') === $value ? 'bg-teal-50 text-teal-700 font-bold' : 'text-slate-600 font-semibold hover:bg-slate-50 hover:text-slate-900' }}">
+                            <span>{{ $label }}</span>
+                            @if(($filters['kategori'] ?? 'semua') === $value)
+                                <i class="fas fa-check text-teal-500 text-xs"></i>
+                            @endif
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
 
-        <select name="periode" class="w-full lg:w-48 btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner appearance-none cursor-pointer">
-            @foreach($periodeOptions as $value => $label)
-                <option value="{{ $value }}" @selected(($filters['periode'] ?? 'semua') === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
+        {{-- Custom Dropdown Periode --}}
+        <div class="relative w-full lg:w-48 custom-dropdown-container">
+            <input type="hidden" name="periode" id="periodeInput" value="{{ $filters['periode'] ?? 'semua' }}">
+            
+            <button type="button" onclick="toggleCustomDropdown('menuPeriode', 'iconPeriode')" class="w-full btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner flex justify-between items-center cursor-pointer">
+                <span id="textPeriode">{{ $periodeOptions[$filters['periode'] ?? 'semua'] ?? 'Semua Periode' }}</span>
+                <i id="iconPeriode" class="fas fa-chevron-down text-xs text-slate-400 transition-transform duration-200 custom-dropdown-icon"></i>
+            </button>
+            
+            <div id="menuPeriode" class="custom-dropdown-menu absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-100 opacity-0 invisible transform scale-95 transition-all duration-200 origin-top">
+                <div class="p-2 flex flex-col gap-1 max-h-64 overflow-y-auto no-scrollbar">
+                    @foreach($periodeOptions as $value => $label)
+                        <button type="button" onclick="selectDropdownOption('periode', '{{ $value }}')" class="w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between {{ ($filters['periode'] ?? 'semua') === $value ? 'bg-teal-50 text-teal-700 font-bold' : 'text-slate-600 font-semibold hover:bg-slate-50 hover:text-slate-900' }}">
+                            <span>{{ $label }}</span>
+                            @if(($filters['periode'] ?? 'semua') === $value)
+                                <i class="fas fa-check text-teal-500 text-xs"></i>
+                            @endif
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
 
+        {{-- Tombol Aksi --}}
         <div class="flex gap-2 w-full lg:w-auto">
             <button type="submit" class="flex-1 lg:flex-none btn-pill bg-slate-800 hover:bg-slate-700 px-6 py-3.5 text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-filter"></i> Filter
             </button>
 
-            <div id="manualFilterContainer">
-                @if($activeFilterCount > 0)
-                    <a href="{{ route('kader.jadwal.index') }}" class="btn-pill border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 w-12 flex items-center justify-center text-slate-400 shadow-sm transition" title="Bersihkan filter">
-                        <i class="fa-solid fa-xmark"></i>
-                    </a>
-                @endif
-            </div>
+            @if($activeFilterCount > 0)
+                <a href="{{ route('kader.jadwal.index') }}" class="btn-pill border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 w-12 flex items-center justify-center text-slate-400 shadow-sm transition" aria-label="Reset Filter">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            @endif
         </div>
     </form>
 
-    {{-- 4. DAFTAR AGENDA (Realtime Area dengan Pagination) --}}
+    {{-- 4. DAFTAR AGENDA (Realtime Area) --}}
     <section class="space-y-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2">
             <div>
@@ -261,7 +284,7 @@
 
                 <div id="notif-pill" class="hidden items-center gap-2 btn-pill border border-amber-200 bg-amber-50 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-amber-700 shadow-sm">
                     <i class="fas fa-bell animate-bounce"></i>
-                    <span id="notif-count">0</span> notifikasi
+                    <span id="notif-count">0</span>
                 </div>
             </div>
         </div>
@@ -289,7 +312,7 @@
 </div>
 
 {{-- TOAST NOTIFICATION --}}
-<div id="jadwal-toast" class="kj-toast fixed bottom-6 right-6 z-50 w-full max-w-sm">
+<div id="jadwal-toast" class="kj-toast fixed bottom-6 right-6 z-50 w-full max-w-sm" role="alert">
     <div class="widget-card p-4 flex gap-4 items-center bg-white/95 border border-emerald-200">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-inner">
             <i class="fas fa-bell text-xl"></i>
@@ -307,104 +330,134 @@
 
 @push('scripts')
 <script>
+// --- LOGIKA KENDALI CUSTOM DROPDOWN ---
+window.toggleCustomDropdown = function(menuId, iconId) {
+    // 1. Tutup semua dropdown lain
+    document.querySelectorAll('.custom-dropdown-menu').forEach(menu => {
+        if (menu.id !== menuId) {
+            menu.classList.add('invisible', 'opacity-0', 'scale-95');
+            menu.classList.remove('opacity-100', 'scale-100');
+        }
+    });
+    document.querySelectorAll('.custom-dropdown-icon').forEach(icon => {
+        if (icon.id !== iconId) icon.classList.remove('rotate-180');
+    });
+
+    // 2. Buka/Tutup dropdown yang diklik
+    const menu = document.getElementById(menuId);
+    const icon = document.getElementById(iconId);
+    
+    if (menu.classList.contains('invisible')) {
+        menu.classList.remove('invisible', 'opacity-0', 'scale-95');
+        menu.classList.add('opacity-100', 'scale-100');
+        icon.classList.add('rotate-180');
+    } else {
+        menu.classList.add('invisible', 'opacity-0', 'scale-95');
+        menu.classList.remove('opacity-100', 'scale-100');
+        icon.classList.remove('rotate-180');
+    }
+};
+
+// Fungsi saat opsi dipilih
+window.selectDropdownOption = function(inputName, value) {
+    // Set input hidden ke value terbaru
+    const form = document.getElementById('filterForm');
+    form.querySelector(`input[name="${inputName}"]`).value = value;
+    
+    // Auto-Submit Filter untuk mempermudah UX
+    form.submit(); 
+};
+
+// Tutup dropdown jika klik diluar area
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-dropdown-container')) {
+        document.querySelectorAll('.custom-dropdown-menu').forEach(menu => {
+            menu.classList.add('invisible', 'opacity-0', 'scale-95');
+            menu.classList.remove('opacity-100', 'scale-100');
+        });
+        document.querySelectorAll('.custom-dropdown-icon').forEach(icon => {
+            icon.classList.remove('rotate-180');
+        });
+    }
+});
+
+
+// --- LOGIKA REALTIME JADWAL & PAGINATION (Tetap Teroptimasi) ---
 document.addEventListener('DOMContentLoaded', () => {
     const initialPayload = @json($initialPayload);
     const liveUrl = @json(route('kader.jadwal.live'));
     const lastSeenKey = 'posyandu_kader_last_seen_jadwal_id';
 
-    const list = document.getElementById('jadwal-card-list');
-    const empty = document.getElementById('jadwal-empty');
-    const pagination = document.getElementById('jadwal-pagination');
-    const subtitle = document.getElementById('list-subtitle');
-    
-    const liveText = document.getElementById('live-text');
-    const liveDot = document.getElementById('live-dot');
-    const serverTime = document.getElementById('server-time');
-    const toast = document.getElementById('jadwal-toast');
-    const toastText = document.getElementById('jadwal-toast-text');
-    const notifPill = document.getElementById('notif-pill');
-    const notifCount = document.getElementById('notif-count');
+    const DOM = {
+        list: document.getElementById('jadwal-card-list'),
+        empty: document.getElementById('jadwal-empty'),
+        pagination: document.getElementById('jadwal-pagination'),
+        subtitle: document.getElementById('list-subtitle'),
+        liveText: document.getElementById('live-text'),
+        liveDot: document.getElementById('live-dot'),
+        serverTime: document.getElementById('server-time'),
+        toast: document.getElementById('jadwal-toast'),
+        toastText: document.getElementById('jadwal-toast-text'),
+        notifPill: document.getElementById('notif-pill'),
+        notifCount: document.getElementById('notif-count'),
+        filterForm: document.getElementById('filterForm')
+    };
 
     let isFetching = false;
     let currentHash = initialPayload?.hash || '';
     let lastSeenId = Number(localStorage.getItem(lastSeenKey) || 0);
-
-    // Variabel Pagination Client-side
+    
     let currentPage = 1;
     const itemsPerPage = 6;
     let currentItems = [];
+    
+    let pollInterval = 4000; 
+    let pollTimer = null;
+    let abortController = null;
 
     if (!lastSeenId && initialPayload?.latest_id) {
         lastSeenId = Number(initialPayload.latest_id);
         localStorage.setItem(lastSeenKey, String(lastSeenId));
     }
 
-    const escapeHtml = (value) => {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
+    const escapeHtml = (text) => {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.toString().replace(/[&<>"']/g, m => map[m]);
     };
 
-    const kategoriClass = (kategori) => {
-        const map = {
-            balita: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            remaja: 'bg-teal-50 text-teal-700 border-teal-200',
-            lansia: 'bg-sky-50 text-sky-700 border-sky-200',
-            imunisasi: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-            pemeriksaan: 'bg-violet-50 text-violet-700 border-violet-200',
-            lainnya: 'bg-slate-50 text-slate-700 border-slate-200',
-            posyandu: 'bg-rose-50 text-rose-700 border-rose-200'
-        };
-        return map[kategori] || map.posyandu;
-    };
-
-    const kategoriIcon = (kategori) => {
-        const map = {
-            balita: 'fa-child-reaching',
-            remaja: 'fa-user-graduate',
-            lansia: 'fa-person-cane',
-            imunisasi: 'fa-syringe',
-            pemeriksaan: 'fa-stethoscope',
-            lainnya: 'fa-layer-group',
-            posyandu: 'fa-calendar-check'
-        };
-        return map[kategori] || map.posyandu;
-    };
-
-    const statusClass = (status) => {
-        const map = {
-            aktif: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-            selesai: 'bg-slate-100 text-slate-500 border-slate-200',
-            dibatalkan: 'bg-rose-50 text-rose-700 border-rose-200',
-            terjadwal: 'bg-amber-50 text-amber-700 border-amber-200'
-        };
-        return map[status] || map.terjadwal;
-    };
-
-    const statusDot = (status) => {
-        const map = {
-            aktif: 'bg-emerald-500',
-            selesai: 'bg-slate-400',
-            dibatalkan: 'bg-rose-500',
-            terjadwal: 'bg-amber-500'
-        };
-        return map[status] || map.terjadwal;
+    const uiMap = {
+        kategori: {
+            balita: { c: 'bg-emerald-50 text-emerald-700 border-emerald-200', i: 'fa-child-reaching' },
+            remaja: { c: 'bg-teal-50 text-teal-700 border-teal-200', i: 'fa-user-graduate' },
+            lansia: { c: 'bg-sky-50 text-sky-700 border-sky-200', i: 'fa-person-cane' },
+            imunisasi: { c: 'bg-indigo-50 text-indigo-700 border-indigo-200', i: 'fa-syringe' },
+            pemeriksaan: { c: 'bg-violet-50 text-violet-700 border-violet-200', i: 'fa-stethoscope' },
+            posyandu: { c: 'bg-rose-50 text-rose-700 border-rose-200', i: 'fa-calendar-check' },
+            default: { c: 'bg-slate-50 text-slate-700 border-slate-200', i: 'fa-layer-group' }
+        },
+        status: {
+            aktif: { c: 'bg-emerald-50 text-emerald-700 border-emerald-200', d: 'bg-emerald-500' },
+            selesai: { c: 'bg-slate-100 text-slate-500 border-slate-200', d: 'bg-slate-400' },
+            dibatalkan: { c: 'bg-rose-50 text-rose-700 border-rose-200', d: 'bg-rose-500' },
+            default: { c: 'bg-amber-50 text-amber-700 border-amber-200', d: 'bg-amber-500' }
+        }
     };
 
     const cardTemplate = (item) => {
+        const cat = uiMap.kategori[item.kategori] || uiMap.kategori.default;
+        const stat = uiMap.status[item.status] || uiMap.status.default;
+        
         return `
-            <article class="widget-card p-5 sm:p-6 flex flex-col h-full hover:-translate-y-1 transition-transform border border-slate-200">
+            <article class="widget-card p-5 sm:p-6 flex flex-col h-full border border-slate-200">
                 <div class="flex items-start gap-4 mb-5 border-b border-slate-100 pb-5">
-                    <div class="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center text-2xl shadow-sm border bg-white ${kategoriClass(item.kategori)}">
-                        <i class="fas ${kategoriIcon(item.kategori)}"></i>
+                    <div class="w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center text-2xl shadow-sm border bg-white ${cat.c}">
+                        <i class="fas ${cat.i}"></i>
                     </div>
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 mb-2 flex-wrap">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${statusClass(item.status)}">
-                                <span class="h-2 w-2 rounded-full ${statusDot(item.status)}"></span>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${stat.c}">
+                                <span class="h-2 w-2 rounded-full ${stat.d}"></span>
                                 ${escapeHtml(item.status_label)}
                             </span>
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border border-slate-200 text-slate-600 bg-slate-50 shadow-sm">
@@ -436,163 +489,124 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="text-[10px] font-black uppercase tracking-wider text-teal-600 max-w-[50%] truncate bg-teal-50 border border-teal-100 px-2.5 py-1.5 rounded-md shadow-sm" title="${escapeHtml(item.target_label)}">
                         <i class="fas fa-users mr-1"></i> ${escapeHtml(item.target_label)}
                     </p>
-                    <a href="${escapeHtml(item.show_url)}" class="btn-pill bg-slate-800 text-white px-6 py-2.5 text-[11px] font-black uppercase tracking-wider hover:bg-teal-600 transition-colors shadow-md">Detail</a>
+                    <a href="${escapeHtml(item.show_url)}" class="btn-pill bg-slate-800 text-white px-6 py-2.5 text-[11px] font-black uppercase tracking-wider hover:bg-teal-600 shadow-md">Detail</a>
                 </div>
             </article>
         `;
     };
 
     const setStatus = (text, mode = 'active') => {
-        if (liveText) liveText.textContent = text;
-        if (!liveDot) return;
+        if (DOM.liveText) DOM.liveText.textContent = text;
+        if (!DOM.liveDot) return;
         const color = mode === 'active' ? 'bg-emerald-500' : mode === 'loading' ? 'bg-amber-500' : 'bg-rose-500';
-        liveDot.className = `h-2 w-2 rounded-full ${color} ${mode === 'active' ? 'animate-pulse' : ''}`;
+        DOM.liveDot.className = `h-2 w-2 rounded-full ${color} ${mode === 'active' ? 'animate-pulse' : ''}`;
     };
 
     const showToast = (message) => {
-        if (!toast) return;
-        if (toastText) toastText.textContent = message || 'Agenda dari Bidan sudah masuk ke daftar.';
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 4200);
+        if (!DOM.toast) return;
+        if (DOM.toastText) DOM.toastText.textContent = message || 'Agenda dari Bidan sudah masuk ke daftar.';
+        DOM.toast.classList.add('show');
+        setTimeout(() => DOM.toast.classList.remove('show'), 4200);
     };
 
-    const updateStats = (stats) => {
-        const pairs = {
-            'stat-semua': stats?.semua ?? 0,
-            'stat-aktif': stats?.aktif ?? 0,
-            'stat-mendatang': stats?.mendatang ?? 0,
-            'stat-selesai': stats?.selesai ?? 0,
-        };
-        Object.entries(pairs).forEach(([id, value]) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
-        });
-    };
-
-    const updateNotif = (count) => {
-        const total = Number(count || 0);
-        if (notifCount) notifCount.textContent = total;
-        if (!notifPill) return;
-
-        if (total > 0) {
-            notifPill.classList.remove('hidden');
-            notifPill.classList.add('inline-flex');
-        } else {
-            notifPill.classList.add('hidden');
-            notifPill.classList.remove('inline-flex');
-        }
-    };
-
-    // Fungsi Render Pagination Controls (Disesuaikan Membulat)
     const renderPaginationControls = (totalItems, totalPages) => {
         if (totalPages <= 1) {
-            pagination.innerHTML = '';
+            DOM.pagination.innerHTML = '';
             return;
         }
 
         let html = `
-            <div class="px-2 py-6 mt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="px-2 py-6 mt-2 flex flex-col sm:flex-row items-center justify-between gap-4 w-full border-t border-slate-100/50">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">
                     Halaman <span class="text-slate-900">${currentPage}</span> dari <span class="text-slate-900">${totalPages}</span>
                 </p>
                 <div class="flex items-center gap-2">
         `;
         
-        // Prev Button
         if (currentPage === 1) {
             html += `<button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"><i class="fas fa-chevron-left text-xs"></i></button>`;
         } else {
-            html += `<button type="button" data-page="${currentPage - 1}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"><i class="fas fa-chevron-left text-xs"></i></button>`;
+            html += `<button type="button" data-page="${currentPage - 1}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600"><i class="fas fa-chevron-left text-xs"></i></button>`;
         }
 
-        // Number Buttons
-        let start = Math.max(1, currentPage - 2);
-        let end = Math.min(totalPages, currentPage + 2);
+        let windowSize = 2; 
+        let start = Math.max(1, currentPage - windowSize);
+        let end = Math.min(totalPages, currentPage + windowSize);
+
+        if (currentPage <= windowSize) end = Math.min(totalPages, 1 + (windowSize * 2));
+        if (currentPage > totalPages - windowSize) start = Math.max(1, totalPages - (windowSize * 2));
 
         for (let i = start; i <= end; i++) {
             if (i === currentPage) {
-                html += `<button type="button" class="btn-pill w-10 h-10 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-md pointer-events-none">${i}</button>`;
+                html += `<span class="btn-pill w-10 h-10 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-md pointer-events-none">${i}</span>`;
             } else {
-                html += `<button type="button" data-page="${i}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-sm shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">${i}</button>`;
+                html += `<button type="button" data-page="${i}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-sm shadow-sm hover:bg-emerald-50 hover:text-emerald-600">${i}</button>`;
             }
         }
 
-        // Next Button
         if (currentPage === totalPages) {
             html += `<button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60"><i class="fas fa-chevron-right text-xs"></i></button>`;
         } else {
-            html += `<button type="button" data-page="${currentPage + 1}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all"><i class="fas fa-chevron-right text-xs"></i></button>`;
+            html += `<button type="button" data-page="${currentPage + 1}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600"><i class="fas fa-chevron-right text-xs"></i></button>`;
         }
 
-        html += `
-                </div>
-            </div>
-        `;
-
-        pagination.innerHTML = html;
+        html += `</div></div>`;
+        DOM.pagination.innerHTML = html;
     };
 
-    // Render List Content yang dibatasi Pagination
     const renderListContent = () => {
         const totalItems = currentItems.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage > totalPages) currentPage = totalPages || 1;
         if (currentPage < 1) currentPage = 1;
 
         if (totalItems === 0) {
-            list.innerHTML = '';
-            empty.classList.remove('hidden');
-            empty.classList.add('flex');
-            pagination.innerHTML = '';
-            subtitle.textContent = 'Tidak ada jadwal yang ditampilkan.';
+            DOM.list.innerHTML = '';
+            DOM.empty.classList.replace('hidden', 'flex');
+            DOM.pagination.innerHTML = '';
+            DOM.subtitle.textContent = 'Tidak ada jadwal yang ditampilkan.';
             return;
         }
 
-        empty.classList.add('hidden');
-        empty.classList.remove('flex');
+        DOM.empty.classList.replace('flex', 'hidden');
 
         const startIdx = (currentPage - 1) * itemsPerPage;
         const endIdx = startIdx + itemsPerPage;
         const paginatedItems = currentItems.slice(startIdx, endIdx);
 
-        list.innerHTML = paginatedItems.map(cardTemplate).join('');
-        
-        // Update text subtitle
-        const endDisplay = Math.min(endIdx, totalItems);
-        subtitle.innerHTML = `Menampilkan <strong class="text-slate-800">${startIdx + 1}-${endDisplay}</strong> dari <strong class="text-slate-800">${totalItems}</strong> agenda tersinkronisasi.`;
-
-        renderPaginationControls(totalItems, totalPages);
+        window.requestAnimationFrame(() => {
+            DOM.list.innerHTML = paginatedItems.map(cardTemplate).join('');
+            const endDisplay = Math.min(endIdx, totalItems);
+            DOM.subtitle.innerHTML = `Menampilkan <strong class="text-slate-800">${startIdx + 1}-${endDisplay}</strong> dari <strong class="text-slate-800">${totalItems}</strong> agenda tersinkronisasi.`;
+            renderPaginationControls(totalItems, totalPages);
+        });
     };
 
     const renderPayload = (payload, animate = true) => {
         currentItems = Array.isArray(payload?.items) ? payload.items : [];
 
-        updateStats(payload?.stats || {});
-        updateNotif(payload?.unread_jadwal_notifikasi || 0);
+        const stats = payload?.stats || {};
+        ['semua', 'aktif', 'mendatang', 'selesai'].forEach(k => {
+            const el = document.getElementById(`stat-${k}`);
+            if (el) el.textContent = stats[k] ?? 0;
+        });
 
-        if (serverTime && payload?.server_time) {
-            serverTime.textContent = payload.server_time;
-        }
+        const unreadCount = Number(payload?.unread_jadwal_notifikasi || 0);
+        if (DOM.notifCount) DOM.notifCount.textContent = unreadCount;
+        if (DOM.notifPill) DOM.notifPill.classList.toggle('hidden', unreadCount === 0);
+        if (DOM.notifPill) DOM.notifPill.classList.toggle('inline-flex', unreadCount > 0);
+        
+        if (DOM.serverTime && payload?.server_time) DOM.serverTime.textContent = payload.server_time;
 
-        if (!list || !empty) return;
+        if (!DOM.list) return;
 
-        if (animate) {
-            list.classList.add('is-loading');
-        }
-
+        if (animate) DOM.list.classList.add('is-loading');
+        
         setTimeout(() => {
             renderListContent();
-            list.classList.remove('is-loading');
+            if (animate) DOM.list.classList.remove('is-loading');
         }, animate ? 150 : 0);
-    };
-
-    const buildUrl = () => {
-        const url = new URL(liveUrl, window.location.origin);
-        const params = new URLSearchParams(window.location.search);
-        params.forEach((value, key) => url.searchParams.set(key, value));
-        url.searchParams.set('_live', Date.now().toString());
-        return url.toString();
     };
 
     const refreshJadwal = async (manual = false) => {
@@ -601,29 +615,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (manual) setStatus('Memeriksa jadwal...', 'loading');
 
+        if (abortController) abortController.abort();
+        abortController = new AbortController();
+
         try {
-            const response = await fetch(buildUrl(), {
+            const url = new URL(liveUrl, window.location.origin);
+            new URLSearchParams(window.location.search).forEach((v, k) => url.searchParams.set(k, v));
+            url.searchParams.set('_r', Date.now().toString());
+
+            const response = await fetch(url, {
                 method: 'GET',
+                signal: abortController.signal,
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                cache: 'no-store'
             });
 
-            if (!response.ok) throw new Error('Gagal memuat jadwal.');
+            if (!response.ok) throw new Error('Fetch failed');
 
             const payload = await response.json();
             const newestId = Number(payload?.latest_id || 0);
 
             if (payload.hash !== currentHash) {
-                if (newestId > lastSeenId && lastSeenId > 0) {
-                    showToast('Bidan menambahkan atau memperbarui jadwal Posyandu.');
-                }
+                if (newestId > lastSeenId && lastSeenId > 0) showToast('Bidan menambahkan atau memperbarui jadwal Posyandu.');
                 renderPayload(payload, true);
                 currentHash = payload.hash || '';
             } else {
-                updateNotif(payload?.unread_jadwal_notifikasi || 0);
-                if (serverTime && payload?.server_time) {
-                    serverTime.textContent = payload.server_time;
-                }
+                if (DOM.serverTime && payload?.server_time) DOM.serverTime.textContent = payload.server_time;
+                const unread = Number(payload?.unread_jadwal_notifikasi || 0);
+                if (DOM.notifCount) DOM.notifCount.textContent = unread;
+                if (DOM.notifPill) DOM.notifPill.classList.toggle('hidden', unread === 0);
+                if (DOM.notifPill) DOM.notifPill.classList.toggle('inline-flex', unread > 0);
             }
 
             if (newestId > lastSeenId) {
@@ -633,44 +653,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setStatus('Realtime aktif', 'active');
         } catch (error) {
-            setStatus('Koneksi terputus', 'error');
+            if (error.name !== 'AbortError') setStatus('Koneksi terputus', 'error');
         } finally {
             isFetching = false;
         }
     };
 
-    // Event Listener Pagination Controls
     document.addEventListener('click', e => {
         const btn = e.target.closest('[data-page]');
         if (btn) {
             currentPage = parseInt(btn.dataset.page);
-            list.classList.add('is-loading');
+            DOM.list.classList.add('is-loading');
             setTimeout(() => {
                 renderListContent();
-                list.classList.remove('is-loading');
+                DOM.list.classList.remove('is-loading');
             }, 150);
         }
     });
 
-    // Reset pagination ketika filter berubah
-    document.getElementById('filterForm')?.addEventListener('submit', () => {
-        currentPage = 1;
-    });
-    document.getElementById('filterForm')?.addEventListener('input', () => {
-        currentPage = 1;
-    });
+    if (DOM.filterForm) {
+        DOM.filterForm.addEventListener('submit', () => currentPage = 1);
+        DOM.filterForm.addEventListener('input', () => currentPage = 1);
+    }
 
-    // Initial render
-    renderPayload(initialPayload, false);
+    const startPolling = () => {
+        if(pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(() => refreshJadwal(false), pollInterval);
+    };
+    const stopPolling = () => { if(pollTimer) clearInterval(pollTimer); };
 
-    // Polling setup
-    setTimeout(() => refreshJadwal(false), 700);
-    setInterval(() => refreshJadwal(false), 3000); // 3 seconds polling
-
-    window.addEventListener('focus', () => refreshJadwal(true));
+    window.addEventListener('focus', () => { refreshJadwal(true); startPolling(); });
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) refreshJadwal(true);
+        if (document.hidden) stopPolling();
+        else { refreshJadwal(true); startPolling(); }
     });
+
+    renderPayload(initialPayload, false);
+    setTimeout(() => refreshJadwal(false), 500); 
+    startPolling();
 });
 </script>
 @endpush

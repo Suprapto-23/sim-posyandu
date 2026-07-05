@@ -34,7 +34,18 @@
         ? Carbon::parse($value)->translatedFormat($format)
         : '-';
 
-    // Styling untuk Alert Kesimpulan Kesehatan
+    // Jaga agar halaman tidak error "Undefined variable" jika controller
+    // tidak mengirim data ini (mis. saat data pemeriksaan belum ada).
+    $metrics = collect($metrics ?? []);
+
+    $imtAnalysis = $imtAnalysis ?? [
+        'label' => 'Menunggu Data',
+        'message' => 'Data pengukuran dasar belum tersedia.',
+        'suggestion' => 'Lakukan pengukuran fisik di Posyandu.',
+        'tone' => 'slate',
+        'icon' => 'fa-circle-info',
+    ];
+
     $analysisTone = match ($imtAnalysis['tone'] ?? 'slate') {
         'emerald' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
         'amber'   => 'border-amber-200 bg-amber-50 text-amber-800',
@@ -42,7 +53,12 @@
         default   => 'border-slate-200 bg-slate-50 text-slate-800',
     };
 
-    // Styling untuk Metrik
+    // Dipecah sekali di sini (bukan explode() berulang di tengah HTML) agar
+    // tidak rawan salah index dan lebih mudah dirawat.
+    $analysisToneParts = explode(' ', $analysisTone);
+    $analysisBorderClass = $analysisToneParts[0] ?? 'border-slate-200';
+    $analysisTextClass = $analysisToneParts[2] ?? 'text-slate-800';
+
     $metricTone = function ($tone) {
         return match ($tone) {
             'emerald' => 'bg-emerald-50 text-emerald-600',
@@ -53,7 +69,21 @@
         };
     };
 
-    // LOGIKA PAGINATION MANUAL DI VIEW UNTUK RIWAYAT REMAJA
+    // Peta ikon metrik berdasarkan label, case-insensitive & lebih lengkap
+    // agar tidak diam-diam jatuh ke ikon default saat label sedikit berbeda.
+    $metricIcon = function ($label) {
+        return match (true) {
+            str_contains(strtolower($label), 'usia') => 'fa-cake-candles',
+            str_contains(strtolower($label), 'imt') => 'fa-weight-scale',
+            str_contains(strtolower($label), 'berat') => 'fa-scale-unbalanced',
+            str_contains(strtolower($label), 'tinggi') => 'fa-ruler-vertical',
+            str_contains(strtolower($label), 'lingkar') || str_contains(strtolower($label), 'lila') => 'fa-ruler-horizontal',
+            str_contains(strtolower($label), 'tensi') || str_contains(strtolower($label), 'tekanan') => 'fa-heart-pulse',
+            str_contains(strtolower($label), 'hb') || str_contains(strtolower($label), 'hemoglobin') => 'fa-droplet',
+            default => 'fa-clipboard-list',
+        };
+    };
+
     $riwayatCards = collect($riwayatCards ?? []);
     $perPage = 4;
     $currentPageRiwayat = LengthAwarePaginator::resolveCurrentPage('pemeriksaan');
@@ -129,11 +159,11 @@
             </div>
         </div>
 
-        <div class="relative z-10 flex gap-2 shrink-0">
-            <a href="{{ $backRoute }}" data-no-delay="true" class="btn-pill bg-white/10 hover:bg-white/20 text-white border border-white/30 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md transition-all">
+        <div class="relative z-10 flex flex-wrap gap-2 shrink-0 w-full md:w-auto">
+            <a href="{{ $backRoute }}" data-no-delay="true" class="btn-pill flex-1 md:flex-none text-center bg-white/10 hover:bg-white/20 text-white border border-white/30 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md transition-all">
                 Kembali
             </a>
-            <a href="{{ $dashboardRoute }}" data-no-delay="true" class="btn-pill bg-white hover:bg-sky-50 text-sky-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5">
+            <a href="{{ $dashboardRoute }}" data-no-delay="true" class="btn-pill flex-1 md:flex-none text-center bg-white hover:bg-sky-50 text-sky-600 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5">
                 Dashboard
             </a>
         </div>
@@ -144,7 +174,7 @@
         @foreach($metrics as $metric)
             <div class="widget-card p-4 flex flex-col justify-center text-center hover:-translate-y-1 transition-all duration-300">
                 <div class="w-10 h-10 mx-auto rounded-full {{ $metricTone($metric['tone'] ?? 'slate') }} flex items-center justify-center text-lg mb-2 shadow-inner">
-                    <i class="fas @if($metric['label']=='Usia') fa-cake-candles @elseif($metric['label']=='IMT') fa-weight-scale @elseif($metric['label']=='Berat') fa-scale-unbalanced @else fa-ruler-vertical @endif"></i>
+                    <i class="fas {{ $metricIcon($metric['label'] ?? '') }}"></i>
                 </div>
                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
                     {{ $metric['label'] }}
@@ -160,10 +190,10 @@
     </div>
 
     {{-- 3. AREA UTAMA: PROFIL, KESIMPULAN & METRIK TAMBAHAN --}}
-    <div class="grid grid-cols-1 gap-5 xl:grid-cols-12 items-start relative">
+    <div class="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:items-stretch relative">
 
         {{-- KOLOM KIRI (STICKY): Profil & Kesimpulan --}}
-        <div class="xl:col-span-5 flex flex-col gap-5 sticky top-6 z-10">
+        <div class="xl:col-span-5 flex flex-col gap-5 xl:sticky xl:top-6 z-10">
             <div class="widget-card flex flex-col overflow-hidden">
                 <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4 flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-sky-500 flex items-center justify-center shadow-sm shrink-0">
@@ -180,17 +210,17 @@
                     {{-- Alert Kesimpulan --}}
                     <div class="rounded-[1rem] border p-4 flex flex-col gap-3 {{ $analysisTone }}">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-sm border {{ explode(' ', $analysisTone)[0] }} {{ explode(' ', $analysisTone)[2] }}">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg shadow-sm border {{ $analysisBorderClass }} {{ $analysisTextClass }}">
                                 <i class="fas {{ $imtAnalysis['icon'] ?? 'fa-circle-info' }}"></i>
                             </div>
                             <div>
                                 <p class="text-[9px] font-black uppercase tracking-widest opacity-70">Kesimpulan Status IMT</p>
-                                <h2 class="text-lg font-black leading-none mt-0.5 {{ explode(' ', $analysisTone)[2] }}">
+                                <h2 class="text-lg font-black leading-none mt-0.5 {{ $analysisTextClass }}">
                                     {{ $imtAnalysis['label'] ?? 'Belum Ada Data' }}
                                 </h2>
                             </div>
                         </div>
-                        <div class="pt-2 border-t {{ explode(' ', $analysisTone)[0] }} opacity-80 border-dashed">
+                        <div class="pt-2 border-t {{ $analysisBorderClass }} opacity-80 border-dashed">
                             <p class="text-xs font-bold leading-relaxed">
                                 {{ $imtAnalysis['message'] ?? '-' }}
                             </p>
@@ -206,25 +236,25 @@
                             <div class="w-6 h-6 rounded-md bg-sky-50 text-sky-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-user text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Nama Lengkap</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5">{{ $remaja->nama_lengkap ?? '-' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 break-words">{{ $remaja->nama_lengkap ?? '-' }}</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3 border-b border-slate-100/50 pb-3">
                             <div class="w-6 h-6 rounded-md bg-sky-50 text-sky-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-id-card text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Nomor Induk (NIK)</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5">{{ $remaja->nik ?? '-' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 tracking-wider">{{ $remaja->nik ?? '-' }}</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3 border-b border-slate-100/50 pb-3">
                             <div class="w-6 h-6 rounded-md bg-sky-50 text-sky-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-calendar-day text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Tanggal Lahir</p>
                                 <p class="text-xs font-black text-slate-800 mt-0.5">{{ $formatDate($remaja->tanggal_lahir ?? null) }}</p>
                             </div>
@@ -233,29 +263,29 @@
                             <div class="w-6 h-6 rounded-md bg-sky-50 text-sky-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-school text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Sekolah</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5">{{ $remaja->sekolah ?: 'Belum diisi' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 break-words">{{ $remaja->sekolah ?: 'Belum diisi' }}</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="w-6 h-6 rounded-md bg-sky-50 text-sky-500 flex items-center justify-center shrink-0">
                                 <i class="fa-solid fa-map-location-dot text-[10px]"></i>
                             </div>
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Alamat</p>
-                                <p class="text-xs font-black text-slate-800 mt-0.5 leading-relaxed">{{ $remaja->alamat ?? '-' }}</p>
+                                <p class="text-xs font-black text-slate-800 mt-0.5 leading-relaxed break-words">{{ $remaja->alamat ?? '-' }}</p>
                             </div>
                         </div>
                     </div>
 
                     {{-- Metrik Kesehatan Lanjutan (Grid Kecil: Tensi, Hb, L. Perut) --}}
                     @if(isset($healthMetrics) && count($healthMetrics) > 0)
-                        <div class="grid grid-cols-3 gap-2 mt-auto">
+                        <div class="grid grid-cols-3 gap-2 mt-auto pt-2">
                             @foreach($healthMetrics as $metric)
-                                <div class="rounded-xl border border-slate-100 bg-white p-2.5 text-center shadow-sm">
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5 truncate">{{ $metric['label'] }}</p>
-                                    <p class="text-sm font-black text-slate-800 truncate">{{ $metric['value'] }}</p>
+                                <div class="rounded-xl border border-slate-100 bg-white p-2.5 text-center shadow-sm flex flex-col justify-between min-w-0">
+                                    <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1 truncate">{{ $metric['label'] }}</p>
+                                    <p class="text-[11px] font-black text-slate-800 leading-tight whitespace-normal break-words">{{ $metric['value'] }}</p>
                                 </div>
                             @endforeach
                         </div>
@@ -267,7 +297,7 @@
 
         {{-- KOLOM KANAN: Daftar Riwayat --}}
         <div class="xl:col-span-7 flex flex-col gap-5">
-            <div class="widget-card flex flex-col overflow-hidden">
+            <div class="widget-card flex flex-col overflow-hidden h-full">
                 <div class="border-b border-slate-100 bg-slate-50/50 px-5 py-4 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-white border border-slate-200 text-sky-500 flex items-center justify-center shadow-sm shrink-0">
@@ -283,64 +313,66 @@
                     </span>
                 </div>
 
-                <div class="p-5 bg-slate-50/30">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-5 bg-slate-50/30 flex-1">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch h-full">
                         @forelse($paginatedRiwayat as $item)
-                            <article class="rounded-[1.25rem] border border-slate-200/80 bg-white p-4 shadow-sm hover:border-sky-300 hover:shadow-md transition-all h-full flex flex-col">
-                                <div class="flex items-start justify-between gap-3 mb-3 border-b border-slate-50 pb-3">
-                                    <div>
-                                        <p class="text-xs font-black text-slate-800">{{ $item['tanggal'] ?? '-' }}</p>
-                                        <p class="mt-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pemeriksaan Remaja</p>
+                            <article class="rounded-[1.25rem] border border-slate-200/80 bg-white p-4 shadow-sm hover:border-sky-300 hover:shadow-md transition-all flex flex-col justify-between h-full">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-3 border-b border-slate-100/50 pb-3">
+                                        <div>
+                                            <p class="text-xs font-black text-slate-800">{{ $formatDate($item['tanggal'] ?? null) }}</p>
+                                            <p class="mt-0.5 text-[8px] font-bold text-slate-400 uppercase tracking-widest">Pemeriksaan Remaja</p>
+                                        </div>
+                                        <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 shrink-0">
+                                            <i class="fa-solid fa-check mr-0.5"></i> {{ $item['status'] ?? 'Tervalidasi' }}
+                                        </span>
                                     </div>
-                                    <span class="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700 shrink-0">
-                                        <i class="fa-solid fa-check mr-0.5"></i> {{ $item['status'] ?? 'Tervalidasi' }}
-                                    </span>
+
+                                    {{-- Baris 1: BB, TB, IMT --}}
+                                    <div class="grid grid-cols-3 gap-2 mb-2">
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">BB</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight whitespace-normal break-words leading-tight">{{ $item['berat'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">TB</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight whitespace-normal break-words leading-tight">{{ $item['tinggi'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-sky-100 bg-sky-50/50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-sky-700 mb-0.5">IMT</p>
+                                            <p class="text-[11px] font-black text-sky-600 tracking-tight whitespace-normal break-words leading-tight">{{ $item['imt'] ?? '-' }}</p>
+                                        </div>
+                                    </div>
+
+                                    {{-- Baris 2: LP, Tensi, HB --}}
+                                    <div class="grid grid-cols-3 gap-2 mb-3">
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">L. Perut</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight whitespace-normal break-words leading-tight">{{ $item['lingkar_perut'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-slate-100 bg-slate-50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Tensi</p>
+                                            <p class="text-[11px] font-black text-slate-800 tracking-tight whitespace-normal break-words leading-tight">{{ $item['tensi'] ?? '-' }}</p>
+                                        </div>
+                                        <div class="rounded-lg border border-rose-100 bg-rose-50/50 p-2 text-center min-w-0">
+                                            <p class="text-[8px] font-black uppercase tracking-widest text-rose-600 mb-0.5">Hb</p>
+                                            <p class="text-[11px] font-black text-rose-600 tracking-tight whitespace-normal break-words leading-tight">{{ $item['hb'] ?? '-' }}</p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {{-- Baris 1: BB, TB, IMT --}}
-                                <div class="grid grid-cols-3 gap-2 mb-2">
-                                    <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">BB</p>
-                                        <p class="truncate text-xs font-black text-slate-800">{{ $item['berat'] ?? '-' }}</p>
-                                    </div>
-                                    <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">TB</p>
-                                        <p class="truncate text-xs font-black text-slate-800">{{ $item['tinggi'] ?? '-' }}</p>
-                                    </div>
-                                    <div class="rounded-lg border border-sky-100 bg-sky-50/50 px-2 py-1.5 text-center">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-sky-700 mb-0.5">IMT</p>
-                                        <p class="truncate text-xs font-black text-sky-600">{{ $item['imt'] ?? '-' }}</p>
-                                    </div>
-                                </div>
-
-                                {{-- Baris 2: LP, Tensi, HB --}}
-                                <div class="grid grid-cols-3 gap-2 mb-3">
-                                    <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">L. Perut</p>
-                                        <p class="truncate text-xs font-black text-slate-800">{{ $item['lingkar_perut'] ?? '-' }}</p>
-                                    </div>
-                                    <div class="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-center">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Tensi</p>
-                                        <p class="truncate text-xs font-black text-slate-800">{{ $item['tensi'] ?? '-' }}</p>
-                                    </div>
-                                    <div class="rounded-lg border border-rose-100 bg-rose-50/50 px-2 py-1.5 text-center">
-                                        <p class="text-[8px] font-black uppercase tracking-widest text-rose-600 mb-0.5">Hb</p>
-                                        <p class="truncate text-xs font-black text-rose-600">{{ $item['hb'] ?? '-' }}</p>
-                                    </div>
-                                </div>
-
-                                <div class="mt-auto flex flex-col gap-2">
+                                <div class="mt-2 flex flex-col gap-2">
                                     @if(!empty($item['keluhan']))
                                         <div class="bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/50">
                                             <p class="text-[8px] font-black uppercase tracking-widest text-amber-600 mb-0.5">Keluhan</p>
-                                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-2">{{ $item['keluhan'] }}</p>
+                                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-3 break-words">{{ $item['keluhan'] }}</p>
                                         </div>
                                     @endif
                                     
                                     @if(!empty($item['edukasi']))
                                         <div class="bg-sky-50/50 p-2.5 rounded-lg border border-sky-100/50">
                                             <p class="text-[8px] font-black uppercase tracking-widest text-sky-600 mb-0.5">Saran Bidan / Edukasi</p>
-                                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-2">{{ $item['edukasi'] }}</p>
+                                            <p class="text-[10px] font-semibold leading-relaxed text-slate-600 line-clamp-3 break-words">{{ $item['edukasi'] }}</p>
                                         </div>
                                     @endif
                                 </div>

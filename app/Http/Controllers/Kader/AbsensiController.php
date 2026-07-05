@@ -222,13 +222,13 @@ class AbsensiController extends Controller
 
         if ($id) {
             $absensi = AbsensiPosyandu::query()
-                ->with(['pencatat', 'details.pasien']) // Sudah benar 'pencatat'
+                ->with(['pencatat', 'details.pasien']) 
                 ->find($id);
         }
 
         if (!$absensi) {
             $absensi = AbsensiPosyandu::query()
-                ->with(['pencatat', 'details.pasien']) // <--- PERBAIKAN: Ubah 'kader' jadi 'pencatat' di sini juga
+                ->with(['pencatat', 'details.pasien']) 
                 ->where('dicatat_oleh', auth()->id())
                 ->latest('updated_at')
                 ->first();
@@ -265,7 +265,7 @@ class AbsensiController extends Controller
         }
 
         $riwayats = AbsensiPosyandu::query()
-            ->with(['kader'])
+            ->with(['pencatat']) // PERBAIKAN: Mengubah 'kader' menjadi 'pencatat'
             ->withCount([
                 'details as total_peserta',
                 'details as total_hadir' => fn ($query) => $query->where('hadir', true),
@@ -303,7 +303,7 @@ class AbsensiController extends Controller
     public function show($id): View
     {
         $absensi = AbsensiPosyandu::query()
-            ->with(['kader', 'details.pasien'])
+            ->with(['pencatat', 'details.pasien']) // PERBAIKAN: Mengubah 'kader' menjadi 'pencatat'
             ->findOrFail($id);
 
         $details = $absensi->details ?? collect();

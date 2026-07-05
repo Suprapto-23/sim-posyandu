@@ -52,6 +52,16 @@
         background-attachment: fixed;
     }
 
+    /* Menghilangkan panah spinner pada input number agar tidak tumpang tindih dengan teks satuan */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+
     .animate-pop-in {
         animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards;
         opacity: 0;
@@ -108,7 +118,6 @@
         margin-left: 2px;
     }
 
-    /* Custom Live Search Dropdown */
     .nexus-dropdown {
         scrollbar-width: thin;
         scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
@@ -116,16 +125,17 @@
     .nexus-dropdown::-webkit-scrollbar { width: 6px; }
     .nexus-dropdown::-webkit-scrollbar-thumb { background-color: rgba(16, 185, 129, 0.3); border-radius: 999px; }
 
-    /* Nexus Premium Modal/Alerts */
+    /* Modal Styling - Z-index dimaksimalkan */
     .pc-modal-backdrop {
         position: fixed;
-        inset: 0;
-        z-index: 9999;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 999999; /* Pastikan selalu paling atas */
         display: none;
         align-items: center;
         justify-content: center;
-        background: rgba(15, 23, 42, .5);
-        backdrop-filter: blur(10px);
+        background: rgba(15, 23, 42, .6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         padding: 1rem;
         opacity: 0;
         transition: opacity 0.3s ease;
@@ -178,7 +188,7 @@
         </div>
     </section>
 
-    {{-- System Alerts (Nexus Premium Style) --}}
+    {{-- System Alerts --}}
     @if(session('success') || session('error') || $errors->any())
         <div class="mb-8">
             @if(session('success'))
@@ -249,7 +259,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2 md:col-span-2">
                         <label class="form-label">Nama Sasaran (Live Search) <span class="req-star">*</span></label>
-                        {{-- Custom Live Search Dropdown --}}
                         <div class="relative" id="liveSearchWrapper">
                             <input type="hidden" name="pasien_id" id="pasienIdHidden" value="{{ $oldPasienId }}">
                             <div class="relative">
@@ -258,7 +267,6 @@
                                 <i class="fas fa-spinner fa-spin absolute right-4 top-1/2 -translate-y-1/2 text-teal-500 pointer-events-none hidden" id="loadingIcon"></i>
                             </div>
                             
-                            {{-- Dropdown Results --}}
                             <div id="pasienDropdown" class="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] max-h-60 overflow-y-auto hidden nexus-dropdown">
                                 <ul id="pasienList" class="p-2 space-y-1">
                                     <!-- List diisi oleh JavaScript -->
@@ -288,7 +296,6 @@
             <div class="p-6 md:p-8">
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     
-                    {{-- All Categories --}}
                     <div class="space-y-2">
                         <label class="form-label">Berat Badan <span class="req-star">*</span></label>
                         <div class="relative">
@@ -305,7 +312,6 @@
                         </div>
                     </div>
 
-                    {{-- IMT Khusus Remaja/Lansia --}}
                     <div class="space-y-2 hidden" data-field-group="remaja lansia">
                         <label class="form-label text-teal-600">IMT Estimasi</label>
                         <div class="relative">
@@ -316,7 +322,6 @@
                         </div>
                     </div>
 
-                    {{-- Balita --}}
                     <div class="space-y-2 hidden" data-field-group="balita">
                         <label class="form-label">Lingkar Kepala <span class="req-star">*</span></label>
                         <div class="relative">
@@ -325,7 +330,6 @@
                         </div>
                     </div>
 
-                    {{-- Balita & Remaja --}}
                     <div class="space-y-2 hidden" data-field-group="balita remaja">
                         <label class="form-label">Lingkar Lengan (LiLA) <span class="req-star">*</span></label>
                         <div class="relative">
@@ -334,7 +338,6 @@
                         </div>
                     </div>
 
-                    {{-- Remaja & Lansia --}}
                     <div class="space-y-2 hidden" data-field-group="remaja lansia">
                         <label class="form-label">Lingkar Perut <span class="req-star">*</span></label>
                         <div class="relative">
@@ -348,7 +351,6 @@
                         <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah') }}" placeholder="Cth: 120/80" class="input-soft">
                     </div>
 
-                    {{-- Lansia --}}
                     <div class="space-y-2 hidden sm:col-span-2 md:col-span-1" data-field-group="lansia">
                         <label class="form-label">Kemandirian <span class="req-star">*</span></label>
                         <select name="tingkat_kemandirian" class="input-soft cursor-pointer">
@@ -358,12 +360,11 @@
                             <option value="bantuan_penuh" @selected(old('tingkat_kemandirian') === 'bantuan_penuh')>Bantuan Penuh</option>
                         </select>
                     </div>
-
                 </div>
             </div>
         </section>
 
-        {{-- CARD 3: Skrining Lanjutan & Anamnesis (Renamed as Requested) --}}
+        {{-- CARD 3: Skrining Lanjutan & Anamnesis --}}
         <section class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
             <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center justify-center">
                 <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
@@ -373,7 +374,6 @@
             </div>
 
             <div class="p-6 md:p-8">
-                {{-- Pemeriksaan Penunjang PTM (Remaja & Lansia Only) --}}
                 <div class="hidden mb-6 pb-6 border-b border-slate-100" data-field-group="remaja lansia">
                     <p class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1"><i class="fa-solid fa-notes-medical"></i> Pemeriksaan Penunjang PTM</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
@@ -408,7 +408,6 @@
                     </div>
                 </div>
 
-                {{-- Riwayat Keluhan & Anamnesis (All Categories) --}}
                 <div>
                     <p class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1"><i class="fa-solid fa-clipboard-question"></i> Anamnesis & Catatan</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -438,40 +437,74 @@
             </button>
         </div>
     </form>
+</div>
 
-    {{-- NEXUS MODAL KONFIRMASI --}}
-    <div id="pcSubmitModal" class="pc-modal-backdrop">
-        <div class="pc-modal-card text-center">
-            <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
-            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl"></div>
-            
-            <div class="relative z-10">
-                <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
-                    <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Data?</h3>
-                <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">
-                    Data pengukuran akan disimpan dan diteruskan ke antrean review Bidan untuk validasi klinis.
-                </p>
-                <div class="flex gap-3">
-                    <button type="button" id="pcCancelSubmit" class="w-full flex-1 rounded-xl border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
-                        Kembali
-                    </button>
-                    <button type="button" id="pcConfirmSubmit" class="w-full flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-check"></i> Simpan
-                    </button>
-                </div>
+{{-- 
+    MODAL AREA 
+    (Ini akan dipindahkan secara otomatis ke dalam <body> oleh JavaScript 
+    agar tidak terhalang oleh parent layout yang memiliki overflow/transform)
+--}}
+
+{{-- Modal Konfirmasi Simpan --}}
+<div id="pcSubmitModal" class="pc-modal-backdrop">
+    <div class="pc-modal-card text-center">
+        <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
+        <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl"></div>
+        
+        <div class="relative z-10">
+            <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Data?</h3>
+            <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">
+                Data pengukuran akan disimpan dan diteruskan ke antrean review Bidan untuk validasi klinis.
+            </p>
+            <div class="flex gap-3">
+                <button type="button" id="pcCancelSubmit" class="w-full flex-1 rounded-xl border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                    Kembali
+                </button>
+                <button type="button" id="pcConfirmSubmit" class="w-full flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check"></i> Simpan
+                </button>
             </div>
         </div>
     </div>
-
 </div>
+
+{{-- Custom Alert Modal (Pengganti alert bawaan browser) --}}
+<div id="pcAlertModal" class="pc-modal-backdrop">
+    <div class="pc-modal-card text-center">
+        <div class="absolute -top-16 -left-16 w-32 h-32 bg-rose-400/20 rounded-full blur-2xl"></div>
+        
+        <div class="relative z-10">
+            <div class="w-20 h-20 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-5 text-rose-500 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 mb-2">Pemberitahuan</h3>
+            <p id="pcAlertMessage" class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">
+                Pesan peringatan sistem.
+            </p>
+            <button type="button" id="pcCloseAlert" class="w-full rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-rose-600 hover:to-pink-600 transition-all">
+                Saya Mengerti
+            </button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     'use strict';
+
+    // ---- TELEPORTASI MODAL KE BODY ----
+    // Ini memastikan modal tidak terjebak di dalam container yang memiliki properti transform/overflow
+    const submitModal = document.getElementById('pcSubmitModal');
+    const alertModal = document.getElementById('pcAlertModal');
+    if (submitModal) document.body.appendChild(submitModal);
+    if (alertModal) document.body.appendChild(alertModal);
+    // ------------------------------------
 
     const form = document.querySelector('#measurementForm');
     const categoryRadios = Array.from(document.querySelectorAll('[data-category-radio]'));
@@ -487,11 +520,32 @@ document.addEventListener('DOMContentLoaded', function () {
     
     const summaryImt = document.querySelector('#imtDisplay');
     const submitBtn = document.querySelector('#openSubmitModalBtn');
-    const modal = document.querySelector('#pcSubmitModal');
+    
+    // Modal Elements
     const cancelSubmit = document.querySelector('#pcCancelSubmit');
     const confirmSubmit = document.querySelector('#pcConfirmSubmit');
 
+    // Alert Custom Elements
+    const alertMessage = document.getElementById('pcAlertMessage');
+    const closeAlertBtn = document.getElementById('pcCloseAlert');
+
     let allPatients = []; 
+
+    // Fungsi Custom Alert
+    function showCustomAlert(message) {
+        if (!alertModal) return;
+        alertMessage.textContent = message;
+        alertModal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCustomAlert() {
+        if (!alertModal) return;
+        alertModal.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    if (closeAlertBtn) closeAlertBtn.addEventListener('click', closeCustomAlert);
 
     function getSelectedCategory() {
         const selected = document.querySelector('[data-category-radio]:checked');
@@ -660,7 +714,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function openModal() {
         if(!hiddenInput.value) {
-            alert('Pilih sasaran dari daftar dropdown pencarian.');
+            // Memanggil Custom Alert, bukan alert() bawaan browser
+            showCustomAlert('Pilih sasaran dari daftar dropdown pencarian terlebih dahulu.');
             searchInput.focus();
             return;
         }
@@ -670,14 +725,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         
-        if (!modal) { form.submit(); return; }
-        modal.classList.add('is-open');
+        if (!submitModal) { form.submit(); return; }
+        submitModal.classList.add('is-open');
         document.body.style.overflow = 'hidden';
     }
 
     function closeModal() {
-        if (!modal) return;
-        modal.classList.remove('is-open');
+        if (!submitModal) return;
+        submitModal.classList.remove('is-open');
         document.body.style.overflow = '';
     }
 
@@ -689,13 +744,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (cancelSubmit) cancelSubmit.addEventListener('click', closeModal);
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if(e.target === modal) closeModal();
+    
+    if (submitModal) {
+        submitModal.addEventListener('click', function(e) {
+            if(e.target === submitModal) closeModal();
+        });
+    }
+    if (alertModal) {
+        alertModal.addEventListener('click', function(e) {
+            if(e.target === alertModal) closeCustomAlert();
         });
     }
 
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.addEventListener('keydown', e => { 
+        if (e.key === 'Escape') {
+            closeModal();
+            closeCustomAlert();
+        }
+    });
 
     if (confirmSubmit) {
         confirmSubmit.addEventListener('click', function () {
