@@ -1,0 +1,444 @@
+@extends('layouts.user')
+
+@section('title', 'Beranda Saya')
+@section('page_title', 'Beranda Saya')
+
+@php
+    use Carbon\Carbon;
+    use Illuminate\Support\Facades\Auth;
+    use Illuminate\Support\Facades\Route;
+    use Illuminate\Support\Str;
+
+    Carbon::setLocale('id');
+
+    $user = Auth::user();
+    $userName = $user->name ?? 'Warga';
+    $firstName = Str::of($userName)->explode(' ')->first() ?: 'Warga';
+
+    $routeTo = function ($names, $params = []) {
+        foreach ((array) $names as $name) {
+            if (Route::has($name)) return route($name, $params);
+        }
+        return '#';
+    };
+
+    $anakList = collect($dataAnak ?? []);
+    $remajaList = collect($dataRemaja ?? []);
+    $lansiaList = collect($dataLansia ?? []);
+
+    $jadwalList = collect($jadwalTerdekat ?? []);
+    $jadwalUtama = $jadwalList->first();
+
+    $notifList = collect($notifikasiTerbaru ?? [])->take(5);
+    $jumlahNotif = $totalNotifikasiBelumDibaca ?? $notifList->where('is_read', false)->count();
+
+    $totalSasaran = $anakList->count() + $remajaList->count() + $lansiaList->count();
+
+    // Routes
+    $monitoringRoute = $routeTo('user.monitoring.index');
+    $jadwalRoute = $routeTo('user.jadwal.index');
+    $notifikasiRoute = $routeTo('user.notifikasi.index');
+    $profileRoute = $routeTo('user.profile.edit');
+
+    $balitaShowRoute = fn ($id) => $routeTo(['user.balita.show', 'user.monitoring.balita.show'], [$id]);
+    $remajaShowRoute = fn ($id) => $routeTo(['user.remaja.show', 'user.monitoring.remaja.show'], [$id]);
+    $lansiaShowRoute = fn ($id) => $routeTo(['user.lansia.show', 'user.monitoring.lansia.show'], [$id]);
+
+    $formatDate = fn ($value, $format = 'd F Y') => filled($value) && $value !== '-' ? Carbon::parse($value)->translatedFormat($format) : '-';
+    $formatTime = fn ($value) => filled($value) && $value !== '-' ? Carbon::parse($value)->format('H:i') : '-';
+
+    // EKSTRAKTOR DATA
+    $getName = fn($item) => data_get($item, 'nama_lengkap') ?: data_get($item, 'nama_remaja') ?: data_get($item, 'nama_balita') ?: data_get($item, 'nama_lansia') ?: data_get($item, 'nama') ?: 'Tanpa Nama';
+    $getDob = fn($item) => data_get($item, 'tanggal_lahir') ?: data_get($item, 'tgl_lahir');
+
+    $ageText = function ($dob) {
+        if (blank($dob)) return '-';
+        try {
+            $diff = Carbon::parse($dob)->diff(now());
+            return $diff->y > 0 ? $diff->y . ' thn' : $diff->m . ' bln';
+        } catch (\Throwable $e) { return '-'; }
+    };
+
+    $healthItems = collect();
+
+    foreach ($anakList as $anak) {
+        $healthItems->push(['type' => 'Balita', 'name' => $getName($anak), 'meta' => $ageText($getDob($anak)), 'href' => $balitaShowRoute(data_get($anak, 'id')), 'icon' => 'fa-baby', 'tone' => 'rose']);
+    }
+    foreach ($remajaList as $remaja) {
+        $healthItems->push(['type' => 'Remaja', 'name' => $getName($remaja), 'meta' => $ageText($getDob($remaja)), 'href' => $remajaShowRoute(data_get($remaja, 'id')), 'icon' => 'fa-child', 'tone' => 'sky']);
+    }
+    foreach ($lansiaList as $lansia) {
+        $healthItems->push(['type' => 'Lansia', 'name' => $getName($lansia), 'meta' => $ageText($getDob($lansia)), 'href' => $lansiaShowRoute(data_get($lansia, 'id')), 'icon' => 'fa-person-cane', 'tone' => 'gold']);
+    }
+
+    $statCards = [
+        ['id' => 'stat-keluarga', 'label' => 'Keluarga Terdaftar', 'value' => $totalSasaran, 'icon' => 'fa-users', 'tone' => 'teal'],
+        ['id' => 'stat-notif', 'label' => 'Pesan Belum Dibaca', 'value' => $jumlahNotif, 'icon' => 'fa-envelope', 'tone' => 'gold'],
+        ['id' => 'stat-jadwal', 'label' => 'Agenda Mendatang', 'value' => $jadwalList->count(), 'icon' => 'fa-calendar-day', 'tone' => 'sky'],
+        ['id' => 'stat-riwayat', 'label' => 'Rekam Kesehatan', 'value' => $healthItems->count(), 'icon' => 'fa-notes-medical', 'tone' => 'rose'],
+    ];
+
+    // Kelas pembagi kolom pada strip statistik: 2 kolom di mobile, 4 kolom di desktop
+    $dividerClasses = ['', 'border-l', 'border-t sm:border-t-0 sm:border-l', 'border-t border-l'];
+@endphp
+
+@push('styles')
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,550;9..144,650&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#16302C;
+        --paper:#F5F7F2;
+        --teal:#2F6F65;
+        --teal-dark:#1D453F;
+        --gold:#C98A2E;
+        --rose:#B5646B;
+        --sky:#3E6E8E;
+        --line:#E1E5DB;
+    }
+
+    body{ background-color: var(--paper); }
+
+    .dash-warga{ font-family:'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; color:var(--ink); }
+    .dash-warga .font-serif-display{ font-family:'Fraunces', Georgia, serif; font-optical-sizing:auto; }
+    .dash-warga .font-mono-data{ font-family:'JetBrains Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums; }
+
+    .dash-warga a:focus-visible,
+    .dash-warga button:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; border-radius:4px; }
+
+    .animate-fade-in{ animation:fadeInUp .5s ease forwards; opacity:0; }
+    @keyframes fadeInUp{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
+
+    /* Header dengan tekstur titik samar di sudut - referensi motif kain, bukan gradient blob */
+    .header-motif{ position:relative; }
+    .header-motif::after{
+        content:'';
+        position:absolute; inset:0;
+        background-image:radial-gradient(var(--line) 1.4px, transparent 1.4px);
+        background-size:16px 16px;
+        -webkit-mask-image:linear-gradient(to left, black, transparent 55%);
+        mask-image:linear-gradient(to left, black, transparent 55%);
+        opacity:.7;
+        pointer-events:none;
+    }
+
+    .chip-teal{ color:var(--teal); background:rgba(47,111,101,.10); }
+    .chip-gold{ color:var(--gold); background:rgba(201,138,46,.13); }
+    .chip-sky{ color:var(--sky); background:rgba(62,110,142,.10); }
+    .chip-rose{ color:var(--rose); background:rgba(181,100,107,.10); }
+
+    .btn-solid{ background:var(--teal); color:#fff; transition:background .2s ease, transform .15s ease; }
+    .btn-solid:hover{ background:var(--teal-dark); transform:translateY(-1px); }
+    .btn-outline{ border:1px solid var(--line); color:var(--ink); background:#fff; transition:all .2s ease; }
+    .btn-outline:hover{ border-color:var(--teal); color:var(--teal); background:rgba(47,111,101,.06); }
+
+    .book-panel{ background:#fff; border:1px solid var(--line); border-radius:16px; }
+    .book-panel-head{ padding:1.1rem 1.25rem; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+
+    .ledger-cell{ transition:background .15s ease; }
+    .ledger-cell:hover{ background:#fafaf7; }
+
+    .value-update{ animation:pulseVal .6s ease; }
+    @keyframes pulseVal{ 0%{ color:var(--teal); } 100%{ color:inherit; } }
+
+    /* Kartu agenda bergaya tiket sobek dengan perforasi */
+    .date-stub{ position:relative; }
+    @media (min-width:640px){
+        .date-stub{ border-right:2px dashed var(--line); }
+        .date-stub::before, .date-stub::after{
+            content:''; position:absolute; right:-9px; width:16px; height:16px;
+            background:#fff; border:1px solid var(--line); border-radius:9999px;
+        }
+        .date-stub::before{ top:-9px; }
+        .date-stub::after{ bottom:-9px; }
+    }
+    @media (max-width:639px){
+        .date-stub{ border-bottom:2px dashed var(--line); padding-bottom:.85rem; margin-bottom:.85rem; width:100%; }
+    }
+
+    .empty-state{ text-align:center; padding:2.25rem 1rem; border:1px dashed var(--line); border-radius:14px; color:#94a3b8; }
+    .empty-state i{ font-size:2rem; color:#cbd5e1; margin-bottom:.65rem; display:block; }
+    .empty-state h3{ font-weight:700; font-size:.82rem; color:#475569; }
+    .empty-state p{ font-size:.74rem; margin-top:.2rem; }
+
+    /* Kartu anggota keluarga bergaya tab indeks buku */
+    .member-tab{ border:1px solid var(--line); border-left-width:3px; transition:transform .15s ease, border-color .15s ease; }
+    .member-tab:hover{ transform:translateX(2px); }
+    .member-tab.tab-rose{ border-left-color:var(--rose); }
+    .member-tab.tab-sky{ border-left-color:var(--sky); }
+    .member-tab.tab-gold{ border-left-color:var(--gold); }
+
+    .note-item{ border:1px solid transparent; transition:background .15s ease, border-color .15s ease; }
+    .note-item:hover{ background:#fafaf7; border-color:var(--line); }
+    .note-item.note-unread{ background:rgba(201,138,46,.06); border-color:rgba(201,138,46,.25); }
+    .note-dot{ width:6px; height:6px; border-radius:9999px; background:#cbd5e1; display:inline-block; }
+    .note-item.note-unread .note-dot{ background:var(--gold); }
+
+    .hide-scroll::-webkit-scrollbar{ width:4px; }
+    .hide-scroll::-webkit-scrollbar-thumb{ background:#d7dbd0; border-radius:10px; }
+    .hide-scroll::-webkit-scrollbar-track{ background:transparent; }
+
+    @media (prefers-reduced-motion:reduce){
+        .dash-warga *{ animation:none !important; transition:none !important; }
+    }
+</style>
+@endpush
+
+@section('content')
+<div class="dash-warga animate-fade-in max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24">
+
+    {{-- HEADER --}}
+    <header class="header-motif overflow-hidden rounded-2xl border border-[var(--line)] bg-white px-6 sm:px-8 py-6 sm:py-7">
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+            <div>
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="chip-teal inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full">
+                        <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span> Tersinkron
+                    </span>
+                    <span class="font-mono-data text-xs text-slate-400" id="realtime-date">memuat tanggal…</span>
+                </div>
+                <h1 class="font-serif-display text-[1.7rem] sm:text-[2.15rem] leading-tight text-[var(--ink)]">
+                    <span id="dynamic-greeting" class="font-normal">Selamat datang,</span> {{ ucwords($firstName) }}
+                </h1>
+                <p class="text-sm text-slate-500 mt-2 max-w-md">Semua jadwal Posyandu dan catatan kesehatan keluarga Anda, dalam satu buku.</p>
+            </div>
+            <a href="{{ $profileRoute }}" class="btn-outline shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest">
+                <i class="fas fa-user-gear"></i> Pengaturan
+            </a>
+        </div>
+    </header>
+
+    {{-- STRIP STATISTIK (LEDGER) --}}
+    <div class="grid grid-cols-2 sm:grid-cols-4 rounded-2xl border border-[var(--line)] bg-white overflow-hidden mt-5">
+        @foreach($statCards as $i => $card)
+            <div class="ledger-cell {{ $dividerClasses[$i] }} border-[var(--line)] px-5 py-4 sm:py-5 flex items-center gap-3">
+                <div class="chip-{{ $card['tone'] }} h-9 w-9 rounded-lg flex items-center justify-center text-sm shrink-0">
+                    <i class="fas {{ $card['icon'] }}"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="font-mono-data text-xl sm:text-2xl font-semibold text-[var(--ink)] leading-none" id="{{ $card['id'] }}">{{ $card['value'] }}</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1 truncate">{{ $card['label'] }}</div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
+    {{-- ALERT ERROR --}}
+    @if(isset($pesanError) && $pesanError)
+        <div class="mt-5 rounded-xl border px-4 py-3.5 flex items-center gap-3" style="background:rgba(181,100,107,.06); border-color:rgba(181,100,107,.3);">
+            <div class="h-9 w-9 rounded-full bg-white flex items-center justify-center shrink-0 border border-[var(--line)]" style="color:var(--rose);">
+                <i class="fas fa-triangle-exclamation text-sm"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-sm font-bold text-[var(--ink)]">Perhatian</h3>
+                <p class="text-xs text-slate-500 mt-0.5">{{ $pesanError }}</p>
+            </div>
+        </div>
+    @endif
+
+    {{-- KONTEN UTAMA --}}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+
+        {{-- KOLOM KIRI --}}
+        <div class="lg:col-span-8 flex flex-col gap-6">
+
+            {{-- AGENDA --}}
+            <section class="book-panel overflow-hidden">
+                <div class="book-panel-head">
+                    <h2 class="font-serif-display text-base text-[var(--ink)] flex items-center gap-2">
+                        <span class="chip-teal h-7 w-7 rounded-lg inline-flex items-center justify-center text-sm"><i class="fas fa-calendar-alt"></i></span>
+                        Agenda Terdekat
+                    </h2>
+                    <a href="{{ $jadwalRoute }}" class="text-[10px] font-bold uppercase tracking-wider text-[var(--teal)] hover:underline">Lihat Semua</a>
+                </div>
+
+                <div class="p-5 sm:p-6">
+                    @if($jadwalUtama)
+                        <div class="flex flex-col sm:flex-row">
+                            <div class="date-stub shrink-0 flex sm:flex-col items-center sm:items-start gap-3 sm:gap-0.5 sm:w-24 sm:pr-5">
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ $formatDate($jadwalUtama->tanggal, 'M Y') }}</span>
+                                <span class="font-mono-data text-3xl font-semibold text-[var(--ink)] leading-none">{{ $formatDate($jadwalUtama->tanggal, 'd') }}</span>
+                                <span class="text-[11px] text-slate-400">{{ $formatDate($jadwalUtama->tanggal, 'l') }}</span>
+                            </div>
+
+                            <div class="flex-1 min-w-0 sm:pl-5 pt-4 sm:pt-0">
+                                <div class="flex flex-wrap gap-2 mb-2.5">
+                                    <span class="chip-teal text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded">
+                                        {{ ucwords(str_replace('_', ' ', $jadwalUtama->target_peserta ?? 'Semua Sasaran')) }}
+                                    </span>
+                                    <span class="bg-slate-100 text-slate-500 text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded">
+                                        <i class="far fa-clock"></i> {{ $formatTime($jadwalUtama->waktu_mulai) }} WIB
+                                    </span>
+                                </div>
+                                <h3 class="font-serif-display text-lg text-[var(--ink)] truncate" title="{{ $jadwalUtama->judul }}">{{ $jadwalUtama->judul }}</h3>
+                                <p class="text-xs text-slate-500 mt-1.5 truncate">
+                                    <i class="fas fa-location-dot text-slate-400 mr-1"></i> {{ $jadwalUtama->lokasi ?? 'Lokasi belum ditentukan' }}
+                                </p>
+                                <a href="{{ route('user.jadwal.show', $jadwalUtama->id) }}" class="btn-solid inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider">
+                                    Lihat Detail <i class="fas fa-arrow-right text-[10px]"></i>
+                                </a>
+                            </div>
+                        </div>
+                    @else
+                        <div class="empty-state">
+                            <i class="fa-regular fa-calendar-xmark"></i>
+                            <h3>Belum Ada Agenda</h3>
+                            <p>Jadwal Posyandu berikutnya akan muncul di sini.</p>
+                        </div>
+                    @endif
+                </div>
+            </section>
+
+            {{-- KELUARGA --}}
+            <section class="book-panel overflow-hidden">
+                <div class="book-panel-head">
+                    <h2 class="font-serif-display text-base text-[var(--ink)] flex items-center gap-2">
+                        <span class="chip-sky h-7 w-7 rounded-lg inline-flex items-center justify-center text-sm"><i class="fas fa-book-medical"></i></span>
+                        Profil Kesehatan Keluarga
+                    </h2>
+                    <a href="{{ $monitoringRoute }}" class="text-[10px] font-bold uppercase tracking-wider text-[var(--teal)] hover:underline">Buku Rekam</a>
+                </div>
+
+                <div class="p-5 sm:p-6">
+                    @if($healthItems->isEmpty())
+                        <div class="empty-state">
+                            <i class="fas fa-user-plus"></i>
+                            <h3>Belum Ada Data Keluarga</h3>
+                            <p><a href="{{ $profileRoute }}" class="font-bold underline" style="color:var(--teal);">Sinkronkan NIK</a> untuk memulai.</p>
+                        </div>
+                    @else
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            @foreach($healthItems->take(4) as $item)
+                                <a href="{{ $item['href'] }}" class="member-tab tab-{{ $item['tone'] }} flex items-center gap-3 p-3.5 rounded-xl">
+                                    <div class="chip-{{ $item['tone'] }} h-11 w-11 rounded-lg flex items-center justify-center text-lg shrink-0">
+                                        <i class="fas {{ $item['icon'] }}"></i>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="text-sm font-bold text-[var(--ink)] truncate">{{ $item['name'] }}</h4>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">{{ $item['meta'] }} &middot; {{ $item['type'] }}</p>
+                                    </div>
+                                    <i class="fas fa-chevron-right text-[10px] text-slate-300"></i>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </section>
+
+        </div>
+
+        {{-- KOLOM KANAN --}}
+        <aside class="lg:col-span-4">
+            <div class="book-panel h-full flex flex-col lg:sticky lg:top-4" style="border-top:3px solid var(--gold);">
+                <div class="book-panel-head">
+                    <h2 class="font-serif-display text-base text-[var(--ink)] flex items-center gap-2">
+                        <span class="chip-gold h-7 w-7 rounded-lg inline-flex items-center justify-center text-sm"><i class="fas fa-envelope-open-text"></i></span>
+                        Pesan Kader
+                        @if($jumlahNotif > 0)
+                            <span class="chip-gold text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none" id="notif-badge">{{ $jumlahNotif }}</span>
+                        @endif
+                    </h2>
+                    <a href="{{ $notifikasiRoute }}" class="text-[10px] font-bold uppercase tracking-wider text-[var(--teal)] hover:underline">Semua</a>
+                </div>
+
+                <div class="flex-1 overflow-y-auto hide-scroll p-3 space-y-1 max-h-[520px]">
+                    @forelse($notifList as $notif)
+                        @php $isNew = !($notif['is_read'] ?? true); @endphp
+                        <a href="{{ $notifikasiRoute }}" class="note-item {{ $isNew ? 'note-unread' : '' }} block p-3.5 rounded-lg">
+                            <div class="flex gap-2.5">
+                                <span class="note-dot mt-1.5 shrink-0"></span>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-[var(--ink)] truncate">{{ $notif['judul'] ?? 'Pemberitahuan' }}</h4>
+                                    <p class="text-[11px] text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">{{ $notif['pesan'] ?? '-' }}</p>
+                                    <span class="font-mono-data text-[10px] text-slate-400 mt-1.5 block">{{ $notif['waktu'] ?? '-' }}</span>
+                                </div>
+                            </div>
+                        </a>
+                    @empty
+                        <div class="empty-state">
+                            <i class="fas fa-circle-check"></i>
+                            <h3>Semua Sudah Dibaca</h3>
+                            <p>Belum ada pesan baru dari kader.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </aside>
+
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. TANGGAL & SAPAAN REAL-TIME
+    const dateEl = document.getElementById('realtime-date');
+    const greetingEl = document.getElementById('dynamic-greeting');
+
+    function updateTimeInfo() {
+        const now = new Date();
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+        if (dateEl) {
+            dateEl.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        }
+
+        const h = now.getHours();
+        let greeting = 'Selamat malam,';
+        if (h >= 4 && h < 11) greeting = 'Selamat pagi,';
+        else if (h >= 11 && h < 15) greeting = 'Selamat siang,';
+        else if (h >= 15 && h < 18) greeting = 'Selamat sore,';
+
+        if (greetingEl && greetingEl.textContent !== greeting) greetingEl.textContent = greeting;
+    }
+
+    updateTimeInfo();
+    setInterval(updateTimeInfo, 60000);
+
+    // 2. POLLING STATISTIK (Anti-Reload)
+    const statsUrl = '{{ Route::has("user.dashboard.stats") ? route("user.dashboard.stats") : "" }}';
+    const statKeluarga = document.getElementById('stat-keluarga');
+    const statNotif = document.getElementById('stat-notif');
+    const statJadwal = document.getElementById('stat-jadwal');
+
+    function fetchDashboardStatsSafe() {
+        if (!statsUrl || statsUrl.trim() === '') return;
+
+        fetch(statsUrl, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.ok ? res.json() : Promise.reject('Network err'))
+        .then(data => {
+            if (data.status === 'success') {
+                updateValueWithAnimation(statKeluarga, data.total_sasaran);
+                updateValueWithAnimation(statNotif, data.unread_count);
+                updateValueWithAnimation(statJadwal, data.total_jadwal);
+
+                const badge = document.getElementById('notif-badge');
+                if (badge && data.unread_count !== undefined) {
+                    badge.textContent = data.unread_count;
+                    badge.style.display = data.unread_count > 0 ? 'inline-flex' : 'none';
+                }
+            }
+        })
+        .catch(() => {});
+    }
+
+    function updateValueWithAnimation(element, newValue) {
+        if (element && element.innerText != newValue && newValue !== undefined) {
+            element.innerText = newValue;
+            element.classList.remove('value-update');
+            void element.offsetWidth;
+            element.classList.add('value-update');
+        }
+    }
+
+    if (statsUrl) {
+        setInterval(fetchDashboardStatsSafe, 15000);
+    }
+});
+</script>
+@endpush

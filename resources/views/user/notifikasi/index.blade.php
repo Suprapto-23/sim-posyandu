@@ -359,6 +359,50 @@
         });
 
         window.addEventListener('popstate', () => window.location.reload());
+        // =======================================================
+        // LIVE POLLING ANTI RELOAD - MENCOCOKKAN REAL-TIME DATA
+        // =======================================================
+        const POLLING_INTERVAL = 8000; // Cek data setiap 8 detik secara tak kasat mata
+
+        setInterval(function() {
+            // Jangan ganggu jika user sedang aktif mengetik di kolom pencarian
+            if (searchInput && searchInput.value.trim() !== '') return;
+
+            const currentUrl = new URL(window.location.href);
+
+            fetch(currentUrl.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const freshDoc = parser.parseFromString(html, 'text/html');
+
+                // 1. Sinkronisasi Wrapper Kartu Notifikasi Utama
+                const oldWrapper = document.getElementById('dynamicContentWrapper');
+                const newWrapper = freshDoc.getElementById('dynamicContentWrapper');
+                if (oldWrapper && newWrapper && oldWrapper.innerHTML.trim() !== newWrapper.innerHTML.trim()) {
+                    oldWrapper.innerHTML = newWrapper.innerHTML;
+                }
+
+                // 2. Sinkronisasi Angka Badge Counter di Atas Tab (Semua, Belum Dibaca, Sudah Dibaca)
+                const oldTabs = document.getElementById('tabsContainer');
+                const newTabs = freshDoc.getElementById('tabsContainer');
+                if (oldTabs && newTabs) {
+                    oldTabs.innerHTML = newTabs.innerHTML;
+                }
+
+                // 3. Sinkronisasi Grid Counter Header / Banner atas jika ada
+                const oldHeroCounters = document.getElementById('heroCounters');
+                const newHeroCounters = freshDoc.getElementById('heroCounters');
+                if (oldHeroCounters && newHeroCounters) {
+                    oldHeroCounters.innerHTML = newHeroCounters.innerHTML;
+                }
+            })
+            .catch(err => console.log('Silent sync paused, reconnecting...'));
+        }, POLLING_INTERVAL);
     });
 </script>
 @endpush

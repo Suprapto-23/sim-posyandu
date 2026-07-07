@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -17,7 +18,7 @@ use Illuminate\View\View;
 class NotifikasiController extends Controller
 {
     /**
-     * Halaman utama notifikasi (Pesan Bidan)
+     * Halaman utama notifikasi (Pesan Bidan) untuk User
      */
     public function index(Request $request): View
     {
@@ -47,6 +48,20 @@ class NotifikasiController extends Controller
 
             $counts = $this->buildCounts();
 
+            // Jika request datang dari AJAX (Live-refresh / Polling)
+            if ($request->ajax()) {
+                return view('user.notifikasi.index', [
+                    'filters' => $filters,
+                    'filter' => $filters['filter'],
+                    'counts' => $counts,
+                    'allCount' => $counts['semua'],
+                    'unreadCount' => $counts['belum'],
+                    'readCount' => $counts['sudah'],
+                    'notifikasis' => $notifikasis,
+                    'notifikasiCards' => $notifikasiCards,
+                ]);
+            }
+
             return view('user.notifikasi.index', [
                 'filters' => $filters,
                 'filter' => $filters['filter'],
@@ -62,7 +77,7 @@ class NotifikasiController extends Controller
         } catch (\Throwable $e) {
             Log::error('User NotifikasiController@index error', [
                 'message' => $e->getMessage(),
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
             ]);
 
             return view('user.notifikasi.index', $this->emptyViewData($request, [
@@ -73,7 +88,7 @@ class NotifikasiController extends Controller
     }
 
     /**
-     * AJAX: ambil 5 notifikasi terbaru untuk dropdown (lonceng)
+     * AJAX Polling: Mengembalikan data JSON untuk counter lonceng dan real-time update
      */
     public function fetchRecent(): JsonResponse
     {
@@ -107,7 +122,7 @@ class NotifikasiController extends Controller
         } catch (\Throwable $e) {
             Log::warning('User NotifikasiController@fetchRecent error', [
                 'message' => $e->getMessage(),
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
             ]);
 
             return response()->json([
@@ -120,7 +135,7 @@ class NotifikasiController extends Controller
     }
 
     /**
-     * Tandai satu notifikasi sebagai dibaca (dari tombol di halaman index)
+     * Tandai satu notifikasi sebagai dibaca
      */
     public function markRead(Request $request, int $id): RedirectResponse
     {
@@ -136,7 +151,7 @@ class NotifikasiController extends Controller
             Log::warning('User NotifikasiController@markRead error', [
                 'message' => $e->getMessage(),
                 'notifikasi_id' => $id,
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
             ]);
 
             return back()->with('error', 'Gagal menandai pesan.');
@@ -157,19 +172,23 @@ class NotifikasiController extends Controller
         } catch (\Throwable $e) {
             Log::warning('User NotifikasiController@markAllRead error', [
                 'message' => $e->getMessage(),
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
             ]);
 
             return back()->with('error', 'Gagal menandai semua pesan.');
         }
     }
 
-    // ========== QUERY HELPERS ==========
+    // ========== CORE QUERY SINKRONISASI ==========
 
     private function baseQuery()
     {
+        // DISESUAIKAN: Mengambil pesan spesifik milik user terpilih ATAU pesan umum (user_id kosong)
         return Notifikasi::query()
-            ->where('user_id', auth()->id());
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())
+                      ->orWhereNull('user_id');
+            });
     }
 
     private function unreadQuery()
@@ -205,7 +224,10 @@ class NotifikasiController extends Controller
     private function markQuery()
     {
         return Notifikasi::query()
-            ->where('user_id', auth()->id());
+            ->where(function ($query) {
+                $query->where('user_id', Auth::id())
+                      ->orWhereNull('user_id');
+            });
     }
 
     // ========== FILTER HELPERS ==========
@@ -217,7 +239,6 @@ class NotifikasiController extends Controller
                 $query->where('is_read', false);
                 return;
             }
-
             if (Schema::hasColumn($this->tableName(), 'read_at')) {
                 $query->whereNull('read_at');
                 return;
@@ -229,7 +250,6 @@ class NotifikasiController extends Controller
                 $query->where('is_read', true);
                 return;
             }
-
             if (Schema::hasColumn($this->tableName(), 'read_at')) {
                 $query->whereNotNull('read_at');
             }
@@ -243,12 +263,7 @@ class NotifikasiController extends Controller
         }
 
         $table = $this->tableName();
-
-        $columns = collect([
-            'judul',
-            'pesan',
-            'tipe',
-        ])->filter(fn ($column) => Schema::hasColumn($table, $column));
+        $columns = collect(['judul', 'pesan', 'tipe'])->filter(fn ($column) => Schema::hasColumn($table, $column));
 
         if ($columns->isEmpty()) {
             return;
@@ -261,7 +276,7 @@ class NotifikasiController extends Controller
         });
     }
 
-    // ========== BUILDERS ==========
+    // ========== BUILDERS UI ELEMENT ==========
 
     private function buildCounts(): array
     {
@@ -272,9 +287,6 @@ class NotifikasiController extends Controller
         ];
     }
 
-    /**
-     * Build card untuk halaman index
-     */
     private function buildCard(Notifikasi $item): array
     {
         $isRead = $this->isRead($item);
@@ -291,21 +303,12 @@ class NotifikasiController extends Controller
             'tone' => $this->typeTone($tipe),
             'link' => $item->link ?: route('user.notifikasi.index'),
             'is_read' => $isRead,
-            'tanggal' => $item->created_at
-                ? $item->created_at->translatedFormat('d F Y, H:i')
-                : '-',
-            'tanggal_short' => $item->created_at
-                ? $item->created_at->translatedFormat('d M Y')
-                : '-',
-            'waktu' => $item->created_at
-                ? $item->created_at->diffForHumans()
-                : '-',
+            'tanggal' => $item->created_at ? $item->created_at->translatedFormat('d F Y, H:i') : '-',
+            'tanggal_short' => $item->created_at ? $item->created_at->translatedFormat('d M Y') : '-',
+            'waktu' => $item->created_at ? $item->created_at->diffForHumans() : '-',
         ];
     }
 
-    /**
-     * Build item untuk dropdown (lonceng) – khusus untuk fetchRecent
-     */
     private function buildDropdownItem(Notifikasi $item): array
     {
         $isRead = $this->isRead($item);
@@ -319,9 +322,7 @@ class NotifikasiController extends Controller
             'icon' => $this->typeIcon($tipe),
             'link' => $item->link ?: route('user.notifikasi.index'),
             'is_read' => $isRead,
-            'waktu' => $item->created_at
-                ? $item->created_at->diffForHumans()
-                : '-',
+            'waktu' => $item->created_at ? $item->created_at->diffForHumans() : '-',
         ];
     }
 
@@ -330,42 +331,32 @@ class NotifikasiController extends Controller
         if (Schema::hasColumn($this->tableName(), 'is_read')) {
             return (bool) $item->is_read;
         }
-
         if (Schema::hasColumn($this->tableName(), 'read_at')) {
             return filled($item->read_at);
         }
-
         return false;
     }
 
     private function readPayload(): array
     {
         $payload = [];
-
         if (Schema::hasColumn($this->tableName(), 'is_read')) {
             $payload['is_read'] = true;
         }
-
         if (Schema::hasColumn($this->tableName(), 'read_at')) {
             $payload['read_at'] = now();
         }
-
         return $payload;
     }
 
-    // ========== UTILITY ==========
-
     private function normalizeFilter(?string $value): string
     {
-        return in_array($value, ['semua', 'belum', 'sudah'], true)
-            ? $value
-            : 'semua';
+        return in_array($value, ['semua', 'belum', 'sudah'], true) ? $value : 'semua';
     }
 
     private function guessType(Notifikasi $item): string
     {
         $text = Str::lower(($item->judul ?? '') . ' ' . ($item->pesan ?? ''));
-
         return match (true) {
             str_contains($text, 'jadwal') || str_contains($text, 'agenda') => 'jadwal',
             str_contains($text, 'imunisasi') || str_contains($text, 'vaksin') => 'imunisasi',
@@ -380,7 +371,6 @@ class NotifikasiController extends Controller
             'jadwal' => 'Jadwal Posyandu',
             'imunisasi' => 'Info Imunisasi',
             'pemeriksaan' => 'Data Pemeriksaan',
-            'import' => 'Status Data',
             default => 'Informasi',
         };
     }
@@ -391,7 +381,6 @@ class NotifikasiController extends Controller
             'jadwal' => 'fa-calendar-check',
             'imunisasi' => 'fa-syringe',
             'pemeriksaan' => 'fa-stethoscope',
-            'import' => 'fa-file-excel',
             default => 'fa-bell',
         };
     }
@@ -402,28 +391,17 @@ class NotifikasiController extends Controller
             'jadwal' => 'emerald',
             'imunisasi' => 'sky',
             'pemeriksaan' => 'amber',
-            'import' => 'violet',
             default => 'slate',
         };
     }
-
-    // ========== EMPTY STATE ==========
 
     private function emptyViewData(Request $request, array $filters): array
     {
         return [
             'filters' => $filters,
             'filter' => $filters['filter'] ?? 'semua',
-
-            'counts' => [
-                'semua' => 0,
-                'belum' => 0,
-                'sudah' => 0,
-            ],
-            'allCount' => 0,
-            'unreadCount' => 0,
-            'readCount' => 0,
-
+            'counts' => ['semua' => 0, 'belum' => 0, 'sudah' => 0],
+            'allCount' => 0, 'unreadCount' => 0, 'readCount' => 0,
             'notifikasis' => $this->emptyPaginator($request),
             'notifikasiCards' => collect(),
         ];
@@ -431,44 +409,35 @@ class NotifikasiController extends Controller
 
     private function emptyPaginator(Request $request): LengthAwarePaginator
     {
-        return new LengthAwarePaginator(
-            [],
-            0,
-            10,
-            LengthAwarePaginator::resolveCurrentPage(),
-            [
-                'path' => $request->url(),
-                'query' => $request->query(),
-            ]
-        );
+        return new LengthAwarePaginator([], 0, 10, LengthAwarePaginator::resolveCurrentPage(), [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
     }
-
-    // ========== TABLE CHECK ==========
 
     private function tableReady(): bool
     {
-        return class_exists(Notifikasi::class)
-            && Schema::hasTable($this->tableName())
-            && Schema::hasColumn($this->tableName(), 'user_id');
+        return class_exists(Notifikasi::class) && Schema::hasTable($this->tableName());
     }
 
     private function tableName(): string
     {
         return (new Notifikasi())->getTable();
     }
+
     public function show($id)
-{
-    // 1. Ambil data notifikasi berdasarkan ID dan pastikan itu milik user yang sedang login
-    $notifikasi = \App\Models\Notifikasi::where('id', $id)
-                    ->where('user_id', auth()->user()->id)
-                    ->firstOrFail();
+    {
+        $notifikasi = Notifikasi::where('id', $id)
+                        ->where(function ($query) {
+                            $query->where('user_id', Auth::id())
+                                  ->orWhereNull('user_id');
+                        })
+                        ->firstOrFail();
 
-    // 2. Ubah status menjadi 'sudah dibaca' jika masih baru
-    if (!$notifikasi->is_read) {
-        $notifikasi->update(['is_read' => true]);
+        if (Schema::hasColumn($this->tableName(), 'is_read') && !$notifikasi->is_read) {
+            $notifikasi->update(['is_read' => true, 'read_at' => now()]);
+        }
+
+        return view('user.notifikasi.show', compact('notifikasi'));
     }
-
-    // 3. TAMPILKAN VIEW (JANGAN PAKAI REDIRECT)
-    return view('user.notifikasi.show', compact('notifikasi'));
-}
 }

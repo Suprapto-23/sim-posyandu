@@ -6,10 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
-    {
-        Schema::create('balitas', function (Blueprint $table) {
-            $table->id();
+    public function up(): void
+{
+    Schema::create('balitas', function (Blueprint $table) {
+        $table->id();
             $table->string('kode_balita')->unique()->nullable();
             $table->string('nik', 16)->unique()->nullable();
             $table->string('nama_lengkap');
@@ -30,6 +30,7 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

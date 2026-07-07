@@ -5,13 +5,13 @@
 @push('styles')
 <style>
     .login-shell {
-        width: 100%; max-width: 1140px; 
+        width: 100%; max-width: 1140px;
         margin: 0 auto;
         display: grid;
         grid-template-columns: 1fr 1fr;
         align-items: center;
         gap: 60px;
-        overflow: hidden; 
+        overflow: hidden;
     }
 
     .brand-side, .form-side {
@@ -23,7 +23,7 @@
     body.is-splitting .form-side { transform: translateX(150%); opacity: 0; }
 
     .brand-side { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    
+
     .brand-logo { width: 280px; height: auto; margin-bottom: 24px; user-select: none; pointer-events: none; }
     .brand-title { color: var(--slate-900); font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.02em; }
     .brand-divider { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
@@ -33,9 +33,10 @@
 
     .feature-grid { display: flex; gap: 16px; justify-content: center; width: 100%; max-width: 440px; }
     .feature-box { background: #ffffff; border: 1px solid #f1f5f9; border-radius: 16px; padding: 16px 12px; width: 90px; display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.03); }
-    
-    /* [A11Y FIX]: Ubah warna icon dari --green-600 menjadi --green-700 agar kontras dengan hijau muda */
-    .feature-icon { width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: var(--green-700); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+
+    /* Ikon kontras terhadap latar hijau muda (kini var(--green-700) benar-benar terdefinisi) */
+    .feature-icon { width: 36px; height: 36px; border-radius: 10px; background: #ecfdf5; color: var(--green-700); display: flex; align-items: center; justify-content: center; }
+    .feature-icon .icon { width: 18px; height: 18px; }
     .feature-text { color: var(--slate-700); font-size: 11px; font-weight: 700; }
 
     .form-side { display: flex; justify-content: flex-end; }
@@ -43,30 +44,38 @@
     .login-header { text-align: center; margin-bottom: 32px; }
     .login-title { color: var(--green-900); font-size: 26px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.03em; }
     .login-subtitle { color: var(--slate-700); font-size: 14px; margin: 0; font-weight: 500; }
-    
+
     .login-form { display: flex; flex-direction: column; gap: 20px; }
     .field-group { width: 100%; }
     .field-label { display: block; font-size: 13px; font-weight: 700; color: var(--slate-900); margin-bottom: 8px; }
     .field-wrap { position: relative; }
-    
-    .field-input { width: 100%; height: 52px; padding: 0 44px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 14px; color: var(--slate-900); font-weight: 500; transition: all 0.2s ease; }
+
+    .field-input { width: 100%; height: 52px; padding: 0 44px; border: 1.5px solid #e2e8f0; border-radius: 14px; font-size: 14px; color: var(--slate-900); font-weight: 500; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
     .field-input:focus { border-color: var(--green-500); outline: none; box-shadow: 0 0 0 4px rgba(16,185,129,0.1); }
-    
-    /* [A11Y FIX]: Memaksa warna dan opacity placeholder agar kontras jelas (standar WCAG AAA) */
+
+    /* Placeholder sekarang benar-benar memakai --slate-600 (variabelnya sudah didefinisikan di layout) */
     .field-input::placeholder { color: var(--slate-600); opacity: 1; font-weight: 500; }
-    
-    /* [A11Y FIX]: Ubah warna icon field dari --slate-500 ke --slate-600 */
-    .field-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--slate-600); font-size: 16px; transition: color 0.2s; pointer-events: none; }
+
+    .field-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--slate-600); transition: color 0.2s; pointer-events: none; }
     .field-input:focus ~ .field-icon { color: var(--green-600); }
-    
-    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--slate-600); cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.2s; }
+
+    .pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--slate-600); cursor: pointer; padding: 4px; border-radius: 8px; transition: background 0.2s; display: flex; }
     .pw-toggle:hover { background: #f1f5f9; color: var(--slate-900); }
-    
-    .submit-btn { width: 100%; height: 54px; background: var(--green-600); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
+    .pw-toggle .icon { width: 17px; height: 17px; }
+
+    .submit-btn { width: 100%; height: 54px; background: var(--green-600); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: background 0.2s, box-shadow 0.2s, transform 0.2s; margin-top: 4px; }
     .submit-btn:hover { background: var(--green-700); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); transform: translateY(-1px); }
-    
+    .submit-btn .icon { width: 18px; height: 18px; }
+
+    /* Spinner tombol submit (pure CSS, menggantikan fa-circle-notch fa-spin) */
+    .btn-spinner {
+        width: 16px; height: 16px; border-radius: 50%; display: inline-block;
+        border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+        animation: fluentSpin 0.6s linear infinite;
+    }
+
     .info-note { margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; display: flex; align-items: flex-start; gap: 12px; }
-    .info-icon { color: var(--green-700); font-size: 20px; }
+    .info-icon { color: var(--green-700); width: 20px; height: 20px; flex-shrink: 0; }
     .info-title { color: var(--green-900); font-size: 13px; font-weight: 700; margin: 0 0 4px; }
     .info-text { color: var(--slate-700); font-size: 12px; margin: 0; line-height: 1.5; font-weight: 500; }
 
@@ -81,16 +90,17 @@
 @section('content')
 <div class="login-shell">
     <section class="brand-side">
-        <img src="{{ asset('img/logo.webp') }}" alt="PosyanduCare" class="brand-logo" fetchpriority="high">
+        <img src="{{ asset('img/logo.webp') }}" alt="PosyanduCare" class="brand-logo" width="280" height="112" fetchpriority="high" decoding="async">
+        <!-- [PENTING] ganti height="112" di atas dengan tinggi asli logo.webp (proporsional terhadap width 280px) agar ruang gambar dicadangkan pas dan CLS makin mendekati 0 -->
         <h2 class="brand-title">Sehat Bersama, Tumbuh Setiap Generasi</h2>
         <div class="brand-divider"><span class="bdl"></span><span class="bdd"></span><span class="bdl"></span></div>
         <p class="brand-desc">Platform layanan kesehatan terpadu untuk masyarakat modern.</p>
-        
+
         <div class="feature-grid">
-            <div class="feature-box"><div class="feature-icon"><i class="fa-solid fa-user-group"></i></div><span class="feature-text">Terintegrasi</span></div>
-            <div class="feature-box"><div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div><span class="feature-text">Aman</span></div>
-            <div class="feature-box"><div class="feature-icon"><i class="fa-solid fa-chart-simple"></i></div><span class="feature-text">Efisien</span></div>
-            <div class="feature-box"><div class="feature-icon"><i class="fa-solid fa-heart-pulse"></i></div><span class="feature-text">Peduli</span></div>
+            <div class="feature-box"><div class="feature-icon"><svg class="icon"><use href="#icon-user-group"></use></svg></div><span class="feature-text">Terintegrasi</span></div>
+            <div class="feature-box"><div class="feature-icon"><svg class="icon"><use href="#icon-shield"></use></svg></div><span class="feature-text">Aman</span></div>
+            <div class="feature-box"><div class="feature-icon"><svg class="icon"><use href="#icon-chart"></use></svg></div><span class="feature-text">Efisien</span></div>
+            <div class="feature-box"><div class="feature-icon"><svg class="icon"><use href="#icon-heart-pulse"></use></svg></div><span class="feature-text">Peduli</span></div>
         </div>
     </section>
 
@@ -107,7 +117,7 @@
                     <label class="field-label" for="login">Email atau NIK</label>
                     <div class="field-wrap">
                         <input type="text" id="login" name="login" class="field-input" placeholder="Masukkan email atau NIK" required autofocus autocomplete="username">
-                        <i class="fa-regular fa-user field-icon"></i>
+                        <svg class="icon field-icon"><use href="#icon-user"></use></svg>
                     </div>
                 </div>
 
@@ -115,22 +125,22 @@
                     <label class="field-label" for="password">Password</label>
                     <div class="field-wrap">
                         <input type="password" id="password" name="password" class="field-input" placeholder="Masukkan password" required autocomplete="current-password">
-                        <i class="fa-solid fa-lock field-icon"></i>
-                        
+                        <svg class="icon field-icon"><use href="#icon-lock"></use></svg>
+
                         <button type="button" id="pwToggle" class="pw-toggle" aria-label="Tampilkan atau sembunyikan password">
-                            <i class="fa-regular fa-eye-slash" id="pwIcon"></i>
+                            <svg class="icon" id="pwIcon"><use href="#icon-eye-slash"></use></svg>
                         </button>
                     </div>
                 </div>
 
                 <button type="submit" id="submitBtn" class="submit-btn" aria-label="Masuk ke dasbor">
                     <span id="submitTxt">Masuk</span>
-                    <i class="fa-solid fa-arrow-right-to-bracket" id="submitIco"></i>
+                    <svg class="icon" id="submitIco"><use href="#icon-arrow-right"></use></svg>
                 </button>
             </form>
 
             <div class="info-note">
-                <i class="fa-solid fa-shield-halved info-icon"></i>
+                <svg class="icon info-icon"><use href="#icon-shield"></use></svg>
                 <div>
                     <p class="info-title">Akses khusus pengguna terdaftar</p>
                     <p class="info-text">Gunakan akun yang telah dibuat oleh petugas Posyandu untuk mengakses layanan kesehatan digital.</p>
@@ -145,10 +155,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const pwInput = document.getElementById('password');
+    const pwIconUse = document.querySelector('#pwIcon use');
     document.getElementById('pwToggle').addEventListener('click', function () {
         const isPassword = pwInput.type === 'password';
         pwInput.type = isPassword ? 'text' : 'password';
-        document.getElementById('pwIcon').className = isPassword ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash';
+        pwIconUse.setAttribute('href', isPassword ? '#icon-eye' : '#icon-eye-slash');
     });
 
     const form = document.getElementById('loginForm');
@@ -156,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const submitBtn = document.getElementById('submitBtn');
 
     form.addEventListener('submit', function (e) {
-        e.preventDefault(); 
-        
+        e.preventDefault();
+
         const loginVal = loginInput.value.trim();
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginVal);
         const isNumeric = /^\d+$/.test(loginVal);
@@ -175,13 +186,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         submitBtn.disabled = true;
         submitBtn.style.opacity = '0.9';
-        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Membuka Dasbor...</span>';
+        submitBtn.innerHTML = '<span class="btn-spinner"></span><span>Membuka Dasbor...</span>';
 
         document.body.classList.add('is-splitting');
 
         setTimeout(() => {
             form.submit();
-        }, 400); 
+        }, 400);
     });
 
     @if($errors->any())

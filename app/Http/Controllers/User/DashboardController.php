@@ -21,13 +21,13 @@ class DashboardController extends Controller
     use ResolvesUserHealthContext;
 
     /**
-     * Tampilkan dashboard User dengan data teroptimasi.
+     * Tampilkan dashboard User dengan kombinasi Cache (Data Statis) & Real-time (Data Dinamis).
      */
     public function index(): View
     {
         $user = auth()->user();
 
-        // --- CACHE CONTEXT USER (5 menit) ---
+        // --- CACHE CONTEXT USER (5 menit) - Aman karena data keluarga jarang berubah ---
         $contextKey = 'user_dashboard_context_' . $user->id;
         $context = Cache::remember($contextKey, 300, function () use ($user) {
             return $this->getUserContext($user);
@@ -46,13 +46,14 @@ class DashboardController extends Controller
             return $this->getJadwalTerdekat($context['targets'] ?? []);
         });
 
-        // --- CACHE NOTIFIKASI (2 menit, lebih sering update) ---
-        $notifData = Cache::remember('user_dashboard_notif_' . $user->id, 120, function () use ($user) {
-            return $this->getNotifikasiRingkas((int) $user->id);
-        });
+        // ========================================================================
+        // PERBAIKAN REAL-TIME: Hapus Cache untuk Notifikasi. 
+        // Selalu ambil langsung dari Database agar akurat dengan lonceng Topbar.
+        // ========================================================================
+        $notifData = $this->getNotifikasiRingkas((int) $user->id);
         [$notifikasiTerbaru, $totalNotifikasiBelumDibaca] = $notifData;
 
-        // --- DATA DINAMIS (tidak di-cache) ---
+        // --- DATA DINAMIS (Pemeriksaan juga harus realtime tanpa cache) ---
         $latestPemeriksaan = $this->getLatestPemeriksaan($context);
 
         $summary = [
@@ -61,7 +62,7 @@ class DashboardController extends Controller
             'total_remaja'  => collect($context['remajas'] ?? [])->count(),
             'total_lansia'  => collect($context['lansias'] ?? [])->count(),
             'total_jadwal'  => $jadwalTerdekat->count(),
-            'total_notifikasi' => $totalNotifikasiBelumDibaca,
+            'total_notifikasi' => $totalNotifikasiBelumDibaca, // Real-time
             'total_pemeriksaan' => $latestPemeriksaan->count(),
         ];
 
@@ -71,7 +72,6 @@ class DashboardController extends Controller
             'user' => $user,
             'context' => $context,
             'summary' => $summary,
-            // PERBAIKAN BUG KUNCI: Pastikan memanggil 'remajas' dan 'lansias' menggunakan 's'
             'dataAnak' => $context['balitas'] ?? collect(),
             'dataRemaja' => $context['remajas'] ?? collect(),
             'dataLansia' => $context['lansias'] ?? collect(),
@@ -85,7 +85,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Endpoint AJAX untuk polling statistik cepat.
+     * Endpoint AJAX untuk polling statistik cepat (Real-time sync).
      */
     public function getStats(): JsonResponse
     {
@@ -95,10 +95,11 @@ class DashboardController extends Controller
                 return response()->json(['status' => 'unauthenticated', 'unread_count' => 0]);
             }
 
-            // Baca dari cache untuk kecepatan
-            $unreadCount = Cache::remember('user_unread_notif_' . $user->id, 60, function () use ($user) {
-                return $this->countUnreadNotifications((int) $user->id);
-            });
+            // ========================================================================
+            // PERBAIKAN REAL-TIME: Hapus Cache pada polling AJAX.
+            // Memastikan data yang dikirim ke Frontend selalu data detik ini juga.
+            // ========================================================================
+            $unreadCount = $this->countUnreadNotifications((int) $user->id);
 
             $contextKey = 'user_dashboard_context_' . $user->id;
             $context = Cache::get($contextKey);
@@ -117,21 +118,21 @@ class DashboardController extends Controller
                 'unread_count' => $unreadCount,
                 'total_sasaran' => $totalSasaran,
                 'total_jadwal' => $jadwalCount,
-                'updated_at' => now('Asia/Jakarta')->format('H:i'),
+                'updated_at' => now('Asia/Jakarta')->format('H:i:s'),
             ]);
         } catch (\Throwable $e) {
             Log::warning('User dashboard stats error', ['message' => $e->getMessage()]);
             return response()->json([
-                'status' => 'success',
+                'status' => 'error',
                 'unread_count' => 0,
                 'total_sasaran' => 0,
                 'total_jadwal' => 0,
-                'updated_at' => now('Asia/Jakarta')->format('H:i'),
+                'updated_at' => now('Asia/Jakarta')->format('H:i:s'),
             ]);
         }
     }
 
-    // ========== PRIVATE HELPERS (dengan cache tambahan) ==========
+    // ========== PRIVATE HELPERS ==========
 
     private function getJadwalTerdekat(array $targets): Collection
     {

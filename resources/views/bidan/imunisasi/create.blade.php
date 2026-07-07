@@ -113,9 +113,9 @@
     .balita-picker-result.is-selected { border-color: rgba(20, 184, 166, .45); background: rgba(240, 253, 250, .9); }
     .balita-picker-result.is-hidden { display: none !important; }
 
-    /* Nexus Modal */
+    /* Nexus Modal - High Z-Index */
     .pc-modal-backdrop {
-        position: fixed !important; inset: 0 !important; z-index: 9999 !important; display: none;
+        position: fixed !important; inset: 0 !important; z-index: 999999 !important; display: none;
         align-items: center; justify-content: center; background: rgba(15, 23, 42, .6); backdrop-filter: blur(10px); padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
     }
     .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
@@ -343,45 +343,53 @@
             </div>
         </div>
     </form>
+</div>
 
-    {{-- MODAL KONFIRMASI --}}
-    <div id="pcSubmitModal" class="pc-modal-backdrop">
-        <div class="pc-modal-card text-center">
-            <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <div class="relative z-10">
-                <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
-                    <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Catatan?</h3>
-                <p class="text-sm font-medium text-slate-500 mb-6 leading-relaxed px-4">
-                    Pastikan jenis vaksin dan dosis yang dipilih sudah benar sebelum menyimpan ke arsip rekam medis.
-                </p>
+{{-- 
+    MODAL AREA 
+    Diletakkan di luar kontainer animasi dan akan dipindahkan ke body oleh JS
+--}}
+<div id="pcSubmitModal" class="pc-modal-backdrop">
+    <div class="pc-modal-card text-center">
+        <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div class="relative z-10">
+            <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Catatan?</h3>
+            <p class="text-sm font-medium text-slate-500 mb-6 leading-relaxed px-4">
+                Pastikan jenis vaksin dan dosis yang dipilih sudah benar sebelum menyimpan ke arsip rekam medis.
+            </p>
 
-                <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-left">
-                    <div class="flex justify-between mb-1"><span class="text-[10px] font-black text-slate-400 uppercase">Balita</span><span id="summaryBalita" class="text-xs font-bold text-slate-700 truncate max-w-[150px]">-</span></div>
-                    <div class="flex justify-between mb-1"><span class="text-[10px] font-black text-slate-400 uppercase">Vaksin</span><span id="summaryVaksin" class="text-xs font-bold text-teal-600 truncate max-w-[150px]">-</span></div>
-                </div>
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-6 text-left">
+                <div class="flex justify-between mb-1"><span class="text-[10px] font-black text-slate-400 uppercase">Balita</span><span id="summaryBalita" class="text-xs font-bold text-slate-700 truncate max-w-[150px]">-</span></div>
+                <div class="flex justify-between mb-1"><span class="text-[10px] font-black text-slate-400 uppercase">Vaksin</span><span id="summaryVaksin" class="text-xs font-bold text-teal-600 truncate max-w-[150px]">-</span></div>
+            </div>
 
-                <div class="flex gap-3">
-                    <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
-                        Kembali
-                    </button>
-                    <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-check"></i> Simpan
-                    </button>
-                </div>
+            <div class="flex gap-3">
+                <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                    Kembali
+                </button>
+                <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check"></i> Simpan
+                </button>
             </div>
         </div>
     </div>
-
 </div>
 @endsection
 
 @push('scripts')
 <script>
 (() => {
+    // --- TELEPORTASI MODAL KE BODY ---
+    const modal = document.getElementById('pcSubmitModal');
+    if (modal && modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     // Balita Picker Logic
     const balitaIdInput = document.getElementById('balita_id');
     const searchInput = document.getElementById('balitaSearchInput');
@@ -469,9 +477,11 @@
 
     // Modal Logic
     const openBtn = document.getElementById('openSubmitModalBtn');
-    const modal = document.getElementById('pcSubmitModal');
     const cancelBtn = document.getElementById('pcCancelSubmit');
     const confirmBtn = document.getElementById('pcConfirmSubmit');
+
+    function lockBody() { document.body.style.overflow = 'hidden'; }
+    function unlockBody() { document.body.style.overflow = ''; }
 
     openBtn?.addEventListener('click', () => {
         if (!balitaIdInput.value) {
@@ -480,15 +490,38 @@
             return;
         }
         if (!form.checkValidity()) { form.reportValidity(); return; }
-        modal.classList.add('is-open');
+        
+        if(modal) {
+            modal.classList.add('is-open');
+            lockBody();
+        }
     });
 
-    cancelBtn?.addEventListener('click', () => modal.classList.remove('is-open'));
-    modal?.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('is-open'); });
+    cancelBtn?.addEventListener('click', () => {
+        if(modal) {
+            modal.classList.remove('is-open');
+            unlockBody();
+        }
+    });
+
+    modal?.addEventListener('click', (e) => { 
+        if(e.target === modal) {
+            modal.classList.remove('is-open');
+            unlockBody();
+        }
+    });
+
+    document.addEventListener('keydown', e => { 
+        if (e.key === 'Escape' && modal && modal.classList.contains('is-open')) {
+            modal.classList.remove('is-open');
+            unlockBody();
+        } 
+    });
 
     confirmBtn?.addEventListener('click', () => {
         confirmBtn.disabled = true;
         confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+        if (openBtn) openBtn.disabled = true;
         form.submit();
     });
 })();

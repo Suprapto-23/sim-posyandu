@@ -30,7 +30,7 @@
     }
 
     // Identifikasi Data (Menggunakan Fallback agar aman dari error backend)
-    $items = $items ?? $imunisasi ?? collect();
+    $items = $imunisasis ?? $items ?? $imunisasi ?? collect();
     $totalData = method_exists($items, 'total') ? $items->total() : $items->count();
 
     $statTotal = $statTotal ?? $totalData;
@@ -248,14 +248,14 @@
         <div class="pc-scroll-container max-h-[600px] p-4 sm:p-6 space-y-4 bg-white/40">
             @forelse($items as $item)
                 @php
-                    // Fallback Property Access (Aman dari error backend jika beda penamaan kolom)
-                    $nama = $item->balita->nama_lengkap ?? $item->nama_lengkap ?? '-';
-                    $nik = $item->balita->nik ?? $item->nik ?? '-';
-                    $namaVaksin = $item->jenis_vaksin ?? $item->nama_vaksin ?? 'Vaksin Umum';
-                    $tanggal = $formatDate($item->tanggal_imunisasi ?? $item->created_at);
-                    $petugas = $item->bidan->name ?? $item->petugas ?? 'Petugas Medis';
-                    $usiaVaksin = $item->usia_saat_vaksin ?? 'Sesuai Jadwal';
-                @endphp
+    // Fallback Property Access (Disesuaikan dengan relasi di Controller)
+    $nama = $item->kunjungan->pasien->nama_lengkap ?? $item->kunjungan->pasien->nama ?? '-';
+    $nik = $item->kunjungan->pasien->nik ?? '-';
+    $namaVaksin = $item->vaksin ?? $item->jenis_imunisasi ?? 'Vaksin Umum';
+    $tanggal = $formatDate($item->tanggal_imunisasi ?? $item->created_at);
+    $petugas = $item->kunjungan->petugas->name ?? $item->kunjungan->petugas->nama ?? 'Petugas Medis';
+    $usiaVaksin = $item->usia_saat_vaksin ?? 'Sesuai Jadwal';
+@endphp
 
                 <article class="bg-white border border-slate-100 rounded-[1.5rem] p-5 shadow-sm hover:shadow-md hover:border-emerald-300 transition duration-300">
                     <div class="data-row">

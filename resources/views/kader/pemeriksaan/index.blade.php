@@ -573,11 +573,8 @@
                         <th class="px-4 py-2">Sasaran</th>
                         <th class="px-4 py-2">Tanggal</th>
                         <th class="px-4 py-2">Kategori</th>
-                        <th class="px-4 py-2 text-center">BB</th>
-                        <th class="px-4 py-2 text-center">TB</th>
-                        <th class="px-4 py-2 text-center" title="Indeks Massa Tubuh">IMT</th>
-                        <th class="px-4 py-2 text-center" title="Lingkar Perut">LP</th>
-                        <th class="px-4 py-2 text-center">Tensi</th>
+                        <th class="px-4 py-2 text-center">Fisik Dasar</th>
+                        <th class="px-4 py-2 text-left min-w-[200px]">Pemeriksaan Spesifik</th>
                         <th class="px-4 py-2 text-center">Status</th>
                         <th class="px-4 py-2 text-right">Aksi</th>
                     </tr>
@@ -612,19 +609,30 @@
                                 </span>
                             </td>
                             <td class="px-4 py-4 text-xs font-bold text-slate-700 text-center">
-                                {{ $metric($item->berat_badan, 'kg') }}
+                                BB: {{ $metric($item->berat_badan, 'kg') }} <br>
+                                TB: {{ $metric($item->tinggi_badan, 'cm') }}
                             </td>
-                            <td class="px-4 py-4 text-xs font-bold text-slate-700 text-center">
-                                {{ $metric($item->tinggi_badan, 'cm') }}
-                            </td>
-                            <td class="px-4 py-4 text-xs font-bold text-slate-700 text-center">
-                                {{ $metric($item->imt) }}
-                            </td>
-                            <td class="px-4 py-4 text-xs font-bold text-slate-700 text-center">
-                                {{ $metric($item->lingkar_perut, 'cm') }}
-                            </td>
-                            <td class="px-4 py-4 text-xs font-bold text-slate-700 text-center">
-                                {{ $metric($item->tekanan_darah) }}
+                            <td class="px-4 py-4 text-xs font-medium text-slate-600">
+                                @if(strtolower($item->kategori_pasien) === 'balita')
+                                    <div class="grid grid-cols-2 gap-1">
+                                        <div><span class="text-emerald-600 font-bold">L.Kepala:</span> {{ $item->lingkar_kepala ?? '-' }} cm</div>
+                                        <div><span class="text-emerald-600 font-bold">LiLA:</span> {{ $item->lingkar_lengan ?? '-' }} cm</div>
+                                    </div>
+                                @elseif(strtolower($item->kategori_pasien) === 'remaja')
+                                    <div class="grid grid-cols-2 gap-1">
+                                        <div><span class="text-violet-600 font-bold">IMT:</span> {{ $item->imt ?? '-' }}</div>
+                                        <div><span class="text-violet-600 font-bold">Tensi:</span> {{ $item->tekanan_darah ?? '-' }}</div>
+                                        <div><span class="text-violet-600 font-bold">LiLA:</span> {{ $item->lingkar_lengan ?? '-' }} cm</div>
+                                        <div><span class="text-violet-600 font-bold">LP:</span> {{ $item->lingkar_perut ?? '-' }} cm</div>
+                                    </div>
+                                @elseif(strtolower($item->kategori_pasien) === 'lansia')
+                                    <div class="grid grid-cols-2 gap-1">
+                                        <div><span class="text-sky-600 font-bold">IMT:</span> {{ $item->imt ?? '-' }}</div>
+                                        <div><span class="text-sky-600 font-bold">Tensi:</span> {{ $item->tekanan_darah ?? '-' }}</div>
+                                        <div><span class="text-sky-600 font-bold">LP:</span> {{ $item->lingkar_perut ?? '-' }} cm</div>
+                                        <div class="col-span-2"><span class="text-sky-600 font-bold">Kemandirian:</span> <span class="capitalize">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</span></div>
+                                    </div>
+                                @endif
                             </td>
                             <td class="px-4 py-4 text-center">
                                 <span class="btn-pill inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase tracking-wider {{ $sm['badge'] }}">
@@ -721,14 +729,35 @@
                                     <p class="text-[10px] font-bold text-slate-400 uppercase">TB</p>
                                     <p class="font-black text-slate-700 mt-0.5">{{ $metric($item->tinggi_badan, 'cm') }}</p>
                                 </div>
-                                <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">IMT</p>
-                                    <p class="font-black text-slate-700 mt-0.5">{{ $metric($item->imt) }}</p>
-                                </div>
-                                <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">LP</p>
-                                    <p class="font-black text-slate-700 mt-0.5">{{ $metric($item->lingkar_perut, 'cm') }}</p>
-                                </div>
+                                
+                                @if(strtolower($item->kategori_pasien) === 'balita')
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">L.Kepala</p>
+                                        <p class="font-black text-emerald-700 mt-0.5">{{ $metric($item->lingkar_kepala, 'cm') }}</p>
+                                    </div>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">LiLA</p>
+                                        <p class="font-black text-emerald-700 mt-0.5">{{ $metric($item->lingkar_lengan, 'cm') }}</p>
+                                    </div>
+                                @elseif(strtolower($item->kategori_pasien) === 'remaja')
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">IMT</p>
+                                        <p class="font-black text-violet-700 mt-0.5">{{ $metric($item->imt) }}</p>
+                                    </div>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
+                                        <p class="font-black text-violet-700 mt-0.5">{{ $metric($item->tekanan_darah) }}</p>
+                                    </div>
+                                @elseif(strtolower($item->kategori_pasien) === 'lansia')
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
+                                        <p class="font-black text-sky-700 mt-0.5">{{ $metric($item->tekanan_darah) }}</p>
+                                    </div>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Kemandirian</p>
+                                        <p class="font-black text-sky-700 mt-0.5 capitalize text-[10px]">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</p>
+                                    </div>
+                                @endif
                             </div>
 
                             @if($note)

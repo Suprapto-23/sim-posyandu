@@ -803,51 +803,63 @@
         });
 
         document.addEventListener('alpine:init', () => {
-            Alpine.data('layoutApp', () => ({
-                profileOpen: false,
-                notifOpen: false,
-                unreadCount: {{ $unreadCount }},
-                notifItems: [],
-                initApp() {
-                    this.fetchNotifikasi();
-                    const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
-                    if (!url) return;
-                    setInterval(() => {
-                        this.fetchNotifikasi();
-                    }, 30000);
-                },
-                async fetchNotifikasi() {
-                    const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
-                    if (!url) return;
-                    try {
-                        const res = await fetch(url, { 
-                            headers: { 
-                                'Accept': 'application/json', 
-                                'X-Requested-With': 'XMLHttpRequest' 
-                            }
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            this.unreadCount = data.unreadCount || 0;
-                            this.notifItems = data.items || [];
-                            
-                            // Update badge
-                            const badge = document.querySelector('.notif-badge');
-                            if (badge && this.unreadCount > 0) {
-                                badge.textContent = this.unreadCount > 9 ? '9+' : this.unreadCount;
-                            }
-                            // Update status di dropdown header
-                            const statusEl = document.querySelector('.user-dropdown .text-emerald-600');
-                            if (statusEl) {
-                                statusEl.textContent = this.unreadCount + ' baru';
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('Gagal fetch notifikasi:', e);
+    Alpine.data('layoutApp', () => ({
+        profileOpen: false,
+        notifOpen: false,
+        unreadCount: {{ $unreadCount }},
+        notifItems: [],
+        pollingInterval: null,
+        
+        initApp() {
+            this.fetchNotifikasi();
+            const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
+            if (!url) return;
+            
+            // Samakan interval dengan halaman inbox (8000ms) untuk konsistensi UI
+            this.pollingInterval = setInterval(() => {
+                this.fetchNotifikasi();
+            }, 8000); 
+        },
+        
+        async fetchNotifikasi() {
+            const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
+            if (!url) return;
+            
+            try {
+                // Tambahkan timestamp untuk mencegah caching agresif dari browser
+                const fetchUrl = new URL(url);
+                fetchUrl.searchParams.append('_t', new Date().getTime());
+
+                const res = await fetch(fetchUrl.toString(), { 
+                    headers: { 
+                        'Accept': 'application/json', 
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
                     }
+                });
+                
+                // Cek jika sesi kedaluwarsa (Server mengembalikan 401 atau Redirect HTML)
+                const contentType = res.headers.get("content-type");
+                if (!res.ok || (contentType && contentType.indexOf("application/json") === -1)) {
+                    clearInterval(this.pollingInterval); // Hentikan polling agar tidak membebani server
+                    console.warn('Sesi mungkin telah berakhir atau terjadi kesalahan server.');
+                    return;
                 }
-            }));
-        });
+
+                const data = await res.json();
+                
+                // Alpine.js akan secara otomatis memperbarui DOM yang menggunakan x-text dan x-if
+                // Tidak perlu lagi document.querySelector('.notif-badge')
+                this.unreadCount = data.unreadCount || 0;
+                this.notifItems = data.items || [];
+                
+            } catch (e) {
+                // Hentikan eksekusi diam-diam tanpa merusak fungsi UI lainnya
+                console.warn('Gagal fetch notifikasi:', e);
+            }
+        }
+    }));
+});
 
         @if(session('success'))
             nexusToast('Berhasil', @json(session('success')), 'success');

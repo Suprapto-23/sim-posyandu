@@ -99,9 +99,9 @@
     .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
     @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-    /* Nexus Modal */
+    /* Nexus Modal - Diperkuat Z-index nya */
     .pc-modal-backdrop {
-        position: fixed !important; inset: 0 !important; z-index: 9999 !important; display: none;
+        position: fixed !important; inset: 0 !important; z-index: 999999 !important; display: none;
         align-items: center; justify-content: center; background: rgba(15, 23, 42, .6); backdrop-filter: blur(10px); padding: 1rem; opacity: 0; transition: opacity 0.3s ease;
     }
     .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
@@ -266,33 +266,41 @@
             </div>
         </section>
     </form>
+</div>
 
-    {{-- MODAL KONFIRMASI --}}
-    <div id="pcSubmitModal" class="pc-modal-backdrop">
-        <div class="pc-modal-card text-center">
-            <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <div class="relative z-10">
-                <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
-                    <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
-                </div>
-                <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Jadwal?</h3>
-                <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">Pastikan data tanggal, waktu, dan target sasaran sudah sesuai agar aplikasi warga menerima informasi yang akurat.</p>
-                <div class="flex gap-3">
-                    <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">Kembali</button>
-                    <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> Simpan</button>
-                </div>
+{{-- 
+    MODAL KONFIRMASI 
+    Diletakkan di luar wrapper agar Teleportasi DOM lebih mulus 
+--}}
+<div id="pcSubmitModal" class="pc-modal-backdrop">
+    <div class="pc-modal-card text-center">
+        <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -bottom-16 -right-16 w-32 h-32 bg-teal-400/20 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div class="relative z-10">
+            <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-5 text-emerald-500 shadow-inner">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Jadwal?</h3>
+            <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">Pastikan data tanggal, waktu, dan target sasaran sudah sesuai agar aplikasi warga menerima informasi yang akurat.</p>
+            <div class="flex gap-3">
+                <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">Kembali</button>
+                <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2"><i class="fa-solid fa-check"></i> Simpan</button>
             </div>
         </div>
     </div>
-
 </div>
 @endsection
 
 @push('scripts')
 <script>
 (() => {
+    // --- TELEPORTASI MODAL KE BODY ---
+    const modal = document.getElementById('pcSubmitModal');
+    if (modal && modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+    }
+
     // Variable Deklarasi
     const form = document.getElementById('jadwalForm');
     const kategoriInput = document.getElementById('kategoriInput');
@@ -331,17 +339,46 @@
         setBtnActive(targBtns, sTarg, 'target');
     };
 
+    // Body Lock Logic
+    function lockBody() { document.body.style.overflow = 'hidden'; }
+    function unlockBody() { document.body.style.overflow = ''; }
+
     // Button Listeners
     katBtns.forEach(b => b.addEventListener('click', () => { sKat = b.dataset.kategori; kategoriInput.value = sKat; setBtnActive(katBtns, sKat, 'kategori'); lockTarget(); }));
     targBtns.forEach(b => b.addEventListener('click', () => { if(sKat==='imunisasi' && b.dataset.target!=='balita') return; sTarg = b.dataset.target; targetInput.value = sTarg; setBtnActive(targBtns, sTarg, 'target'); }));
     statBtns.forEach(b => b.addEventListener('click', () => { sStat = b.dataset.status; statusInput.value = sStat; setBtnActive(statBtns, sStat, 'status'); }));
 
-    // Modal Logic
-    const modal = document.getElementById('pcSubmitModal');
-    document.getElementById('openSubmitModalBtn').addEventListener('click', () => { if(form.reportValidity()) modal.classList.add('is-open'); });
-    document.getElementById('pcCancelSubmit').addEventListener('click', () => modal.classList.remove('is-open'));
+    // Modal Events
+    document.getElementById('openSubmitModalBtn').addEventListener('click', () => { 
+        if(form.reportValidity()) {
+            modal.classList.add('is-open'); 
+            lockBody();
+        }
+    });
+    
+    document.getElementById('pcCancelSubmit').addEventListener('click', () => {
+        modal.classList.remove('is-open');
+        unlockBody();
+    });
+    
+    modal.addEventListener('click', (e) => {
+        if(e.target === modal) {
+            modal.classList.remove('is-open');
+            unlockBody();
+        }
+    });
+    
+    document.addEventListener('keydown', e => { 
+        if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+            modal.classList.remove('is-open');
+            unlockBody();
+        } 
+    });
+
     document.getElementById('pcConfirmSubmit').addEventListener('click', function() {
-        this.disabled = true; this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; form.submit();
+        this.disabled = true; 
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; 
+        form.submit();
     });
 
     // Initial Trigger

@@ -369,6 +369,8 @@ class PemeriksaanController extends Controller
             'status_verifikasi' => 'pending',
         ];
 
+        
+
         if (Schema::hasColumn('pemeriksaans', 'created_by')) {
             $payload['created_by'] = Auth::id();
         }

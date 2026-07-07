@@ -274,6 +274,9 @@ Route::middleware(['auth', 'checkstatus', 'role:bidan'])
 
         Route::get('/notifikasi/fetch', [BidanNotifikasiController::class, 'fetchRecent'])
             ->name('notifikasi.fetch');
+        
+        Route::get('/notifikasi/count', [KaderNotifikasiController::class, 'count'])
+        ->name('notifikasi.count');
 
         Route::post('/notifikasi/mark-all-read', [BidanNotifikasiController::class, 'markAllRead'])
             ->name('notifikasi.markall');
@@ -484,6 +487,9 @@ Route::middleware(['auth', 'checkstatus', 'role:kader'])
         Route::get('/notifikasi/fetch', [KaderNotifikasiController::class, 'fetchRecent'])
             ->name('notifikasi.fetch');
 
+        Route::get('/notifikasi/count', [KaderNotifikasiController::class, 'count'])
+         ->name('notifikasi.count');
+
         Route::post('/notifikasi/read-all', [KaderNotifikasiController::class, 'markAllRead'])
             ->name('notifikasi.markAllRead');
 
@@ -590,6 +596,9 @@ Route::middleware(['auth', 'checkstatus', 'role:user'])
 
         Route::get('/notifikasi/fetch', [UserNotifikasiController::class, 'fetchRecent'])
             ->name('notifikasi.fetch');
+        
+        Route::get('/notifikasi/count', [KaderNotifikasiController::class, 'count'])
+        ->name('notifikasi.count');
 
         Route::post('/notifikasi/mark-all-read', [UserNotifikasiController::class, 'markAllRead'])
             ->name('notifikasi.markall');

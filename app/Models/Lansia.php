@@ -26,6 +26,7 @@ class Lansia extends Model
         'tanggal_lahir',
         'jenis_kelamin',
         'alamat',
+        'nama_keluarga',
         'telepon_keluarga',
         'penyakit_bawaan',
         'golongan_darah',

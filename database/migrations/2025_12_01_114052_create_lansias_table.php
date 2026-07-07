@@ -19,6 +19,7 @@ return new class extends Migration
             $table->date('tanggal_lahir')->nullable();
             $table->enum('jenis_kelamin', ['L', 'P']);
             $table->text('alamat')->nullable();
+            $table->string('nama_keluarga')->nullable();
             $table->string('telepon_keluarga')->nullable();
             
             // Data Kesehatan Dasar
@@ -29,6 +30,7 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

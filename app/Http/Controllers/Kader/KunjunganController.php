@@ -35,13 +35,17 @@ class KunjunganController extends Controller
                     ->latest('created_at');
 
         // Filter Berdasarkan Kategori Warga
+        // CATATAN PERBAIKAN: sebelumnya hanya mencocokkan nama class penuh
+        // (App\Models\Remaja dst), padahal di bagian lain aplikasi ini
+        // (Bidan\PemeriksaanController, Bidan\RekamMedisController,
+        // Kader\ImunisasiController, User\BalitaController, dan
+        // Kunjungan::scopeKategori) semuanya mengecek baik nama class
+        // penuh MAUPUN alias morphMap ('balita'/'remaja'/'lansia'), karena
+        // data pasien_type di tabel ini historisnya tidak selalu konsisten.
+        // Memakai scope yang sama disini supaya hasil filter tidak diam-diam
+        // kehilangan data kunjungan yang pasien_type-nya tersimpan beda format.
         if ($kategori !== 'semua') {
-            $pasienType = match($kategori) {
-                'remaja'    => 'App\Models\Remaja',
-                'lansia'    => 'App\Models\Lansia',
-                default     => 'App\Models\Balita',
-            };
-            $query->where('pasien_type', $pasienType);
+            $query->kategori($kategori);
         }
 
         // Pencarian Real-Time Cerdas (Menyisir 4 Tabel Sekaligus)

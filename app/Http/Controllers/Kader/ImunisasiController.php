@@ -19,6 +19,8 @@ class ImunisasiController extends Controller
         try {
             $kategori = strtolower((string) $request->get('kategori', 'semua'));
             $search = trim((string) $request->get('search', ''));
+            // Menangkap parameter 'vaksin' dari dropdown filter
+            $vaksin = strtolower((string) $request->get('vaksin', 'semua'));
             $bulan = (int) $request->get('bulan', now()->month);
             $tahun = (int) $request->get('tahun', now()->year);
 
@@ -38,6 +40,13 @@ class ImunisasiController extends Controller
                 ->with(['kunjungan.petugas', 'kunjungan.pasien'])
                 ->whereMonth('tanggal_imunisasi', $bulan)
                 ->whereYear('tanggal_imunisasi', $tahun)
+                // Filter berdasarkan jenis vaksin jika nilainya bukan 'semua'
+                ->when($vaksin !== 'semua', function (Builder $q) use ($vaksin) {
+                    $q->where(function (Builder $subQ) use ($vaksin) {
+                        $subQ->where('vaksin', 'like', "%{$vaksin}%")
+                             ->orWhere('jenis_imunisasi', 'like', "%{$vaksin}%");
+                    });
+                })
                 ->latest('tanggal_imunisasi')
                 ->latest('id');
 
@@ -50,8 +59,9 @@ class ImunisasiController extends Controller
 
             $statistics = $this->generateAnalytics($kategori, $bulan, $tahun);
 
+            // Menambahkan 'vaksin' ke dalam array compact agar dikirim kembali ke view
             return view('kader.imunisasi.index', array_merge(
-                compact('imunisasis', 'kategori', 'search', 'bulan', 'tahun'),
+                compact('imunisasis', 'kategori', 'search', 'vaksin', 'bulan', 'tahun'),
                 $statistics
             ));
         } catch (\Throwable $e) {
