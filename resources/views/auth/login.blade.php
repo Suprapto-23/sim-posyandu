@@ -133,7 +133,7 @@
                     </div>
                 </div>
 
-                <button type="submit" id="submitBtn" class="submit-btn" aria-label="Masuk ke dasbor">
+                <button type="submit" id="submitBtn" class="submit-btn" aria-label="Masuk ke dashboard">
                     <span id="submitTxt">Masuk</span>
                     <svg class="icon" id="submitIco"><use href="#icon-arrow-right"></use></svg>
                 </button>

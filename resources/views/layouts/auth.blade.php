@@ -51,7 +51,7 @@
         body {
             font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
             color: var(--slate-900);
-            -webkit-font-smoothing: antialiased;
+            -webkit-font-smoothing: antialiased; font-synthesis: none;
             overflow-x: hidden;
             position: relative;
         }
@@ -266,7 +266,7 @@
 
     <div class="bridge-loader">
         <div class="fluent-spinner"></div>
-        <p>Memuat Dasbor...</p>
+        <p>Memuat Dashboard</p>
     </div>
 
     <main class="auth-main">

@@ -19,8 +19,8 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional"></noscript>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -52,7 +52,7 @@
             font-family: "Plus Jakarta Sans", system-ui, sans-serif;
             color: var(--slate-700);
             background-color: var(--bg-app);
-            -webkit-font-smoothing: antialiased;
+            -webkit-font-smoothing: antialiased; font-synthesis: none;
             text-rendering: optimizeLegibility;
         }
 
@@ -404,6 +404,9 @@
                     newScript.textContent = oldScript.textContent;
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
+
+                // Re-bind komponen Alpine.js pada konten baru (fix: dulu tidak di-rebind)
+                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
                 // Tunggu sebentar lalu fade-in halus
                 requestAnimationFrame(() => {

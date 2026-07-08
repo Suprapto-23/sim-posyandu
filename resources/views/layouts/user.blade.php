@@ -19,8 +19,8 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional"></noscript>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -55,7 +55,7 @@
             font-family: "Plus Jakarta Sans", system-ui, sans-serif;
             color: var(--slate-700);
             background-color: var(--bg-app);
-            -webkit-font-smoothing: antialiased;
+            -webkit-font-smoothing: antialiased; font-synthesis: none;
         }
 
         /* ── SIDEBAR (GPU) ── */
@@ -391,22 +391,15 @@
             }
         }
 
+        /* ── SPA - Butter Smooth (anti-reload) ── */
         .user-main {
-            opacity: 0;
-            animation: contentEnter 0.08s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 1; transform: translateY(0);
+            transition: opacity var(--transition-speed) var(--ease-out), transform var(--transition-speed) var(--ease-out);
             will-change: opacity, transform;
         }
-        @keyframes contentEnter {
-            0% { opacity: 0; transform: translateY(6px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-        .content-leave .user-main {
-            animation: contentLeave 0.05s ease-in forwards !important;
-        }
-        @keyframes contentLeave {
-            0% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-5px); }
-        }
+        .user-main.is-leaving { opacity: 0; transform: translateY(-6px); }
+        .user-main.is-entering { opacity: 0; transform: translateY(6px); }
+        .user-main.is-enter-done { opacity: 1; transform: translateY(0); }
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
@@ -652,9 +645,9 @@
             </header>
         </div>
 
-        <div class="main-scroll-area">
+        <div class="main-scroll-area" id="mainScrollArea">
             <div class="user-container">
-                <main class="user-main">
+                <main class="user-main" id="userMain">
                     @yield('content')
                 </main>
             </div>
@@ -749,17 +742,103 @@
         window.nexusConfirm = nexusConfirm;
         window.nexusToast = nexusToast;
 
+        // ============================================================
+        // UPDATE SIDEBAR ACTIVE STATE
+        // ============================================================
+        function updateSidebarActive(currentUrl) {
+            const url = currentUrl || window.location.href;
+            const currentPath = new URL(url).pathname;
+            document.querySelectorAll('.pc-sidebar a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href) {
+                    const linkPath = new URL(href, window.location.origin).pathname;
+                    link.classList.toggle('active', linkPath === currentPath);
+                }
+            });
+        }
+
+        // ============================================================
+        // SPA NAVIGATION (anti-reload, butter smooth)
+        // ============================================================
+        let currentAbortController = null;
+        let isNavigating = false;
+
+        function navigateTo(url) {
+            if (isNavigating) {
+                if (currentAbortController) currentAbortController.abort();
+                return;
+            }
+
+            const currentPath = window.location.pathname + window.location.search;
+            const targetPath = new URL(url).pathname + new URL(url).search;
+            if (currentPath === targetPath) return;
+
+            isNavigating = true;
+            const controller = new AbortController();
+            currentAbortController = controller;
+
+            const mainEl = document.getElementById('userMain');
+            const scrollArea = document.getElementById('mainScrollArea');
+
+            mainEl.classList.remove('is-enter-done', 'is-entering');
+            mainEl.classList.add('is-leaving');
+
+            fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+            .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
+            .then(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const title = doc.querySelector('title');
+                if (title) document.title = title.textContent;
+
+                const newContent = doc.querySelector('#userMain');
+                if (!newContent) { window.location.href = url; return; }
+
+                mainEl.innerHTML = newContent.innerHTML;
+                mainEl.classList.remove('is-leaving');
+                mainEl.classList.add('is-entering');
+
+                if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+
+                mainEl.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
+
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        mainEl.classList.remove('is-entering');
+                        mainEl.classList.add('is-enter-done');
+                        updateSidebarActive(url);
+                    }, 50);
+                });
+
+                window.history.pushState({}, '', url);
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                window.location.href = url;
+            })
+            .finally(() => {
+                isNavigating = false;
+                currentAbortController = null;
+            });
+        }
+
+        window.addEventListener('popstate', function() { navigateTo(window.location.href); });
+
         // ── NAVIGASI ──
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
-            if (link && link.href && !link.target && link.host === window.location.host && !link.hasAttribute('download') && !link.hasAttribute('data-no-delay')) {
-                if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-                e.preventDefault();
-                document.body.classList.add('content-leave');
-                setTimeout(() => {
-                    window.location.href = link.href;
-                }, 100);
-            }
+            if (!link || !link.href || link.target || link.host !== window.location.host) return;
+            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay')) return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+            e.preventDefault();
+            navigateTo(link.href);
         });
 
         document.addEventListener('submit', function (event) {
@@ -797,8 +876,11 @@
         });
 
         window.addEventListener('pageshow', function (event) {
-            if (event.persisted) { 
-                document.body.classList.remove('content-leave'); 
+            if (event.persisted) {
+                document.body.classList.remove('content-leave');
+                const mainEl = document.getElementById('userMain');
+                if (mainEl) { mainEl.classList.remove('is-leaving', 'is-entering'); mainEl.classList.add('is-enter-done'); }
+                updateSidebarActive(window.location.href);
             }
         });
 
@@ -811,6 +893,7 @@
         pollingInterval: null,
         
         initApp() {
+            updateSidebarActive(window.location.href);
             this.fetchNotifikasi();
             const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
             if (!url) return;

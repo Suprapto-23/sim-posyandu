@@ -18,8 +18,8 @@
     <link rel="icon" type="image/webp" href="{{ asset('img/logo.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=optional"></noscript>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -55,7 +55,7 @@
             font-family: "Plus Jakarta Sans", system-ui, sans-serif;
             color: var(--slate-700);
             background-color: var(--bg-app);
-            -webkit-font-smoothing: antialiased;
+            -webkit-font-smoothing: antialiased; font-synthesis: none;
         }
 
         /* ── SIDEBAR ── */
@@ -288,10 +288,16 @@
         .main-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .main-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        .main-inner { width: 100%; min-height: 100%; opacity: 0; animation: contentEnter 0.08s ease-out forwards; }
-        @keyframes contentEnter { 0% { opacity: 0; } 100% { opacity: 1; } }
-        .content-leave .main-inner { animation: contentLeave 0.05s ease-in forwards !important; }
-        @keyframes contentLeave { 0% { opacity: 1; } 100% { opacity: 0; } }
+        /* ── SPA - Butter Smooth (anti-reload) ── */
+        .main-inner {
+            width: 100%; min-height: 100%;
+            opacity: 1; transform: translateY(0);
+            transition: opacity var(--transition-speed) var(--ease-out), transform var(--transition-speed) var(--ease-out);
+            will-change: opacity, transform;
+        }
+        .main-inner.is-leaving { opacity: 0; transform: translateY(-6px); }
+        .main-inner.is-entering { opacity: 0; transform: translateY(6px); }
+        .main-inner.is-enter-done { opacity: 1; transform: translateY(0); }
 
         /* Padding disesuaikan karena bottom-nav sudah dihapus */
         @media (max-width: 1023px) { .main-scroll { padding: 16px; } }
@@ -502,8 +508,8 @@ div.swal2-container .swal2-popup {
             </header>
         </div>
 
-        <div class="main-scroll">
-            <main class="main-inner">
+        <div class="main-scroll" id="mainScrollArea">
+            <main class="main-inner" id="bidanMain">
                 @yield('content')
             </main>
         </div>
@@ -559,13 +565,102 @@ div.swal2-container .swal2-popup {
         window.nexusConfirm = nexusConfirm;
         window.nexusToast = nexusToast;
 
+        // ============================================================
+        // UPDATE SIDEBAR ACTIVE STATE
+        // ============================================================
+        function updateSidebarActive(currentUrl) {
+            const url = currentUrl || window.location.href;
+            const currentPath = new URL(url).pathname;
+            document.querySelectorAll('.pc-sidebar a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href) {
+                    const linkPath = new URL(href, window.location.origin).pathname;
+                    link.classList.toggle('active', linkPath === currentPath);
+                }
+            });
+        }
+
+        // ============================================================
+        // SPA NAVIGATION (anti-reload, butter smooth)
+        // ============================================================
+        let currentAbortController = null;
+        let isNavigating = false;
+
+        function navigateTo(url) {
+            if (isNavigating) {
+                if (currentAbortController) currentAbortController.abort();
+                return;
+            }
+
+            const currentPath = window.location.pathname + window.location.search;
+            const targetPath = new URL(url).pathname + new URL(url).search;
+            if (currentPath === targetPath) return;
+
+            isNavigating = true;
+            const controller = new AbortController();
+            currentAbortController = controller;
+
+            const mainEl = document.getElementById('bidanMain');
+            const scrollArea = document.getElementById('mainScrollArea');
+
+            mainEl.classList.remove('is-enter-done', 'is-entering');
+            mainEl.classList.add('is-leaving');
+
+            fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+            .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
+            .then(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const title = doc.querySelector('title');
+                if (title) document.title = title.textContent;
+
+                const newContent = doc.querySelector('#bidanMain');
+                if (!newContent) { window.location.href = url; return; }
+
+                mainEl.innerHTML = newContent.innerHTML;
+                mainEl.classList.remove('is-leaving');
+                mainEl.classList.add('is-entering');
+
+                if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+
+                mainEl.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
+
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        mainEl.classList.remove('is-entering');
+                        mainEl.classList.add('is-enter-done');
+                        updateSidebarActive(url);
+                    }, 50);
+                });
+
+                window.history.pushState({}, '', url);
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                window.location.href = url;
+            })
+            .finally(() => {
+                isNavigating = false;
+                currentAbortController = null;
+            });
+        }
+
+        window.addEventListener('popstate', function() { navigateTo(window.location.href); });
+
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
-            if (link && link.href && !link.target && link.host === window.location.host && !link.hasAttribute('download') && !link.hasAttribute('data-no-delay')) {
-                if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-                e.preventDefault(); document.body.classList.add('content-leave');
-                setTimeout(() => { window.location.href = link.href; }, 100);
-            }
+            if (!link || !link.href || link.target || link.host !== window.location.host) return;
+            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay')) return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+            e.preventDefault();
+            navigateTo(link.href);
         });
 
         document.addEventListener('submit', function (event) {
@@ -586,12 +681,20 @@ div.swal2-container .swal2-popup {
             }
         });
 
-        window.addEventListener('pageshow', function (event) { if (event.persisted) document.body.classList.remove('content-leave'); });
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted) {
+                document.body.classList.remove('content-leave');
+                const mainEl = document.getElementById('bidanMain');
+                if (mainEl) { mainEl.classList.remove('is-leaving', 'is-entering'); mainEl.classList.add('is-enter-done'); }
+                updateSidebarActive(window.location.href);
+            }
+        });
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('layoutApp', () => ({
                 profileOpen: false, notifOpen: false, unreadCount: {{ $notifCount }}, notifItems: [],
                 initApp() {
+                    updateSidebarActive(window.location.href);
                     this.fetchNotifikasi();
                     const url = '{{ Route::has("bidan.notifikasi.fetch") ? route("bidan.notifikasi.fetch") : "" }}';
                     if (!url) return;
