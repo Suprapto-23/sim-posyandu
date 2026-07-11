@@ -6,6 +6,7 @@ use App\Models\Balita;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\RemembersRowNumber;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
@@ -15,69 +16,121 @@ use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 
-class BalitaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatchInserts, WithChunkReading
+class BalitaImport implements ToModel, WithHeadingRow, WithBatchInserts, WithChunkReading, SkipsEmptyRows
 {
     use RemembersRowNumber;
 
-    public function model(array $row)
+    private int $headingRow;
+
+    public function __construct(int $headingRow = 3)
     {
-        $rowNumber = $this->getRowNumber();
-
-        $nikBalita = $this->cleanNik($row['nik_balita'] ?? null, $rowNumber, 'NIK balita');
-        $namaLengkap = $this->cleanText($row['nama_lengkap'] ?? null);
-
-        if ($namaLengkap === '') {
-            throw new \RuntimeException("Baris {$rowNumber}: nama_lengkap wajib diisi.");
-        }
-
-        if (Balita::where('nik', $nikBalita)->exists()) {
-            return null;
-        }
-
-        $jenisKelamin = $this->normalizeGender($row['jenis_kelamin'] ?? null, $rowNumber);
-        $tanggalLahir = $this->parseDate($row['tanggal_lahir'] ?? null, $rowNumber);
-
-        $namaIbu = $this->cleanText($row['nama_ibu'] ?? null);
-        $nikIbu = $this->cleanOptionalNik($row['nik_ibu'] ?? null, $rowNumber, 'NIK ibu');
-
-        if ($namaIbu === '') {
-            throw new \RuntimeException("Baris {$rowNumber}: nama_ibu wajib diisi.");
-        }
-
-        $linkedUser = $this->findLinkedUser($nikIbu, $namaIbu);
-
-        $data = [
-            'kode_balita' => $this->generateKodeBalita(),
-            'nik' => $nikBalita,
-            'nama_lengkap' => $namaLengkap,
-            'jenis_kelamin' => $jenisKelamin,
-            'tempat_lahir' => $this->cleanText($row['tempat_lahir'] ?? null) ?: '-',
-            'tanggal_lahir' => $tanggalLahir,
-            'nama_ibu' => $namaIbu,
-            'berat_lahir' => $this->cleanDecimal($row['berat_lahir_kg'] ?? null),
-            'panjang_lahir' => $this->cleanDecimal($row['panjang_lahir_cm'] ?? null),
-            'alamat' => $this->cleanText($row['alamat_lengkap'] ?? null) ?: '-',
-            'created_by' => auth()->id(),
-        ];
-
-        if (Schema::hasColumn('balitas', 'user_id')) {
-            $data['user_id'] = $linkedUser?->id;
-        }
-
-        if (Schema::hasColumn('balitas', 'nik_ibu')) {
-            $data['nik_ibu'] = $nikIbu;
-        }
-
-        if (Schema::hasColumn('balitas', 'nama_ayah')) {
-            $data['nama_ayah'] = $this->cleanText($row['nama_ayah'] ?? null) ?: null;
-        }
-
-        return new Balita($data);
+        $this->headingRow = $headingRow;
     }
 
     public function headingRow(): int
     {
-        return 3;
+        return $this->headingRow;
+    }
+
+    public function model(array $row)
+    {
+        // 1. FILTER GHOST ROWS (Otomatis buang baris kosong)
+        $isEmpty = collect($row)->filter(fn($val) => trim((string)$val) !== '')->isEmpty();
+        if ($isEmpty) {
+            return null;
+        }
+
+        $rowNumber = $this->getRowNumber();
+
+        try {
+            // 2. SANITASI NIK CERDAS (Otomatis perbaiki format eksponensial Excel e.g., 3.32E+15)
+            $nik = $this->cleanNik($row['nik'] ?? null, $rowNumber);
+            $nikIbu = $this->cleanNik($row['nik_ibu'] ?? $row['nik_ortu'] ?? null, $rowNumber, false); // NIK Ibu opsional
+            
+            // Proteksi Data Utama
+            if (empty($nik)) {
+                Log::warning("Import Balita: Baris {$rowNumber} dilewati karena NIK anak kosong atau tidak valid.");
+                return null;
+            }
+
+            // 3. ANTI-DUPLIKASI OTOMATIS
+            if (Balita::where('nik', $nik)->exists()) {
+                return null; // Skip jika data sudah ada agar tidak error duplikat
+            }
+
+            // 4. FUZZY MATCHING (Menangkap variasi nama kolom Excel dari Kader)
+            $namaAnak = $this->cleanText($row['nama_anak'] ?? $row['nama_lengkap'] ?? $row['nama'] ?? '');
+            $namaIbu = $this->cleanText($row['nama_ibu'] ?? $row['nama_ortu'] ?? '');
+            $namaAyah = $this->cleanText($row['nama_ayah'] ?? '');
+            $jenisKelamin = $this->normalizeGender($row['jenis_kelamin'] ?? $row['jk'] ?? null);
+            $tanggalLahir = $this->parseExcelDate($row['tanggal_lahir'] ?? $row['tgl_lahir'] ?? null);
+            
+            if (!$namaAnak || !$tanggalLahir) {
+                Log::warning("Import Balita: Baris {$rowNumber} dilewati karena Nama Anak atau Tanggal Lahir kosong.");
+                return null;
+            }
+
+            // 5. PENYUSUNAN DATA UTAMA
+            $data = [
+                'nik'           => $nik,
+                'nik_ibu'       => $nikIbu,
+                'nama_lengkap'  => $namaAnak,
+                'nama_ibu'      => $namaIbu ?: '-',
+                'nama_ayah'     => $namaAyah ?: '-',
+                'jenis_kelamin' => $jenisKelamin,
+                'tempat_lahir'  => $this->cleanText($row['tempat_lahir'] ?? null) ?: '-',
+                'tanggal_lahir' => $tanggalLahir,
+                'alamat'        => $this->cleanText($row['alamat'] ?? $row['alamat_lengkap'] ?? null) ?: '-',
+                'rt'            => $this->cleanText($row['rt'] ?? null),
+                'rw'            => $this->cleanText($row['rw'] ?? null),
+                'berat_lahir'   => $this->parseNumeric($row['berat_lahir'] ?? $row['berat_badan_lahir'] ?? null),
+                'tinggi_lahir'  => $this->parseNumeric($row['tinggi_lahir'] ?? $row['panjang_badan_lahir'] ?? null),
+                'created_by'    => auth()->id(),
+            ];
+
+            // 6. SCHEMA AUTO-ADAPT (Mencegah error SQL jika tabel Balita diubah di masa depan)
+            if (Schema::hasColumn('balitas', 'kode_balita')) {
+                $data['kode_balita'] = $this->generateKodeBalita();
+            }
+
+            if (Schema::hasColumn('balitas', 'user_id')) {
+                // Pintar mencari akun user_id berdasarkan NIK Ibu atau Nama Ibu
+                $linkedUser = $this->findLinkedUser($nikIbu ?: $nik, $namaIbu ?: $namaAnak);
+                $data['user_id'] = $linkedUser?->id;
+            }
+
+            if (Schema::hasColumn('balitas', 'telepon_keluarga')) {
+                $data['telepon_keluarga'] = $this->cleanPhone($row['telepon_keluarga'] ?? $row['no_hp'] ?? $row['telepon'] ?? null);
+            }
+
+            if (Schema::hasColumn('balitas', 'golongan_darah')) {
+                $data['golongan_darah'] = $this->cleanBloodType($row['golongan_darah'] ?? $row['goldar'] ?? null);
+            }
+
+            if (Schema::hasColumn('balitas', 'buku_kia')) {
+                $data['buku_kia'] = $this->normalizeBoolean($row['buku_kia'] ?? $row['kia'] ?? null);
+            }
+
+            if (Schema::hasColumn('balitas', 'imd')) {
+                $data['imd'] = $this->normalizeBoolean($row['imd'] ?? null);
+            }
+
+            // 7. INSERT AMAN
+            $balita = new Balita();
+            foreach ($data as $column => $value) {
+                // Hanya suntikkan data jika kolomnya benar-benar ada di database saat ini
+                if (Schema::hasColumn('balitas', $column)) {
+                    $balita->{$column} = $value;
+                }
+            }
+
+            return $balita;
+
+        } catch (\Throwable $e) {
+            // Isolasi kegagalan 1 baris agar tidak membatalkan sisa ratusan baris lainnya
+            Log::error("KADER_IMPORT_BALITA_BARIS_{$rowNumber}: " . $e->getMessage());
+            return null; 
+        }
     }
 
     public function batchSize(): int
@@ -90,181 +143,138 @@ class BalitaImport implements ToModel, WithHeadingRow, SkipsEmptyRows, WithBatch
         return 200;
     }
 
-    private function cleanText($value): string
-    {
-        return trim((string) $value);
-    }
+    /* =======================================================
+       HELPER METHODS (Otak Kecerdasan Pemetaan Data)
+       ======================================================= */
 
-    private function cleanNik($value, int $rowNumber, string $label): string
+    private function cleanNik($value, int $rowNumber, bool $isRequired = true): ?string
     {
-        if ($value === null || $value === '') {
-            throw new \RuntimeException("Baris {$rowNumber}: {$label} wajib diisi.");
+        if ($value === null || trim((string) $value) === '') {
+            return $isRequired ? null : null;
         }
 
-        if (is_int($value) || is_float($value)) {
-            $value = number_format($value, 0, '', '');
-        }
-
-        $value = trim((string) $value);
-
-        if (stripos($value, 'e+') !== false || stripos($value, 'e-') !== false) {
+        // Tangani notasi eksponensial (misal: 3.32609E+15)
+        if (stripos((string)$value, 'e+') !== false || stripos((string)$value, 'e-') !== false) {
             $value = sprintf('%.0f', (float) $value);
         }
 
-        $nik = preg_replace('/[^0-9]/', '', $value);
+        $nik = preg_replace('/[^0-9]/', '', (string)$value);
 
+        // Abaikan NIK jika ternyata bukan 16 digit, namun jangan matikan program
         if (strlen($nik) !== 16) {
-            throw new \RuntimeException("Baris {$rowNumber}: {$label} harus 16 digit angka. Nilai terbaca: {$value}");
+            return null; 
         }
 
         return $nik;
     }
 
-    private function cleanOptionalNik($value, int $rowNumber, string $label): ?string
+    private function cleanText($value): ?string
     {
-        if ($value === null || trim((string) $value) === '') {
-            return null;
-        }
-
-        return $this->cleanNik($value, $rowNumber, $label);
+        if ($value === null || trim((string)$value) === '') return null;
+        return trim(strip_tags((string)$value));
     }
 
-    private function cleanDecimal($value): ?float
+    private function parseNumeric($value): ?float
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        $value = str_replace(',', '.', trim((string) $value));
-        $number = preg_replace('/[^0-9.]/', '', $value);
-
-        return $number !== '' ? (float) $number : null;
+        if ($value === null || trim((string)$value) === '') return null;
+        
+        // Konversi koma ke titik untuk format desimal Indonesia
+        $value = str_replace(',', '.', (string)$value);
+        $value = preg_replace('/[^0-9.\-]/', '', $value); // Buang huruf tak sengaja terketik
+        
+        return is_numeric($value) ? round((float)$value, 2) : null;
     }
 
-    private function normalizeGender($value, int $rowNumber): string
+    private function parseExcelDate($value)
+    {
+        if (empty($value)) return null;
+
+        try {
+            // Jika terbaca sebagai Serial Number Excel
+            if (is_numeric($value)) {
+                $dateObj = Date::excelToDateTimeObject($value);
+                return Carbon::instance($dateObj)->format('Y-m-d');
+            }
+            
+            // Jika terbaca sebagai String Biasa
+            $value = trim(str_replace('/', '-', (string)$value));
+            
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+                return Carbon::createFromFormat('Y-m-d', $value)->format('Y-m-d');
+            } elseif (preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $value)) {
+                return Carbon::createFromFormat('d-m-Y', $value)->format('Y-m-d');
+            }
+            
+            return null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function normalizeGender($value): string
     {
         $value = strtolower(trim((string) $value));
-
         return match ($value) {
-            'l', 'laki-laki', 'laki laki', 'laki', 'pria', 'cowok' => 'L',
-            'p', 'perempuan', 'wanita', 'cewek' => 'P',
-            default => throw new \RuntimeException("Baris {$rowNumber}: jenis_kelamin wajib L atau P."),
+            'l', 'laki-laki', 'laki laki', 'laki', 'pria', 'cowok', 'putra' => 'L',
+            'p', 'perempuan', 'wanita', 'cewek', 'putri' => 'P',
+            default => 'L', // Fallback default
         };
     }
 
-    private function parseDate($value, int $rowNumber): string
+    private function cleanPhone($value): ?string
     {
-        if ($value === null || $value === '') {
-            throw new \RuntimeException("Baris {$rowNumber}: tanggal_lahir wajib diisi.");
-        }
+        if (empty($value)) return null;
+        if (stripos((string)$value, 'e+') !== false) $value = sprintf('%.0f', (float) $value);
+        $phone = preg_replace('/[^0-9+]/', '', trim((string)$value));
+        return $phone !== '' ? $phone : null;
+    }
 
-        try {
-            if (is_numeric($value)) {
-                $date = Date::excelToDateTimeObject($value);
-                $carbon = Carbon::instance($date);
-            } else {
-                $value = trim((string) $value);
-                $value = str_replace('/', '-', $value);
+    private function cleanBloodType($value): ?string
+    {
+        $value = strtoupper(trim((string)$value));
+        $value = str_replace([' ', '+', '-'], '', $value); // Normalisasi
+        return in_array($value, ['A', 'B', 'AB', 'O'], true) ? $value : null;
+    }
 
-                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-                    $carbon = Carbon::createFromFormat('Y-m-d', $value);
-                } elseif (preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $value)) {
-                    $carbon = Carbon::createFromFormat('d-m-Y', $value);
-                } else {
-                    throw new \RuntimeException('Format tanggal tidak dikenali.');
-                }
-            }
-
-            if ($carbon->isFuture()) {
-                throw new \RuntimeException('Tanggal lahir tidak boleh melebihi hari ini.');
-            }
-
-            return $carbon->format('Y-m-d');
-        } catch (\Throwable $e) {
-            throw new \RuntimeException("Baris {$rowNumber}: tanggal_lahir tidak valid. Gunakan format YYYY-MM-DD, contoh 2021-05-17.");
-        }
+    private function normalizeBoolean($value): ?bool
+    {
+        if ($value === null) return null;
+        $value = strtolower(trim((string)$value));
+        if (in_array($value, ['ya', 'y', '1', 'true', 'ada', 'punya'], true)) return true;
+        if (in_array($value, ['tidak', 't', '0', 'false', 'belum', 'tidak ada'], true)) return false;
+        return null;
     }
 
     private function generateKodeBalita(): string
     {
         do {
-            $kode = 'BLT-' . now('Asia/Jakarta')->format('ymd') . '-' . random_int(1000, 9999);
+            $kode = 'BAL-' . now('Asia/Jakarta')->format('ymd') . '-' . random_int(1000, 9999);
         } while (Balita::where('kode_balita', $kode)->exists());
-
         return $kode;
     }
 
-    private function findLinkedUser(?string $nikIbu, string $namaIbu): ?User
+    private function findLinkedUser(string $nikOrEmail, string $namaLengkap): ?User
     {
-        $nikIbu = $nikIbu ? preg_replace('/[^0-9]/', '', $nikIbu) : null;
-        $namaIbu = trim($namaIbu);
+        $query = User::query();
+        $hasCondition = false;
 
-        $userQuery = User::query();
-        $hasUserCondition = false;
-
-        $userQuery->where(function ($q) use ($nikIbu, $namaIbu, &$hasUserCondition) {
-            if ($nikIbu && Schema::hasColumn('users', 'nik')) {
-                $q->where('nik', $nikIbu);
-                $hasUserCondition = true;
+        $query->where(function ($q) use ($nikOrEmail, $namaLengkap, &$hasCondition) {
+            if (!empty($nikOrEmail) && Schema::hasColumn('users', 'nik')) {
+                $q->where('nik', $nikOrEmail);
+                $hasCondition = true;
             }
-
-            if ($nikIbu && Schema::hasColumn('users', 'username')) {
-                $method = $hasUserCondition ? 'orWhere' : 'where';
-                $q->{$method}('username', $nikIbu);
-                $hasUserCondition = true;
+            if (!empty($nikOrEmail) && Schema::hasColumn('users', 'email')) {
+                $method = $hasCondition ? 'orWhere' : 'where';
+                $q->{$method}('email', $nikOrEmail);
+                $hasCondition = true;
             }
-
-            if ($namaIbu !== '' && Schema::hasColumn('users', 'name')) {
-                $method = $hasUserCondition ? 'orWhere' : 'where';
-                $q->{$method}('name', 'like', "%{$namaIbu}%");
-                $hasUserCondition = true;
+            if (!empty($namaLengkap) && Schema::hasColumn('users', 'name')) {
+                $method = $hasCondition ? 'orWhere' : 'where';
+                $q->{$method}('name', 'like', "%{$namaLengkap}%");
+                $hasCondition = true;
             }
         });
 
-        if ($hasUserCondition) {
-            $user = $userQuery->first();
-
-            if ($user) {
-                return $user;
-            }
-        }
-
-        if (!Schema::hasTable('profiles')) {
-            return null;
-        }
-
-        $profileQuery = DB::table('profiles');
-        $hasProfileCondition = false;
-
-        $profileQuery->where(function ($q) use ($nikIbu, $namaIbu, &$hasProfileCondition) {
-            if ($nikIbu && Schema::hasColumn('profiles', 'nik')) {
-                $q->where('nik', $nikIbu);
-                $hasProfileCondition = true;
-            }
-
-            if ($nikIbu && Schema::hasColumn('profiles', 'no_ktp')) {
-                $method = $hasProfileCondition ? 'orWhere' : 'where';
-                $q->{$method}('no_ktp', $nikIbu);
-                $hasProfileCondition = true;
-            }
-
-            if ($namaIbu !== '' && Schema::hasColumn('profiles', 'full_name')) {
-                $method = $hasProfileCondition ? 'orWhere' : 'where';
-                $q->{$method}('full_name', 'like', "%{$namaIbu}%");
-                $hasProfileCondition = true;
-            }
-        });
-
-        if (!$hasProfileCondition) {
-            return null;
-        }
-
-        $profile = $profileQuery->first();
-
-        if ($profile && isset($profile->user_id)) {
-            return User::find($profile->user_id);
-        }
-
-        return null;
+        return $hasCondition ? $query->first() : null;
     }
 }

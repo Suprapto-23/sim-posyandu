@@ -546,6 +546,8 @@ Route::middleware(['auth', 'checkstatus', 'role:user'])
 
         Route::get('/stats', [UserDashboardController::class, 'getStats'])
             ->name('stats');
+        Route::get('/dashboard/chart', [DashboardController::class, 'chartData'])->name('dashboard.chart');
+        Route::get('/dashboard/stats', [DashboardController::class, 'getStats'])->name('dashboard.stats');
 
         /*
         |--------------------------------------------------------------------------

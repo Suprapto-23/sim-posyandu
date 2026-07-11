@@ -20,6 +20,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Validators\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
+// Tambahan Namespace untuk Pendeteksi Header Dinamis
+use Maatwebsite\Excel\Concerns\ToArray;
+use Maatwebsite\Excel\Concerns\WithLimit;
+
 class ImportController extends Controller
 {
     private array $types = [
@@ -110,12 +114,16 @@ class ImportController extends Controller
         ]);
 
         try {
-            $importClass = $this->makeImportClass($jenisData);
+            // [MODIFIKASI]: Cari tahu baris ke berapa yang mengandung NIK & Nama
+            $headerRow = $this->findHeaderRow($file);
+            
+            // [MODIFIKASI]: Suntikkan baris dinamis ke dalam Class Import
+            $importClass = $this->makeImportClass($jenisData, $headerRow);
 
             $jumlahBaris = $this->countExcelRows($importClass, $file);
 
             if ($jumlahBaris <= 0) {
-                throw new \RuntimeException('File Excel kosong atau belum memiliki data setelah baris heading.');
+                throw new \RuntimeException('File Excel kosong atau belum memiliki data valid setelah baris heading.');
             }
 
             $jumlahSebelum = $this->countDataByType($jenisData);
@@ -125,21 +133,23 @@ class ImportController extends Controller
             $jumlahSesudah = $this->countDataByType($jenisData);
 
             $dataBerhasil = max(0, $jumlahSesudah - $jumlahSebelum);
-$dataGagal = max(0, $jumlahBaris - $dataBerhasil);
-$modeText = $isSmartImport ? '[Mode Smart Mapping Aktif]' : '[Mode Standar]';
-$jenisDataLabel = $this->types[$jenisData]['label'] ?? ucfirst($jenisData);
+            $dataGagal = max(0, $jumlahBaris - $dataBerhasil);
+            
+            $modeText = $isSmartImport ? '[Mode Smart Mapping Aktif]' : '[Mode Standar]';
+            $jenisDataLabel = $this->types[$jenisData]['label'] ?? ucfirst($jenisData);
 
-$riwayat->update([
-    'status' => 'completed',
-    'total_data' => $jumlahBaris,
-    'data_berhasil' => $dataBerhasil,
-    'data_gagal' => $dataGagal,
-    'catatan' => "{$modeText} Import {$jenisDataLabel} selesai. Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBerhasil}. Data tidak masuk atau dilewati: {$dataGagal}. Data dengan NIK yang sudah ada dilewati agar tidak terjadi duplikasi.",
-]);
+            // [MODIFIKASI]: Menambahkan informasi di log bahwa sistem mendeteksi header secara dinamis
+            $riwayat->update([
+                'status' => 'completed',
+                'total_data' => $jumlahBaris,
+                'data_berhasil' => $dataBerhasil,
+                'data_gagal' => $dataGagal,
+                'catatan' => "{$modeText} Import {$jenisDataLabel} selesai (Header terdeteksi otomatis di Baris {$headerRow}). Sistem membaca {$jumlahBaris} baris data dari Excel. Data baru tersimpan: {$dataBerhasil}. Data tidak masuk atau dilewati: {$dataGagal}. Data dengan NIK duplikat diabaikan.",
+            ]);
 
             return redirect()
                 ->route('kader.import.history')
-                ->with('success', "Import berhasil diproses. Data baru tersimpan: {$dataBerhasil} dari {$jumlahBaris} baris terbaca.");
+                ->with('success', "Import berhasil diproses. Data tersimpan: {$dataBerhasil} dari {$jumlahBaris} baris terbaca.");
         } catch (ValidationException $e) {
             $errorMsg = $this->formatValidationError($e);
 
@@ -280,7 +290,45 @@ $riwayat->update([
         return array_key_exists($type, $this->types) ? $type : null;
     }
 
-    private function makeImportClass(string $type)
+    /**
+     * [FITUR BARU]: Algoritma Pendeteksi Header Dinamis
+     * Menganalisis 15 baris pertama untuk mencari di mana kolom data sebenarnya dimulai.
+     */
+    private function findHeaderRow($file): int
+    {
+        try {
+            // Gunakan class anonymous + WithLimit agar memori server aman
+            // meskipun user mengunggah excel berisi puluhan ribu baris.
+            $importLimit = new class implements ToArray, WithLimit {
+                public function array(array $array) {}
+                public function limit(): int {
+                    return 15;
+                }
+            };
+            
+            $arrayData = Excel::toArray($importLimit, $file);
+            $rows = $arrayData[0] ?? [];
+
+            foreach ($rows as $index => $row) {
+                // Konversi seluruh cell di baris tersebut menjadi satu string kecil tanpa spasi
+                $rowString = strtolower(implode('', array_map(fn($val) => trim((string)$val), $row)));
+                
+                // Cari kata kunci wajib yang pasti ada di template ('nik' dan 'nama')
+                if (str_contains($rowString, 'nik') && (str_contains($rowString, 'nama') || str_contains($rowString, 'lengkap'))) {
+                    return $index + 1; // Baris Excel dimulai dari angka 1
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Pendeteksian header dinamis gagal, fallback ke default: ' . $e->getMessage());
+        }
+
+        return 3; // Fallback ke baris 3 jika file terlalu berantakan
+    }
+
+    /**
+     * [MODIFIKASI]: Menambahkan argumen $headerRow untuk disuntikkan ke class Import
+     */
+    private function makeImportClass(string $type, int $headerRow = 3)
     {
         $class = $this->types[$type]['import'] ?? null;
 
@@ -288,7 +336,7 @@ $riwayat->update([
             throw new \RuntimeException("Class import untuk {$type} tidak ditemukan.");
         }
 
-        return new $class();
+        return new $class($headerRow);
     }
 
     private function countExcelRows($importClass, $file): int

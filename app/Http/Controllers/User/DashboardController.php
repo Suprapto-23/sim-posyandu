@@ -8,6 +8,7 @@ use App\Models\Notifikasi;
 use App\Models\Pemeriksaan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -21,24 +22,33 @@ class DashboardController extends Controller
     use ResolvesUserHealthContext;
 
     /**
-     * Tampilkan dashboard User dengan kombinasi Cache (Data Statis) & Real-time (Data Dinamis).
+     * Tampilkan dashboard User dengan data Real-time untuk Grafik dan Notifikasi.
      */
     public function index(): View
     {
         $user = auth()->user();
 
-        // --- CACHE CONTEXT USER (5 menit) - Aman karena data keluarga jarang berubah ---
+        // --- CACHE CONTEXT USER (5 menit) ---
         $contextKey = 'user_dashboard_context_' . $user->id;
         $context = Cache::remember($contextKey, 300, function () use ($user) {
             return $this->getUserContext($user);
         });
 
-        // --- CACHE GRAFIK BALITA (5 menit) ---
-        $balitaId = collect($context['balitas'] ?? [])->first()?->id;
-        $grafikData = $balitaId
-            ? Cache::remember('user_dashboard_grafik_' . $balitaId, 300, function () use ($balitaId) {
-                return $this->getGrafikBalita($balitaId);
-            })
+        // ========================================================================
+        // 1. DETEKSI DEMOGRAFI DINAMIS
+        // ========================================================================
+        $sasaranList = $this->buildSasaranList($context);
+        $sasaranAktif = $sasaranList->first();
+
+        $kategoriGrafik = $sasaranAktif['kategori'] ?? null;
+        $pasienIdGrafik = $sasaranAktif['id'] ?? null;
+
+        // ========================================================================
+        // 2. PEMBARUAN REAL-TIME GRAFIK PERTUMBUHAN
+        // ========================================================================
+        $grafikPeriode = 'bulanan';
+        $grafikData = ($kategoriGrafik && $pasienIdGrafik)
+            ? $this->getGrafikPertumbuhan($kategoriGrafik, $pasienIdGrafik, $grafikPeriode)
             : [];
 
         // --- CACHE JADWAL (5 menit) ---
@@ -47,13 +57,11 @@ class DashboardController extends Controller
         });
 
         // ========================================================================
-        // PERBAIKAN REAL-TIME: Hapus Cache untuk Notifikasi. 
-        // Selalu ambil langsung dari Database agar akurat dengan lonceng Topbar.
+        // 3. PEMBARUAN REAL-TIME: Notifikasi dan Pemeriksaan
         // ========================================================================
         $notifData = $this->getNotifikasiRingkas((int) $user->id);
         [$notifikasiTerbaru, $totalNotifikasiBelumDibaca] = $notifData;
 
-        // --- DATA DINAMIS (Pemeriksaan juga harus realtime tanpa cache) ---
         $latestPemeriksaan = $this->getLatestPemeriksaan($context);
 
         $summary = [
@@ -62,7 +70,7 @@ class DashboardController extends Controller
             'total_remaja'  => collect($context['remajas'] ?? [])->count(),
             'total_lansia'  => collect($context['lansias'] ?? [])->count(),
             'total_jadwal'  => $jadwalTerdekat->count(),
-            'total_notifikasi' => $totalNotifikasiBelumDibaca, // Real-time
+            'total_notifikasi' => $totalNotifikasiBelumDibaca,
             'total_pemeriksaan' => $latestPemeriksaan->count(),
         ];
 
@@ -76,6 +84,9 @@ class DashboardController extends Controller
             'dataRemaja' => $context['remajas'] ?? collect(),
             'dataLansia' => $context['lansias'] ?? collect(),
             'grafikData' => $grafikData,
+            'grafikPeriode' => $grafikPeriode,
+            'sasaranList' => $sasaranList,
+            'sasaranAktif' => $sasaranAktif,
             'jadwalTerdekat' => $jadwalTerdekat,
             'notifikasiTerbaru' => $notifikasiTerbaru,
             'totalNotifikasiBelumDibaca' => $totalNotifikasiBelumDibaca,
@@ -84,9 +95,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Endpoint AJAX untuk polling statistik cepat (Real-time sync).
-     */
     public function getStats(): JsonResponse
     {
         try {
@@ -95,10 +103,6 @@ class DashboardController extends Controller
                 return response()->json(['status' => 'unauthenticated', 'unread_count' => 0]);
             }
 
-            // ========================================================================
-            // PERBAIKAN REAL-TIME: Hapus Cache pada polling AJAX.
-            // Memastikan data yang dikirim ke Frontend selalu data detik ini juga.
-            // ========================================================================
             $unreadCount = $this->countUnreadNotifications((int) $user->id);
 
             $contextKey = 'user_dashboard_context_' . $user->id;
@@ -132,7 +136,291 @@ class DashboardController extends Controller
         }
     }
 
+    public function chartData(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['status' => 'unauthenticated'], 401);
+            }
+
+            $periode = $request->query('periode', 'bulanan');
+            $periode = in_array($periode, ['bulanan', 'tahunan'], true) ? $periode : 'bulanan';
+
+            $tahunParam = $request->query('tahun');
+            $tahun = (is_numeric($tahunParam) && (int) $tahunParam >= 2000 && (int) $tahunParam <= 2100)
+                ? (int) $tahunParam
+                : null;
+
+            $contextKey = 'user_dashboard_context_' . $user->id;
+            $context = Cache::get($contextKey);
+            if (!$context) {
+                $context = $this->getUserContext($user);
+                Cache::put($contextKey, $context, 300);
+            }
+
+            $sasaranList = $this->buildSasaranList($context);
+
+            $requestedKategori = $request->query('kategori');
+            $requestedId = $request->query('pasien_id');
+
+            $selected = null;
+            if ($requestedKategori && $requestedId) {
+                $selected = $sasaranList->first(fn ($item) => $item['kategori'] === $requestedKategori && (string) $item['id'] === (string) $requestedId
+                );
+            }
+            if (!$selected) {
+                $selected = $sasaranList->first();
+            }
+
+            if (!$selected) {
+                return response()->json([
+                    'status' => 'empty',
+                    'message' => 'Belum ada data sasaran kesehatan untuk ditampilkan.',
+                    'sasaran' => [],
+                    'updated_at' => now('Asia/Jakarta')->format('H:i:s'),
+                ]);
+            }
+
+            $grafik = $this->getGrafikPertumbuhan($selected['kategori'], (int) $selected['id'], $periode, $tahun);
+
+            if (empty($grafik['labels'] ?? [])) {
+                return response()->json([
+                    'status' => 'empty',
+                    'message' => 'Data pemeriksaan belum tersedia atau masih menunggu validasi Bidan.',
+                    'kategori' => $selected['kategori'],
+                    'pasien_id' => $selected['id'],
+                    'nama' => $selected['nama'],
+                    'periode' => $periode,
+                    'tahun' => $grafik['tahun'] ?? $tahun,
+                    'available_years' => $grafik['available_years'] ?? [],
+                    'sasaran' => $sasaranList->values(),
+                    'updated_at' => now('Asia/Jakarta')->format('H:i:s'),
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'periode' => $periode,
+                'tahun' => $grafik['tahun'] ?? $tahun,
+                'available_years' => $grafik['available_years'] ?? [],
+                'kosong_tahun_ini' => $grafik['kosong_tahun_ini'] ?? false,
+                'kategori' => $selected['kategori'],
+                'pasien_id' => $selected['id'],
+                'nama' => $selected['nama'],
+                'labels' => $grafik['labels'],
+                'berat' => $grafik['berat'],
+                'tinggi' => $grafik['tinggi'],
+                'ringkasan' => $grafik['ringkasan'] ?? null,
+                'sasaran' => $sasaranList->values(),
+                'updated_at' => now('Asia/Jakarta')->format('H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Gagal memuat data grafik dashboard user', ['message' => $e->getMessage()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kendala saat memuat grafik. Coba lagi sebentar.',
+                'updated_at' => now('Asia/Jakarta')->format('H:i:s'),
+            ], 500);
+        }
+    }
+
     // ========== PRIVATE HELPERS ==========
+
+    private function buildSasaranList(array $context): Collection
+    {
+        $resolveNama = fn ($item) => data_get($item, 'nama_lengkap')
+            ?: data_get($item, 'nama_remaja')
+            ?: data_get($item, 'nama_balita')
+            ?: data_get($item, 'nama_lansia')
+            ?: data_get($item, 'nama')
+            ?: 'Tanpa Nama';
+
+        $list = collect();
+
+        foreach (collect($context['balitas'] ?? []) as $item) {
+            $list->push(['kategori' => 'balita', 'id' => data_get($item, 'id'), 'nama' => $resolveNama($item), 'label' => 'Balita']);
+        }
+        foreach (collect($context['remajas'] ?? []) as $item) {
+            $list->push(['kategori' => 'remaja', 'id' => data_get($item, 'id'), 'nama' => $resolveNama($item), 'label' => 'Remaja']);
+        }
+        foreach (collect($context['lansias'] ?? []) as $item) {
+            $list->push(['kategori' => 'lansia', 'id' => data_get($item, 'id'), 'nama' => $resolveNama($item), 'label' => 'Lansia']);
+        }
+
+        return $list->filter(fn ($item) => filled($item['id']))->values();
+    }
+
+    private function getGrafikPertumbuhan(?string $kategori, ?int $id, string $periode = 'bulanan', ?int $tahun = null): array
+    {
+        if (!$id || !$kategori || !Schema::hasTable('pemeriksaans')) return [];
+
+        $periode = in_array($periode, ['bulanan', 'tahunan'], true) ? $periode : 'bulanan';
+
+        try {
+            $availableYears = $this->getAvailableYears($kategori, $id);
+            $ringkasan = $this->getRingkasanTerakhir($kategori, $id);
+
+            if (empty($availableYears) && !$ringkasan) return [];
+
+            $dateExpr = $this->tanggalExpr();
+            $query = Pemeriksaan::query();
+            $this->constrainPemeriksaanPatient($query, $kategori, $id);
+            $this->applyVerifiedFilter($query);
+
+            if ($periode === 'tahunan') {
+                $rows = $query->selectRaw("YEAR($dateExpr) as label_waktu, AVG(berat_badan) as avg_berat, AVG(tinggi_badan) as avg_tinggi")
+                    ->groupBy('label_waktu')
+                    ->orderBy('label_waktu')
+                    ->get();
+                
+                if ($rows->isEmpty()) return [];
+                
+                return [
+                    'labels' => $rows->pluck('label_waktu')->toArray(),
+                    'berat' => $rows->map(fn($r) => is_null($r->avg_berat) ? null : round((float) $r->avg_berat, 1))->toArray(),
+                    'tinggi' => $rows->map(fn($r) => is_null($r->avg_tinggi) ? null : round((float) $r->avg_tinggi, 1))->toArray(),
+                    'ringkasan' => $ringkasan,
+                    'tahun' => null,
+                    'available_years' => $availableYears,
+                ];
+            }
+
+            // --- MODE BULANAN ---
+            // Membiarkan controller menerima tahun berapapun yang diminta UI tanpa paksaan fallback.
+            $tahunDipakai = $tahun ?: ($availableYears[0] ?? (int) now('Asia/Jakarta')->format('Y'));
+
+            // Ambil rata-rata per bulan pada tahun yang dipilih
+            $rows = $query->selectRaw("MONTH($dateExpr) as bulan, AVG(berat_badan) as avg_berat, AVG(tinggi_badan) as avg_tinggi")
+                ->whereRaw("YEAR($dateExpr) = ?", [$tahunDipakai])
+                ->groupBy('bulan')
+                ->get()
+                ->keyBy('bulan');
+
+            $labels = [];
+            $berat = [];
+            $tinggi = [];
+
+            $currentYear = (int) now('Asia/Jakarta')->format('Y');
+            $currentMonth = (int) now('Asia/Jakarta')->format('n');
+
+            for ($bulanKe = 1; $bulanKe <= 12; $bulanKe++) {
+                $labels[] = Carbon::createFromDate($tahunDipakai, $bulanKe, 1)->translatedFormat('M');
+                
+                // Jangan tampilkan bulan masa depan di tahun berjalan
+                if ($tahunDipakai === $currentYear && $bulanKe > $currentMonth) {
+                    break;
+                }
+
+                if ($rows->has($bulanKe)) {
+                    $berat[] = round((float) $rows->get($bulanKe)->avg_berat, 1);
+                    $tinggi[] = round((float) $rows->get($bulanKe)->avg_tinggi, 1);
+                } else {
+                    // Biarkan null agar Chart.js menggambar garis bersambung (spanGaps)
+                    $berat[] = null;
+                    $tinggi[] = null;
+                }
+            }
+
+            $adaDataTahunIni = collect($berat)->merge($tinggi)->filter(fn($v) => !is_null($v))->isNotEmpty();
+
+            return [
+                'labels' => $labels,
+                'berat' => $berat,
+                'tinggi' => $tinggi,
+                'ringkasan' => $ringkasan,
+                'tahun' => $tahunDipakai,
+                'available_years' => $availableYears,
+                'kosong_tahun_ini' => !$adaDataTahunIni,
+            ];
+        } catch (\Throwable $e) {
+            Log::error("Gagal memuat grafik pertumbuhan: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function tanggalExpr(): string
+    {
+        return Schema::hasColumn('pemeriksaans', 'tanggal_periksa')
+            ? 'COALESCE(tanggal_periksa, created_at)'
+            : 'created_at';
+    }
+
+    private function getAvailableYears(string $kategori, int $id): array
+    {
+        if (!Schema::hasTable('pemeriksaans')) return [];
+
+        try {
+            $dateExpr = $this->tanggalExpr();
+            $query = Pemeriksaan::query()->selectRaw("DISTINCT YEAR($dateExpr) as tahun");
+            $this->constrainPemeriksaanPatient($query, $kategori, $id);
+            $this->applyVerifiedFilter($query);
+
+            return $query->orderByDesc('tahun')
+                ->pluck('tahun')
+                ->filter(fn ($t) => filled($t))
+                ->map(fn ($t) => (int) $t)
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    private function getRingkasanTerakhir(string $kategori, int $id): ?array
+    {
+        if (!Schema::hasTable('pemeriksaans')) return null;
+
+        try {
+            $countQuery = Pemeriksaan::query();
+            $this->constrainPemeriksaanPatient($countQuery, $kategori, $id);
+            $this->applyVerifiedFilter($countQuery);
+            $jumlahTotal = $countQuery->count();
+
+            if ($jumlahTotal === 0) return null;
+
+            $dataQuery = Pemeriksaan::query()
+                ->select(['id', 'tanggal_periksa', 'berat_badan', 'tinggi_badan', 'created_at']);
+            $this->constrainPemeriksaanPatient($dataQuery, $kategori, $id);
+            $this->applyVerifiedFilter($dataQuery);
+
+            $duaTerakhir = $dataQuery
+                ->orderByDesc('tanggal_periksa')
+                ->orderByDesc('created_at')
+                ->limit(2)
+                ->get()
+                ->map(function ($item) {
+                    $item->tanggal_efektif = Carbon::parse($item->tanggal_periksa ?? $item->created_at);
+                    return $item;
+                });
+
+            if ($duaTerakhir->isEmpty()) return null;
+
+            $terakhir = $duaTerakhir->first();
+            $sebelum = $duaTerakhir->count() > 1 ? $duaTerakhir->get(1) : null;
+
+            return [
+                'berat_terakhir'   => filled($terakhir->berat_badan) ? (float) $terakhir->berat_badan : null,
+                'tinggi_terakhir'  => filled($terakhir->tinggi_badan) ? (float) $terakhir->tinggi_badan : null,
+                'tanggal_terakhir' => $terakhir->tanggal_efektif->translatedFormat('d M Y'),
+                'tren_berat'       => $this->hitungTren($sebelum->berat_badan ?? null, $terakhir->berat_badan),
+                'tren_tinggi'      => $this->hitungTren($sebelum->tinggi_badan ?? null, $terakhir->tinggi_badan),
+                'jumlah_data'      => $jumlahTotal,
+            ];
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function hitungTren($sebelum, $sekarang): ?string
+    {
+        if (!filled($sebelum) || !filled($sekarang)) return null;
+
+        $selisih = (float) $sekarang - (float) $sebelum;
+        if (abs($selisih) < 0.05) return 'stabil';
+
+        return $selisih > 0 ? 'naik' : 'turun';
+    }
 
     private function getJadwalTerdekat(array $targets): Collection
     {
@@ -198,36 +486,6 @@ class DashboardController extends Controller
             return 0;
         } catch (\Throwable $e) {
             return 0;
-        }
-    }
-
-    private function getGrafikBalita(?int $balitaId): array
-    {
-        if (!$balitaId || !Schema::hasTable('pemeriksaans')) return [];
-
-        try {
-            $query = Pemeriksaan::query()
-                ->select(['id', 'tanggal_periksa', 'berat_badan', 'tinggi_badan', 'created_at']);
-            $this->constrainPemeriksaanPatient($query, 'balita', $balitaId);
-            $this->applyVerifiedFilter($query);
-
-            $items = $query
-                ->orderByDesc('tanggal_periksa')
-                ->orderByDesc('created_at')
-                ->limit(12)
-                ->get()
-                ->sortBy(fn ($item) => $item->tanggal_periksa ?? $item->created_at)
-                ->values();
-
-            if ($items->isEmpty()) return [];
-
-            return [
-                'labels' => $items->map(fn ($item) => Carbon::parse($item->tanggal_periksa ?? $item->created_at)->translatedFormat('M y'))->toArray(),
-                'berat' => $items->map(fn ($item) => filled($item->berat_badan) ? (float) $item->berat_badan : null)->toArray(),
-                'tinggi' => $items->map(fn ($item) => filled($item->tinggi_badan) ? (float) $item->tinggi_badan : null)->toArray(),
-            ];
-        } catch (\Throwable $e) {
-            return [];
         }
     }
 

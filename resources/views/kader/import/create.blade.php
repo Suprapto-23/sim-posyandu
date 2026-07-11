@@ -96,58 +96,30 @@
     }
     .radio-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 20px -5px rgba(15, 23, 42, 0.05);
-    }
-    
-    .btn-pill {
-        border-radius: 9999px;
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-    .btn-pill:active { transform: scale(0.96); }
-
-    /* Step Indicator Line */
-    .step-line::before {
-        content: '';
-        position: absolute;
-        left: 23px;
-        top: 48px;
-        bottom: -16px;
-        width: 2px;
-        background: #e2e8f0;
-        z-index: 0;
-    }
-    .step-item:last-child .step-line::before {
-        display: none;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
     }
 </style>
 @endpush
 
 @section('content')
-<div class="max-w-[1080px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 mt-6">
-
-    {{-- HEADER TOOL IMPORT (Disamakan dengan Palet Dashboard) --}}
-    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[3rem] p-8 md:p-12 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] text-center border border-white/20">
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-20 pointer-events-none"></div>
-        <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
-        <div class="absolute -left-16 -bottom-16 w-40 h-40 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
-
-        <div class="relative z-10 flex flex-col items-center">
-            <div class="w-24 h-24 rounded-[2rem] bg-white border-4 border-white/50 text-emerald-500 flex items-center justify-center text-4xl shadow-xl mb-6">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
+<div class="max-w-5xl mx-auto pb-12 animate-pop-in">
+    {{-- HEADER HALAMAN --}}
+    <section class="mb-8 relative z-10">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold mb-3">
+                    <i class="fa-solid fa-bolt text-amber-500"></i> Mode Cepat
+                </span>
+                <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                    Import Data Massal
+                </h1>
+                <p class="text-slate-500 font-medium mt-2 text-sm md:text-base max-w-2xl">
+                    Unggah puluhan hingga ratusan data warga sekaligus menggunakan format Excel. Menghemat waktu kader tanpa perlu menginput satu per satu.
+                </p>
             </div>
-
-            <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
-                Import Data Massal
-            </h1>
-
-            <p class="text-teal-50 text-sm font-medium max-w-xl mx-auto mt-3 leading-relaxed">
-                Alat khusus untuk memasukkan ratusan data sasaran sekaligus. Ikuti 3 langkah mudah di bawah ini untuk memulai proses sinkronisasi database.
-            </p>
-
-            <div class="mt-8 flex flex-wrap justify-center gap-3">
+            <div class="flex items-center gap-3 w-full md:w-auto">
                 @if($routeHas('kader.import.history'))
-                    <a href="{{ route('kader.import.history') }}" class="btn-pill bg-white/20 hover:bg-white/30 text-white border border-white/30 px-6 py-3.5 text-xs font-bold uppercase tracking-widest backdrop-blur-md transition-all shadow-sm">
+                    <a href="{{ route('kader.import.history') }}" class="btn-pill bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3.5 text-xs font-bold uppercase tracking-widest transition-all">
                         <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Riwayat Import
                     </a>
                 @endif
@@ -160,21 +132,89 @@
         </div>
     </section>
 
-    {{-- ALERT PESAN ERROR --}}
+    {{-- ALERT PESAN ERROR (SMART & FRIENDLY ERROR HANDLING) --}}
     @if($errors->any() || session('error'))
-        <div class="bg-rose-50 border-2 border-rose-200 rounded-[2rem] p-6 mb-8 flex items-start gap-4 shadow-sm">
-            <div class="bg-white rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
-                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-xl"></i>
+        <div class="bg-rose-50 border-2 border-rose-200 rounded-[2rem] p-6 mb-8 flex items-start gap-5 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+            
+            <div class="bg-white rounded-full w-14 h-14 flex items-center justify-center shrink-0 shadow-sm mt-0.5 relative z-10 border border-rose-100">
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl"></i>
             </div>
-            <div>
-                <h3 class="font-black text-base text-rose-800">Proses Import Gagal</h3>
-                <p class="text-sm font-bold text-rose-600 mt-1">{{ session('error') ?: 'Terdapat kesalahan pada file atau input Anda:' }}</p>
+            
+            <div class="relative z-10 flex-1">
+                <h3 class="font-black text-lg text-rose-900 leading-tight">Gagal Memproses Dokumen</h3>
+                
+                @if(session('error'))
+                    @php
+                        $rawError = session('error');
+                        $smartMessage = 'Terjadi kendala saat sistem membaca dokumen Excel Anda.';
+                        $smartSolution = 'Periksa kembali data Anda dan pastikan sesuai dengan petunjuk pengisian template resmi ya.';
+                        
+                        // KECERDASAN DETEKSI ERROR UNTUK KADER (BAHASA FRIENDLY)
+                        $lowerError = strtolower($rawError);
+                        
+                        if (str_contains($lowerError, 'out of range') || str_contains($lowerError, '22003')) {
+                            $smartMessage = 'Ada angka yang terlalu besar atau format tanggal yang terselubung pada kolom angka.';
+                            $smartSolution = 'Buka Excel Anda, blok kolom angka (seperti Berat Badan / Asam Urat), lalu ubah format cell-nya menjadi <strong>Text</strong>. Pastikan Anda mengetik desimal pakai titik/koma (misal: 5.5). Jika Excel malah mengubahnya jadi angka puluhan ribu, ketik ulang saja.';
+                        } elseif (str_contains($lowerError, '1364') || str_contains($lowerError, 'doesn\'t have a default value') || str_contains($lowerError, 'cannot be null')) {
+                            // Cerdas mencari kolom apa yang kosong
+                            preg_match("/(?:Field|Column) '([^']+)'/i", $rawError, $matches);
+                            $field = $matches[1] ?? 'data penting';
+                            $fieldSopan = ucwords(str_replace('_', ' ', $field));
+                            
+                            $smartMessage = "Oops! Ada sel yang masih kosong pada kolom '{$fieldSopan}'.";
+                            $smartSolution = "Silakan buka lagi file Excel Anda, dan lengkapi kolom <strong>{$fieldSopan}</strong> (atau kolom dengan judul mirip). Pastikan tidak ada NIK, Nama, atau kelengkapan wajib lainnya yang dibiarkan kosong, lalu coba unggah lagi ya.";
+                        } elseif (str_contains($lowerError, 'gagal di baris')) {
+                            $smartMessage = 'Beberapa data tidak memenuhi standar isian Posyandu.';
+                            $smartSolution = 'Coba cek lagi baris Excel yang disebutkan di bawah ini. Pastikan NIK sudah pas 16 digit dan tidak ada nama yang terlewat.';
+                        } elseif (str_contains($lowerError, 'mimes') || str_contains($lowerError, 'format')) {
+                            $smartMessage = 'Ups, format dokumennya tidak sesuai.';
+                            $smartSolution = 'Sistem hanya bisa membaca file Excel (.xlsx atau .xls). Jangan mengunggah dokumen bentuk PDF, Word, ataupun foto/gambar ya.';
+                        } elseif (str_contains($lowerError, 'kosong') || str_contains($lowerError, 'undefined array key')) {
+                            $smartMessage = 'Dokumen Excel terbaca kosong atau judul kolomnya ada yang hilang/berubah.';
+                            $smartSolution = 'Pastikan Anda tidak mengubah, mewarnai, atau menghapus <strong>baris judul (Header)</strong> bawaan dari template. Sistem akan otomatis mencari tulisan seperti "nik" untuk mulai membaca data.';
+                        }
+                    @endphp
+                    
+                    <div class="mt-4 space-y-3">
+                        {{-- Kotak Penyebab Error --}}
+                        <div class="bg-white/70 rounded-xl p-3 border border-rose-100">
+                            <p class="text-sm font-bold text-rose-800 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info opacity-50"></i>
+                                <span>Penyebab Masalah:</span>
+                            </p>
+                            <p class="text-sm font-medium text-rose-600 mt-1 pl-6">{{ $smartMessage }}</p>
+                            
+                            @if($smartMessage !== $rawError && !str_contains($rawError, '[SERVER ERROR]'))
+                                <p class="text-xs font-medium text-rose-400/80 mt-1 pl-6 break-words">
+                                    <i>Kode sistem: {{ $rawError }}</i>
+                                </p>
+                            @endif
+                        </div>
+                        
+                        {{-- Kotak Solusi Cerdas --}}
+                        <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-100 shadow-inner">
+                            <p class="text-sm font-bold text-emerald-800 flex items-center gap-2">
+                                <i class="fa-solid fa-lightbulb text-amber-500"></i>
+                                <span>Saran dari Sistem:</span>
+                            </p>
+                            <p class="text-sm font-medium text-emerald-700 mt-1 pl-6 leading-relaxed">{!! $smartSolution !!}</p>
+                        </div>
+                    </div>
+                @endif
+                
                 @if($errors->any())
-                    <ul class="text-xs font-bold mt-2 text-rose-700/80 space-y-1 list-disc list-inside bg-white/50 p-3 rounded-xl">
-                        @foreach($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
+                    <div class="mt-4 bg-white/70 rounded-xl p-3 border border-rose-100">
+                        <p class="text-sm font-bold text-rose-800 flex items-center gap-2 mb-2">
+                            <i class="fa-regular fa-circle-xmark opacity-50"></i>
+                            <span>Peringatan Formulir:</span>
+                        </p>
+                        <ul class="text-sm font-medium text-rose-600 space-y-1 list-disc list-inside pl-6">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 @endif
             </div>
         </div>
@@ -198,109 +238,105 @@
                         @foreach($typeMeta as $key => $item)
                             <button type="button" onclick="downloadTemplateInstan('{{ $templateBaseUrl }}/{{ $key }}')" class="flex flex-col items-center text-center gap-2 p-4 rounded-2xl border border-slate-200 bg-white hover:border-emerald-400 hover:shadow-md transition-all group">
                                 <div class="w-10 h-10 rounded-full {{ $item['bg'] }} {{ $item['color'] }} flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
-                                    <i class="fa-solid fa-file-excel"></i>
+                                    <i class="fa-solid {{ $item['icon'] }}"></i>
                                 </div>
-                                <div>
-                                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest">{{ $item['label'] }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5">Format .xlsx</p>
-                                </div>
+                                <span class="text-sm font-bold text-slate-700">Template {{ $item['label'] }}</span>
                             </button>
                         @endforeach
                     </div>
                 </div>
             </div>
+            <div class="absolute left-6 top-12 bottom-0 w-0.5 bg-slate-200 -ml-[1px]"></div>
         </div>
 
-        {{-- LANGKAH 2: PILIH KATEGORI --}}
+        {{-- LANGKAH 2: PILIH JENIS DATA --}}
         <div class="step-item relative pb-10">
             <div class="step-line flex items-start gap-5 relative z-10">
                 <div class="w-12 h-12 rounded-full bg-slate-900 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
                     2
                 </div>
                 <div class="flex-1 pt-1">
-                    <h2 class="text-xl font-black text-slate-900">Pilih Kategori Sasaran</h2>
-                    <p class="text-sm font-semibold text-slate-500 mt-1">Pilih jenis data yang ingin Anda masukkan. Pastikan pilihan ini sama dengan template yang Anda isi.</p>
-                    
+                    <h2 class="text-xl font-black text-slate-900">Pilih Kategori Data</h2>
+                    <p class="text-sm font-semibold text-slate-500 mt-1">Pastikan jenis data yang dipilih sesuai dengan template yang Anda isi.</p>
+
                     <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
                         @foreach($typeMeta as $key => $item)
-                            <label class="radio-card relative flex items-start gap-4 p-5 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            <label class="radio-card block cursor-pointer">
                                 <input type="radio" name="jenis_data" value="{{ $key }}" class="peer sr-only" {{ $type === $key ? 'checked' : '' }}>
-                                
-                                {{-- Background Active Highlight --}}
-                                <div class="absolute inset-0 bg-emerald-50/50 opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
-                                <div class="absolute inset-0 border-2 border-emerald-500 rounded-2xl opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
-
-                                <div class="w-12 h-12 rounded-2xl {{ $item['bg'] }} {{ $item['color'] }} flex items-center justify-center text-xl shrink-0 relative z-10">
-                                    <i class="fa-solid {{ $item['icon'] }}"></i>
-                                </div>
-                                <div class="relative z-10 pt-0.5">
-                                    <h4 class="text-sm font-black text-slate-900">{{ $item['label'] }}</h4>
-                                    <p class="text-[10px] font-bold text-slate-500 mt-1 leading-relaxed pr-2">{{ $item['desc'] }}</p>
-                                </div>
-                                
-                                {{-- Check Icon --}}
-                                <div class="absolute top-5 right-5 text-emerald-500 opacity-0 peer-checked:opacity-100 transform scale-50 peer-checked:scale-100 transition-all duration-300">
-                                    <i class="fa-solid fa-circle-check text-xl"></i>
+                                <div class="rounded-2xl border-2 border-slate-200 bg-white p-5 peer-checked:border-emerald-500 peer-checked:bg-emerald-50/50 transition-all shadow-sm">
+                                    <div class="flex items-center gap-4 mb-2">
+                                        <div class="w-10 h-10 rounded-full {{ $item['bg'] }} {{ $item['color'] }} flex items-center justify-center text-lg">
+                                            <i class="fa-solid {{ $item['icon'] }}"></i>
+                                        </div>
+                                        <h3 class="font-bold text-slate-800 text-base">{{ $item['label'] }}</h3>
+                                    </div>
+                                    <p class="text-xs text-slate-500 font-medium leading-relaxed">
+                                        {{ $item['desc'] }}
+                                    </p>
                                 </div>
                             </label>
                         @endforeach
                     </div>
                 </div>
             </div>
+            <div class="absolute left-6 top-12 bottom-0 w-0.5 bg-slate-200 -ml-[1px]"></div>
         </div>
 
-        {{-- LANGKAH 3: UPLOAD FILE --}}
+        {{-- LANGKAH 3: UNGGAH FILE --}}
         <div class="step-item relative pb-6">
             <div class="step-line flex items-start gap-5 relative z-10">
-                <div class="w-12 h-12 rounded-full bg-slate-900 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
+                <div class="w-12 h-12 rounded-full bg-emerald-500 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-[0_4px_15px_rgba(16,185,129,0.4)]">
                     3
                 </div>
                 <div class="flex-1 pt-1">
-                    <h2 class="text-xl font-black text-slate-900">Unggah File Anda</h2>
-                    <p class="text-sm font-semibold text-slate-500 mt-1">Masukkan file template yang sudah diisi. Sistem akan otomatis mendeteksi jika ada NIK ganda.</p>
-                    
-                    <div class="mt-5">
-                        <label id="dropzoneBox" for="fileInput" class="upload-dropzone flex flex-col items-center justify-center min-h-[220px] rounded-3xl p-8 text-center relative overflow-hidden group">
-                            
-                            {{-- State Awal --}}
-                            <div id="uploadStateEmpty" class="flex flex-col items-center transition-all duration-300">
-                                <div class="w-16 h-16 rounded-3xl bg-white text-emerald-500 flex items-center justify-center text-2xl shadow-sm border border-slate-100 mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-900">Unggah Dokumen</h2>
+                            <p class="text-sm font-semibold text-slate-500 mt-1">Masukkan file Excel (.xlsx atau .xls) yang telah Anda isi dengan lengkap.</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100" title="Smart Import aktif secara otomatis membaca posisi kolom">
+                            <i class="fa-solid fa-wand-magic-sparkles text-indigo-500 text-xs"></i>
+                            <span class="text-xs font-bold text-indigo-700">Auto-Detect Aktif</span>
+                            <input type="hidden" name="smart_import" value="1">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 relative">
+                        <input type="file" name="file" id="file" class="hidden" accept=".xlsx, .xls, .csv">
+                        
+                        <label for="file" id="dropzone" class="upload-dropzone block rounded-[2rem] p-8 text-center relative overflow-hidden">
+                            <div id="state-empty" class="transition-all duration-300">
+                                <div class="w-20 h-20 mx-auto bg-white rounded-full shadow-sm flex items-center justify-center border border-slate-100 mb-4 text-emerald-500 text-3xl">
                                     <i class="fa-solid fa-cloud-arrow-up"></i>
                                 </div>
-                                <h3 class="text-lg font-black text-slate-800">Klik atau Seret file ke sini</h3>
-                                <p class="text-xs font-bold text-slate-500 mt-2">Hanya mendukung file <span class="text-slate-700">.xlsx, .xls, .csv</span> (Maks. 10MB)</p>
-                            </div>
-
-                            {{-- State File Terpilih --}}
-                            <div id="uploadStateFilled" class="flex flex-col items-center absolute inset-0 bg-emerald-50 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4">
-                                <div class="flex flex-col items-center justify-center h-full w-full">
-                                    <div class="w-16 h-16 rounded-3xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg mb-3">
-                                        <i class="fa-solid fa-file-excel"></i>
-                                    </div>
-                                    <h3 id="fileNameDisplay" class="text-lg font-black text-emerald-900 px-4 truncate max-w-sm">nama_file.xlsx</h3>
-                                    <p id="fileSizeDisplay" class="text-xs font-bold text-emerald-600 mt-1">0 MB • Siap diproses</p>
-                                    <div class="mt-4 px-4 py-1.5 rounded-full bg-white border border-emerald-200 text-[10px] font-black uppercase tracking-widest text-emerald-600 shadow-sm cursor-pointer hover:bg-emerald-100 transition-colors">
-                                        Ganti File
-                                    </div>
+                                <h3 class="text-lg font-black text-slate-700">Klik untuk Mencari File</h3>
+                                <p class="text-sm font-medium text-slate-500 mt-2">Atau seret dan lepas file Excel Anda ke area ini</p>
+                                <div class="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-slate-400">
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-check text-emerald-500"></i> Maks 10 MB</span>
+                                    <span class="flex items-center gap-1"><i class="fa-solid fa-check text-emerald-500"></i> .xlsx / .xls</span>
                                 </div>
                             </div>
 
-                            <input id="fileInput" type="file" name="file" class="hidden" accept=".xlsx,.xls,.csv" required>
+                            <div id="state-filled" class="absolute inset-0 flex flex-col items-center justify-center bg-emerald-50/90 opacity-0 pointer-events-none transition-all duration-300 translate-y-4">
+                                <div class="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center border border-emerald-100 mb-3 text-emerald-600 text-3xl">
+                                    <i class="fa-solid fa-file-excel"></i>
+                                </div>
+                                <h3 id="file-name-display" class="text-base font-black text-emerald-900 truncate max-w-[80%]">NamaFile.xlsx</h3>
+                                <p id="file-size-display" class="text-xs font-bold text-emerald-600 mt-1">2.5 MB • Format Sesuai</p>
+                                <button type="button" onclick="resetFileUI(); document.getElementById('file').value='';" class="mt-4 px-4 py-1.5 rounded-full bg-white text-rose-500 text-xs font-bold border border-rose-100 hover:bg-rose-50 transition-colors z-20 relative">
+                                    <i class="fa-solid fa-xmark mr-1"></i> Batal / Ganti File
+                                </button>
+                            </div>
                         </label>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- ACTION PANEL --}}
-        <div class="mt-8 ml-16 bg-slate-50 border border-slate-200 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-                <h4 class="text-sm font-black text-slate-800"><i class="fa-solid fa-shield-halved text-emerald-500 mr-1.5"></i> Validasi Aman</h4>
-                <p class="text-[11px] font-bold text-slate-500 mt-0.5">Sistem memblokir data dengan format salah atau NIK duplikat.</p>
-            </div>
-            
-            <button type="submit" id="submitBtn" class="btn-pill w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 px-8 py-3.5 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <i class="fa-solid fa-rocket"></i> Proses Import
+        {{-- TOMBOL SUBMIT --}}
+        <div class="mt-8 pt-8 border-t border-slate-100 flex justify-end relative z-10">
+            <button type="submit" id="btnSubmit" class="btn-primary w-full sm:w-auto px-8 py-4 rounded-2xl text-sm font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-[0_10px_20px_rgba(16,185,129,0.3)] hover:-translate-y-1 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rocket"></i> Mulai Proses Import Data
             </button>
         </div>
     </form>
@@ -309,31 +345,25 @@
 
 @push('scripts')
 <script>
-    // FUNGSI SUPER CEPAT UNDUH TEMPLATE NATIVE
-    window.downloadTemplateInstan = function(url) {
-        let iframe = document.getElementById('instanDownloader');
-        if (!iframe) {
-            iframe = document.createElement('iframe');
-            iframe.id = 'instanDownloader';
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
-        }
-        iframe.src = url; // Langsung tembak link download (Native HTML5)
-    };
+    function downloadTemplateInstan(url) {
+        const type = document.querySelector('input[name="jenis_data"]:checked').value;
+        window.location.href = url + '?type=' + type;
+    }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const dropzoneBox = document.getElementById('dropzoneBox');
-        const fileInput = document.getElementById('fileInput');
-        const stateEmpty = document.getElementById('uploadStateEmpty');
-        const stateFilled = document.getElementById('uploadStateFilled');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const fileSizeDisplay = document.getElementById('fileSizeDisplay');
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('file');
+        const dropzone = document.getElementById('dropzone');
+        const stateEmpty = document.getElementById('state-empty');
+        const stateFilled = document.getElementById('state-filled');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const fileSizeDisplay = document.getElementById('file-size-display');
+        const dropzoneBox = document.querySelector('.upload-dropzone');
         const form = document.getElementById('importForm');
-        const submitBtn = document.getElementById('submitBtn');
+        const submitBtn = document.getElementById('btnSubmit');
 
-        // Drag & Drop Styling
+        // Drag & Drop Events
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropzoneBox.addEventListener(eventName, preventDefaults, false);
+            dropzone.addEventListener(eventName, preventDefaults, false);
         });
 
         function preventDefaults(e) {
@@ -342,65 +372,59 @@
         }
 
         ['dragenter', 'dragover'].forEach(eventName => {
-            dropzoneBox.addEventListener(eventName, highlight, false);
+            dropzone.addEventListener(eventName, () => {
+                dropzoneBox.classList.add('is-dragover');
+            }, false);
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
-            dropzoneBox.addEventListener(eventName, unhighlight, false);
+            dropzone.addEventListener(eventName, () => {
+                dropzoneBox.classList.remove('is-dragover');
+            }, false);
         });
 
-        function highlight(e) {
-            dropzoneBox.classList.add('is-dragover');
-        }
-
-        function unhighlight(e) {
-            dropzoneBox.classList.remove('is-dragover');
-        }
-
-        // Handle Drop File
-        dropzoneBox.addEventListener('drop', handleDrop, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
+        dropzone.addEventListener('drop', function(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
             
             if (files.length) {
-                fileInput.files = files; // Assign files to input
-                updateFileUI(files[0]);
-            }
-        }
-
-        // Handle Browse File
-        fileInput.addEventListener('change', function() {
-            if (this.files.length) {
-                updateFileUI(this.files[0]);
+                fileInput.files = files;
+                updateFileUI();
             }
         });
 
-        // Update UI untuk File
-        function updateFileUI(file) {
-            // Validasi Format
-            const allowedExtensions = ['xlsx', 'xls', 'csv'];
-            const extension = file.name.split('.').pop().toLowerCase();
+        fileInput.addEventListener('change', updateFileUI);
+
+        function updateFileUI() {
+            if (!fileInput.files.length) return;
             
-            if (!allowedExtensions.includes(extension)) {
+            const file = fileInput.files[0];
+            
+            const validTypes = [
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'text/csv'
+            ];
+            
+            const extension = file.name.split('.').pop().toLowerCase();
+            const validExtensions = ['xls', 'xlsx', 'csv'];
+
+            if (!validTypes.includes(file.type) && !validExtensions.includes(extension)) {
                 alert('Tolong pilih file Excel (.xlsx, .xls) atau CSV.');
-                fileInput.value = '';
                 resetFileUI();
+                fileInput.value = '';
                 return;
             }
 
-            // Validasi Ukuran (Max 10MB)
-            const maxSize = 10 * 1024 * 1024;
-            if (file.size > maxSize) {
+            if (file.size > 10 * 1024 * 1024) { // 10MB
                 alert('Ukuran file terlalu besar. Maksimal 10 MB.');
-                fileInput.value = '';
                 resetFileUI();
+                fileInput.value = '';
                 return;
             }
 
-            // Ganti UI ke Mode Terisi
             const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+            
             fileNameDisplay.textContent = file.name;
             fileSizeDisplay.textContent = sizeMb + ' MB • Format Sesuai';
 
@@ -416,7 +440,7 @@
             dropzoneBox.style.background = '#ecfdf5';
         }
 
-        function resetFileUI() {
+        window.resetFileUI = function() {
             stateFilled.style.opacity = '0';
             stateFilled.style.pointerEvents = 'none';
             stateFilled.style.transform = 'translateY(10px)';
@@ -429,11 +453,10 @@
             dropzoneBox.style.background = '#f8fafc';
         }
 
-        // Form Submit Loading State
         form.addEventListener('submit', function(e) {
             if (!fileInput.files.length) {
                 e.preventDefault();
-                alert('Anda belum mengunggah file Excel.');
+                alert('Oops! Anda belum memilih atau mengunggah file Excel.');
                 return;
             }
 
