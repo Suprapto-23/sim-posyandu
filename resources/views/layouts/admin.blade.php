@@ -356,75 +356,115 @@
 
         let currentAbortController = null;
         let isNavigating = false;
+        let currentAbortController = null;
 
         function navigateTo(url) {
+            // Cegah klik berulang saat navigasi sedang berjalan
             if (isNavigating) {
                 if (currentAbortController) currentAbortController.abort();
                 return;
             }
 
-            const currentPath = window.location.pathname + window.location.search;
-            const targetPath = new URL(url).pathname + new URL(url).search;
-            if (currentPath === targetPath) return;
+            const currentUrl = new URL(window.location.href);
+            const targetUrl = new URL(url, window.location.origin);
+            if (currentUrl.pathname + currentUrl.search === targetUrl.pathname + targetUrl.search) return;
 
             isNavigating = true;
             const controller = new AbortController();
             currentAbortController = controller;
 
-            const mainEl = document.getElementById('adminMain');
-            const scrollArea = document.getElementById('mainScrollArea');
+            // [UNIVERSAL]: Otomatis mencari ID yang cocok untuk Admin, Bidan, atau Kader
+            const mainEl = document.getElementById('adminMain') || 
+                           document.getElementById('bidanMain') || 
+                           document.getElementById('kaderMain') || 
+                           document.querySelector('main');
+                           
+            const scrollArea = document.getElementById('mainScrollArea') || window;
 
-            // Eksekusi Animasi Keluar
-            mainEl.classList.remove('is-enter-done', 'is-entering');
-            mainEl.classList.add('is-leaving');
+            // Jika elemen tidak ditemukan sama sekali, lakukan hard-reload (mencegah stuck)
+            if (!mainEl) {
+                window.location.href = url;
+                return;
+            }
 
-            fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
-            .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
+            document.body.style.cursor = 'wait';
+            mainEl.style.pointerEvents = 'none';
+
+            fetch(url, { 
+                signal: controller.signal, 
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+            })
+            .then(res => { 
+                if (!res.ok) throw new Error('Network error'); 
+                return res.text(); 
+            })
             .then(html => {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
-                const newContent = doc.querySelector('#adminMain');
-                if (!newContent) { window.location.href = url; return; }
-
-                // Swap Konten
-                mainEl.innerHTML = newContent.innerHTML;
+                // Mencari konten baru berdasarkan ID yang ditemukan sebelumnya
+                const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
                 
-                // Set Animasi Masuk
-                mainEl.classList.remove('is-leaving');
-                mainEl.classList.add('is-entering');
+                if (!newContent) {
+                    window.location.href = url; 
+                    return; 
+                }
 
-                if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+                mainEl.classList.remove('is-enter-done', 'is-entering');
+                mainEl.classList.add('is-leaving');
 
-                // Eksekusi ulang tag <script> baru agar berfungsi
-                mainEl.querySelectorAll('script').forEach(oldScript => {
-                    const newScript = document.createElement('script');
-                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    newScript.textContent = oldScript.textContent;
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                });
+                setTimeout(() => {
+                    mainEl.innerHTML = newContent.innerHTML;
+                    
+                    mainEl.classList.remove('is-leaving');
+                    mainEl.classList.add('is-entering');
 
-                // Re-bind komponen Alpine.js pada konten baru (fix: dulu tidak di-rebind)
-                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
+                    if (scrollArea.scrollTo) {
+                        scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+                    }
 
-                // Tunggu sebentar lalu fade-in halus
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        mainEl.classList.remove('is-entering');
-                        mainEl.classList.add('is-enter-done');
-                        document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                        updateSidebarActive(url);
-                    }, 50); 
-                });
+                    mainEl.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
 
-                window.history.pushState({}, '', url);
+                    if (window.Alpine && typeof Alpine.initTree === 'function') {
+                        Alpine.initTree(mainEl);
+                    }
+
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            mainEl.classList.remove('is-entering');
+                            mainEl.classList.add('is-enter-done');
+                            document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
+                            
+                            // Try-Catch agar tidak error jika fungsi ini belum terdefinisi di salah satu layout
+                            try {
+                                if (typeof updateSidebarActive === 'function') {
+                                    updateSidebarActive(url);
+                                }
+                            } catch(e) {
+                                console.warn('Sidebar active state update skipped.');
+                            }
+
+                        }, 30); 
+                    });
+
+                    window.history.pushState({}, '', url);
+                }, 120);
             })
             .catch(err => {
                 if (err.name === 'AbortError') return;
+                // Jika terjadi error saat fetch, paksakan hard-reload ke URL tujuan agar tidak stuck
                 window.location.href = url;
             })
             .finally(() => {
+                // Pastikan state selalu dikembalikan normal, baik sukses maupun gagal
+                document.body.style.cursor = 'default';
+                if (mainEl) mainEl.style.pointerEvents = 'auto';
                 isNavigating = false;
                 currentAbortController = null;
             });
