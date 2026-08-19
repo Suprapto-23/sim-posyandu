@@ -2,11 +2,12 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Kader Workspace') | PosyanduCare</title>
 
+    <!-- Mencegah FOUC (Flash of Unstyled Content) -->
     <script>
         try {
             if (localStorage.getItem('pc_kader_sidebar') !== '0' && matchMedia('(min-width:1024px)').matches) {
@@ -31,100 +32,104 @@
     <style>
         :root {
             --sb-width: 280px;
-            --slate-900: #0f172a;
-            --slate-700: #334155;
-            --slate-500: #64748b;
-            --border: #f1f5f9;
-            --bg-app: #fcfcfd;
-            --transition-speed: 0.08s;
-            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
+            --border: #f1f5f9; --bg-app: #fcfcfd;
+            --transition-speed: 0.2s; /* Diperhalus */
+            --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); 
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         [x-cloak] { display: none !important; }
 
         html, body { 
-            margin: 0; 
-            height: 100vh; 
-            overflow: hidden; 
+            margin: 0; height: 100vh; overflow: hidden; 
             font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-            color: var(--slate-700);
-            background-color: var(--bg-app);
+            color: var(--slate-700); background-color: var(--bg-app);
             -webkit-font-smoothing: antialiased; font-synthesis: none;
+            text-rendering: optimizeLegibility;
         }
 
-        .kader-sidebar {
-            position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; 
-            width: var(--sb-width); padding: 16px;
-            transform: translateX(-100%);
-            transition: transform var(--transition-speed) var(--ease-out);
-            will-change: transform; 
+        html.locked, body.locked { overflow: hidden !important; }
+
+        /* ── SPA LOADER BAR (Progress Bar Atas) ── */
+        #spa-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, #10b981, #34d399, #059669);
+            background-size: 200% 100%; z-index: 9999999;
+            transform-origin: left; transform: scaleX(0); opacity: 0;
+            transition: transform 0.2s ease-out, opacity 0.2s ease; pointer-events: none;
         }
-        html.sb-open .kader-sidebar { transform: translateX(0); }
+        @keyframes loadingBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        #spa-loader.is-loading { animation: loadingBar 1s infinite linear; }
+
+        /* ── SIDEBAR ── */
+        .kader-sidebar {
+            position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
+            width: var(--sb-width); padding: 16px;
+            transform: translateX(-100%) translateZ(0); 
+            transition: transform var(--transition-speed) var(--ease-out);
+            will-change: transform; backface-visibility: hidden;
+        }
+        html.sb-open .kader-sidebar { transform: translateX(0) translateZ(0); }
         
         .pc-sidebar {
-            height: 100%; 
-            border-radius: 24px; 
-            padding: 24px 16px; 
-            overflow-y: auto; overflow-x: hidden;
-            background: #ffffff;
+            height: 100%; border-radius: 24px; padding: 24px 16px; 
+            overflow-y: auto; overflow-x: hidden; background: #ffffff;
             border: 1px solid var(--border); 
             box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
             scrollbar-width: none !important;
         }
         .pc-sidebar::-webkit-scrollbar { display: none !important; }
 
-        .app-wrapper {
-            display: flex; flex-direction: column; 
-            height: 100vh;
-            padding-left: 0;
-            transition: padding-left var(--transition-speed) var(--ease-out);
+        .pc-sidebar a {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 12px; color: var(--slate-500);
+            font-weight: 700; font-size: 13px; text-decoration: none;
+            transition: all 0.1s ease; cursor: pointer;
         }
-        @media (min-width: 1024px) { 
-            html.sb-open .app-wrapper { padding-left: var(--sb-width); } 
-        }
+        .pc-sidebar a:hover { background: #f1f5f9; color: #0f172a; }
+        .pc-sidebar a.active { background: #ecfdf5; color: #059669; font-weight: 800; }
+        .pc-sidebar a i { width: 20px; text-align: center; font-size: 14px; }
 
-        .topbar-wrapper {
-            padding: 16px 24px 0;
-            flex-shrink: 0; 
-            z-index: 50;
+        /* ── LAYOUT ── */
+        .app-wrapper {
+            display: flex; flex-direction: column; height: 100vh; padding-left: 0;
+            transition: padding-left var(--transition-speed) var(--ease-out);
+            will-change: padding-left; z-index: 10;
         }
+        @media (min-width: 1024px) { html.sb-open .app-wrapper { padding-left: var(--sb-width); } }
+
+        /* ── TOPBAR ── */
+        .topbar-wrapper { padding: 16px 24px 0; flex-shrink: 0; z-index: 40; }
 
         .kader-topbar {
-            min-height: 68px; 
-            padding: 8px 16px; 
-            border-radius: 24px; 
+            min-height: 68px; padding: 8px 16px; border-radius: 24px; 
             display: flex; align-items: center; gap: 12px; 
             background: rgba(255, 255, 255, 0.85); 
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border); 
-            box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border); box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02);
+            transform: translateZ(0); 
         }
         @media (max-width: 1023px) {
-            .kader-topbar {
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                background: rgba(255,255,255,.97);
-                min-height: 60px;
-            }
+            .kader-topbar { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,.97); min-height: 60px; }
         }
 
         .sidebar-toggle {
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 14px;
             background: #ffffff; color: var(--slate-500); cursor: pointer; flex-shrink: 0;
-            display: grid; place-items: center; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease;
+            display: grid; place-items: center; transition: all 0.1s ease;
         }
         .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
         .sidebar-toggle:active { transform: scale(0.92); }
 
         .topbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 
+        /* ── BUTTONS ── */
         .btn-notif { 
             width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 50%; 
             background: #ffffff; color: var(--slate-500); cursor: pointer; 
             display: flex; align-items: center; justify-content: center; 
-            position: relative; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
+            position: relative; transition: all 0.1s ease; 
         }
         .btn-notif:hover { background: #f8fafc; color: #0f172a; border-color: #e2e8f0; }
         .btn-notif:active { transform: scale(0.92); }
@@ -132,7 +137,7 @@
         .profile-button { 
             height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border); 
             border-radius: 50px; background: #ffffff; cursor: pointer; 
-            display: flex; align-items: center; gap: 10px; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
+            display: flex; align-items: center; gap: 10px; transition: all 0.1s ease; 
         }
         .profile-button:hover { background: #f8fafc; border-color: #e2e8f0; }
         .profile-button:active { transform: scale(0.96); }
@@ -144,51 +149,27 @@
         .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .profile-name { font-size: 13px; font-weight: 800; color: var(--slate-700); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+        /* ── DROPDOWNS ── */
         .kader-dropdown { 
             position: absolute; right: 0; top: calc(100% + 12px); width: 240px; z-index: 90; 
-            border-radius: 24px; padding: 8px; background: #ffffff; 
-            border: 1px solid var(--border); 
+            border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border); 
             box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04); 
             transform-origin: top right; 
         }
-        /* ── DROPDOWN NOTIFIKASI KHUSUS ── */
         .notif-dropdown {
-            position: absolute;
-            right: 0;
-            top: calc(100% + 12px);
-            width: 360px;
-            z-index: 100;
-            border-radius: 24px;
-            padding: 8px;
-            background: #ffffff;
-            border: 1px solid var(--border);
+            position: absolute; right: 0; top: calc(100% + 12px); width: 360px; z-index: 100;
+            border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border);
             box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04);
             transform-origin: top right;
         }
-        
-        /* Pengaturan layaknya tampilan Mobile yang Center */
         @media (max-width: 1023px) {
-            .notif-dropdown {
-                position: fixed;
-                top: 76px;
-                left: 16px;
-                right: 16px;
-                width: auto;
-                border-radius: 20px;
-                padding: 6px;
-                transform-origin: top right;
-            }
+            .notif-dropdown { position: fixed; top: 76px; left: 16px; right: 16px; width: auto; border-radius: 20px; padding: 6px; }
+            .kader-dropdown { width: 220px; right: -8px; }
         }
         
-        /* Scrollbar Khusus Area Notifikasi */
-        .notif-scroll {
-            max-height: 340px;
-            overflow-y: auto;
-            padding: 4px;
-        }
+        .notif-scroll { max-height: 340px; overflow-y: auto; padding: 4px; }
         .notif-scroll::-webkit-scrollbar { width: 4px; }
         .notif-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
-        .notif-scroll::-webkit-scrollbar-track { background: transparent; }
 
         .dropdown-head { padding: 12px; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
         .dropdown-name { color: var(--slate-900); font-size: 14px; font-weight: 800; line-height: 1.2; }
@@ -196,38 +177,50 @@
         .dropdown-link, .dropdown-logout { 
             width: 100%; border: 0; border-radius: 16px; padding: 12px 14px; 
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; 
-            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease, transform 0.08s ease; 
+            color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.1s ease; 
         }
         .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
         .dropdown-logout { color: #e11d48; }
         .dropdown-logout:hover { background: #fff1f2; }
 
+        /* ── MAIN CONTENT SCROLL ── */
         .main-scroll-area {
-            flex: 1; 
-            overflow-y: auto; 
-            overflow-x: hidden;
-            padding: 24px;
-            scroll-behavior: smooth;
+            flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px;
+            scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
         }
-
         .main-scroll-area::-webkit-scrollbar { width: 6px; }
         .main-scroll-area::-webkit-scrollbar-track { background: transparent; }
         .main-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .main-scroll-area::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* ── SPA - Butter Smooth (anti-reload) ── */
+        /* ── SPA ANIMATION (SMOOTH FADE IN/OUT - ZERO DELAY) ── */
         .kader-main {
-            opacity: 1; transform: translateY(0);
-            transition: opacity var(--transition-speed) var(--ease-out), transform var(--transition-speed) var(--ease-out);
+            /* State Normal (Tampil Penuh) */
+            opacity: 1; 
+            transform: translateY(0) scale(1);
+            transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
             will-change: opacity, transform;
+            transform-origin: top center;
         }
-        .kader-main.is-leaving { opacity: 0; transform: translateY(-6px); }
-        .kader-main.is-entering { opacity: 0; transform: translateY(6px); }
-        .kader-main.is-enter-done { opacity: 1; transform: translateY(0); }
 
+        /* State Memuat (Fetch Data API) - Tidak Blank, hanya redup */
+        .kader-main.is-loading-state { 
+            opacity: 0.5; 
+            transform: scale(0.995); 
+            pointer-events: none;
+        }
+
+        /* State Persiapan Muncul (Posisi awal konten baru) */
+        .kader-main.is-entering-state { 
+            opacity: 0; 
+            transform: translateY(15px); 
+            transition: none !important; /* Matikan transisi agar reset posisi instan */
+        }
+
+        /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
-            position: fixed; inset: 0; z-index: 90; border: 0; background: rgba(15,23,42,.3);
-            opacity: 0; visibility: hidden; transition: opacity 0.08s ease, visibility 0.08s ease;
+            position: fixed; inset: 0; z-index: 45; border: 0; background: rgba(15,23,42,.3);
+            opacity: 0; visibility: hidden; transition: opacity 0.1s ease, visibility 0.1s ease;
+            backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
         }
         html.sb-open .mobile-overlay { opacity: 1; visibility: visible; }
         
@@ -239,12 +232,40 @@
             .main-scroll-area { padding: 16px; }
         }
 
-        .nexus-swal { border-radius: 32px !important; padding: 32px !important; font-family: "Plus Jakarta Sans", sans-serif !important; border: 1px solid var(--border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;}
-        .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important;}
-        .nexus-html { font-size: 14px !important; color: #64748b !important; }
-        .nexus-ok { border-radius: 16px !important; background: #0f172a !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important;}
-        .nexus-danger { border-radius: 16px !important; background: #e11d48 !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important;}
-        .nexus-cancel { border-radius: 16px !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #475569 !important; font-weight: 700 !important; padding: 12px 24px !important;}
+        /* ── FULL SCREEN SWEETALERT FIX ── */
+        div.swal2-container {
+            z-index: 9999999 !important; 
+            background: rgba(15, 23, 42, 0.45) !important; 
+            backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
+            position: fixed !important; inset: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
+        }
+        div.swal2-container .swal2-popup { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        
+        .nexus-swal { 
+            border-radius: 32px !important; padding: 32px !important; 
+            font-family: "Plus Jakarta Sans", sans-serif !important; 
+            border: 1px solid rgba(255,255,255,0.4) !important; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3) !important;
+            width: 95% !important; max-width: 440px !important; 
+        }
+        .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important; margin-bottom: 8px !important;}
+        .nexus-html { font-size: 14px !important; color: #475569 !important; line-height: 1.6 !important; }
+        
+        .nexus-ok { border-radius: 14px !important; background: #0f172a !important; color: #fff !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important; border: 0 !important;}
+        .nexus-ok:hover { background: #1e293b !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(15,23,42,0.2) !important; }
+        .nexus-danger { border-radius: 14px !important; background: #e11d48 !important; color: #fff !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important; border: 0 !important;}
+        .nexus-danger:hover { background: #be123c !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(225,29,72,0.2) !important; }
+        .nexus-cancel { border-radius: 14px !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #475569 !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important;}
+        .nexus-cancel:hover { background: #f1f5f9 !important; color: #0f172a !important; }
+
+        @media (max-width: 480px) {
+            .nexus-swal { padding: 24px !important; border-radius: 24px !important; }
+            .nexus-title { font-size: 18px !important; }
+            .nexus-ok, .nexus-danger, .nexus-cancel { padding: 12px 20px !important; font-size: 13px !important; width: 100% !important; margin-bottom: 8px !important;}
+            .swal2-actions { flex-direction: column; width: 100%; }
+        }
     </style>
     @stack('styles')
 </head>
@@ -260,6 +281,10 @@
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
 
+    <!-- SPA Loader Bar -->
+    <div id="spa-loader"></div>
+
+    <!-- OVERLAY UNTUK MOBILE -->
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
     <aside class="kader-sidebar">
@@ -294,13 +319,11 @@
                              x-transition:leave-end="opacity-0 scale-95 translate-y-3" 
                              class="notif-dropdown">
                              
-                            <!-- Header Notifikasi -->
                             <div class="p-3 border-b border-slate-100 flex items-center justify-between">
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notifikasi</p>
                                 <span class="text-[10px] font-bold text-slate-800" x-show="unreadCount > 0" x-text="unreadCount + ' baru'"></span>
                             </div>
 
-                            <!-- Body Notifikasi -->
                             <div class="notif-scroll">
                                 <template x-if="unreadCount === 0">
                                     <div class="text-center text-xs font-semibold text-slate-400 py-8">
@@ -320,7 +343,6 @@
                                 </template>
                             </div>
 
-                            <!-- Footer Notifikasi -->
                             <div class="p-3 border-t border-slate-100 text-center">
                                 <a href="{{ Route::has('kader.notifikasi.index') ? route('kader.notifikasi.index') : '#' }}" class="text-[10px] font-bold text-slate-700 uppercase tracking-widest hover:text-slate-900">
                                     Lihat Semua Notifikasi
@@ -389,8 +411,10 @@
             root.classList.toggle('sb-open', open);
             if (matchMedia('(max-width:1023px)').matches) {
                 root.classList.toggle('locked', open);
+                document.body.classList.toggle('locked', open);
             } else {
                 root.classList.remove('locked');
+                document.body.classList.remove('locked');
             }
             if (save && matchMedia('(min-width:1024px)').matches) {
                 try { localStorage.setItem('pc_kader_sidebar', open ? '1' : '0'); } catch (e) {}
@@ -401,6 +425,9 @@
             setSidebar(!root.classList.contains('sb-open'));
         }
 
+        // ============================================================
+        // SWEETALERT PREMIUM (Tampil Penuh - Menutupi Sidebar)
+        // ============================================================
         function nexusConfirm(options) {
             return Swal.fire({
                 title: options.title || 'Konfirmasi',
@@ -422,12 +449,6 @@
             });
         }
 
-        // ============================================================
-        // INTERCEPTOR NAVIGASI – DIPERBAIKI DENGAN data-no-delay
-        // ============================================================
-        // ============================================================
-        // UPDATE SIDEBAR ACTIVE STATE
-        // ============================================================
         function updateSidebarActive(currentUrl) {
             const url = currentUrl || window.location.href;
             const currentPath = new URL(url).pathname;
@@ -441,121 +462,101 @@
         }
 
         // ============================================================
-        // SPA NAVIGATION (anti-reload, butter smooth)
+        // SPA NAVIGATION (ZERO DELAY - DIM & SWAP METOD)
         // ============================================================
         let currentAbortController = null;
         let isNavigating = false;
 
-        function navigateTo(url) {
-            // Cegah klik berulang saat navigasi sedang berjalan
+        async function navigateTo(url) {
             if (isNavigating) {
                 if (currentAbortController) currentAbortController.abort();
-                return;
             }
 
-            const currentUrl = new URL(window.location.href);
-            const targetUrl = new URL(url, window.location.origin);
-            if (currentUrl.pathname + currentUrl.search === targetUrl.pathname + targetUrl.search) return;
+            const currentPath = new URL(window.location.href).pathname + new URL(window.location.href).search;
+            const targetPath = new URL(url, window.location.origin).pathname + new URL(url, window.location.origin).search;
+            if (currentPath === targetPath) return;
 
             isNavigating = true;
             const controller = new AbortController();
             currentAbortController = controller;
 
-            // [UNIVERSAL]: Otomatis mencari ID yang cocok untuk Admin, Bidan, atau Kader
-            const mainEl = document.getElementById('adminMain') || 
-                           document.getElementById('bidanMain') || 
-                           document.getElementById('kaderMain') || 
-                           document.querySelector('main');
-                           
+            const mainEl = document.getElementById('kaderMain') || document.querySelector('main');
             const scrollArea = document.getElementById('mainScrollArea') || window;
+            const loader = document.getElementById('spa-loader');
 
-            // Jika elemen tidak ditemukan sama sekali, lakukan hard-reload (mencegah stuck)
-            if (!mainEl) {
-                window.location.href = url;
-                return;
-            }
+            if (!mainEl) { window.location.href = url; return; }
 
-            document.body.style.cursor = 'wait';
-            mainEl.style.pointerEvents = 'none';
+            // 1. UPDATE MENU SEKARANG JUGA & TAMPILKAN LOADER
+            updateSidebarActive(url);
+            loader.style.opacity = '1';
+            loader.style.transform = 'scaleX(0.3)';
+            loader.classList.add('is-loading');
+            
+            // 2. KONTEN LAMA JANGAN HILANG (Mencegah Blank/Delay Putih)
+            // Hanya di-dim (redupkan) sedikit agar user tau sistem sedang memuat.
+            mainEl.classList.add('is-loading-state');
 
-            fetch(url, { 
-                signal: controller.signal, 
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-            })
-            .then(res => { 
+            try {
+                // 3. FETCH DATA (Sepenuhnya di background tanpa buatan delay)
+                const res = await fetch(url, { 
+                    signal: controller.signal, 
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+                });
                 if (!res.ok) throw new Error('Network error'); 
-                return res.text(); 
-            })
-            .then(html => {
+
+                loader.style.transform = 'scaleX(0.7)';
+                const html = await res.text();
+                loader.style.transform = 'scaleX(1)';
+
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
-                // Mencari konten baru berdasarkan ID yang ditemukan sebelumnya
                 const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
+                if (!newContent) throw new Error('DOM Mismatch');
+
+                // 4. RESET POSISI DOM INSTAN (is-entering-state menghapus transisi sementara)
+                mainEl.classList.remove('is-loading-state');
+                mainEl.classList.add('is-entering-state'); 
                 
-                if (!newContent) {
-                    window.location.href = url; 
-                    return; 
-                }
+                // SWAP HTML
+                mainEl.innerHTML = newContent.innerHTML;
+                if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
 
-                mainEl.classList.remove('is-enter-done', 'is-entering');
-                mainEl.classList.add('is-leaving');
+                // Evaluasi ulang script (Alpine, Chart, dll)
+                mainEl.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
 
-                setTimeout(() => {
-                    mainEl.innerHTML = newContent.innerHTML;
-                    
-                    mainEl.classList.remove('is-leaving');
-                    mainEl.classList.add('is-entering');
+                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
-                    if (scrollArea.scrollTo) {
-                        scrollArea.scrollTo({ top: 0, behavior: 'instant' });
-                    }
+                // 5. ANIMASI MUNCUL HALUS (FADE IN + SLIDE UP)
+                void mainEl.offsetWidth; // Force Reflow browser agar mengenali elemen sudah di-reset
+                mainEl.classList.remove('is-entering-state'); // Memicu kembali transisi CSS default (.kader-main)
 
-                    mainEl.querySelectorAll('script').forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        newScript.textContent = oldScript.textContent;
-                        oldScript.parentNode.replaceChild(newScript, oldScript);
-                    });
+                document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
+                window.history.pushState({}, '', url);
 
-                    if (window.Alpine && typeof Alpine.initTree === 'function') {
-                        Alpine.initTree(mainEl);
-                    }
-
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            mainEl.classList.remove('is-entering');
-                            mainEl.classList.add('is-enter-done');
-                            document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                            
-                            // Try-Catch agar tidak error jika fungsi ini belum terdefinisi di salah satu layout
-                            try {
-                                if (typeof updateSidebarActive === 'function') {
-                                    updateSidebarActive(url);
-                                }
-                            } catch(e) {
-                                console.warn('Sidebar active state update skipped.');
-                            }
-
-                        }, 30); 
-                    });
-
-                    window.history.pushState({}, '', url);
-                }, 120);
-            })
-            .catch(err => {
-                if (err.name === 'AbortError') return;
-                // Jika terjadi error saat fetch, paksakan hard-reload ke URL tujuan agar tidak stuck
-                window.location.href = url;
-            })
-            .finally(() => {
-                // Pastikan state selalu dikembalikan normal, baik sukses maupun gagal
-                document.body.style.cursor = 'default';
-                if (mainEl) mainEl.style.pointerEvents = 'auto';
+            } catch (err) {
+                if (err.name !== 'AbortError') window.location.href = url;
+            } finally {
+                mainEl.style.pointerEvents = 'auto';
                 isNavigating = false;
                 currentAbortController = null;
-            });
+                
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    loader.classList.remove('is-loading');
+                    setTimeout(() => loader.style.transform = 'scaleX(0)', 200);
+                }, 100);
+
+                if (matchMedia('(max-width:1023px)').matches && root.classList.contains('sb-open')) {
+                    setSidebar(false);
+                }
+            }
         }
 
         window.addEventListener('popstate', function() { navigateTo(window.location.href); });
@@ -563,7 +564,7 @@
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
             if (!link || !link.href || link.target || link.host !== window.location.host) return;
-            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay')) return;
+            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay') || link.hasAttribute('data-no-spa')) return;
             if (e.ctrlKey || e.metaKey || e.shiftKey) return;
 
             e.preventDefault();
@@ -576,33 +577,23 @@
 
             if (form.classList.contains('js-logout-form')) {
                 event.preventDefault();
-                nexusConfirm({
-                    title: 'Keluar dari sistem?', text: 'Sesi Anda saat ini akan diakhiri.',
-                    icon: 'question', yes: 'Ya, Keluar'
+                nexusConfirm({ 
+                    title: 'Keluar dari sistem?', text: 'Sesi Anda saat ini akan diakhiri.', icon: 'question', iconColor: '#0f172a', yes: 'Ya, Keluar' 
                 }).then(r => {
-                    if (r.isConfirmed) {
-                        form.dataset.confirmed = '1';
+                    if (r.isConfirmed) { 
+                        form.dataset.confirmed = '1'; 
                         document.body.classList.add('content-leave'); 
-                        setTimeout(() => form.submit(), 40);
+                        setTimeout(() => form.submit(), 100); 
                     }
                 });
             }
-            
-            if (form.classList.contains('delete-form')) {
+            if (form.classList.contains('delete-form') || form.classList.contains('dynamic-form-delete')) {
                 event.preventDefault();
-                nexusConfirm({
-                    title: 'Hapus Data?', text: 'Tindakan ini tidak bisa dibatalkan.',
-                    icon: 'warning', iconColor: '#e11d48', yes: 'Ya, Hapus', danger: true
-                }).then(r => { if(r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); } });
-            }
-        });
-
-        window.addEventListener('pageshow', function (event) {
-            if (event.persisted) {
-                document.body.classList.remove('content-leave');
-                const mainEl = document.getElementById('kaderMain');
-                if (mainEl) { mainEl.classList.remove('is-leaving', 'is-entering'); mainEl.classList.add('is-enter-done'); }
-                updateSidebarActive(window.location.href);
+                nexusConfirm({ 
+                    title: 'Hapus Data?', text: 'Data yang belum direview Bidan dapat dihapus secara permanen. Lanjutkan?', icon: 'warning', iconColor: '#e11d48', yes: 'Ya, Hapus', danger: true 
+                }).then(r => {
+                    if(r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); }
+                });
             }
         });
 
@@ -615,38 +606,46 @@
                     updateSidebarActive(window.location.href);
                     const url = '{{ Route::has("kader.notifikasi.count") ? route("kader.notifikasi.count") : "" }}';
                     if (!url) return;
+                    
                     setInterval(async () => {
                         try {
-                            const res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }});
+                            const fetchUrl = new URL(url, window.location.origin);
+                            fetchUrl.searchParams.append('_t', new Date().getTime()); 
+
+                            const res = await fetch(fetchUrl.toString(), { 
+                                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+                            
                             if (res.ok) {
-                                const data = await res.json();
-                                if (data.unread !== undefined) this.unreadCount = data.unread;
+                                const contentType = res.headers.get("content-type");
+                                if(contentType && contentType.includes("application/json")){
+                                    const data = await res.json();
+                                    if (data.unread !== undefined) this.unreadCount = data.unread;
+                                }
                             }
                         } catch (e) {}
-                    }, 30000); 
+                    }, 8000); 
                 }
             }));
         });
     </script>
+    
     @stack('scripts')
     @stack('modals')
+    
     <script>
-    // Menonaktifkan Klik Kanan
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-    });
-
-    // Menonaktifkan tombol F12, Ctrl+Shift+I, Ctrl+Shift+J, dan Ctrl+U
+    // Security: Anti Inspect
+    document.addEventListener('contextmenu', e => e.preventDefault());
     document.onkeydown = function(e) {
         if (
-            e.keyCode === 123 || // Tombol F12
-            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || // Tombol Ctrl+Shift+I / J
-            (e.ctrlKey && e.keyCode === 85) // Tombol Ctrl+U (View Source)
+            e.keyCode === 123 || 
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
+            (e.ctrlKey && e.keyCode === 85)
         ) {
             e.preventDefault();
             return false;
         }
     };
-</script>
+    </script>
 </body>
 </html>
