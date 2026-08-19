@@ -585,7 +585,6 @@ div.swal2-container .swal2-popup {
         // ============================================================
         let currentAbortController = null;
         let isNavigating = false;
-        let currentAbortController = null;
 
         function navigateTo(url) {
             // Cegah klik berulang saat navigasi sedang berjalan

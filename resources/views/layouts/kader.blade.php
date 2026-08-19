@@ -445,7 +445,6 @@
         // ============================================================
         let currentAbortController = null;
         let isNavigating = false;
-        let currentAbortController = null;
 
         function navigateTo(url) {
             // Cegah klik berulang saat navigasi sedang berjalan
