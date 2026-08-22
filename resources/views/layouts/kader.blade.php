@@ -499,9 +499,10 @@
             try {
                 // 3. FETCH DATA (Sepenuhnya di background tanpa buatan delay)
                 const res = await fetch(url, { 
-                    signal: controller.signal, 
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-                });
+    signal: controller.signal, 
+    cache: 'no-store',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+});
                 if (!res.ok) throw new Error('Network error'); 
 
                 loader.style.transform = 'scaleX(0.7)';
