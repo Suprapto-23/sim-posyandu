@@ -39,7 +39,7 @@
         .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
         .icon { display: inline-block; vertical-align: middle; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        /* BACKGROUND STATIS SAJA */
+        /* BACKGROUND STATIS */
         .auth-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden; }
         .auth-bg-base {
             position: absolute; inset: 0;
@@ -48,19 +48,11 @@
                         linear-gradient(135deg, #eefcf6 0%, #ffffff 50%, #fff7ed 100%);
         }
 
-        /* FORM TRANSISI FADE IN (Hanya saat pertama masuk, langsung muncul seketika) */
+        /* CONTAINER UTAMA - DIBUAT INSTAN TANPA ANIMASI DELAY */
         .auth-main {
             position: relative; z-index: 10; min-height: 100svh;
             display: flex; align-items: center; justify-content: center; padding: 24px;
-            animation: instantFade 0.3s ease-out forwards;
         }
-        
-        @keyframes instantFade {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-
-        /* PERHATIAN: Semua kode class .is-splitting SUDAH DIHAPUS agar layar tidak pernah blank */
 
         /* PREMIUM ALERT */
         .premium-alert-backdrop {
@@ -68,7 +60,7 @@
             background: rgba(15, 23, 42, 0.45);
             backdrop-filter: blur(6px);
             opacity: 0; pointer-events: none;
-            transition: opacity 0.18s ease;
+            transition: opacity 0.15s ease;
         }
         .premium-alert-backdrop.is-open { opacity: 1; pointer-events: auto; }
 
@@ -80,11 +72,10 @@
             padding: 32px 28px 24px;
             box-shadow: 0 24px 60px rgba(0,0,0,0.18);
             text-align: center;
-            transform: translate(-50%, -50%) scale(0.92);
+            transform: translate(-50%, -50%) scale(0.95);
             opacity: 0;
             pointer-events: none;
-            transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
-            will-change: transform, opacity;
+            transition: transform 0.2s ease, opacity 0.15s ease;
             overflow: hidden;
         }
         .premium-alert.is-open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
@@ -128,15 +119,10 @@
         }
         .premium-alert-progress { height: 100%; width: 100%; background: var(--green-500); transform-origin: left center; }
         @keyframes premiumAlertShrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-
-        @media (prefers-reduced-motion: reduce) {
-            .auth-main, .premium-alert, .premium-alert-backdrop { animation: none !important; transition: none !important; }
-        }
     </style>
     @stack('styles')
 </head>
 <body>
-    <!-- Sprite SVG tunggal -->
     <svg class="icon-sprite" aria-hidden="true">
         <symbol id="icon-user-group" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path><circle cx="17.5" cy="9" r="2.2"></circle><path d="M15.5 20c.3-2.5 2.1-4.4 4.5-4.8"></path></symbol>
         <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3z"></path><path d="M9 12l2 2 4-4"></path></symbol>
@@ -188,27 +174,21 @@
             var closeBtn = document.getElementById('premiumAlertClose');
             var confirmBtn = document.getElementById('premiumAlertConfirm');
             var closeTimer = null;
-            var lastFocused = null;
-
-            var ICONS = {
-                success: { icon: '#icon-check', cls: 'is-success' },
-                error:   { icon: '#icon-x', cls: 'is-error' },
-                warning: { icon: '#icon-alert-triangle', cls: 'is-warning' },
-                info:    { icon: '#icon-info', cls: 'is-info' }
-            };
 
             function closeAlert() {
                 modal.classList.remove('is-open');
                 backdrop.classList.remove('is-open');
-                document.body.style.overflow = '';
                 clearTimeout(closeTimer);
-                if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
             }
 
             function openAlert(title, html, type, autoCloseMs) {
                 clearTimeout(closeTimer);
-                var cfg = ICONS[type] || ICONS.info;
-                lastFocused = document.activeElement;
+                var cfg = {
+                    success: { icon: '#icon-check', cls: 'is-success' },
+                    error:   { icon: '#icon-x', cls: 'is-error' },
+                    warning: { icon: '#icon-alert-triangle', cls: 'is-warning' },
+                    info:    { icon: '#icon-info', cls: 'is-info' }
+                }[type] || { icon: '#icon-info', cls: 'is-info' };
 
                 iconWrap.className = 'premium-alert-icon-wrap ' + cfg.cls;
                 iconUse.setAttribute('href', cfg.icon);
@@ -217,22 +197,17 @@
 
                 modal.classList.add('is-open');
                 backdrop.classList.add('is-open');
-                document.body.style.overflow = 'hidden';
 
                 progressEl.style.animation = 'none';
                 void progressEl.offsetWidth;
                 progressEl.style.animation = 'premiumAlertShrink ' + autoCloseMs + 'ms linear forwards';
 
-                confirmBtn.focus();
                 closeTimer = setTimeout(closeAlert, autoCloseMs);
             }
 
             closeBtn.addEventListener('click', closeAlert);
             confirmBtn.addEventListener('click', closeAlert);
             backdrop.addEventListener('click', closeAlert);
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && modal.classList.contains('is-open')) closeAlert();
-            });
 
             window.showAuthAlert = function (title, message, icon) {
                 openAlert(title, message, icon || 'info', 3000);
@@ -249,18 +224,5 @@
         });
     </script>
     @stack('scripts')
-    <script>
-    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-    document.onkeydown = function(e) {
-        if (
-            e.keyCode === 123 ||
-            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
-            (e.ctrlKey && e.keyCode === 85)
-        ) {
-            e.preventDefault();
-            return false;
-        }
-    };
-    </script>
 </body>
 </html>

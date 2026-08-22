@@ -16,59 +16,12 @@
         padding: 24px;
     }
 
-    .brand-side, .form-side {
-        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-in-out;
-        will-change: transform, opacity;
-    }
-
-    body.is-splitting .brand-side { transform: translateX(-150%); opacity: 0; }
-    body.is-splitting .form-side { transform: translateX(150%); opacity: 0; }
-
-    /* =========================================
-       AREA DESKTOP (Tampil Utuh & Elegan)
-       ========================================= */
-    .desktop-brand-area { 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        text-align: center; 
-    }
-
-    .partner-logos {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 24px;
-        margin-bottom: 32px;
-        background: rgba(255, 255, 255, 0.85);
-        padding: 12px 32px;
-        border-radius: 100px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.04);
-        border: 1px solid #f1f5f9;
-        backdrop-filter: blur(10px);
-    }
-    .partner-logo {
-        height: 48px;
-        width: auto;
-        object-fit: contain;
-        user-select: none;
-        pointer-events: none;
-    }
-    .partner-divider {
-        width: 2px;
-        height: 32px;
-        background: #e2e8f0;
-        border-radius: 2px;
-    }
-
-    .brand-logo { 
-        width: 320px; 
-        height: auto; 
-        margin-bottom: 24px; 
-        user-select: none; 
-        pointer-events: none; 
-    }
-    
+    /* AREA DESKTOP */
+    .desktop-brand-area { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .partner-logos { display: inline-flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 32px; background: rgba(255, 255, 255, 0.85); padding: 12px 32px; border-radius: 100px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; backdrop-filter: blur(10px); }
+    .partner-logo { height: 48px; width: auto; object-fit: contain; pointer-events: none; }
+    .partner-divider { width: 2px; height: 32px; background: #e2e8f0; border-radius: 2px; }
+    .brand-logo { width: 320px; height: auto; margin-bottom: 24px; pointer-events: none; }
     .brand-divider { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
     .bdl { width: 40px; height: 2px; background: #e2e8f0; border-radius: 4px; }
     .bdd { width: 6px; height: 6px; background: var(--amber-500); transform: rotate(45deg); }
@@ -81,12 +34,9 @@
     .feature-icon .icon { width: 18px; height: 18px; }
     .feature-text { color: var(--slate-700); font-size: 11px; font-weight: 700; }
 
-    /* Container untuk Mobile (Disembunyikan di Desktop) */
     .mobile-brand-area { display: none; }
 
-    /* =========================================
-       AREA FORM (Tetap Konsisten)
-       ========================================= */
+    /* AREA FORM */
     .form-side { display: flex; justify-content: flex-end; }
     .login-card { width: 100%; max-width: 440px; background: #ffffff; border-radius: 28px; padding: 40px; box-shadow: 0 24px 50px rgba(0,0,0,0.06), 0 0 0 8px rgba(255,255,255,0.4); }
     .login-header { text-align: center; margin-bottom: 32px; }
@@ -110,78 +60,33 @@
     .pw-toggle .icon { width: 17px; height: 17px; }
 
     .submit-btn { width: 100%; height: 54px; background: var(--green-600); color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: background 0.2s, box-shadow 0.2s, transform 0.2s; margin-top: 4px; }
-    .submit-btn:hover { background: var(--green-700); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); transform: translateY(-1px); }
+    .submit-btn:hover:not(:disabled) { background: var(--green-700); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); transform: translateY(-1px); }
+    .submit-btn:disabled { opacity: 0.9; cursor: default; }
     .submit-btn .icon { width: 18px; height: 18px; }
 
+    /* SPINNER SUPER KILAT (0.1s) */
     .btn-spinner {
-        width: 16px; height: 16px; border-radius: 50%; display: inline-block;
-        border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
-        animation: fluentSpin 0.6s linear infinite;
+        width: 18px; height: 18px; border-radius: 50%; display: inline-block;
+        border: 2.5px solid rgba(255,255,255,0.35); border-top-color: #fff;
+        animation: fluentSpin 0.1s linear infinite; 
     }
+    @keyframes fluentSpin { 100% { transform: rotate(360deg); } }
 
     .info-note { margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; display: flex; align-items: flex-start; gap: 12px; }
     .info-icon { color: var(--green-700); width: 20px; height: 20px; flex-shrink: 0; }
     .info-title { color: var(--green-900); font-size: 13px; font-weight: 700; margin: 0 0 4px; }
     .info-text { color: var(--slate-700); font-size: 12px; margin: 0; line-height: 1.5; font-weight: 500; }
 
-    /* =========================================
-       RESOLUSI MOBILE (< 992px)
-       LOGIC: Isolasi & Pemotongan CSS (Clipping)
-       ========================================= */
+    /* MOBILE */
     @media (max-width: 992px) {
-        .login-shell { 
-            grid-template-columns: 1fr; 
-            justify-items: center; 
-            gap: 20px; 
-            padding: 16px;
-        }
-        
-        body.is-splitting .brand-side { transform: translateY(-30px); opacity: 0; }
-        body.is-splitting .form-side { transform: translateY(30px); opacity: 0; }
-        
-        /* Matikan layout Desktop agar tidak bentrok */
+        .login-shell { grid-template-columns: 1fr; justify-items: center; gap: 20px; padding: 16px; }
         .desktop-brand-area { display: none; }
-        
-        /* Aktifkan layout Mobile Clean */
-        .mobile-brand-area {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            width: 100%;
-            margin-bottom: 8px; /* Dekatkan ke form */
-        }
-
-        /* 1. Potong teks, sisakan Icon bundar di sisi kiri */
-        .icon-crop-dikti {
-            width: 44px; 
-            height: 44px;
-            object-fit: cover;
-            object-position: left center;
-        }
-
-        /* 2. Potong teks, sisakan ikon infinity di sisi atas */
-        .icon-crop-posyandu {
-            width: 80px; 
-            height: 38px;
-            object-fit: cover;
-            object-position: center top;
-        }
-
-        /* 3. Render natural (Sudah Icon murni) */
-        .icon-crop-itsnu {
-            width: 44px; 
-            height: 44px;
-            object-fit: contain;
-        }
-
-        /* Penyesuaian form card */
+        .mobile-brand-area { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%; margin-bottom: 8px; }
+        .icon-crop-dikti { width: 44px; height: 44px; object-fit: cover; object-position: left center; }
+        .icon-crop-posyandu { width: 80px; height: 38px; object-fit: cover; object-position: center top; }
+        .icon-crop-itsnu { width: 44px; height: 44px; object-fit: contain; }
         .form-side { width: 100%; justify-content: center; }
-        .login-card { 
-            padding: 32px 24px; 
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.08), 0 0 0 4px rgba(255,255,255,0.5); 
-        }
+        .login-card { padding: 32px 24px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.08), 0 0 0 4px rgba(255,255,255,0.5); }
         .login-title { font-size: 22px; }
     }
 </style>
@@ -190,19 +95,16 @@
 @section('content')
 <div class="login-shell">
     <section class="brand-side">
-        
-        <!-- [1] BLOK DESKTOP (Full Teks & Detail) -->
+        <!-- DESKTOP -->
         <div class="desktop-brand-area">
             <div class="partner-logos">
                 <img src="{{ asset('img/diktisaintek.webp') }}" alt="Diktisaintek" class="partner-logo">
                 <div class="partner-divider"></div>
                 <img src="{{ asset('img/itsnu.webp') }}" alt="ITS NU" class="partner-logo">
             </div>
-            <img src="{{ asset('img/logo.webp') }}" alt="PosyanduCare" class="brand-logo" width="320" fetchpriority="high" decoding="async">
-            
+            <img src="{{ asset('img/logo.webp') }}" alt="PosyanduCare" class="brand-logo" width="320">
             <div class="brand-divider"><span class="bdl"></span><span class="bdd"></span><span class="bdl"></span></div>
             <p class="brand-desc">Platform layanan kesehatan terpadu untuk masyarakat modern.</p>
-
             <div class="feature-grid">
                 <div class="feature-box"><div class="feature-icon"><svg class="icon"><use href="#icon-user-group"></use></svg></div><span class="feature-text">Terintegrasi</span></div>
                 <div class="feature-box"><div class="feature-icon"><svg class="icon"><use href="#icon-shield"></use></svg></div><span class="feature-text">Aman</span></div>
@@ -211,13 +113,12 @@
             </div>
         </div>
 
-        <!-- [2] BLOK MOBILE (Clean, Presisi, Icon-Only) -->
+        <!-- MOBILE -->
         <div class="mobile-brand-area">
-            <img src="{{ asset('img/diktisaintek.webp') }}" alt="Icon Dikti" class="icon-crop-dikti" fetchpriority="high">
-            <img src="{{ asset('img/logo.webp') }}" alt="Icon PosyanduCare" class="icon-crop-posyandu" fetchpriority="high">
-            <img src="{{ asset('img/itsnu.webp') }}" alt="Icon ITS NU" class="icon-crop-itsnu" fetchpriority="high">
+            <img src="{{ asset('img/diktisaintek.webp') }}" alt="Icon Dikti" class="icon-crop-dikti">
+            <img src="{{ asset('img/logo.webp') }}" alt="Icon PosyanduCare" class="icon-crop-posyandu">
+            <img src="{{ asset('img/itsnu.webp') }}" alt="Icon ITS NU" class="icon-crop-itsnu">
         </div>
-
     </section>
 
     <section class="form-side">
@@ -242,16 +143,15 @@
                     <div class="field-wrap">
                         <input type="password" id="password" name="password" class="field-input" placeholder="Masukkan password" required autocomplete="current-password">
                         <svg class="icon field-icon"><use href="#icon-lock"></use></svg>
-
-                        <button type="button" id="pwToggle" class="pw-toggle" aria-label="Tampilkan atau sembunyikan password">
+                        <button type="button" id="pwToggle" class="pw-toggle" aria-label="Tampilkan password">
                             <svg class="icon" id="pwIcon"><use href="#icon-eye-slash"></use></svg>
                         </button>
                     </div>
                 </div>
 
-                <button type="submit" id="submitBtn" class="submit-btn" aria-label="Masuk ke dashboard">
-                    <span id="submitTxt">Masuk</span>
-                    <svg class="icon" id="submitIco"><use href="#icon-arrow-right"></use></svg>
+                <button type="submit" id="submitBtn" class="submit-btn">
+                    <span>Masuk</span>
+                    <svg class="icon"><use href="#icon-arrow-right"></use></svg>
                 </button>
             </form>
 
@@ -272,6 +172,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const pwInput = document.getElementById('password');
     const pwIconUse = document.querySelector('#pwIcon use');
+    
     document.getElementById('pwToggle').addEventListener('click', function () {
         const isPassword = pwInput.type === 'password';
         pwInput.type = isPassword ? 'text' : 'password';
@@ -283,14 +184,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const submitBtn = document.getElementById('submitBtn');
 
     form.addEventListener('submit', function (e) {
-        e.preventDefault();
-
         const loginVal = loginInput.value.trim();
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginVal);
         const isNumeric = /^\d+$/.test(loginVal);
         const isNIK = isNumeric && loginVal.length === 16;
 
         if (!isEmail && !isNIK) {
+            e.preventDefault(); 
             let errorMsg = 'Format tidak dikenali. Harap masukkan <b>Email yang valid</b> atau <b>16 Digit NIK</b>.';
             if (isNumeric && loginVal.length !== 16) {
                 errorMsg = `Format NIK tidak tepat. NIK harus persis 16 digit angka.<br><br><i>(Saat ini Anda memasukkan ${loginVal.length} digit)</i>`;
@@ -300,15 +200,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // Tidak ada manipulasi opacity, transisi, atau animasi layar sama sekali!
+        // Hanya mematikan tombol dan menyalakan spinner 0.1 detik
         submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.9';
-        submitBtn.innerHTML = '<span class="btn-spinner"></span><span>Membuka Dasbor...</span>';
-
-        document.body.classList.add('is-splitting');
-
-        setTimeout(() => {
-            form.submit();
-        }, 400);
+        submitBtn.innerHTML = '<span class="btn-spinner"></span><span style="margin-left:8px;">Masuk</span>';
     });
 
     @if($errors->any())
