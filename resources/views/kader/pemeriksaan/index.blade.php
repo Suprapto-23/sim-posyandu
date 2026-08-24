@@ -256,13 +256,28 @@
 
     /* Modal Styling */
     .nexus-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        margin: 0 !important;
         opacity: 0;
         visibility: hidden;
-        transition: all 0.3s ease;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .nexus-modal[hidden] {
+        display: none !important;
     }
     .nexus-modal.is-open {
         opacity: 1;
         visibility: visible;
+    }
+    .nexus-modal .nexus-modal-backdrop {
+        position: absolute;
+        inset: 0;
     }
 
     /* Smooth Transitions for AJAX */
@@ -394,17 +409,17 @@
 @endpush
 
 @section('content')
-<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 relative pb-32 animate-fade-in">
+<div class="px-3 py-4 sm:px-6 sm:py-8 lg:px-8 max-w-[1400px] mx-auto space-y-4 sm:space-y-6 relative pb-24 sm:pb-32 animate-fade-in overflow-x-hidden">
 
     {{-- SYSTEM ALERT --}}
     @if(session('success') || session('error') || $errors->any())
-        <div class="rounded-[2rem] p-6 shadow-sm border-2 flex items-center gap-4 {{ session('success') ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800' }}">
-            <div class="bg-white rounded-full w-12 h-12 flex items-center justify-center shrink-0 shadow-inner">
-                <i class="fa-solid {{ session('success') ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-rose-500' }} text-xl"></i>
+        <div class="rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 shadow-sm border-2 flex items-center gap-3 sm:gap-4 {{ session('success') ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800' }}">
+            <div class="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shrink-0 shadow-inner">
+                <i class="fa-solid {{ session('success') ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-rose-500' }} text-base sm:text-xl"></i>
             </div>
-            <div>
-                <h3 class="font-black text-lg">{{ session('success') ? 'Berhasil' : 'Peringatan' }}</h3>
-                <p class="font-medium text-sm mt-1 opacity-80">
+            <div class="min-w-0">
+                <h3 class="font-black text-base sm:text-lg">{{ session('success') ? 'Berhasil' : 'Peringatan' }}</h3>
+                <p class="font-medium text-xs sm:text-sm mt-0.5 sm:mt-1 opacity-80">
                     {{ session('success') ?? session('error') }}
                     @if($errors->any())
                         Ada input yang belum valid. Perbaiki dulu.
@@ -415,123 +430,123 @@
     @endif
 
     {{-- 1. HEADER / HERO WIDGET --}}
-    <div class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-6 sm:p-10 shadow-2xl shadow-teal-500/30 flex flex-col xl:flex-row justify-between items-center gap-8 border-[4px] border-white/50">
+    <div class="relative overflow-hidden rounded-[1.75rem] sm:rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-5 sm:p-10 shadow-2xl shadow-teal-500/30 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-5 sm:gap-8 border-[3px] sm:border-[4px] border-white/50">
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50"></div>
         <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
         
-        <div class="relative z-10 w-full xl:w-1/2 flex flex-col gap-4 text-center xl:text-left">
-            <div class="inline-flex justify-center xl:justify-start items-center gap-2 mb-1">
-                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+        <div class="relative z-10 w-full xl:w-1/2 flex flex-col gap-3 sm:gap-4 text-center xl:text-left">
+            <div class="inline-flex justify-center xl:justify-start items-center gap-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-3.5 py-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-300 animate-ping absolute"></span>
                     <span class="w-2 h-2 rounded-full bg-emerald-200 relative"></span>
                     Measurement Center
                 </span>
             </div>
             
-            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight drop-shadow-md">
+            <h1 class="text-[1.6rem] leading-[1.15] sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight sm:leading-tight drop-shadow-md">
                 Pengukuran Fisik Posyandu.
             </h1>
 
-            <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-lg mx-auto xl:mx-0 drop-shadow-sm">
+            <p class="text-teal-50 text-xs sm:text-sm font-medium leading-relaxed max-w-lg mx-auto xl:mx-0 drop-shadow-sm">
                 Kader mencatat data dasar seperti berat badan, tinggi badan, lingkar tubuh, tensi, dan catatan awal. Validasi klinis tetap dilakukan Bidan.
             </p>
 
-            <div class="flex flex-wrap justify-center xl:justify-start gap-3 mt-2">
-                <a href="{{ route('kader.pemeriksaan.create', ['kategori' => $kategori ?: 'balita']) }}" class="btn-pill bg-white text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-6 py-3 text-sm font-bold shadow-[0_8px_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Input Pengukuran
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap justify-center xl:justify-start gap-2.5 sm:gap-3 mt-1 sm:mt-2">
+                <a href="{{ route('kader.pemeriksaan.create', ['kategori' => $kategori ?: 'balita']) }}" class="btn-pill bg-white text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold shadow-[0_8px_20px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> <span class="truncate">Input Pengukuran</span>
                 </a>
-                <a href="{{ route('kader.dashboard') }}" class="btn-pill bg-black/10 hover:bg-black/20 text-white border border-white/30 px-6 py-3 text-sm font-bold backdrop-blur-md flex items-center gap-2 transition-all">
-                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                <a href="{{ route('kader.dashboard') }}" class="btn-pill bg-black/10 hover:bg-black/20 text-white border border-white/30 px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all">
+                    <i class="fa-solid fa-chart-line"></i> <span class="truncate">Dashboard</span>
                 </a>
             </div>
         </div>
 
         <div id="hero-stats" class="relative z-10 w-full xl:w-auto flex flex-col sm:flex-row gap-4 justify-center">
-            <div class="widget-card !rounded-[2.5rem] !bg-white/90 p-6 flex flex-col justify-center gap-2 min-w-[220px]">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Total Data Ditemukan</p>
-                <div class="flex items-center justify-center gap-4 mt-2">
-                    <div class="w-14 h-14 rounded-full bg-teal-100 text-teal-500 flex items-center justify-center text-2xl shadow-inner shrink-0">
+            <div class="widget-card !rounded-[1.5rem] sm:!rounded-[2.5rem] !bg-white/90 p-4 sm:p-6 flex flex-col justify-center gap-2 sm:min-w-[220px]">
+                <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Total Data Ditemukan</p>
+                <div class="flex items-center justify-center gap-3 sm:gap-4 mt-1 sm:mt-2">
+                    <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-teal-100 text-teal-500 flex items-center justify-center text-lg sm:text-2xl shadow-inner shrink-0">
                         <i class="fa-solid fa-database"></i>
                     </div>
-                    <p class="text-4xl font-black text-slate-800">{{ number_format($totalData) }}</p>
+                    <p class="text-2xl sm:text-4xl font-black text-slate-800">{{ number_format($totalData) }}</p>
                 </div>
-                <p class="text-xs font-semibold text-teal-600 text-center mt-2 bg-teal-50 py-1 px-3 rounded-full mx-auto"><i class="fa-solid fa-filter mr-1"></i> {{ $filterCaption }}</p>
+                <p class="text-[10px] sm:text-xs font-semibold text-teal-600 text-center mt-1 sm:mt-2 bg-teal-50 py-1 px-3 rounded-full mx-auto"><i class="fa-solid fa-filter mr-1"></i> {{ $filterCaption }}</p>
             </div>
         </div>
     </div>
 
     {{-- 2. METRIK / STATS GRID --}}
-    <section id="stats-row-1" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section id="stats-row-1" class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         {{-- Status Row --}}
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-amber-500">Menunggu Review</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($pendingCount) }}</p>
+        <div class="widget-card p-3.5 sm:p-6 flex justify-between items-center group hover:-translate-y-1 min-w-0">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-500 truncate">Menunggu Review</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($pendingCount) }}</p>
             </div>
-            <div class="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 shadow-inner group-hover:rotate-6 transition-transform">
-                <i class="fa-solid fa-clock text-xl"></i>
-            </div>
-        </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-rose-500">Perlu Revisi</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($revisiCount) }}</p>
-            </div>
-            <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 shadow-inner group-hover:-rotate-6 transition-transform">
-                <i class="fa-solid fa-rotate-left text-xl"></i>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 shadow-inner group-hover:rotate-6 transition-transform shrink-0">
+                <i class="fa-solid fa-clock text-sm sm:text-xl"></i>
             </div>
         </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-500">Tervalidasi</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($verifiedCount) }}</p>
+        <div class="widget-card p-3.5 sm:p-6 flex justify-between items-center group hover:-translate-y-1 min-w-0">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-rose-500 truncate">Perlu Revisi</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($revisiCount) }}</p>
             </div>
-            <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 shadow-inner group-hover:rotate-6 transition-transform">
-                <i class="fa-solid fa-circle-check text-xl"></i>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 shadow-inner group-hover:-rotate-6 transition-transform shrink-0">
+                <i class="fa-solid fa-rotate-left text-sm sm:text-xl"></i>
+            </div>
+        </div>
+        <div class="widget-card p-3.5 sm:p-6 flex justify-between items-center group hover:-translate-y-1 min-w-0 col-span-2 lg:col-span-1">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-500 truncate">Tervalidasi</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($verifiedCount) }}</p>
+            </div>
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 shadow-inner group-hover:rotate-6 transition-transform shrink-0">
+                <i class="fa-solid fa-circle-check text-sm sm:text-xl"></i>
             </div>
         </div>
     </section>
 
-    <section id="stats-row-2" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section id="stats-row-2" class="grid grid-cols-3 gap-2.5 sm:gap-4">
         {{-- Kategori Row --}}
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-teal-600">Total Balita</p>
-                <p class="mt-1 text-2xl font-black text-slate-800">{{ number_format($balitaCount) }}</p>
+        <div class="widget-card p-3 sm:p-6 flex flex-col sm:flex-row justify-between items-center sm:items-center gap-1.5 sm:gap-0 group hover:-translate-y-1 text-center sm:text-left min-w-0">
+            <div class="min-w-0 w-full">
+                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-teal-600 truncate">Total Balita</p>
+                <p class="mt-0.5 sm:mt-1 text-lg sm:text-2xl font-black text-slate-800">{{ number_format($balitaCount) }}</p>
             </div>
-            <div class="w-12 h-12 rounded-full bg-teal-50 text-teal-500 flex items-center justify-center text-lg shadow-inner">
+            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-teal-50 text-teal-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
                 <i class="fa-solid fa-child-reaching"></i>
             </div>
         </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-violet-600">Total Remaja</p>
-                <p class="mt-1 text-2xl font-black text-slate-800">{{ number_format($remajaCount) }}</p>
+        <div class="widget-card p-3 sm:p-6 flex flex-col sm:flex-row justify-between items-center sm:items-center gap-1.5 sm:gap-0 group hover:-translate-y-1 text-center sm:text-left min-w-0">
+            <div class="min-w-0 w-full">
+                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-violet-600 truncate">Total Remaja</p>
+                <p class="mt-0.5 sm:mt-1 text-lg sm:text-2xl font-black text-slate-800">{{ number_format($remajaCount) }}</p>
             </div>
-            <div class="w-12 h-12 rounded-full bg-violet-50 text-violet-500 flex items-center justify-center text-lg shadow-inner">
+            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-violet-50 text-violet-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
                 <i class="fa-solid fa-user-graduate"></i>
             </div>
         </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-sky-600">Total Lansia</p>
-                <p class="mt-1 text-2xl font-black text-slate-800">{{ number_format($lansiaCount) }}</p>
+        <div class="widget-card p-3 sm:p-6 flex flex-col sm:flex-row justify-between items-center sm:items-center gap-1.5 sm:gap-0 group hover:-translate-y-1 text-center sm:text-left min-w-0">
+            <div class="min-w-0 w-full">
+                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-sky-600 truncate">Total Lansia</p>
+                <p class="mt-0.5 sm:mt-1 text-lg sm:text-2xl font-black text-slate-800">{{ number_format($lansiaCount) }}</p>
             </div>
-            <div class="w-12 h-12 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center text-lg shadow-inner">
+            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
                 <i class="fa-solid fa-person-cane"></i>
             </div>
         </div>
     </section>
 
     {{-- 3. FILTER & TAB WIDGET --}}
-    <form id="filterForm" method="GET" action="{{ route('kader.pemeriksaan.index') }}" class="flex flex-col gap-4 relative z-20">
+    <form id="filterForm" method="GET" action="{{ route('kader.pemeriksaan.index') }}" class="flex flex-col gap-3 sm:gap-4 relative z-20">
         
         {{-- Kategori Tabs --}}
-        <div class="flex flex-wrap gap-2 p-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full w-full sm:w-fit shadow-[0_8px_20px_-4px_rgba(0,0,0,0.05)]">
+        <div class="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full w-full sm:w-fit shadow-[0_8px_20px_-4px_rgba(0,0,0,0.05)]">
             @foreach($kategoriOptions as $key => $label)
                 <label class="cursor-pointer relative flex-1 sm:flex-none">
                     <input type="radio" name="kategori" value="{{ $key }}" class="peer sr-only" @checked($kategori === $key)>
-                    <div class="px-5 py-2.5 rounded-full text-sm font-bold text-slate-500 text-center peer-checked:bg-white peer-checked:text-teal-600 peer-checked:shadow-sm transition-all duration-300">
+                    <div class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold text-slate-500 text-center peer-checked:bg-white peer-checked:text-teal-600 peer-checked:shadow-sm transition-all duration-300">
                         {{ $label }}
                     </div>
                 </label>
@@ -539,13 +554,13 @@
         </div>
 
         {{-- Search & Status --}}
-        <div class="widget-card p-4 flex flex-col lg:flex-row gap-4 items-center">
+        <div class="widget-card p-3 sm:p-4 flex flex-col lg:flex-row gap-3 sm:gap-4 items-center">
             <div class="w-full lg:flex-1 relative">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"></i>
-                <input type="search" name="search" value="{{ $search }}" autocomplete="off" placeholder="Cari nama atau NIK sasaran..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3.5 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner">
+                <input type="search" name="search" value="{{ $search }}" autocomplete="off" placeholder="Cari nama atau NIK sasaran..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3 sm:py-3.5 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner">
             </div>
 
-            <select name="status" class="w-full lg:w-48 btn-pill border border-slate-200 bg-white/80 px-4 py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner appearance-none cursor-pointer">
+            <select name="status" class="w-full lg:w-48 btn-pill border border-slate-200 bg-white/80 px-4 py-3 sm:py-3.5 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:border-teal-400 shadow-inner appearance-none cursor-pointer">
                 @foreach($statusOptions as $key => $label)
                     <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
                 @endforeach
@@ -554,13 +569,13 @@
     </form>
 
     {{-- 4. DAFTAR PENGUKURAN --}}
-    <section id="data-table-section" class="widget-card p-4 sm:p-6">
-        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+    <section id="data-table-section" class="widget-card p-3.5 sm:p-6">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
-                <h2 class="text-lg font-black text-slate-800">Riwayat Pengukuran Fisik</h2>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">Menampilkan {{ number_format($totalData) }} data</p>
+                <h2 class="text-base sm:text-lg font-black text-slate-800">Riwayat Pengukuran Fisik</h2>
+                <p class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5 sm:mt-1">Menampilkan {{ number_format($totalData) }} data</p>
             </div>
-            <a href="{{ route('kader.pemeriksaan.create', ['kategori' => $kategori ?: 'balita']) }}" class="btn-pill bg-teal-50 border border-teal-100 text-teal-600 hover:bg-teal-500 hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2">
+            <a href="{{ route('kader.pemeriksaan.create', ['kategori' => $kategori ?: 'balita']) }}" class="btn-pill bg-teal-50 border border-teal-100 text-teal-600 hover:bg-teal-500 hover:text-white px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto">
                 <i class="fa-solid fa-plus"></i> Tambah Data
             </a>
         </div>
@@ -683,7 +698,7 @@
         </div>
 
         {{-- Mobile Card View --}}
-        <div class="space-y-3 lg:hidden">
+        <div class="space-y-2.5 sm:space-y-3 lg:hidden">
             @forelse($pemeriksaans as $item)
                 @php
                     $nama = $pasienNama($item);
@@ -695,75 +710,75 @@
                     $note = $item->catatan_validasi ?? $item->catatan_bidan ?? $item->catatan_review ?? null;
                 @endphp
 
-                <article class="pc-row p-4">
-                    <div class="flex items-start gap-4">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full {{ $km['badge'] }} text-sm font-black shadow-inner">
+                <article class="pc-row p-3 sm:p-4">
+                    <div class="flex items-start gap-3 sm:gap-4">
+                        <div class="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full {{ $km['badge'] }} text-xs sm:text-sm font-black shadow-inner">
                             {{ Str::upper(Str::substr($nama, 0, 1)) }}
                         </div>
 
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 class="line-clamp-1 text-base font-black text-slate-800">{{ $nama }}</h3>
+                                <h3 class="line-clamp-1 text-sm sm:text-base font-black text-slate-800">{{ $nama }}</h3>
                             </div>
                             
-                            <div class="flex flex-wrap gap-2 mb-3">
-                                <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $km['badge'] }}">
+                            <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2.5 sm:mb-3">
+                                <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider {{ $km['badge'] }}">
                                     <i class="fa-solid {{ $km['icon'] }}"></i> {{ $km['label'] }}
                                 </span>
-                                <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $sm['badge'] }}">
+                                <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider {{ $sm['badge'] }}">
                                     <span class="h-1.5 w-1.5 rounded-full {{ $sm['dot'] }}"></span> {{ $sm['label'] }}
                                 </span>
                             </div>
 
-                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-500 mb-4">
+                            <div class="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs font-semibold text-slate-500 mb-3 sm:mb-4">
                                 <span class="flex items-center gap-1"><i class="fa-solid fa-id-card opacity-70"></i> {{ $nik }}</span>
                                 <span class="flex items-center gap-1"><i class="fa-solid fa-calendar-day opacity-70"></i> {{ $formatTanggal($item) }}</span>
                             </div>
 
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-4">
-                                <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">BB</p>
-                                    <p class="font-black text-slate-700 mt-0.5">{{ $metric($item->berat_badan, 'kg') }}</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-xs mb-3 sm:mb-4">
+                                <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                    <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">BB</p>
+                                    <p class="font-black text-slate-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->berat_badan, 'kg') }}</p>
                                 </div>
-                                <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">TB</p>
-                                    <p class="font-black text-slate-700 mt-0.5">{{ $metric($item->tinggi_badan, 'cm') }}</p>
+                                <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                    <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">TB</p>
+                                    <p class="font-black text-slate-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tinggi_badan, 'cm') }}</p>
                                 </div>
                                 
                                 @if(strtolower($item->kategori_pasien) === 'balita')
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">L.Kepala</p>
-                                        <p class="font-black text-emerald-700 mt-0.5">{{ $metric($item->lingkar_kepala, 'cm') }}</p>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">L.Kepala</p>
+                                        <p class="font-black text-emerald-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->lingkar_kepala, 'cm') }}</p>
                                     </div>
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">LiLA</p>
-                                        <p class="font-black text-emerald-700 mt-0.5">{{ $metric($item->lingkar_lengan, 'cm') }}</p>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">LiLA</p>
+                                        <p class="font-black text-emerald-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->lingkar_lengan, 'cm') }}</p>
                                     </div>
                                 @elseif(strtolower($item->kategori_pasien) === 'remaja')
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">IMT</p>
-                                        <p class="font-black text-violet-700 mt-0.5">{{ $metric($item->imt) }}</p>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">IMT</p>
+                                        <p class="font-black text-violet-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->imt) }}</p>
                                     </div>
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
-                                        <p class="font-black text-violet-700 mt-0.5">{{ $metric($item->tekanan_darah) }}</p>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
+                                        <p class="font-black text-violet-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tekanan_darah) }}</p>
                                     </div>
                                 @elseif(strtolower($item->kategori_pasien) === 'lansia')
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
-                                        <p class="font-black text-sky-700 mt-0.5">{{ $metric($item->tekanan_darah) }}</p>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
+                                        <p class="font-black text-sky-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tekanan_darah) }}</p>
                                     </div>
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-2 text-center">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Kemandirian</p>
-                                        <p class="font-black text-sky-700 mt-0.5 capitalize text-[10px]">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</p>
+                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
+                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Kemandirian</p>
+                                        <p class="font-black text-sky-700 mt-0.5 capitalize text-[9px] sm:text-[10px]">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</p>
                                     </div>
                                 @endif
                             </div>
 
                             @if($note)
-                                <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50/50 p-3">
-                                    <p class="text-[10px] font-black uppercase tracking-wider text-rose-600 mb-1">Catatan Bidan</p>
-                                    <p class="text-xs font-medium text-rose-800 leading-relaxed">{{ $note }}</p>
+                                <div class="mb-3 sm:mb-4 rounded-xl border border-rose-200 bg-rose-50/50 p-2.5 sm:p-3">
+                                    <p class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-rose-600 mb-1">Catatan Bidan</p>
+                                    <p class="text-[11px] sm:text-xs font-medium text-rose-800 leading-relaxed">{{ $note }}</p>
                                 </div>
                             @endif
 
@@ -793,11 +808,11 @@
                     </div>
                 </article>
             @empty
-                <div class="p-8 text-center border-2 border-dashed border-slate-200 rounded-[2rem] bg-white/50">
-                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4 shadow-inner">
-                        <i class="fa-solid fa-folder-open text-2xl"></i>
+                <div class="p-6 sm:p-8 text-center border-2 border-dashed border-slate-200 rounded-[2rem] bg-white/50">
+                    <div class="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3 sm:mb-4 shadow-inner">
+                        <i class="fa-solid fa-folder-open text-xl sm:text-2xl"></i>
                     </div>
-                    <h3 class="font-black text-slate-800 text-lg">Data Belum Ada</h3>
+                    <h3 class="font-black text-slate-800 text-base sm:text-lg">Data Belum Ada</h3>
                     <p class="text-sm font-medium text-slate-500 mt-1">Input pengukuran fisik pertama agar masuk antrean review Bidan.</p>
                 </div>
             @endforelse
@@ -805,28 +820,28 @@
 
         {{-- CUSTOM PC PAGINATION --}}
         @if(method_exists($pemeriksaans, 'links'))
-            <div class="mt-8 pt-6 border-t border-slate-100 pc-pagination">
+            <div class="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-slate-100 pc-pagination">
                 {{ $pemeriksaans->links() }}
             </div>
         @endif
     </section>
 
     {{-- 5. MODAL HAPUS DATA --}}
-    <div id="pcDeleteModal" class="nexus-modal fixed inset-0 z-[9999] flex items-center justify-center px-4">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" id="nexusAlertBackdrop"></div>
-        <div class="widget-card bg-white w-full max-w-sm p-6 relative z-10 scale-95 transform transition-transform duration-300">
-            <div class="w-16 h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-500 shadow-inner">
-                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+    <div id="pcDeleteModal" class="nexus-modal z-[9999] flex items-center justify-center p-4" hidden>
+        <div class="nexus-modal-backdrop bg-slate-900/40 backdrop-blur-sm" id="nexusAlertBackdrop"></div>
+        <div class="widget-card bg-white w-full max-w-sm p-5 sm:p-6 relative z-10 scale-95 transform transition-transform duration-300 max-h-[90dvh] overflow-y-auto">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-3 sm:mb-4 text-rose-500 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation text-xl sm:text-2xl"></i>
             </div>
-            <h3 class="text-xl font-black text-slate-800 text-center mb-2">Hapus Data?</h3>
-            <p class="text-sm font-medium text-slate-500 text-center mb-6 leading-relaxed">
+            <h3 class="text-lg sm:text-xl font-black text-slate-800 text-center mb-2">Hapus Data?</h3>
+            <p class="text-xs sm:text-sm font-medium text-slate-500 text-center mb-5 sm:mb-6 leading-relaxed">
                 Data yang belum direview Bidan dapat dihapus secara permanen. Lanjutkan?
             </p>
             <div class="flex gap-3">
-                <button type="button" id="pcCancelDelete" class="w-full flex-1 btn-pill border border-slate-200 bg-white text-slate-700 px-4 py-3 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                <button type="button" id="pcCancelDelete" class="w-full flex-1 btn-pill border border-slate-200 bg-white text-slate-700 px-4 py-2.5 sm:py-3 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
                     Batal
                 </button>
-                <button type="button" id="pcConfirmDelete" class="w-full flex-1 btn-pill bg-gradient-to-r from-rose-500 to-rose-600 text-white px-4 py-3 text-sm font-bold shadow-md hover:from-rose-600 hover:to-rose-700 transition-all flex items-center justify-center gap-2">
+                <button type="button" id="pcConfirmDelete" class="w-full flex-1 btn-pill bg-gradient-to-r from-rose-500 to-rose-600 text-white px-4 py-2.5 sm:py-3 text-sm font-bold shadow-md hover:from-rose-600 hover:to-rose-700 transition-all flex items-center justify-center gap-2">
                     <i class="fa-solid fa-trash"></i> Hapus
                 </button>
             </div>
@@ -837,8 +852,21 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
     'use strict';
+
+    function ready(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            // DOM is already parsed (e.g. script executed late, or injected
+            // after the DOMContentLoaded event already fired) — run immediately
+            // instead of waiting forever for an event that will never come.
+            fn();
+        }
+    }
+
+    ready(function () {
 
     let debounceTimer;
 
@@ -942,7 +970,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function openModal(form) {
         targetDeleteForm = form;
         if (!modal) return;
-        
+
+        modal.hidden = false;
+        // Force a reflow so the browser registers the un-hidden state
+        // before the opacity/visibility transition starts (smooth fade-in).
+        void modal.offsetWidth;
         modal.classList.add('is-open');
         modal.querySelector('.widget-card').classList.remove('scale-95');
         modal.querySelector('.widget-card').classList.add('scale-100');
@@ -957,6 +989,14 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.querySelector('.widget-card').classList.remove('scale-100');
         modal.querySelector('.widget-card').classList.add('scale-95');
         unlockBody();
+
+        // Wait for the fade-out transition to finish before fully hiding,
+        // so it never flashes closed abruptly.
+        window.setTimeout(function () {
+            if (!modal.classList.contains('is-open')) {
+                modal.hidden = true;
+            }
+        }, 300);
     }
 
     // Tangkap klik tombol hapus (menggunakan event delegation)
@@ -990,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', function () {
             HTMLFormElement.prototype.submit.call(targetDeleteForm);
         });
     }
-});
+    }); // end ready()
+})();
 </script>
 @endpush

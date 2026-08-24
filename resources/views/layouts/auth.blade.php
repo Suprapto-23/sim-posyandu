@@ -18,6 +18,13 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    {{-- Prerender halaman tujuan saat link di-hover/ditekan (Chrome) -> navigasi terasa instan, bukan cuma animasi --}}
+    <script type="speculationrules">
+    {
+        "prerender": [{ "where": { "href_matches": "/*" }, "eagerness": "moderate" }]
+    }
+    </script>
+
     <style>
         :root {
             --green-900: #064e3b; --green-700: #047857; --green-600: #059669; --green-500: #10b981;
@@ -54,28 +61,57 @@
             display: flex; align-items: center; justify-content: center; padding: 24px;
         }
 
+        /* PAGE TRANSITION - NATIVE VIEW TRANSITION (hilangkan blank putih saat pindah halaman) */
+        @view-transition { navigation: auto; }
+
+        ::view-transition-old(root) {
+            animation: authViewOut .32s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        ::view-transition-new(root) {
+            animation: authViewIn .38s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes authViewOut { to { opacity: 0; transform: scale(0.985); } }
+        @keyframes authViewIn { from { opacity: 0; transform: scale(1.015); } }
+
+        @media (prefers-reduced-motion: reduce) {
+            ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+        }
+
+        /* Fallback untuk browser yang belum dukung View Transitions, dan untuk submit form login (POST) */
+        body { animation: pageFadeIn .18s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        @keyframes pageFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        body.page-leaving {
+            animation: none;
+            opacity: 1;
+            transition: opacity .18s ease-in;
+        }
+        body.page-leaving.is-hidden { opacity: 0; }
+
         /* PREMIUM ALERT */
         .premium-alert-backdrop {
             position: fixed; inset: 0; z-index: 999;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(6px);
+            background: rgba(8, 15, 30, 0.55);
+            backdrop-filter: blur(14px) saturate(140%);
             opacity: 0; pointer-events: none;
-            transition: opacity 0.15s ease;
+            transition: opacity 0.2s ease;
         }
         .premium-alert-backdrop.is-open { opacity: 1; pointer-events: auto; }
 
         .premium-alert {
             position: fixed; top: 50%; left: 50%; z-index: 1000;
             width: calc(100% - 48px); max-width: 380px;
-            background: rgba(255,255,255,0.98);
-            border-radius: 24px;
-            padding: 32px 28px 24px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 28px;
+            padding: 34px 28px 24px;
+            box-shadow: 0 30px 70px -12px rgba(2, 6, 23, 0.35), 0 0 0 1px rgba(255,255,255,0.4) inset;
             text-align: center;
-            transform: translate(-50%, -50%) scale(0.95);
+            transform: translate(-50%, -46%) scale(0.9);
             opacity: 0;
             pointer-events: none;
-            transition: transform 0.2s ease, opacity 0.15s ease;
+            transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
             overflow: hidden;
         }
         .premium-alert.is-open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
@@ -83,46 +119,128 @@
         .premium-alert-close {
             position: absolute; top: 14px; right: 14px;
             width: 30px; height: 30px; border-radius: 10px;
-            background: none; border: none; color: var(--slate-500);
+            background: rgba(15,23,42,0.04); border: none; color: var(--slate-500);
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: background 0.15s ease, color 0.15s ease;
+            cursor: pointer; transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
         }
-        .premium-alert-close:hover { background: #f1f5f9; color: var(--slate-900); }
+        .premium-alert-close:hover { background: #f1f5f9; color: var(--slate-900); transform: rotate(90deg); }
 
         .premium-alert-icon-wrap {
-            width: 60px; height: 60px; border-radius: 50%;
+            width: 64px; height: 64px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 18px;
+            transform: scale(0);
+            opacity: 0;
         }
-        .premium-alert-icon-wrap .icon { width: 28px; height: 28px; }
-        .premium-alert-icon-wrap.is-success { background: #ecfdf5; color: var(--green-600); }
-        .premium-alert-icon-wrap.is-error   { background: #fef2f2; color: #dc2626; }
-        .premium-alert-icon-wrap.is-warning { background: #fffbeb; color: var(--amber-500); }
-        .premium-alert-icon-wrap.is-info    { background: #eff6ff; color: #2563eb; }
+        .premium-alert.is-open .premium-alert-icon-wrap {
+            animation: alertIconPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.08s both;
+        }
+        @keyframes alertIconPop { to { transform: scale(1); opacity: 1; } }
+        .premium-alert-icon-wrap .icon { width: 30px; height: 30px; }
+        .premium-alert-icon-wrap.is-success { background: #ecfdf5; color: var(--green-600); box-shadow: 0 0 0 8px rgba(16,185,129,0.08), 0 10px 20px -6px rgba(16,185,129,0.35); }
+        .premium-alert-icon-wrap.is-error   { background: #fef2f2; color: #dc2626; box-shadow: 0 0 0 8px rgba(220,38,38,0.08), 0 10px 20px -6px rgba(220,38,38,0.35); }
+        .premium-alert-icon-wrap.is-warning { background: #fffbeb; color: var(--amber-500); box-shadow: 0 0 0 8px rgba(245,158,11,0.08), 0 10px 20px -6px rgba(245,158,11,0.35); }
+        .premium-alert-icon-wrap.is-info    { background: #eff6ff; color: #2563eb; box-shadow: 0 0 0 8px rgba(37,99,235,0.08), 0 10px 20px -6px rgba(37,99,235,0.35); }
 
-        .premium-alert-title { color: var(--slate-900); font-size: 1.15rem; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.02em; }
-        .premium-alert-msg { color: var(--slate-600); font-size: 0.9rem; font-weight: 500; line-height: 1.55; margin: 0; }
+        .premium-alert-title { color: var(--slate-900); font-size: 1.2rem; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.03em; }
+        .premium-alert-msg { color: var(--slate-600); font-size: 0.9rem; font-weight: 500; line-height: 1.6; margin: 0; }
         .premium-alert-msg b { color: var(--slate-900); }
 
         .premium-alert-confirm {
-            border: none; border-radius: 12px; background: var(--slate-900); color: #fff;
-            font-weight: 700; font-size: 0.9rem; padding: 12px 24px; width: 100%;
-            margin-top: 20px; cursor: pointer; transition: transform 0.1s ease-out, background 0.15s ease;
+            border: none; border-radius: 14px; background: var(--slate-900); color: #fff;
+            font-weight: 700; font-size: 0.9rem; padding: 13px 24px; width: 100%;
+            margin-top: 22px; cursor: pointer; transition: transform 0.12s ease-out, background 0.15s ease, box-shadow 0.15s ease;
             font-family: inherit;
         }
-        .premium-alert-confirm:hover { background: var(--green-900); }
+        .premium-alert-confirm:hover { background: var(--green-900); box-shadow: 0 8px 20px -6px rgba(6,78,59,0.4); }
         .premium-alert-confirm:active { transform: scale(0.96); }
 
         .premium-alert-progress-track {
-            position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
-            background: rgba(15,23,42,0.06); overflow: hidden;
+            position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+            background: rgba(15,23,42,0.05); overflow: hidden;
         }
-        .premium-alert-progress { height: 100%; width: 100%; background: var(--green-500); transform-origin: left center; }
+        .premium-alert-progress { height: 100%; width: 100%; background: linear-gradient(90deg, var(--green-500), var(--green-600)); transform-origin: left center; }
         @keyframes premiumAlertShrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+        /* GERBANG TRANSISI - nutup layar instan (ga ada celah putih), lalu kebuka dari tengah begitu halaman siap */
+        .gate-overlay { position: fixed; inset: 0; z-index: 3000; pointer-events: none; overflow: hidden; }
+
+        /* Background dikunci ke viewport (fixed) - kedua panel jadi "jendela" ke satu gradient yang sama,
+           persis nyambung di tengah tanpa belang atau garis jahitan */
+        .gate-panel {
+            position: absolute; top: 0; bottom: 0; width: 50%;
+            background-image:
+                radial-gradient(circle at 32% 18%, rgba(94,234,212,0.35), transparent 48%),
+                radial-gradient(circle at 68% 88%, rgba(45,212,191,0.22), transparent 46%),
+                linear-gradient(160deg, #10b981 0%, #0f766e 38%, #134e4a 68%, #0a1f1c 100%);
+            background-size: 100vw 100vh;
+            background-attachment: fixed, fixed, fixed;
+            background-position: 0 0;
+            will-change: transform, filter;
+            transition: transform .62s cubic-bezier(0.83, 0, 0.17, 1), filter .62s ease;
+        }
+        .gate-left  { left: 0; }
+        .gate-right { right: 0; transition-delay: .04s; }
+        .gate-overlay.is-open .gate-left  { transform: translateX(-102%) scale(1.03); filter: blur(2px); }
+        .gate-overlay.is-open .gate-right { transform: translateX(102%) scale(1.03); filter: blur(2px); }
+
+        /* Kilau tipis yang menyapu pas gerbang mau kebuka - kasih kesan premium */
+        .gate-seam {
+            position: absolute; top: 0; bottom: 0; left: 50%; width: 140px; margin-left: -70px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18) 48%, transparent);
+            opacity: 0; pointer-events: none;
+        }
+        .gate-overlay.is-open .gate-seam { animation: gateSheen .62s cubic-bezier(0.4,0,0.2,1) both; }
+        @keyframes gateSheen { 0% { opacity: 0; transform: scaleX(0.4); } 35% { opacity: 1; } 100% { opacity: 0; transform: scaleX(3.2); } }
+
+
+        .gate-brand {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 18px;
+            opacity: 1; transform: scale(1) translateY(0); filter: blur(0);
+            transition: opacity .3s ease, transform .4s cubic-bezier(0.34, 1.56, 0.64, 1), filter .3s ease;
+        }
+        .gate-overlay.is-open .gate-brand { opacity: 0; transform: scale(0.92) translateY(-6px); filter: blur(4px); }
+
+        .gate-logo-wrap { position: relative; width: 148px; display: flex; align-items: center; justify-content: center; }
+        .gate-logo-wrap::before {
+            content: ''; position: absolute; inset: -20px -34px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.22), transparent 70%);
+            animation: gateGlow 2.2s ease-in-out infinite;
+        }
+        @keyframes gateGlow { 0%, 100% { opacity: .5; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.08); } }
+        .gate-logo { position: relative; width: 100%; height: auto; filter: brightness(0) invert(1); opacity: .97; animation: gateFloat 3s ease-in-out infinite; }
+        @keyframes gateFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+        .gate-bar { width: 120px; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.18); overflow: hidden; margin-top: 4px; }
+        .gate-bar span {
+            display: block; width: 40%; height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            animation: gateBarSweep 1.1s cubic-bezier(0.4,0,0.2,1) infinite;
+        }
+        @keyframes gateBarSweep { 0% { transform: translateX(-120%); } 100% { transform: translateX(280%); } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .gate-panel, .gate-brand { transition: none !important; }
+            .gate-logo, .gate-logo-wrap::before, .gate-bar span, .gate-seam { animation: none !important; }
+        }
     </style>
+
     @stack('styles')
 </head>
 <body>
+    <div class="gate-overlay" id="gateOverlay" aria-hidden="true">
+        <div class="gate-panel gate-left"></div>
+        <div class="gate-panel gate-right"></div>
+        <div class="gate-seam"></div>
+        <div class="gate-brand">
+            <div class="gate-logo-wrap">
+                <img src="{{ asset('img/logo.webp') }}" alt="" class="gate-logo">
+            </div>
+            <div class="gate-bar"><span></span></div>
+        </div>
+    </div>
+
     <svg class="icon-sprite" aria-hidden="true">
         <symbol id="icon-user-group" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path><circle cx="17.5" cy="9" r="2.2"></circle><path d="M15.5 20c.3-2.5 2.1-4.4 4.5-4.8"></path></symbol>
         <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6l7-3z"></path><path d="M9 12l2 2 4-4"></path></symbol>
@@ -208,6 +326,31 @@
             closeBtn.addEventListener('click', closeAlert);
             confirmBtn.addEventListener('click', closeAlert);
             backdrop.addEventListener('click', closeAlert);
+
+            // GERBANG: buka begitu halaman siap (minimal biar ga glitchy, maksimal biar ga nyangkut lama)
+            var gate = document.getElementById('gateOverlay');
+            var gateOpened = false;
+
+            function openGate() {
+                if (!gate || gateOpened) return;
+                gateOpened = true;
+                gate.classList.add('is-open');
+                setTimeout(function () { gate.style.visibility = 'hidden'; }, 520);
+            }
+
+            var MIN_CLOSED_MS = 220, MAX_WAIT_MS = 900;
+            window.addEventListener('load', function () { setTimeout(openGate, MIN_CLOSED_MS); });
+            setTimeout(openGate, MAX_WAIT_MS);
+
+            // Dipanggil sebelum pindah halaman (mis. submit login): tutup gerbang dulu, baru navigasi.
+            // Total delay tambahan cuma ~350ms - cukup buat halus, tetap terasa cepat.
+            window.fadeNavigate = function (proceed) {
+                if (!gate) { proceed(); return; }
+                gate.style.visibility = 'visible';
+                gate.classList.remove('is-open');
+                void gate.offsetWidth; // paksa reflow biar animasi nutup kepicu
+                setTimeout(proceed, 350);
+            };
 
             window.showAuthAlert = function (title, message, icon) {
                 openAlert(title, message, icon || 'info', 3000);

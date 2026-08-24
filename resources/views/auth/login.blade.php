@@ -200,10 +200,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Tidak ada manipulasi opacity, transisi, atau animasi layar sama sekali!
-        // Hanya mematikan tombol dan menyalakan spinner 0.1 detik
+        // Validasi lolos: cegah submit instan, mainkan fade-out singkat (.15s),
+        // baru kirim form. Total delay tambahan hanya ~150ms, tetap terasa cepat.
+        e.preventDefault();
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="btn-spinner"></span><span style="margin-left:8px;">Masuk</span>';
+
+        window.fadeNavigate(function () {
+            HTMLFormElement.prototype.submit.call(form);
+        });
     });
 
     @if($errors->any())

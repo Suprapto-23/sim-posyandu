@@ -58,6 +58,17 @@
             -webkit-font-smoothing: antialiased; font-synthesis: none;
         }
 
+        /* ── SPA LOADER BAR ── */
+        #spa-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, #10b981, #34d399, #059669);
+            background-size: 200% 100%; z-index: 9999999;
+            transform-origin: left; transform: scaleX(0); opacity: 0;
+            transition: transform 0.2s var(--ease-out), opacity 0.2s ease; pointer-events: none;
+        }
+        @keyframes loadingBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        #spa-loader.is-loading { animation: loadingBar 1s infinite linear; }
+
         /* ── SIDEBAR ── */
         .bidan-sidebar {
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 100;
@@ -222,7 +233,7 @@
             .profile-name { display: none; }
         }
 
-        /* ── DROPDOWN NOTIFIKASI ── */
+        /* ── DROPDOWNS ── */
         .notif-dropdown {
             position: absolute; right: 0; top: calc(100% + 12px); width: 360px; z-index: 100;
             border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border);
@@ -235,8 +246,6 @@
                 border-radius: 20px; padding: 6px; transform-origin: top right;
             }
         }
-
-        /* ── DROPDOWN PROFILE ── */
         .profile-dropdown {
             position: absolute; right: 0; top: calc(100% + 12px); width: 260px; z-index: 90;
             border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border);
@@ -262,7 +271,6 @@
         .notif-scroll::-webkit-scrollbar { width: 4px; }
         .notif-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
         .notif-scroll::-webkit-scrollbar-track { background: transparent; }
-
         .notif-item { display: block; padding: 12px 12px; border-radius: 14px; transition: background 0.1s ease; border-bottom: 1px solid rgba(241,245,249,0.8); }
         .notif-item:last-child { border-bottom: 0; }
         .notif-item:hover { background: #f8fafc; }
@@ -273,13 +281,6 @@
         .notif-item .notif-body { font-size: 12px; font-weight: 600; color: #64748b; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
         .notif-item .notif-time { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
         .notif-item .notif-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: #ef4444; margin-top: 4px; }
-        @media (max-width: 1023px) {
-            .notif-item { padding: 10px 10px; }
-            .notif-item .notif-icon { width: 32px; height: 32px; font-size: 12px; }
-            .notif-item .notif-title { font-size: 12px; }
-            .notif-item .notif-body { font-size: 11px; }
-            .notif-item .notif-time { font-size: 9px; }
-        }
 
         /* ── MAIN CONTENT ── */
         .main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px; scroll-behavior: smooth; }
@@ -298,8 +299,8 @@
         .main-inner.is-leaving { opacity: 0; transform: translateY(-6px); }
         .main-inner.is-entering { opacity: 0; transform: translateY(6px); }
         .main-inner.is-enter-done { opacity: 1; transform: translateY(0); }
+        .main-inner.is-loading-state { opacity: 0.5; pointer-events: none; }
 
-        /* Padding disesuaikan karena bottom-nav sudah dihapus */
         @media (max-width: 1023px) { .main-scroll { padding: 16px; } }
         @media (max-width: 480px) { .main-scroll { padding: 12px; } }
 
@@ -318,56 +319,29 @@
         .pc-modal-layer { position: relative; z-index: 300; }
 
         /* ── SWEETALERT OVERLAY CONFIGURATION ── */
-div.swal2-container {
-    z-index: 9999999 !important;
-    /* Ubah background agar lebih transparan namun tetap memberikan efek blur */
-    background: rgba(15, 23, 42, 0.2) !important; 
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
-    /* Pastikan container menutupi seluruh viewport */
-    position: fixed !important;
-    inset: 0 !important;
-}
-/* Mencegah popup ikut terblur oleh parent */
-div.swal2-container .swal2-popup {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
+        div.swal2-container {
+            z-index: 9999999 !important;
+            background: rgba(15, 23, 42, 0.2) !important; 
+            backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important;
+            position: fixed !important; inset: 0 !important;
+        }
+        div.swal2-container .swal2-popup { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
         /* ── STYLING POPUP SWEETALERT ── */
         .nexus-swal {
-            border-radius: 32px !important;
-            padding: 32px !important;
-            font-family: "Plus Jakarta Sans", sans-serif !important;
-            border: 1px solid var(--border) !important;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
-            width: 90% !important;
-            max-width: 400px !important;
+            border-radius: 32px !important; padding: 32px !important; font-family: "Plus Jakarta Sans", sans-serif !important;
+            border: 1px solid var(--border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important; width: 90% !important; max-width: 400px !important;
         }
-
         .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important; margin-bottom: 8px !important; }
         .nexus-html { font-size: 14px !important; color: #64748b !important; }
 
-        .nexus-ok {
-            border-radius: 16px !important;
-            background: #0f172a !important;
-            color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; border: 0 !important; transition: all 0.15s ease !important;
-        }
-        .nexus-danger {
-            border-radius: 16px !important;
-            background: #e11d48 !important;
-            color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; border: 0 !important; transition: all 0.15s ease !important;
-        }
-        .nexus-cancel {
-            border-radius: 16px !important;
-            background: #f8fafc !important; border: 1px solid #e2e8f0 !important;
-            color: #475569 !important; font-weight: 700 !important; padding: 12px 24px !important; transition: all 0.15s ease !important;
-        }
+        .nexus-ok { border-radius: 16px !important; background: #0f172a !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; border: 0 !important; transition: all 0.15s ease !important; }
+        .nexus-danger { border-radius: 16px !important; background: #e11d48 !important; color: #fff !important; font-weight: 700 !important; padding: 12px 24px !important; border: 0 !important; transition: all 0.15s ease !important; }
+        .nexus-cancel { border-radius: 16px !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #475569 !important; font-weight: 700 !important; padding: 12px 24px !important; transition: all 0.15s ease !important; }
 
         .swal2-icon.swal2-question { border-color: var(--green-500) !important; color: var(--green-500) !important; }
         .swal2-icon.swal2-warning { border-color: #f59e0b !important; color: #f59e0b !important; }
         .swal2-icon.swal2-success { border-color: var(--green-500) !important; color: var(--green-500) !important; }
-
         @media (max-width: 480px) {
             .nexus-swal { padding: 20px !important; border-radius: 20px !important; }
             .nexus-title { font-size: 18px !important; }
@@ -407,6 +381,9 @@ div.swal2-container .swal2-popup {
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
         
+    <!-- SPA Loader -->
+    <div id="spa-loader"></div>
+
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
     <aside class="bidan-sidebar">
@@ -515,7 +492,11 @@ div.swal2-container .swal2-popup {
         </div>
     </div>
 
-    <div class="pc-modal-layer">
+    <!-- WRAPPER UNTUK STACK AGAR IKUT TER-UPDATE -->
+    <div id="spa-scripts">
+        @stack('scripts')
+    </div>
+    <div class="pc-modal-layer" id="spa-modals">
         @stack('modals')
     </div>
 
@@ -565,9 +546,6 @@ div.swal2-container .swal2-popup {
         window.nexusConfirm = nexusConfirm;
         window.nexusToast = nexusToast;
 
-        // ============================================================
-        // UPDATE SIDEBAR ACTIVE STATE
-        // ============================================================
         function updateSidebarActive(currentUrl) {
             const url = currentUrl || window.location.href;
             const currentPath = new URL(url).pathname;
@@ -580,17 +558,22 @@ div.swal2-container .swal2-popup {
             });
         }
 
-        // ============================================================
-        // SPA NAVIGATION (anti-reload, butter smooth)
-        // ============================================================
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (!link || !link.href || link.target || link.host !== window.location.host) return;
+            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay') || link.hasAttribute('data-no-spa')) return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+            e.preventDefault();
+            navigateTo(link.href);
+        });
+
         let currentAbortController = null;
         let isNavigating = false;
 
-        function navigateTo(url) {
-            // Cegah klik berulang saat navigasi sedang berjalan
+        async function navigateTo(url) {
             if (isNavigating) {
                 if (currentAbortController) currentAbortController.abort();
-                return;
             }
 
             const currentUrl = new URL(window.location.href);
@@ -601,114 +584,135 @@ div.swal2-container .swal2-popup {
             const controller = new AbortController();
             currentAbortController = controller;
 
-            // [UNIVERSAL]: Otomatis mencari ID yang cocok untuk Admin, Bidan, atau Kader
-            const mainEl = document.getElementById('adminMain') || 
-                           document.getElementById('bidanMain') || 
-                           document.getElementById('kaderMain') || 
-                           document.querySelector('main');
-                           
+            const mainEl = document.getElementById('adminMain') || document.getElementById('bidanMain') || document.getElementById('kaderMain') || document.querySelector('main');
             const scrollArea = document.getElementById('mainScrollArea') || window;
+            const loader = document.getElementById('spa-loader');
 
-            // Jika elemen tidak ditemukan sama sekali, lakukan hard-reload (mencegah stuck)
-            if (!mainEl) {
-                window.location.href = url;
-                return;
+            if (!mainEl) { window.location.href = url; return; }
+
+            updateSidebarActive(url);
+            
+            if (loader) {
+                loader.style.opacity = '1';
+                loader.style.transform = 'scaleX(0.3)';
+                loader.classList.add('is-loading');
             }
-
+            
+            mainEl.classList.remove('is-enter-done', 'is-entering');
+            mainEl.classList.add('is-leaving');
             document.body.style.cursor = 'wait';
             mainEl.style.pointerEvents = 'none';
 
-            fetch(url, { 
-                signal: controller.signal, 
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-            })
-            .then(res => { 
+            try {
+                const res = await fetch(url, { 
+                    signal: controller.signal, 
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+                });
+                
                 if (!res.ok) throw new Error('Network error'); 
-                return res.text(); 
-            })
-            .then(html => {
+
+                if (loader) loader.style.transform = 'scaleX(0.7)';
+                const html = await res.text();
+                if (loader) loader.style.transform = 'scaleX(1)';
+
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
-                // Mencari konten baru berdasarkan ID yang ditemukan sebelumnya
+                // --- SINKRONISASI CSS & TAG STYLE ---
+                const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
+                doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
+                    if (newLink.href && !currentLinks.includes(newLink.href)) {
+                        const linkNode = document.createElement('link');
+                        Array.from(newLink.attributes).forEach(attr => linkNode.setAttribute(attr.name, attr.value));
+                        document.head.appendChild(linkNode);
+                    }
+                });
+
+                const currentStyles = Array.from(document.querySelectorAll('head style')).map(el => el.innerHTML.trim());
+                doc.querySelectorAll('head style').forEach(newStyle => {
+                    if (!currentStyles.includes(newStyle.innerHTML.trim())) {
+                        const styleNode = document.createElement('style');
+                        Array.from(newStyle.attributes).forEach(attr => styleNode.setAttribute(attr.name, attr.value));
+                        styleNode.innerHTML = newStyle.innerHTML;
+                        document.head.appendChild(styleNode);
+                    }
+                });
+
                 const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
+                if (!newContent) throw new Error('DOM Mismatch');
+
+                // Jeda sebentar mengikuti durasi CSS transition untuk `is-leaving` (kira-kira 100ms)
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                mainEl.classList.remove('is-leaving');
+                mainEl.classList.add('is-entering'); 
                 
-                if (!newContent) {
-                    window.location.href = url; 
-                    return; 
+                mainEl.innerHTML = newContent.innerHTML;
+                if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+
+                mainEl.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                // --- SINKRONISASI MODALS & STACK SCRIPTS ---
+                const newModals = doc.getElementById('spa-modals');
+                if (newModals) {
+                    document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
                 }
 
-                mainEl.classList.remove('is-enter-done', 'is-entering');
-                mainEl.classList.add('is-leaving');
-
-                setTimeout(() => {
-                    mainEl.innerHTML = newContent.innerHTML;
+                const newScripts = doc.getElementById('spa-scripts');
+                if (newScripts) {
+                    const scriptContainer = document.getElementById('spa-scripts');
+                    scriptContainer.innerHTML = newScripts.innerHTML;
                     
-                    mainEl.classList.remove('is-leaving');
-                    mainEl.classList.add('is-entering');
-
-                    if (scrollArea.scrollTo) {
-                        scrollArea.scrollTo({ top: 0, behavior: 'instant' });
-                    }
-
-                    mainEl.querySelectorAll('script').forEach(oldScript => {
+                    scriptContainer.querySelectorAll('script').forEach(oldScript => {
                         const newScript = document.createElement('script');
                         Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
                         newScript.textContent = oldScript.textContent;
                         oldScript.parentNode.replaceChild(newScript, oldScript);
                     });
+                }
 
-                    if (window.Alpine && typeof Alpine.initTree === 'function') {
-                        Alpine.initTree(mainEl);
-                    }
+                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            mainEl.classList.remove('is-entering');
-                            mainEl.classList.add('is-enter-done');
-                            document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                            
-                            // Try-Catch agar tidak error jika fungsi ini belum terdefinisi di salah satu layout
-                            try {
-                                if (typeof updateSidebarActive === 'function') {
-                                    updateSidebarActive(url);
-                                }
-                            } catch(e) {
-                                console.warn('Sidebar active state update skipped.');
-                            }
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        mainEl.classList.remove('is-entering');
+                        mainEl.classList.add('is-enter-done');
+                        document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
+                    }, 30);
+                });
 
-                        }, 30); 
-                    });
+                window.history.pushState({}, '', url);
 
-                    window.history.pushState({}, '', url);
-                }, 120);
-            })
-            .catch(err => {
-                if (err.name === 'AbortError') return;
-                // Jika terjadi error saat fetch, paksakan hard-reload ke URL tujuan agar tidak stuck
-                window.location.href = url;
-            })
-            .finally(() => {
-                // Pastikan state selalu dikembalikan normal, baik sukses maupun gagal
+            } catch (err) {
+                if (err.name !== 'AbortError') window.location.href = url;
+            } finally {
                 document.body.style.cursor = 'default';
-                if (mainEl) mainEl.style.pointerEvents = 'auto';
+                mainEl.style.pointerEvents = 'auto';
                 isNavigating = false;
                 currentAbortController = null;
-            });
+                
+                if (loader) {
+                    setTimeout(() => {
+                        loader.style.opacity = '0';
+                        loader.classList.remove('is-loading');
+                        setTimeout(() => loader.style.transform = 'scaleX(0)', 200);
+                    }, 100);
+                }
+
+                if (matchMedia('(max-width:1023px)').matches && root.classList.contains('sb-open')) {
+                    setSidebar(false);
+                }
+            }
         }
 
         window.addEventListener('popstate', function() { navigateTo(window.location.href); });
-
-        document.addEventListener('click', function(e) {
-            const link = e.target.closest('a');
-            if (!link || !link.href || link.target || link.host !== window.location.host) return;
-            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay')) return;
-            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-
-            e.preventDefault();
-            navigateTo(link.href);
-        });
 
         document.addEventListener('submit', function (event) {
             const form = event.target;
@@ -768,7 +772,5 @@ div.swal2-container .swal2-popup {
         @if(session('error')) nexusToast('Perhatian', @json(session('error')), 'error'); @endif
         @if(session('warning')) nexusToast('Perhatian', @json(session('warning')), 'warning'); @endif
     </script>
-    @stack('scripts')
-    
 </body>
 </html>

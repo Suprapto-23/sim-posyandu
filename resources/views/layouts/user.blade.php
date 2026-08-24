@@ -58,6 +58,17 @@
             -webkit-font-smoothing: antialiased; font-synthesis: none;
         }
 
+        /* ── SPA LOADER BAR ── */
+        #spa-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, #10b981, #34d399, #059669);
+            background-size: 200% 100%; z-index: 9999999;
+            transform-origin: left; transform: scaleX(0); opacity: 0;
+            transition: transform 0.2s var(--ease-out), opacity 0.2s ease; pointer-events: none;
+        }
+        @keyframes loadingBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        #spa-loader.is-loading { animation: loadingBar 1s infinite linear; }
+
         /* ── SIDEBAR (GPU) ── */
         .user-sidebar {
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; 
@@ -229,7 +240,7 @@
             .profile-name { display: none; }
         }
 
-        /* ── DROPDOWN NOTIFIKASI (PERBAIKAN) ── */
+        /* ── DROPDOWNS ── */
         .user-dropdown { 
             position: absolute;
             right: 0;
@@ -242,26 +253,24 @@
             background: #ffffff;
             border: 1px solid var(--border);
             box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04);
-            /* Hapus transition CSS, serahkan ke Alpine */
             transform-origin: top right;
         }
 
         @media (max-width: 767px) {
-    .user-dropdown {
-        position: fixed;      /* Ubah dari absolute ke fixed */
-        top: 76px;            /* Berada pas di bawah topbar (12px padding + 60px tinggi bar + 4px jarak) */
-        left: 12px;           /* Memberikan jarak aman dari pinggir kiri layar */
-        right: 12px;          /* Memberikan jarak aman dari pinggir kanan layar */
-        margin: 0 auto;
-        width: auto;          /* Tidak perlu calc() lagi karena left & right sudah mengatur lebarnya */
-        max-width: 400px;
-        transform-origin: top center;
-        border-radius: 20px;
-        padding: 6px;
-    }
-}
+            .user-dropdown {
+                position: fixed;
+                top: 76px;
+                left: 12px;
+                right: 12px;
+                margin: 0 auto;
+                width: auto;
+                max-width: 400px;
+                transform-origin: top center;
+                border-radius: 20px;
+                padding: 6px;
+            }
+        }
 
-        /* ── DROPDOWN PROFILE ── */
         .profile-dropdown {
             position: absolute;
             right: 0;
@@ -294,7 +303,7 @@
         .dropdown-logout { color: #e11d48; }
         .dropdown-logout:hover { background: #fff1f2; }
 
-        /* ── NOTIF DROPDOWN SCROLL ── */
+        /* ── NOTIF SCROLL ── */
         .notif-scroll {
             max-height: 340px;
             overflow-y: auto;
@@ -400,6 +409,7 @@
         .user-main.is-leaving { opacity: 0; transform: translateY(-6px); }
         .user-main.is-entering { opacity: 0; transform: translateY(6px); }
         .user-main.is-enter-done { opacity: 1; transform: translateY(0); }
+        .user-main.is-loading-state { opacity: 0.5; pointer-events: none; }
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
@@ -523,6 +533,9 @@
 @endphp
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
+
+    <!-- SPA Loader -->
+    <div id="spa-loader"></div>
 
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
@@ -683,7 +696,13 @@
         </a>
     </nav>
 
-    @stack('modals')
+    <!-- WRAPPER UNTUK STACK AGAR IKUT TER-UPDATE -->
+    <div id="spa-scripts">
+        @stack('scripts')
+    </div>
+    <div id="spa-modals">
+        @stack('modals')
+    </div>
 
     <script>
         const root = document.documentElement;
@@ -742,12 +761,10 @@
         window.nexusConfirm = nexusConfirm;
         window.nexusToast = nexusToast;
 
-        // ============================================================
-        // UPDATE SIDEBAR ACTIVE STATE
-        // ============================================================
         function updateSidebarActive(currentUrl) {
             const url = currentUrl || window.location.href;
             const currentPath = new URL(url).pathname;
+            
             document.querySelectorAll('.pc-sidebar a').forEach(link => {
                 const href = link.getAttribute('href');
                 if (href) {
@@ -755,18 +772,38 @@
                     link.classList.toggle('active', linkPath === currentPath);
                 }
             });
+
+            // Update Bottom Nav Active State (Mobile)
+            document.querySelectorAll('.bottom-nav a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href) {
+                    const linkPath = new URL(href, window.location.origin).pathname;
+                    // Sedikit logika agar tab active di bottom nav sesuai
+                    if (linkPath === currentPath || (linkPath !== '/' && currentPath.startsWith(linkPath))) {
+                        link.classList.add('active');
+                    } else {
+                        link.classList.remove('active');
+                    }
+                }
+            });
         }
 
-        // ============================================================
-        // SPA NAVIGATION (anti-reload, butter smooth)
-        // ============================================================
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (!link || !link.href || link.target || link.host !== window.location.host) return;
+            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay') || link.hasAttribute('data-no-spa')) return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+            e.preventDefault();
+            navigateTo(link.href);
+        });
+
         let currentAbortController = null;
         let isNavigating = false;
 
-        function navigateTo(url) {
+        async function navigateTo(url) {
             if (isNavigating) {
                 if (currentAbortController) currentAbortController.abort();
-                return;
             }
 
             const currentPath = window.location.pathname + window.location.search;
@@ -779,24 +816,69 @@
 
             const mainEl = document.getElementById('userMain');
             const scrollArea = document.getElementById('mainScrollArea');
+            const loader = document.getElementById('spa-loader');
+
+            if (!mainEl) { window.location.href = url; return; }
+
+            updateSidebarActive(url);
+            
+            if (loader) {
+                loader.style.opacity = '1';
+                loader.style.transform = 'scaleX(0.3)';
+                loader.classList.add('is-loading');
+            }
 
             mainEl.classList.remove('is-enter-done', 'is-entering');
             mainEl.classList.add('is-leaving');
+            document.body.style.cursor = 'wait';
+            mainEl.style.pointerEvents = 'none';
 
-            fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
-            .then(res => { if (!res.ok) throw new Error('Network error'); return res.text(); })
-            .then(html => {
+            try {
+                const res = await fetch(url, { 
+                    signal: controller.signal, 
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+                });
+                
+                if (!res.ok) throw new Error('Network error'); 
+
+                if (loader) loader.style.transform = 'scaleX(0.7)';
+                const html = await res.text();
+                if (loader) loader.style.transform = 'scaleX(1)';
+
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
+                // --- SINKRONISASI CSS & TAG STYLE ---
+                const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
+                doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
+                    if (newLink.href && !currentLinks.includes(newLink.href)) {
+                        const linkNode = document.createElement('link');
+                        Array.from(newLink.attributes).forEach(attr => linkNode.setAttribute(attr.name, attr.value));
+                        document.head.appendChild(linkNode);
+                    }
+                });
+
+                const currentStyles = Array.from(document.querySelectorAll('head style')).map(el => el.innerHTML.trim());
+                doc.querySelectorAll('head style').forEach(newStyle => {
+                    if (!currentStyles.includes(newStyle.innerHTML.trim())) {
+                        const styleNode = document.createElement('style');
+                        Array.from(newStyle.attributes).forEach(attr => styleNode.setAttribute(attr.name, attr.value));
+                        styleNode.innerHTML = newStyle.innerHTML;
+                        document.head.appendChild(styleNode);
+                    }
+                });
+
                 const newContent = doc.querySelector('#userMain');
-                if (!newContent) { window.location.href = url; return; }
+                if (!newContent) throw new Error('DOM Mismatch');
 
-                mainEl.innerHTML = newContent.innerHTML;
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 mainEl.classList.remove('is-leaving');
-                mainEl.classList.add('is-entering');
-
+                mainEl.classList.add('is-entering'); 
+                
+                mainEl.innerHTML = newContent.innerHTML;
                 if (scrollArea) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
 
                 mainEl.querySelectorAll('script').forEach(oldScript => {
@@ -806,40 +888,60 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
 
+                // --- SINKRONISASI MODALS & STACK SCRIPTS ---
+                const newModals = doc.getElementById('spa-modals');
+                if (newModals) {
+                    document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
+                }
+
+                const newScripts = doc.getElementById('spa-scripts');
+                if (newScripts) {
+                    const scriptContainer = document.getElementById('spa-scripts');
+                    scriptContainer.innerHTML = newScripts.innerHTML;
+                    
+                    scriptContainer.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                }
+
                 if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
                 requestAnimationFrame(() => {
                     setTimeout(() => {
                         mainEl.classList.remove('is-entering');
                         mainEl.classList.add('is-enter-done');
-                        updateSidebarActive(url);
+                        document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
                     }, 50);
                 });
 
                 window.history.pushState({}, '', url);
-            })
-            .catch(err => {
-                if (err.name === 'AbortError') return;
-                window.location.href = url;
-            })
-            .finally(() => {
+
+            } catch (err) {
+                if (err.name !== 'AbortError') window.location.href = url;
+            } finally {
+                document.body.style.cursor = 'default';
+                mainEl.style.pointerEvents = 'auto';
                 isNavigating = false;
                 currentAbortController = null;
-            });
+                
+                if (loader) {
+                    setTimeout(() => {
+                        loader.style.opacity = '0';
+                        loader.classList.remove('is-loading');
+                        setTimeout(() => loader.style.transform = 'scaleX(0)', 200);
+                    }, 100);
+                }
+
+                if (matchMedia('(max-width:767px)').matches && root.classList.contains('sb-open')) {
+                    setSidebar(false);
+                }
+            }
         }
 
         window.addEventListener('popstate', function() { navigateTo(window.location.href); });
-
-        // ── NAVIGASI ──
-        document.addEventListener('click', function(e) {
-            const link = e.target.closest('a');
-            if (!link || !link.href || link.target || link.host !== window.location.host) return;
-            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay')) return;
-            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-
-            e.preventDefault();
-            navigateTo(link.href);
-        });
 
         document.addEventListener('submit', function (event) {
             const form = event.target;
@@ -885,64 +987,58 @@
         });
 
         document.addEventListener('alpine:init', () => {
-    Alpine.data('layoutApp', () => ({
-        profileOpen: false,
-        notifOpen: false,
-        unreadCount: {{ $unreadCount }},
-        notifItems: [],
-        pollingInterval: null,
-        
-        initApp() {
-            updateSidebarActive(window.location.href);
-            this.fetchNotifikasi();
-            const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
-            if (!url) return;
-            
-            // Samakan interval dengan halaman inbox (8000ms) untuk konsistensi UI
-            this.pollingInterval = setInterval(() => {
-                this.fetchNotifikasi();
-            }, 8000); 
-        },
-        
-        async fetchNotifikasi() {
-            const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
-            if (!url) return;
-            
-            try {
-                // Tambahkan timestamp untuk mencegah caching agresif dari browser
-                const fetchUrl = new URL(url);
-                fetchUrl.searchParams.append('_t', new Date().getTime());
+            Alpine.data('layoutApp', () => ({
+                profileOpen: false,
+                notifOpen: false,
+                unreadCount: {{ $unreadCount }},
+                notifItems: [],
+                pollingInterval: null,
+                
+                initApp() {
+                    updateSidebarActive(window.location.href);
+                    this.fetchNotifikasi();
+                    const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
+                    if (!url) return;
+                    
+                    this.pollingInterval = setInterval(() => {
+                        this.fetchNotifikasi();
+                    }, 8000); 
+                },
+                
+                async fetchNotifikasi() {
+                    const url = '{{ Route::has("user.notifikasi.fetch") ? route("user.notifikasi.fetch") : "" }}';
+                    if (!url) return;
+                    
+                    try {
+                        const fetchUrl = new URL(url);
+                        fetchUrl.searchParams.append('_t', new Date().getTime());
 
-                const res = await fetch(fetchUrl.toString(), { 
-                    headers: { 
-                        'Accept': 'application/json', 
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                        const res = await fetch(fetchUrl.toString(), { 
+                            headers: { 
+                                'Accept': 'application/json', 
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Cache-Control': 'no-cache, no-store, must-revalidate'
+                            }
+                        });
+                        
+                        const contentType = res.headers.get("content-type");
+                        if (!res.ok || (contentType && contentType.indexOf("application/json") === -1)) {
+                            clearInterval(this.pollingInterval); 
+                            console.warn('Sesi mungkin telah berakhir atau terjadi kesalahan server.');
+                            return;
+                        }
+
+                        const data = await res.json();
+                        
+                        this.unreadCount = data.unreadCount || 0;
+                        this.notifItems = data.items || [];
+                        
+                    } catch (e) {
+                        console.warn('Gagal fetch notifikasi:', e);
                     }
-                });
-                
-                // Cek jika sesi kedaluwarsa (Server mengembalikan 401 atau Redirect HTML)
-                const contentType = res.headers.get("content-type");
-                if (!res.ok || (contentType && contentType.indexOf("application/json") === -1)) {
-                    clearInterval(this.pollingInterval); // Hentikan polling agar tidak membebani server
-                    console.warn('Sesi mungkin telah berakhir atau terjadi kesalahan server.');
-                    return;
                 }
-
-                const data = await res.json();
-                
-                // Alpine.js akan secara otomatis memperbarui DOM yang menggunakan x-text dan x-if
-                // Tidak perlu lagi document.querySelector('.notif-badge')
-                this.unreadCount = data.unreadCount || 0;
-                this.notifItems = data.items || [];
-                
-            } catch (e) {
-                // Hentikan eksekusi diam-diam tanpa merusak fungsi UI lainnya
-                console.warn('Gagal fetch notifikasi:', e);
-            }
-        }
-    }));
-});
+            }));
+        });
 
         @if(session('success'))
             nexusToast('Berhasil', @json(session('success')), 'success');
@@ -954,6 +1050,5 @@
             nexusToast('Perhatian', @json(session('warning')), 'warning');
         @endif
     </script>
-    @stack('scripts')
 </body>
 </html>

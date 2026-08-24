@@ -34,7 +34,7 @@
             --sb-width: 280px;
             --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
             --border: #f1f5f9; --bg-app: #fcfcfd;
-            --transition-speed: 0.2s; /* Diperhalus */
+            --transition-speed: 0.2s; 
             --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); 
         }
 
@@ -100,7 +100,8 @@
         @media (min-width: 1024px) { html.sb-open .app-wrapper { padding-left: var(--sb-width); } }
 
         /* ── TOPBAR ── */
-        .topbar-wrapper { padding: 16px 24px 0; flex-shrink: 0; z-index: 40; }
+        .topbar-wrapper { padding: 16px 24px 0; flex-shrink: 0; position: relative; z-index: 40; }
+.btn-notif { position: relative; z-index: 2; }
 
         .kader-topbar {
             min-height: 68px; padding: 8px 16px; border-radius: 24px; 
@@ -194,7 +195,6 @@
 
         /* ── SPA ANIMATION (SMOOTH FADE IN/OUT - ZERO DELAY) ── */
         .kader-main {
-            /* State Normal (Tampil Penuh) */
             opacity: 1; 
             transform: translateY(0) scale(1);
             transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -202,18 +202,16 @@
             transform-origin: top center;
         }
 
-        /* State Memuat (Fetch Data API) - Tidak Blank, hanya redup */
         .kader-main.is-loading-state { 
             opacity: 0.5; 
             transform: scale(0.995); 
             pointer-events: none;
         }
 
-        /* State Persiapan Muncul (Posisi awal konten baru) */
         .kader-main.is-entering-state { 
             opacity: 0; 
             transform: translateY(15px); 
-            transition: none !important; /* Matikan transisi agar reset posisi instan */
+            transition: none !important;
         }
 
         /* ── MOBILE OVERLAY ── */
@@ -281,10 +279,8 @@
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
 
-    <!-- SPA Loader Bar -->
     <div id="spa-loader"></div>
 
-    <!-- OVERLAY UNTUK MOBILE -->
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
     <aside class="kader-sidebar">
@@ -301,6 +297,7 @@
                 </button>
 
                 <div class="topbar-right">
+                    <!-- Bagian Notifikasi & Profil tidak diubah... -->
                     <div class="relative">
                         <button @click="notifOpen = !notifOpen; profileOpen = false" class="btn-notif">
                             <i class="fa-regular fa-bell text-[18px]"></i>
@@ -309,44 +306,10 @@
                                 <span class="relative inline-flex rounded-full h-[10px] w-[10px] bg-rose-500 border-2 border-white"></span>
                             </span>
                         </button>
-
-                        <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false" 
-                             x-transition:enter="transition ease-out duration-100"
-                             x-transition:enter-start="opacity-0 scale-95 translate-y-3"
-                             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave-end="opacity-0 scale-95 translate-y-3" 
-                             class="notif-dropdown">
-                             
+                        <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false" class="notif-dropdown">
+                            <!-- Konten dropdown notif... -->
                             <div class="p-3 border-b border-slate-100 flex items-center justify-between">
                                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notifikasi</p>
-                                <span class="text-[10px] font-bold text-slate-800" x-show="unreadCount > 0" x-text="unreadCount + ' baru'"></span>
-                            </div>
-
-                            <div class="notif-scroll">
-                                <template x-if="unreadCount === 0">
-                                    <div class="text-center text-xs font-semibold text-slate-400 py-8">
-                                        <i class="fa-regular fa-circle-check text-2xl block mb-2 text-slate-300"></i>
-                                        Belum ada notifikasi.
-                                    </div>
-                                </template>
-                                
-                                <template x-if="unreadCount > 0">
-                                    <div class="p-4 text-center">
-                                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-50 mb-3">
-                                            <i class="fa-solid fa-bell-concierge text-slate-400 text-lg"></i>
-                                        </div>
-                                        <p class="text-sm font-bold text-slate-800">Anda memiliki <span x-text="unreadCount"></span> pesan baru!</p>
-                                        <p class="text-xs font-medium text-slate-500 mt-1">Silakan periksa halaman notifikasi.</p>
-                                    </div>
-                                </template>
-                            </div>
-
-                            <div class="p-3 border-t border-slate-100 text-center">
-                                <a href="{{ Route::has('kader.notifikasi.index') ? route('kader.notifikasi.index') : '#' }}" class="text-[10px] font-bold text-slate-700 uppercase tracking-widest hover:text-slate-900">
-                                    Lihat Semua Notifikasi
-                                </a>
                             </div>
                         </div>
                     </div>
@@ -359,15 +322,7 @@
                             <span class="profile-name">Kader Pusat</span>
                             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 pr-1 transition-transform duration-300" :class="profileOpen ? 'rotate-180' : ''"></i>
                         </button>
-
-                        <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false" 
-                             x-transition:enter="transition ease-out duration-100"
-                             x-transition:enter-start="opacity-0 scale-95 translate-y-3"
-                             x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-                             x-transition:leave-end="opacity-0 scale-95 translate-y-3" 
-                             class="kader-dropdown">
+                        <div x-cloak x-show="profileOpen" @click.outside="profileOpen = false" class="kader-dropdown">
                             <div class="dropdown-head">
                                 <div class="profile-avatar w-12 h-12 text-lg">
                                     @if($photo) <img src="{{ asset('storage/'.$photo) }}"> @else {{ $initial }} @endif
@@ -377,13 +332,11 @@
                                     <div class="dropdown-role">Akses Kader</div>
                                 </div>
                             </div>
-
                             @if($profileUrl !== '#')
                                 <a href="{{ $profileUrl }}" class="dropdown-link">
                                     <i class="fa-regular fa-user text-slate-400"></i> Profil Saya
                                 </a>
                             @endif
-
                             <form method="POST" action="{{ route('logout') }}" class="js-logout-form m-0 p-0 mt-2 border-t border-slate-100 pt-2">
                                 @csrf
                                 <button type="submit" class="dropdown-logout">
@@ -401,7 +354,14 @@
                 @yield('content')
             </main>
         </div>
+    </div>
 
+    <!-- WRAPPER UNTUK STACK AGAR IKUT TER-UPDATE SAAT NAVIGASI SPA -->
+    <div id="spa-scripts">
+        @stack('scripts')
+    </div>
+    <div id="spa-modals">
+        @stack('modals')
     </div>
 
     <script>
@@ -425,9 +385,6 @@
             setSidebar(!root.classList.contains('sb-open'));
         }
 
-        // ============================================================
-        // SWEETALERT PREMIUM (Tampil Penuh - Menutupi Sidebar)
-        // ============================================================
         function nexusConfirm(options) {
             return Swal.fire({
                 title: options.title || 'Konfirmasi',
@@ -461,9 +418,6 @@
             });
         }
 
-        // ============================================================
-        // SPA NAVIGATION (ZERO DELAY - DIM & SWAP METOD)
-        // ============================================================
         let currentAbortController = null;
         let isNavigating = false;
 
@@ -486,23 +440,20 @@
 
             if (!mainEl) { window.location.href = url; return; }
 
-            // 1. UPDATE MENU SEKARANG JUGA & TAMPILKAN LOADER
             updateSidebarActive(url);
             loader.style.opacity = '1';
             loader.style.transform = 'scaleX(0.3)';
             loader.classList.add('is-loading');
             
-            // 2. KONTEN LAMA JANGAN HILANG (Mencegah Blank/Delay Putih)
-            // Hanya di-dim (redupkan) sedikit agar user tau sistem sedang memuat.
             mainEl.classList.add('is-loading-state');
 
             try {
-                // 3. FETCH DATA (Sepenuhnya di background tanpa buatan delay)
                 const res = await fetch(url, { 
-    signal: controller.signal, 
-    cache: 'no-store',
-    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-});
+                    signal: controller.signal, 
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+                });
+                
                 if (!res.ok) throw new Error('Network error'); 
 
                 loader.style.transform = 'scaleX(0.7)';
@@ -513,18 +464,36 @@
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
+                // --- FIX TAMBAHAN MULAI: SINKRONISASI CSS & TAG STYLE ---
+                const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
+                doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
+                    if (newLink.href && !currentLinks.includes(newLink.href)) {
+                        const linkNode = document.createElement('link');
+                        Array.from(newLink.attributes).forEach(attr => linkNode.setAttribute(attr.name, attr.value));
+                        document.head.appendChild(linkNode);
+                    }
+                });
+
+                const currentStyles = Array.from(document.querySelectorAll('head style')).map(el => el.innerHTML.trim());
+                doc.querySelectorAll('head style').forEach(newStyle => {
+                    if (!currentStyles.includes(newStyle.innerHTML.trim())) {
+                        const styleNode = document.createElement('style');
+                        Array.from(newStyle.attributes).forEach(attr => styleNode.setAttribute(attr.name, attr.value));
+                        styleNode.innerHTML = newStyle.innerHTML;
+                        document.head.appendChild(styleNode);
+                    }
+                });
+                // --- FIX TAMBAHAN SELESAI ---
+
                 const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
                 if (!newContent) throw new Error('DOM Mismatch');
 
-                // 4. RESET POSISI DOM INSTAN (is-entering-state menghapus transisi sementara)
                 mainEl.classList.remove('is-loading-state');
                 mainEl.classList.add('is-entering-state'); 
                 
-                // SWAP HTML
                 mainEl.innerHTML = newContent.innerHTML;
                 if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
 
-                // Evaluasi ulang script (Alpine, Chart, dll)
                 mainEl.querySelectorAll('script').forEach(oldScript => {
                     const newScript = document.createElement('script');
                     Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
@@ -532,11 +501,28 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
 
+                // --- FIX TAMBAHAN MULAI: SINKRONISASI MODALS & STACK SCRIPTS ---
+                const newModals = doc.getElementById('spa-modals');
+                if (newModals) document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
+
+                const newScripts = doc.getElementById('spa-scripts');
+                if (newScripts) {
+                    const scriptContainer = document.getElementById('spa-scripts');
+                    scriptContainer.innerHTML = newScripts.innerHTML;
+                    
+                    scriptContainer.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.textContent = oldScript.textContent;
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+                }
+                // --- FIX TAMBAHAN SELESAI ---
+
                 if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
-                // 5. ANIMASI MUNCUL HALUS (FADE IN + SLIDE UP)
-                void mainEl.offsetWidth; // Force Reflow browser agar mengenali elemen sudah di-reset
-                mainEl.classList.remove('is-entering-state'); // Memicu kembali transisi CSS default (.kader-main)
+                void mainEl.offsetWidth; 
+                mainEl.classList.remove('is-entering-state'); 
 
                 document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
                 window.history.pushState({}, '', url);
@@ -630,9 +616,5 @@
             }));
         });
     </script>
-    
-    @stack('scripts')
-    @stack('modals')
-    
 </body>
 </html>

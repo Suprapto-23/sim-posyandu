@@ -36,7 +36,7 @@
             --slate-500: #64748b;
             --border: #f1f5f9;
             --bg-app: #fcfcfd;
-            --transition-speed: 0.12s; /* Dioptimasi untuk Snappy Feel */
+            --transition-speed: 0.12s; 
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
             --emerald-600: #059669;
             --emerald-50: #ecfdf5;
@@ -56,6 +56,17 @@
             text-rendering: optimizeLegibility;
         }
 
+        /* ── SPA LOADER BAR ── */
+        #spa-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, #10b981, #34d399, #059669);
+            background-size: 200% 100%; z-index: 9999999;
+            transform-origin: left; transform: scaleX(0); opacity: 0;
+            transition: transform 0.2s var(--ease-out), opacity 0.2s ease; pointer-events: none;
+        }
+        @keyframes loadingBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+        #spa-loader.is-loading { animation: loadingBar 1s infinite linear; }
+
         /* ── SIDEBAR ── */
         .admin-sidebar {
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; 
@@ -67,18 +78,13 @@
         html.sb-open .admin-sidebar { transform: translateX(0); }
         
         .pc-sidebar {
-            height: 100%; 
-            border-radius: 24px; 
-            padding: 24px 16px; 
-            overflow-y: auto; overflow-x: hidden;
-            background: #ffffff;
+            height: 100%; border-radius: 24px; padding: 24px 16px; 
+            overflow-y: auto; overflow-x: hidden; background: #ffffff;
             border: 1px solid var(--border); 
             box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
             scrollbar-width: none !important;
         }
         .pc-sidebar::-webkit-scrollbar { display: none !important; }
-
-        /* ── SIDEBAR LINKS (SUPER CEPAT) ── */
         .pc-sidebar a {
             display: flex; align-items: center; gap: 10px;
             padding: 10px 14px; border-radius: 12px; color: var(--slate-500);
@@ -120,16 +126,13 @@
         }
         .sidebar-toggle:hover { color: #0f172a; background: #f8fafc; border-color: #e2e8f0; }
         .sidebar-toggle:active { transform: scale(0.92); }
-
         .topbar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-
         .system-chip {
             height: 38px; padding: 0 16px; border-radius: 14px;
             background: #ecfdf5; border: 1px solid rgba(16,185,129,.18);
             color: #065f46; font-size: 11.5px; font-weight: 900;
             display: flex; align-items: center; gap: 7px; white-space: nowrap;
         }
-
         .profile-button { 
             height: 44px; padding: 4px 12px 4px 4px; border: 1px solid var(--border); 
             border-radius: 50px; background: #ffffff; cursor: pointer; 
@@ -153,22 +156,20 @@
         .dropdown-head { padding: 12px; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 12px; }
         .dropdown-name { color: var(--slate-900); font-size: 14px; font-weight: 800; line-height: 1.2; }
         .dropdown-role { color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;}
-        .dropdown-link, .dropdown-logout { 
+        .dropdown-logout { 
             width: 100%; border: 0; border-radius: 16px; padding: 12px 14px; 
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; 
             color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.1s ease; 
+            color: #e11d48;
         }
-        .dropdown-link:hover { background: #f8fafc; color: #0f172a; }
-        .dropdown-logout { color: #e11d48; }
         .dropdown-logout:hover { background: #fff1f2; }
 
-        /* ── MAIN CONTENT (Smooth Scroll Hardware Accelerated) ── */
+        /* ── MAIN CONTENT ── */
         .main-scroll-area {
             flex: 1; overflow-y: auto; overflow-x: hidden;
             padding: 24px; scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
-
         .main-scroll-area::-webkit-scrollbar { width: 6px; }
         .main-scroll-area::-webkit-scrollbar-track { background: transparent; }
         .main-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -183,6 +184,7 @@
         .admin-main.is-leaving { opacity: 0; transform: translateY(-6px); }
         .admin-main.is-entering { opacity: 0; transform: translateY(6px); }
         .admin-main.is-enter-done { opacity: 1; transform: translateY(0); }
+        .admin-main.is-loading-state { opacity: 0.5; pointer-events: none; }
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
@@ -200,6 +202,7 @@
         }
 
         /* ── SWEETALERT PALETTE EMERALD ── */
+        div.swal2-container { z-index: 9999999 !important; background: rgba(15, 23, 42, 0.45) !important; }
         .nexus-swal { border-radius: 32px !important; padding: 32px !important; font-family: "Plus Jakarta Sans", sans-serif !important; border: 1px solid var(--border) !important; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;}
         .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important;}
         .nexus-html { font-size: 14px !important; color: #64748b !important; }
@@ -219,10 +222,12 @@
     $name = $user->name ?? 'Administrator';
     $initial = strtoupper(substr($name, 0, 1));
     $photo = $user->foto ?? null;
-    // Admin tidak memiliki halaman profil (by design) — link "Profil Saya" dihapus.
 @endphp
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
+
+    <!-- SPA Loader -->
+    <div id="spa-loader"></div>
 
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
@@ -291,7 +296,13 @@
 
     </div>
 
-    @stack('modals')
+    <!-- WRAPPER UNTUK STACK -->
+    <div id="spa-scripts">
+        @stack('scripts')
+    </div>
+    <div id="spa-modals">
+        @stack('modals')
+    </div>
 
     <script>
         const root = document.documentElement;
@@ -307,7 +318,6 @@
 
         function toggleSidebar() { setSidebar(!root.classList.contains('sb-open')); }
 
-        // ── SweetAlert Configuration ──
         function nexusConfirm(options) {
             return Swal.fire({
                 title: options.title || 'Konfirmasi',
@@ -326,9 +336,6 @@
             });
         }
 
-        // ============================================================
-        // UPDATE SIDEBAR ACTIVE STATE
-        // ============================================================
         function updateSidebarActive(currentUrl) {
             const url = currentUrl || window.location.href;
             const currentPath = new URL(url).pathname;
@@ -341,9 +348,6 @@
             });
         }
 
-        // ============================================================
-        // SPA NAVIGATION (BUTTERY SMOOTH)
-        // ============================================================
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a');
             if (!link || !link.href || link.target || link.host !== window.location.host) return;
@@ -357,11 +361,9 @@
         let currentAbortController = null;
         let isNavigating = false;
 
-        function navigateTo(url) {
-            // Cegah klik berulang saat navigasi sedang berjalan
+        async function navigateTo(url) {
             if (isNavigating) {
                 if (currentAbortController) currentAbortController.abort();
-                return;
             }
 
             const currentUrl = new URL(window.location.href);
@@ -372,115 +374,122 @@
             const controller = new AbortController();
             currentAbortController = controller;
 
-            // [UNIVERSAL]: Otomatis mencari ID yang cocok untuk Admin, Bidan, atau Kader
-            const mainEl = document.getElementById('adminMain') || 
-                           document.getElementById('bidanMain') || 
-                           document.getElementById('kaderMain') || 
-                           document.querySelector('main');
-                           
+            const mainEl = document.getElementById('adminMain') || document.querySelector('main');
             const scrollArea = document.getElementById('mainScrollArea') || window;
+            const loader = document.getElementById('spa-loader');
 
-            // Jika elemen tidak ditemukan sama sekali, lakukan hard-reload (mencegah stuck)
-            if (!mainEl) {
-                window.location.href = url;
-                return;
-            }
+            if (!mainEl) { window.location.href = url; return; }
 
-            document.body.style.cursor = 'wait';
-            mainEl.style.pointerEvents = 'none';
+            updateSidebarActive(url);
+            loader.style.opacity = '1';
+            loader.style.transform = 'scaleX(0.3)';
+            loader.classList.add('is-loading');
+            mainEl.classList.add('is-loading-state');
 
-            fetch(url, { 
-                signal: controller.signal, 
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-            })
-            .then(res => { 
+            try {
+                const res = await fetch(url, { 
+                    signal: controller.signal, 
+                    cache: 'no-store',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
+                });
+                
                 if (!res.ok) throw new Error('Network error'); 
-                return res.text(); 
-            })
-            .then(html => {
+
+                loader.style.transform = 'scaleX(0.7)';
+                const html = await res.text();
+                loader.style.transform = 'scaleX(1)';
+
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
-                // Mencari konten baru berdasarkan ID yang ditemukan sebelumnya
-                const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
-                
-                if (!newContent) {
-                    window.location.href = url; 
-                    return; 
-                }
-
-                mainEl.classList.remove('is-enter-done', 'is-entering');
-                mainEl.classList.add('is-leaving');
-
-                setTimeout(() => {
-                    mainEl.innerHTML = newContent.innerHTML;
-                    
-                    mainEl.classList.remove('is-leaving');
-                    mainEl.classList.add('is-entering');
-
-                    if (scrollArea.scrollTo) {
-                        scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+                // --- SINKRONISASI CSS & TAG STYLE ---
+                const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
+                doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
+                    if (newLink.href && !currentLinks.includes(newLink.href)) {
+                        const linkNode = document.createElement('link');
+                        Array.from(newLink.attributes).forEach(attr => linkNode.setAttribute(attr.name, attr.value));
+                        document.head.appendChild(linkNode);
                     }
+                });
 
-                    mainEl.querySelectorAll('script').forEach(oldScript => {
+                const currentStyles = Array.from(document.querySelectorAll('head style')).map(el => el.innerHTML.trim());
+                doc.querySelectorAll('head style').forEach(newStyle => {
+                    if (!currentStyles.includes(newStyle.innerHTML.trim())) {
+                        const styleNode = document.createElement('style');
+                        Array.from(newStyle.attributes).forEach(attr => styleNode.setAttribute(attr.name, attr.value));
+                        styleNode.innerHTML = newStyle.innerHTML;
+                        document.head.appendChild(styleNode);
+                    }
+                });
+
+                const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
+                if (!newContent) throw new Error('DOM Mismatch');
+
+                mainEl.classList.remove('is-loading-state', 'is-enter-done');
+                mainEl.classList.add('is-entering'); 
+                
+                mainEl.innerHTML = newContent.innerHTML;
+                if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
+
+                mainEl.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                // --- SINKRONISASI MODALS & STACK SCRIPTS ---
+                const newModals = doc.getElementById('spa-modals');
+                if (newModals) document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
+
+                const newScripts = doc.getElementById('spa-scripts');
+                if (newScripts) {
+                    const scriptContainer = document.getElementById('spa-scripts');
+                    scriptContainer.innerHTML = newScripts.innerHTML;
+                    
+                    scriptContainer.querySelectorAll('script').forEach(oldScript => {
                         const newScript = document.createElement('script');
                         Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
                         newScript.textContent = oldScript.textContent;
                         oldScript.parentNode.replaceChild(newScript, oldScript);
                     });
+                }
 
-                    if (window.Alpine && typeof Alpine.initTree === 'function') {
-                        Alpine.initTree(mainEl);
-                    }
+                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            mainEl.classList.remove('is-entering');
-                            mainEl.classList.add('is-enter-done');
-                            document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                            
-                            // Try-Catch agar tidak error jika fungsi ini belum terdefinisi di salah satu layout
-                            try {
-                                if (typeof updateSidebarActive === 'function') {
-                                    updateSidebarActive(url);
-                                }
-                            } catch(e) {
-                                console.warn('Sidebar active state update skipped.');
-                            }
+                void mainEl.offsetWidth; 
+                mainEl.classList.remove('is-entering'); 
+                mainEl.classList.add('is-enter-done'); 
 
-                        }, 30); 
-                    });
+                document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
+                window.history.pushState({}, '', url);
 
-                    window.history.pushState({}, '', url);
-                }, 120);
-            })
-            .catch(err => {
-                if (err.name === 'AbortError') return;
-                // Jika terjadi error saat fetch, paksakan hard-reload ke URL tujuan agar tidak stuck
-                window.location.href = url;
-            })
-            .finally(() => {
-                // Pastikan state selalu dikembalikan normal, baik sukses maupun gagal
-                document.body.style.cursor = 'default';
-                if (mainEl) mainEl.style.pointerEvents = 'auto';
+            } catch (err) {
+                if (err.name !== 'AbortError') window.location.href = url;
+            } finally {
+                mainEl.style.pointerEvents = 'auto';
                 isNavigating = false;
                 currentAbortController = null;
-            });
+                
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    loader.classList.remove('is-loading');
+                    setTimeout(() => loader.style.transform = 'scaleX(0)', 200);
+                }, 100);
+
+                if (matchMedia('(max-width:1023px)').matches && root.classList.contains('sb-open')) {
+                    setSidebar(false);
+                }
+            }
         }
 
         window.addEventListener('popstate', function() { navigateTo(window.location.href); });
 
-        // ============================================================
-        // GLOBAL FORM INTERCEPTOR (SOLUSI BUG SWEETALERT)
-        // ============================================================
         document.addEventListener('submit', function (event) {
             const form = event.target;
-            
-            // Bypass jika sudah dikonfirmasi
             if (form.dataset.confirmed === '1') return;
 
-            // 1. Aksi Logout
             if (form.classList.contains('js-logout-form')) {
                 event.preventDefault();
                 nexusConfirm({
@@ -491,7 +500,6 @@
                 return;
             }
             
-            // 2. Aksi Hapus (Warga/Kader/Bidan)
             if (form.classList.contains('dynamic-form-delete') || form.classList.contains('delete-form')) {
                 event.preventDefault();
                 const btn = form.querySelector('button');
@@ -504,7 +512,6 @@
                 return;
             }
 
-            // 3. Aksi Toggle Status (Aktif/Nonaktif)
             if (form.classList.contains('dynamic-form-toggle')) {
                 event.preventDefault();
                 const btn = form.querySelector('button');
@@ -520,7 +527,6 @@
                 return;
             }
 
-            // 4. Aksi Reset Password
             if (form.classList.contains('dynamic-form-reset')) {
                 event.preventDefault();
                 const btn = form.querySelector('button');
@@ -535,20 +541,18 @@
             }
         });
 
-        // ── FIX BROWSER BFCACHE (Back/Forward Cache) ──
         window.addEventListener('pageshow', function (event) {
             if (event.persisted) {
                 document.body.classList.remove('content-leave');
                 const mainEl = document.getElementById('adminMain');
                 if (mainEl) {
-                    mainEl.classList.remove('is-leaving', 'is-entering');
+                    mainEl.classList.remove('is-loading-state', 'is-entering');
                     mainEl.classList.add('is-enter-done');
                 }
                 updateSidebarActive(window.location.href);
             }
         });
 
-        // ── ALPINE & INISIASI ──
         document.addEventListener('alpine:init', () => {
             Alpine.data('layoutApp', () => ({
                 profileOpen: false,
@@ -562,7 +566,5 @@
 
         document.addEventListener('DOMContentLoaded', () => updateSidebarActive(window.location.href));
     </script>
-    
-    @stack('scripts')
 </body>
 </html>
