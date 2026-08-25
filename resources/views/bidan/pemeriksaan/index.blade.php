@@ -158,7 +158,6 @@
     .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
     .btn-pill:active { transform: scale(0.97); }
 
-    /* Custom Scrollbar */
     .slim-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
     .slim-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
     .slim-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -197,17 +196,17 @@
             </h1>
 
             <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Tinjau data pemeriksaan dari Kader, berikan catatan medis, dan validasi hasil pemeriksaan untuk dimasukkan ke dalam sistem Rekam Medis terpadu.
+                Tinjau data pemeriksaan dari Kader, berikan catatan medis, dan validasi hasil pemeriksaan untuk dimasukkan ke dalam sistem Rekam Medis terpadu[cite: 18].
             </p>
         </div>
 
         <div class="relative z-10 w-full lg:w-1/3 flex justify-center lg:justify-end">
-            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/20 border border-white/30 backdrop-blur-md px-6 py-4 flex items-center gap-5">
+            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/90 border border-white/50 backdrop-blur-md px-6 py-4 flex items-center gap-5 shadow-lg">
                 <div>
-                    <span class="block text-[10px] font-black uppercase tracking-widest text-teal-50">Total Tampil</span>
-                    <span class="block text-3xl font-black text-white mt-0.5" id="pemeriksaanVisibleCount">{{ $visibleCount }}</span>
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-teal-800">Total Tampil</span>
+                    <span class="block text-3xl font-black text-slate-900 mt-0.5" id="pemeriksaanVisibleCount">{{ $visibleCount }}</span>
                 </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-teal-500 shadow-lg">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-md">
                     <i class="fa-solid fa-database text-2xl"></i>
                 </div>
             </div>
@@ -229,31 +228,38 @@
         @endforeach
     </section>
 
-    {{-- 3. FILTER BAR --}}
-    <section class="widget-card p-5">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div class="flex p-1.5 bg-slate-50 border border-slate-100 rounded-[1.2rem] shadow-inner shrink-0 overflow-x-auto slim-scroll">
-                <a href="{{ $buildUrl(['tab' => 'pending']) }}" class="btn-pill inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all {{ $tab === 'pending' ? 'bg-white text-amber-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800' }}">
+    {{-- 3. FILTER BAR (DISESUAIKAN UKURANNYA AGAR PAS & TIDAK MEPET BATAS) --}}
+    <section class="widget-card p-4 sm:p-6">
+        <div class="flex flex-col gap-3 items-center justify-center w-full max-w-xl mx-auto">
+            
+            {{-- Baris 1: Status Tab (Menunggu & Tervalidasi) --}}
+            <div class="flex items-center justify-center gap-2 w-full">
+                <a href="{{ $buildUrl(['tab' => 'pending']) }}" class="btn-pill flex-1 inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all {{ $tab === 'pending' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
                     <i class="fa-solid fa-clock-rotate-left"></i> Menunggu
-                    <span class="rounded-full bg-amber-100/80 px-2 py-0.5 text-[10px] text-amber-800 ml-1">{{ $stats['pending'] ?? 0 }}</span>
+                    <span class="rounded-full {{ $tab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800' }} px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black ml-1">{{ $stats['pending'] ?? 0 }}</span>
                 </a>
-                <a href="{{ $buildUrl(['tab' => 'verified']) }}" class="btn-pill inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all {{ $tab === 'verified' ? 'bg-white text-teal-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-800' }}">
+                <a href="{{ $buildUrl(['tab' => 'verified']) }}" class="btn-pill flex-1 inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all {{ $tab === 'verified' ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
                     <i class="fa-solid fa-circle-check"></i> Tervalidasi
-                    <span class="rounded-full bg-teal-100/80 px-2 py-0.5 text-[10px] text-teal-800 ml-1">{{ $stats['verified'] ?? 0 }}</span>
+                    <span class="rounded-full {{ $tab === 'verified' ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-800' }} px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black ml-1">{{ $stats['verified'] ?? 0 }}</span>
                 </a>
             </div>
 
-            <div class="flex flex-wrap gap-2">
-                <a href="{{ $buildUrl(['kategori' => 'semua']) }}" class="btn-pill inline-flex items-center gap-2 border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all {{ $kategori === 'semua' ? 'border-slate-800 bg-slate-800 text-white shadow-md' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50' }}">
+            {{-- Baris 2: Kategori Filter (Semua, Balita, Remaja, Lansia) --}}
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 w-full">
+                <a href="{{ $buildUrl(['kategori' => 'semua']) }}" class="btn-pill inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all {{ $kategori === 'semua' ? 'bg-slate-900 text-white shadow-md' : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100' }}">
                     <i class="fa-solid fa-users"></i> Semua
                 </a>
                 @foreach($kategoriOptions as $key => $option)
-                    @php $theme = $kategoriTheme($key); $active = $kategori === $key; @endphp
-                    <a href="{{ $buildUrl(['kategori' => $key]) }}" class="btn-pill inline-flex items-center gap-2 border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all {{ $active ? $theme['active'] : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50' }}">
+                    @php 
+                        $theme = $kategoriTheme($key); 
+                        $active = $kategori === $key; 
+                    @endphp
+                    <a href="{{ $buildUrl(['kategori' => $key]) }}" class="btn-pill inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all {{ $active ? $theme['active'] . ' shadow-md' : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100' }}">
                         <i class="fa-solid {{ $option['icon'] }}"></i> {{ $option['label'] }}
                     </a>
                 @endforeach
             </div>
+
         </div>
     </section>
 
@@ -281,7 +287,6 @@
             </form>
         </div>
 
-        {{-- PERBAIKAN: Menggunakan min-h dan max-h agar kotak memendek saat data sedikit dan men-scroll saat data banyak --}}
         <div class="min-h-[200px] max-h-[600px] overflow-y-auto overflow-x-auto slim-scroll relative bg-slate-50/30">
             <div class="hidden lg:block w-full min-w-[1000px]">
                 <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -420,7 +425,6 @@
                 </p>
                 
                 <div class="flex items-center gap-1.5">
-                    {{-- Previous Page --}}
                     @if ($pemeriksaans->onFirstPage())
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400 cursor-not-allowed">
                             <i class="fa-solid fa-chevron-left text-xs"></i>
@@ -431,7 +435,6 @@
                         </a>
                     @endif
 
-                    {{-- Pagination Numbers --}}
                     @php
                         $start = max(1, $pemeriksaans->currentPage() - 1);
                         $end = min($pemeriksaans->lastPage(), $pemeriksaans->currentPage() + 1);
@@ -459,7 +462,6 @@
                         <a href="{{ $pemeriksaans->url($pemeriksaans->lastPage()) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all shadow-sm text-xs font-bold">{{ $pemeriksaans->lastPage() }}</a>
                     @endif
 
-                    {{-- Next Page --}}
                     @if ($pemeriksaans->hasMorePages())
                         <a href="{{ $pemeriksaans->nextPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all shadow-sm">
                             <i class="fa-solid fa-chevron-right text-xs"></i>

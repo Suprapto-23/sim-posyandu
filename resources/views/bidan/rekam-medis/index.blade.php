@@ -9,7 +9,7 @@
     $type = $type ?? request('type', 'balita');
     $search = $search ?? request('search', '');
 
-    // KONSISTENSI WARNA: Semua menggunakan identitas Emerald Posyandu
+    // KONSISTENSI WARNA: Semua menggunakan identitas Emerald Posyandu[cite: 19]
     $typeOptions = $typeOptions ?? [
         'balita' => ['label' => 'Balita', 'desc' => 'Riwayat pertumbuhan, pemeriksaan dasar, dan imunisasi.'],
         'remaja' => ['label' => 'Remaja', 'desc' => 'Riwayat pemeriksaan kesehatan dan pemantauan gizi remaja.'],
@@ -141,51 +141,51 @@
 @section('content')
 <div class="bg-mesh-fixed"></div>
 
-<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 animate-pop-in">
+<div class="px-3 py-6 sm:px-6 lg:px-8 max-w-[1400px] mx-auto space-y-6 sm:space-y-8 animate-pop-in">
 
     {{-- 1. HEADER BANNER DINAMIS --}}
-    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r {{ $currentUi['gradient'] }} p-8 sm:p-10 shadow-2xl {{ $currentUi['shadow'] }} flex flex-col lg:flex-row justify-between items-center gap-8 border-[6px] border-white/40" style="transform: translateZ(0);">
+    <section class="relative overflow-hidden rounded-[2.5rem] sm:rounded-[3rem] bg-gradient-to-r {{ $currentUi['gradient'] }} p-6 sm:p-10 shadow-xl sm:shadow-2xl {{ $currentUi['shadow'] }} flex flex-col lg:flex-row justify-between items-center gap-6 sm:gap-8 border-[4px] sm:border-[6px] border-white/40" style="transform: translateZ(0);">
         <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
         <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
 
-        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-4 text-center lg:text-left">
-            <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
-                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-3 sm:gap-4 text-center lg:text-left">
+            <div class="inline-flex justify-center lg:justify-start items-center gap-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-3 sm:px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
                     <i class="fa-solid fa-folder-tree"></i> Arsip Kesehatan
                 </span>
             </div>
             
-            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+            <h1 class="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
                 Rekam Medis {{ $currentTypeMeta['label'] ?? ucfirst($type) }}
             </h1>
 
-            <p class="text-white/90 text-sm font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <p class="text-white/90 text-xs sm:text-sm font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
                 Akses ringkas riwayat pemeriksaan klinis yang telah divalidasi oleh Bidan untuk sasaran {{ $currentTypeMeta['label'] ?? ucfirst($type) }}.
             </p>
         </div>
 
         <div class="relative z-10 w-full lg:w-1/3 flex justify-center lg:justify-end">
-            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/20 border border-white/30 backdrop-blur-md px-6 py-4 flex items-center gap-5">
+            <div class="widget-card !rounded-[1.75rem] sm:!rounded-[2rem] !shadow-none bg-white/90 border border-white/50 backdrop-blur-md px-5 sm:px-6 py-3.5 sm:py-4 flex items-center gap-4 sm:gap-5 shadow-lg">
                 <div>
-                    <span class="block text-[10px] font-black uppercase tracking-widest text-white/90">Total Tampil</span>
-                    <span class="block text-3xl font-black text-white mt-0.5" id="rekamMedisVisibleCount">{{ $visibleCount }}</span>
+                    <span class="block text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-teal-800">Total Tampil</span>
+                    <span class="block text-2xl sm:text-3xl font-black text-slate-900 mt-0.5" id="rekamMedisVisibleCount">{{ $visibleCount }}</span>
                 </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-{{ $currentUi['theme'] }}-500 shadow-lg">
-                    <i class="fa-solid fa-database text-2xl"></i>
+                <div class="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-md">
+                    <i class="fa-solid fa-database text-xl sm:text-2xl"></i>
                 </div>
             </div>
         </div>
     </section>
 
     {{-- 2. SUMMARY CARDS --}}
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         @foreach($summaryCards as $card)
-            <div class="widget-card p-5 group flex items-center justify-between">
+            <div class="widget-card p-4 sm:p-5 group flex items-center justify-between">
                 <div>
                     <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 group-hover:text-{{ $card['theme'] }}-500 transition-colors">{{ $card['label'] }}</p>
-                    <h2 class="text-3xl font-black text-slate-800 leading-none">{{ $card['value'] }}</h2>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-800 leading-none">{{ $card['value'] }}</h2>
                 </div>
-                <div class="w-12 h-12 rounded-2xl bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 border border-{{ $card['theme'] }}-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-{{ $card['theme'] }}-50 text-{{ $card['theme'] }}-500 border border-{{ $card['theme'] }}-100 flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 transition-transform">
                     <i class="fa-solid {{ $card['icon'] }}"></i>
                 </div>
             </div>
@@ -193,26 +193,26 @@
     </section>
 
     {{-- 3. TYPE SELECTOR (TABS) --}}
-    <section class="grid gap-4 md:grid-cols-3">
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         @foreach($typeOptions as $key => $option)
             @php 
                 $active = $type === $key; 
                 $ui = $getUiTheme($key);
             @endphp
             <a href="{{ route('bidan.rekam-medis.index', ['type' => $key]) }}"
-               class="widget-card p-5 border-2 transition-all {{ $active ? 'border-'.$ui['theme'].'-400 shadow-md shadow-'.$ui['theme'].'-500/10 bg-'.$ui['theme'].'-50/30' : 'border-transparent hover:border-emerald-200' }}">
-                <div class="flex gap-4 items-center">
-                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border bg-white shadow-sm {{ $active ? 'text-'.$ui['theme'].'-500 border-'.$ui['theme'].'-200' : 'text-slate-400 border-slate-100' }}">
-                        <i class="fa-solid {{ $ui['icon'] }} text-2xl"></i>
+               class="widget-card p-4 sm:p-5 border-2 transition-all {{ $active ? 'border-'.$ui['theme'].'-400 shadow-md shadow-'.$ui['theme'].'-500/10 bg-'.$ui['theme'].'-50/30' : 'border-transparent hover:border-emerald-200' }}">
+                <div class="flex gap-3 sm:gap-4 items-center">
+                    <div class="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl border bg-white shadow-sm {{ $active ? 'text-'.$ui['theme'].'-500 border-'.$ui['theme'].'-200' : 'text-slate-400 border-slate-100' }}">
+                        <i class="fa-solid {{ $ui['icon'] }} text-xl sm:text-2xl"></i>
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2 mb-1">
-                            <h3 class="text-base font-black text-slate-800">{{ $option['label'] }}</h3>
-                            <span class="rounded-md bg-white px-2 py-0.5 text-[10px] font-black border shadow-sm {{ $active ? 'text-'.$ui['theme'].'-600 border-'.$ui['theme'].'-200' : 'text-slate-400 border-slate-200' }}">
+                            <h3 class="text-sm sm:text-base font-black text-slate-800">{{ $option['label'] }}</h3>
+                            <span class="rounded-md bg-white px-2 py-0.5 text-[9px] sm:text-[10px] font-black border shadow-sm {{ $active ? 'text-'.$ui['theme'].'-600 border-'.$ui['theme'].'-200' : 'text-slate-400 border-slate-200' }}">
                                 {{ data_get($stats, "total.$key", 0) }} Data
                             </span>
                         </div>
-                        <p class="truncate text-[11px] font-semibold text-slate-500">{{ $option['desc'] }}</p>
+                        <p class="truncate text-[10px] sm:text-[11px] font-semibold text-slate-500">{{ $option['desc'] }}</p>
                     </div>
                 </div>
             </a>
@@ -223,12 +223,12 @@
     <section class="widget-card overflow-hidden flex flex-col relative">
         
         {{-- Header & Pencarian --}}
-        <div class="p-6 border-b border-slate-100 bg-white flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between shrink-0 z-20">
+        <div class="p-4 sm:p-6 border-b border-slate-100 bg-white flex flex-col gap-3 sm:gap-4 xl:flex-row xl:items-center xl:justify-between shrink-0 z-20">
             <div class="min-w-0 flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-{{ $currentUi['theme'] }}-50 text-{{ $currentUi['theme'] }}-500 flex items-center justify-center text-lg shadow-sm border border-{{ $currentUi['theme'] }}-100"><i class="fa-solid fa-address-book"></i></div>
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-{{ $currentUi['theme'] }}-50 text-{{ $currentUi['theme'] }}-500 flex items-center justify-center text-base sm:text-lg shadow-sm border border-{{ $currentUi['theme'] }}-100"><i class="fa-solid fa-address-book"></i></div>
                 <div>
-                    <h2 class="text-base font-black tracking-tight text-slate-800 uppercase">Direktori Pasien</h2>
-                    <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Database {{ $currentTypeMeta['label'] ?? ucfirst($type) }}</p>
+                    <h2 class="text-sm sm:text-base font-black tracking-tight text-slate-800 uppercase">Direktori Pasien</h2>
+                    <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">Database {{ $currentTypeMeta['label'] ?? ucfirst($type) }}</p>
                 </div>
             </div>
 
@@ -236,7 +236,7 @@
                 <input type="hidden" name="type" value="{{ $type }}">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                 <input type="text" id="rekamMedisLiveSearch" name="search" value="{{ $search }}" autocomplete="off" placeholder="Cari nama atau NIK sasaran..."
-                       class="w-full rounded-[1.2rem] border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-{{ $currentUi['theme'] }}-400 focus:bg-white focus:ring-4 focus:ring-{{ $currentUi['theme'] }}-100 shadow-inner">
+                       class="w-full rounded-[1.2rem] border border-slate-200 bg-slate-50 py-2.5 sm:py-3 pl-10 pr-10 text-xs font-bold text-slate-700 outline-none transition focus:border-{{ $currentUi['theme'] }}-400 focus:bg-white focus:ring-4 focus:ring-{{ $currentUi['theme'] }}-100 shadow-inner">
                 
                 <button type="button" id="rekamMedisClearSearch" class="absolute right-3 top-1/2 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition">
                     <i class="fa-solid fa-xmark text-sm"></i>
@@ -244,7 +244,7 @@
             </form>
         </div>
 
-        {{-- Tabel Scrollable Area (Kunci Presisi max-h-[600px]) --}}
+        {{-- Tabel Scrollable Area --}}
         <div class="min-h-[200px] max-h-[600px] overflow-y-auto overflow-x-auto slim-scroll relative bg-slate-50/30">
             <div class="hidden lg:block w-full min-w-[1000px]">
                 <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -321,7 +321,7 @@
             </div>
 
             {{-- MOBILE VIEW --}}
-            <div id="rekamMedisCardContainer" class="space-y-4 lg:hidden p-4">
+            <div id="rekamMedisCardContainer" class="space-y-3 lg:hidden p-3 sm:p-4">
                 @foreach($data as $pasien)
                     @php
                         $nama = $getNama($pasien);
@@ -335,21 +335,21 @@
                         $searchName = mb_strtolower(trim((string) $nama), 'UTF-8');
                         $searchNik = mb_strtolower(trim((string) $nik), 'UTF-8');
                     @endphp
-                    <article class="js-rekam-card rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm" data-name="{{ $searchName }}" data-nik="{{ $searchNik }}">
+                    <article class="js-rekam-card rounded-[1.5rem] border border-slate-100 bg-white p-4 sm:p-5 shadow-sm" data-name="{{ $searchName }}" data-nik="{{ $searchNik }}">
                         <div class="flex justify-between items-start mb-3">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 border border-slate-200 flex items-center justify-center"><i class="fa-solid fa-user"></i></div>
-                                <div>
-                                    <h3 class="text-sm font-bold text-slate-900">{{ $nama }}</h3>
+                                <div class="min-w-0">
+                                    <h3 class="text-sm font-bold text-slate-900 truncate">{{ $nama }}</h3>
                                     <p class="text-[10px] text-slate-400 font-mono mt-0.5">{{ $nik }}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-50 mb-4">
+                        <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-50 mb-3">
                             <div class="bg-slate-50 rounded-lg p-2"><p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Gender</p><p class="text-xs font-bold text-slate-700">{{ $gender }}</p></div>
                             <div class="bg-slate-50 rounded-lg p-2"><p class="text-[9px] font-black uppercase text-slate-400 mb-0.5">Lahir</p><p class="text-xs font-bold text-slate-700">{{ $tanggalLahir }}</p></div>
                         </div>
-                        <a href="{{ route('bidan.rekam-medis.show', [$type, $pasien->id]) }}" class="btn-pill w-full inline-flex justify-center items-center bg-slate-900 text-white px-3 py-3 text-[10px] font-black uppercase tracking-widest shadow-sm">Buka Berkas Rekam Medis</a>
+                        <a href="{{ route('bidan.rekam-medis.show', [$type, $pasien->id]) }}" class="btn-pill w-full inline-flex justify-center items-center bg-slate-900 text-white px-3 py-2.5 text-[10px] font-black uppercase tracking-widest shadow-sm">Buka Berkas Rekam Medis</a>
                     </article>
                 @endforeach
             </div>
@@ -364,7 +364,7 @@
 
         {{-- PAGINATION CUSTOM UI --}}
         @if(method_exists($data, 'hasPages') && $data->hasPages())
-            <div id="rekamMedisPagination" class="bg-white p-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 rounded-b-[2rem]">
+            <div id="rekamMedisPagination" class="bg-white p-4 sm:p-5 border-t border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 rounded-b-[2rem]">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
                     Menampilkan <span class="text-slate-700">{{ $data->firstItem() }}</span> - <span class="text-slate-700">{{ $data->lastItem() }}</span> dari <span class="text-slate-800">{{ $data->total() }}</span> data
                 </p>

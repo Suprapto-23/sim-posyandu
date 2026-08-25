@@ -45,22 +45,37 @@
 
 @push('styles')
 <style>
+    html { scroll-behavior: smooth; }
     body {
-        background-color: #f8fafc;
+        background-color: #f4f7f6;
         background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
                           radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
         background-attachment: fixed;
     }
 
-    /* Menghilangkan panah spinner pada input number agar tidak tumpang tindih dengan teks satuan */
+    /* Menghilangkan panah spinner pada input number */
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button {
         -webkit-appearance: none;
         margin: 0;
     }
-    input[type="number"] {
-        -moz-appearance: textfield;
+    input[type="number"] { -moz-appearance: textfield; }
+
+    .widget-card {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transform: translateZ(0);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    .widget-card:hover {
+        transform: translateY(-2px) translateZ(0);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    }
+
+    .btn-pill { border-radius: 9999px; transition: all 0.2s ease; cursor: pointer; }
+    .btn-pill:active { transform: scale(0.97); }
 
     .animate-pop-in {
         animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards;
@@ -68,7 +83,7 @@
     }
 
     @keyframes popIn {
-        from { opacity: 0; transform: scale(.96) translateY(12px); }
+        from { opacity: 0; transform: scale(.98) translateY(10px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
@@ -81,19 +96,22 @@
         width: 100%;
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        padding: 12px 14px;
+        border-radius: 1.2rem;
+        padding: 12px 16px;
         font-size: 13px;
         font-weight: 700;
         color: #1e293b;
         outline: none;
-        transition: all .22s ease;
+        transition: all .25s ease;
+    }
+    .input-soft-right-icon {
+        padding-right: 3.25rem !important;
     }
 
     .input-soft:focus {
         background: #ffffff;
         border-color: #10b981; 
-        box-shadow: 0 0 0 4px rgba(16, 185, 129, .12);
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, .15);
     }
     
     .input-soft:disabled {
@@ -106,7 +124,7 @@
     .form-label {
         display: block;
         margin-bottom: 0.5rem;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 900;
         text-transform: uppercase;
         letter-spacing: 0.1em;
@@ -125,35 +143,37 @@
     .nexus-dropdown::-webkit-scrollbar { width: 6px; }
     .nexus-dropdown::-webkit-scrollbar-thumb { background-color: rgba(16, 185, 129, 0.3); border-radius: 999px; }
 
-    /* Modal Styling - Z-index dimaksimalkan */
+    /* Modal Styling */
     .pc-modal-backdrop {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 999999; /* Pastikan selalu paling atas */
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 9999999 !important;
         display: none;
         align-items: center;
         justify-content: center;
-        background: rgba(15, 23, 42, .6);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        background: rgba(15, 23, 42, 0.45) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
         padding: 1rem;
         opacity: 0;
         transition: opacity 0.3s ease;
     }
-    .pc-modal-backdrop.is-open { display: flex; opacity: 1; }
+    .pc-modal-backdrop.is-open { display: flex !important; opacity: 1; }
     
     .pc-modal-card {
         width: 100%;
-        max-width: 420px;
+        max-width: 440px;
         background: white;
-        border-radius: 2rem;
+        border-radius: 2.5rem;
         padding: 2.5rem 2rem;
-        transform: scale(0.95) translateY(10px);
+        transform: scale(0.9) translateY(20px);
         opacity: 0;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         position: relative;
         overflow: hidden;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
     }
     .pc-modal-backdrop.is-open .pc-modal-card {
         transform: scale(1) translateY(0);
@@ -163,36 +183,37 @@
 @endpush
 
 @section('content')
-<div class="max-w-4xl mx-auto animate-pop-in pb-12 px-4 sm:px-6 lg:px-8 mt-6">
+<div class="px-4 py-8 sm:px-6 lg:px-8 max-w-[1000px] mx-auto space-y-6 animate-pop-in">
 
-    {{-- Hero Section --}}
-    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[2.5rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20 text-center">
+    {{-- Hero Banner --}}
+    <section class="relative overflow-hidden rounded-[3rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 flex flex-col justify-center items-center text-center gap-4 border-[6px] border-white/40" style="transform: translateZ(0);">
         <div class="hero-grid absolute inset-0 opacity-20 pointer-events-none"></div>
-        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[70px] rounded-full pointer-events-none"></div>
-        <div class="absolute -bottom-16 -left-16 w-56 h-56 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
+        <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
 
-        <div class="relative z-10">
-            <div class="inline-flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-widest mb-4">
-                <a href="{{ route('kader.pemeriksaan.index') }}" class="hover:text-white transition-colors">Daftar Pengukuran</a>
-                <i class="fas fa-chevron-right text-[8px]"></i>
-                <span class="text-white">Input Baru</span>
+        <div class="relative z-10 w-full flex flex-col items-center gap-3">
+            <div class="inline-flex items-center gap-2">
+                <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
+                    <a href="{{ route('kader.pemeriksaan.index') }}" class="hover:text-white transition-colors">Daftar Pengukuran</a>
+                    <i class="fas fa-chevron-right text-[8px]"></i>
+                    <span>Input Baru</span>
+                </span>
             </div>
 
             <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
                 Catat Pengukuran Fisik
             </h1>
 
-            <p class="text-teal-50 text-sm font-medium max-w-xl mx-auto mt-3 leading-relaxed">
-                Pilih sasaran, lengkapi hasil pengukuran fisik dasar, dan simpan data untuk antrean validasi klinis oleh Bidan.
+            <p class="text-white/90 text-sm font-medium max-w-xl mx-auto leading-relaxed">
+                Pilih sasaran, lengkapi hasil pengukuran fisik dasar[cite: 12], dan simpan data untuk antrean validasi klinis oleh Bidan[cite: 12].
             </p>
         </div>
     </section>
 
     {{-- System Alerts --}}
     @if(session('success') || session('error') || $errors->any())
-        <div class="mb-8">
+        <div class="space-y-4">
             @if(session('success'))
-                <div class="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden">
+                <div class="widget-card bg-emerald-50 border-emerald-200 p-5 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-white text-emerald-500 flex items-center justify-center text-xl shrink-0 shadow-sm border border-emerald-100">
                         <i class="fas fa-check-circle"></i>
                     </div>
@@ -204,7 +225,7 @@
             @endif
 
             @if(session('error') || $errors->any())
-                <div class="bg-rose-50 border border-rose-200 rounded-3xl p-5 flex items-start gap-4 shadow-sm relative overflow-hidden">
+                <div class="widget-card bg-rose-50 border-rose-200 p-5 flex items-start gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-white text-rose-500 flex items-center justify-center text-xl shrink-0 shadow-sm border border-rose-100">
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
@@ -224,36 +245,37 @@
         </div>
     @endif
 
-    <form id="measurementForm" method="POST" action="{{ route('kader.pemeriksaan.store') }}" data-selected-pasien="{{ $oldPasienId }}" data-api-url="{{ route('kader.pemeriksaan.api') }}">
+    <form id="measurementForm" method="POST" action="{{ route('kader.pemeriksaan.store') }}" data-selected-pasien="{{ $oldPasienId }}" data-api-url="{{ route('kader.pemeriksaan.api') }}" class="space-y-6">
         @csrf
 
         {{-- CARD 1: Data Sasaran & Kategori --}}
-        <section class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-6">
-            <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center justify-center">
-                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
-                    <i class="fas fa-users text-teal-500"></i>
-                    Identitas Sasaran
-                </h5>
+        <section class="widget-card overflow-hidden">
+            <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-base shadow-sm border border-emerald-100">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h5 class="font-black text-slate-800 text-sm uppercase tracking-wider">Identitas Sasaran</h5>
             </div>
 
-            <div class="p-6 md:p-8">
-                <!-- Kategori Radios -->
-                <label class="form-label mb-3 text-center md:text-left">Pilih Kategori Sasaran <span class="req-star">*</span></label>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                    @foreach($kategoriMenus as $key => $item)
-                        <label class="cursor-pointer relative block">
-                            <input type="radio" name="kategori_pasien" value="{{ $key }}" class="peer sr-only" data-category-radio @checked($oldKategori === $key)>
-                            <div class="h-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-slate-50 peer-checked:border-{{ $item['color'] }}-400 peer-checked:bg-white peer-checked:shadow-md flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white {{ $item['bg'] }} shadow-inner shrink-0 transition-transform peer-checked:scale-110">
-                                    <i class="fa-solid {{ $item['icon'] }}"></i>
+            <div class="p-6 md:p-8 space-y-6">
+                <div>
+                    <label class="form-label mb-3">Pilih Kategori Sasaran <span class="req-star">*</span></label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        @foreach($kategoriMenus as $key => $item)
+                            <label class="cursor-pointer relative block">
+                                <input type="radio" name="kategori_pasien" value="{{ $key }}" class="peer sr-only" data-category-radio @checked($oldKategori === $key)>
+                                <div class="h-full rounded-2xl border-2 border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-slate-50 peer-checked:border-emerald-400 peer-checked:bg-white peer-checked:shadow-md flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white {{ $item['bg'] }} shadow-inner shrink-0 transition-transform peer-checked:scale-110">
+                                        <i class="fa-solid {{ $item['icon'] }}"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-black text-slate-700 peer-checked:text-emerald-700 transition-colors">{{ $item['label'] }}</p>
+                                        <p class="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">{{ $item['desc'] }}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-sm font-black text-slate-700 peer-checked:text-{{ $item['color'] }}-700 transition-colors">{{ $item['label'] }}</p>
-                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5 leading-tight">{{ $item['desc'] }}</p>
-                                </div>
-                            </div>
-                        </label>
-                    @endforeach
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -262,18 +284,16 @@
                         <div class="relative" id="liveSearchWrapper">
                             <input type="hidden" name="pasien_id" id="pasienIdHidden" value="{{ $oldPasienId }}">
                             <div class="relative">
-                                <input type="text" id="pasienSearchInput" class="input-soft pr-10 cursor-text" placeholder="Ketik nama atau NIK sasaran..." autocomplete="off">
-                                <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" id="searchIcon"></i>
-                                <i class="fas fa-spinner fa-spin absolute right-4 top-1/2 -translate-y-1/2 text-teal-500 pointer-events-none hidden" id="loadingIcon"></i>
+                                <input type="text" id="pasienSearchInput" class="input-soft input-soft-right-icon cursor-text" placeholder="Ketik nama atau NIK sasaran..." autocomplete="off">
+                                {{-- Gunakan satu elemen ikon tunggal yang dikontrol via JS agar tidak pernah tumpang tindih --}}
+                                <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-all" id="inputIcon"></i>
                             </div>
                             
                             <div id="pasienDropdown" class="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] max-h-60 overflow-y-auto hidden nexus-dropdown">
-                                <ul id="pasienList" class="p-2 space-y-1">
-                                    <!-- List diisi oleh JavaScript -->
-                                </ul>
+                                <ul id="pasienList" class="p-2 space-y-1"></ul>
                             </div>
                         </div>
-                        <p id="pasienHelp" class="text-[10px] font-bold text-slate-400 mt-1 pl-1">Ketik untuk mencari sasaran berdasarkan kategori yang dipilih.</p>
+                        <p id="pasienHelp" class="text-[10px] font-bold text-slate-400 mt-1 pl-1">Ketik untuk mencari sasaran berdasarkan kategori yang dipilih[cite: 12].</p>
                     </div>
 
                     <div class="space-y-2 md:col-span-2">
@@ -285,17 +305,16 @@
         </section>
 
         {{-- CARD 2: Pengukuran Fisik Dasar --}}
-        <section class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-6">
-            <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center justify-center">
-                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
-                    <i class="fas fa-stethoscope text-teal-500"></i>
-                    Pengukuran Fisik Antropometri
-                </h5>
+        <section class="widget-card overflow-hidden">
+            <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-500 flex items-center justify-center text-base shadow-sm border border-teal-100">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <h5 class="font-black text-slate-800 text-sm uppercase tracking-wider">Pengukuran Fisik Antropometri</h5>
             </div>
 
             <div class="p-6 md:p-8">
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    
                     <div class="space-y-2">
                         <label class="form-label">Berat Badan <span class="req-star">*</span></label>
                         <div class="relative">
@@ -315,7 +334,7 @@
                     <div class="space-y-2 hidden" data-field-group="remaja lansia">
                         <label class="form-label text-teal-600">IMT Estimasi</label>
                         <div class="relative">
-                            <div id="imtDisplay" class="input-soft bg-teal-50/50 border-teal-100 text-teal-700 flex items-center min-h-[44px]">
+                            <div id="imtDisplay" class="input-soft bg-teal-50/50 border-teal-100 text-teal-700 flex items-center min-h-[46px]">
                                 -
                             </div>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-teal-600/50 pointer-events-none">kg/m²</span>
@@ -365,17 +384,17 @@
         </section>
 
         {{-- CARD 3: Skrining Lanjutan & Anamnesis --}}
-        <section class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
-            <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center justify-center">
-                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
-                    <i class="fas fa-vial-circle-check text-teal-500"></i>
-                    Skrining Lanjutan & Catatan Tambahan
-                </h5>
+        <section class="widget-card overflow-hidden">
+            <div class="bg-slate-50/70 px-8 py-5 border-b border-slate-100 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-500 flex items-center justify-center text-base shadow-sm border border-cyan-100">
+                    <i class="fas fa-vial-circle-check"></i>
+                </div>
+                <h5 class="font-black text-slate-800 text-sm uppercase tracking-wider">Skrining Lanjutan & Catatan Tambahan</h5>
             </div>
 
-            <div class="p-6 md:p-8">
-                <div class="hidden mb-6 pb-6 border-b border-slate-100" data-field-group="remaja lansia">
-                    <p class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1"><i class="fa-solid fa-notes-medical"></i> Pemeriksaan Penunjang PTM</p>
+            <div class="p-6 md:p-8 space-y-6">
+                <div class="hidden pb-6 border-b border-slate-100" data-field-group="remaja lansia">
+                    <p class="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5"><i class="fa-solid fa-notes-medical"></i> Pemeriksaan Penunjang PTM</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                         <div class="space-y-2">
                             <label class="form-label">Gula Darah</label>
@@ -409,7 +428,7 @@
                 </div>
 
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1"><i class="fa-solid fa-clipboard-question"></i> Anamnesis & Catatan</p>
+                    <p class="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5"><i class="fa-solid fa-clipboard-question"></i> Anamnesis & Catatan</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
                             <label class="form-label">Riwayat Keluhan Saat Datang</label>
@@ -425,27 +444,19 @@
         </section>
 
         {{-- BUTTONS --}}
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="{{ route('kader.pemeriksaan.index') }}" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
-                <i class="fas fa-times mr-1"></i>
-                Batal
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+            <a href="{{ route('kader.pemeriksaan.index') }}" class="btn-pill w-full sm:w-auto px-8 py-3.5 font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
+                <i class="fas fa-times mr-1"></i> Batal
             </a>
 
-            <button type="button" id="openSubmitModalBtn" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 transition-all shadow-[0_4px_15px_rgba(16,185,129,.30)] hover:-translate-y-0.5 text-sm flex items-center justify-center gap-2">
-                <i class="fas fa-save"></i>
-                Simpan Pengukuran
+            <button type="button" id="openSubmitModalBtn" class="btn-pill w-full sm:w-auto px-8 py-3.5 font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 transition-all shadow-[0_4px_15px_rgba(16,185,129,.30)] hover:-translate-y-0.5 text-sm flex items-center justify-center gap-2">
+                <i class="fas fa-save"></i> Simpan Pengukuran
             </button>
         </div>
     </form>
 </div>
 
-{{-- 
-    MODAL AREA 
-    (Ini akan dipindahkan secara otomatis ke dalam <body> oleh JavaScript 
-    agar tidak terhalang oleh parent layout yang memiliki overflow/transform)
---}}
-
-{{-- Modal Konfirmasi Simpan --}}
+{{-- MODAL KONFIRMASI SIMPAN --}}
 <div id="pcSubmitModal" class="pc-modal-backdrop">
     <div class="pc-modal-card text-center">
         <div class="absolute -top-16 -left-16 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
@@ -457,13 +468,13 @@
             </div>
             <h3 class="text-2xl font-black text-slate-800 mb-2">Simpan Data?</h3>
             <p class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">
-                Data pengukuran akan disimpan dan diteruskan ke antrean review Bidan untuk validasi klinis.
+                Data pengukuran akan disimpan dan diteruskan ke antrean review Bidan untuk validasi klinis[cite: 12].
             </p>
             <div class="flex gap-3">
-                <button type="button" id="pcCancelSubmit" class="w-full flex-1 rounded-xl border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                <button type="button" id="pcCancelSubmit" class="btn-pill w-full flex-1 border border-slate-200 bg-white text-slate-700 px-4 py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
                     Kembali
                 </button>
-                <button type="button" id="pcConfirmSubmit" class="w-full flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
+                <button type="button" id="pcConfirmSubmit" class="btn-pill w-full flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-2">
                     <i class="fa-solid fa-check"></i> Simpan
                 </button>
             </div>
@@ -471,7 +482,7 @@
     </div>
 </div>
 
-{{-- Custom Alert Modal (Pengganti alert bawaan browser) --}}
+{{-- CUSTOM ALERT MODAL --}}
 <div id="pcAlertModal" class="pc-modal-backdrop">
     <div class="pc-modal-card text-center">
         <div class="absolute -top-16 -left-16 w-32 h-32 bg-rose-400/20 rounded-full blur-2xl"></div>
@@ -484,13 +495,12 @@
             <p id="pcAlertMessage" class="text-sm font-medium text-slate-500 mb-8 leading-relaxed px-4">
                 Pesan peringatan sistem.
             </p>
-            <button type="button" id="pcCloseAlert" class="w-full rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-rose-600 hover:to-pink-600 transition-all">
+            <button type="button" id="pcCloseAlert" class="btn-pill w-full bg-gradient-to-r from-rose-500 to-pink-500 text-white px-4 py-3.5 text-sm font-bold shadow-md hover:from-rose-600 hover:to-pink-600 transition-all">
                 Saya Mengerti
             </button>
         </div>
     </div>
 </div>
-
 @endsection
 
 @push('scripts')
@@ -498,40 +508,32 @@
 document.addEventListener('DOMContentLoaded', function () {
     'use strict';
 
-    // ---- TELEPORTASI MODAL KE BODY ----
-    // Ini memastikan modal tidak terjebak di dalam container yang memiliki properti transform/overflow
     const submitModal = document.getElementById('pcSubmitModal');
     const alertModal = document.getElementById('pcAlertModal');
     if (submitModal) document.body.appendChild(submitModal);
     if (alertModal) document.body.appendChild(alertModal);
-    // ------------------------------------
 
     const form = document.querySelector('#measurementForm');
     const categoryRadios = Array.from(document.querySelectorAll('[data-category-radio]'));
     
-    // Live Search Elements
     const searchInput = document.getElementById('pasienSearchInput');
     const hiddenInput = document.getElementById('pasienIdHidden');
     const dropdown = document.getElementById('pasienDropdown');
     const list = document.getElementById('pasienList');
-    const searchIcon = document.getElementById('searchIcon');
-    const loadingIcon = document.getElementById('loadingIcon');
+    const inputIcon = document.getElementById('inputIcon'); // Menggunakan elemen ikon tunggal
     const pasienHelp = document.getElementById('pasienHelp');
     
     const summaryImt = document.querySelector('#imtDisplay');
     const submitBtn = document.querySelector('#openSubmitModalBtn');
     
-    // Modal Elements
     const cancelSubmit = document.querySelector('#pcCancelSubmit');
     const confirmSubmit = document.querySelector('#pcConfirmSubmit');
 
-    // Alert Custom Elements
     const alertMessage = document.getElementById('pcAlertMessage');
     const closeAlertBtn = document.getElementById('pcCloseAlert');
 
     let allPatients = []; 
 
-    // Fungsi Custom Alert
     function showCustomAlert(message) {
         if (!alertModal) return;
         alertMessage.textContent = message;
@@ -580,8 +582,10 @@ document.addEventListener('DOMContentLoaded', function () {
         searchInput.value = '';
         hiddenInput.value = '';
         searchInput.disabled = true;
-        searchIcon.classList.add('hidden');
-        loadingIcon.classList.remove('hidden');
+        
+        // Ubah ikon tunggal menjadi spinner loading
+        inputIcon.className = 'fas fa-spinner fa-spin absolute right-4 top-1/2 -translate-y-1/2 text-teal-500 pointer-events-none transition-all';
+        
         searchInput.placeholder = 'Memuat data sasaran...';
 
         fetch(apiUrl + '?kategori=' + encodeURIComponent(category), {
@@ -593,8 +597,9 @@ document.addEventListener('DOMContentLoaded', function () {
             
             searchInput.disabled = false;
             searchInput.placeholder = 'Ketik nama atau NIK sasaran...';
-            searchIcon.classList.remove('hidden');
-            loadingIcon.classList.add('hidden');
+            
+            // Kembalikan ikon tunggal menjadi ikon search normal
+            inputIcon.className = 'fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-all';
             
             if(allPatients.length > 0) {
                 pasienHelp.textContent = `${allPatients.length} data tersedia.`;
@@ -614,8 +619,7 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .catch(() => {
             searchInput.placeholder = 'Gagal memuat data';
-            searchIcon.classList.remove('hidden');
-            loadingIcon.classList.add('hidden');
+            inputIcon.className = 'fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-all';
             pasienHelp.textContent = 'Gagal terhubung ke server API.';
         });
     }
@@ -629,9 +633,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         data.forEach(item => {
             const li = document.createElement('li');
-            li.className = 'px-4 py-3 hover:bg-teal-50 cursor-pointer rounded-xl transition-colors flex flex-col group';
+            li.className = 'px-4 py-3 hover:bg-emerald-50 cursor-pointer rounded-xl transition-colors flex flex-col group';
             li.innerHTML = `
-                <span class="text-sm font-black text-slate-700 group-hover:text-teal-700 transition-colors">${item.nama}</span>
+                <span class="text-sm font-black text-slate-700 group-hover:text-emerald-700 transition-colors">${item.nama}</span>
                 <span class="text-[10px] font-bold text-slate-400 mt-0.5">NIK: ${item.nik || '-'}</span>
             `;
             
@@ -714,7 +718,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function openModal() {
         if(!hiddenInput.value) {
-            // Memanggil Custom Alert, bukan alert() bawaan browser
             showCustomAlert('Pilih sasaran dari daftar dropdown pencarian terlebih dahulu.');
             searchInput.focus();
             return;

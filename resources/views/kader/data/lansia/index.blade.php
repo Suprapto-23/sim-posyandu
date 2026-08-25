@@ -117,9 +117,11 @@
 @push('styles')
 <style>
     body {
-        background-color: #f8fafc;
-        background-image: radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
-                          radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%);
+        background-color: #f1f5f9;
+        background-image: 
+            radial-gradient(at 0% 0%, hsla(160, 100%, 94%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, hsla(190, 100%, 92%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, hsla(150, 100%, 94%, 1) 0px, transparent 50%);
         background-attachment: fixed;
     }
 
@@ -134,11 +136,13 @@
     }
 
     .widget-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 1);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 2rem; 
-        box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .btn-pill {
@@ -148,6 +152,7 @@
     }
     .btn-pill:active { transform: scale(0.96); }
 
+    /* Custom Dropdown Animation */
     .dropdown-open {
         opacity: 1 !important;
         visibility: visible !important;
@@ -157,11 +162,12 @@
         transform: rotate(180deg);
     }
 
+    /* Scroll Optimization */
     .pc-scroll-container {
         overflow-y: auto;
         overflow-x: hidden;
         scrollbar-width: thin;
-        scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
+        scrollbar-color: rgba(20, 184, 166, 0.3) transparent;
         padding-right: 8px;
         scroll-behavior: smooth !important;
         -webkit-overflow-scrolling: touch;
@@ -171,59 +177,32 @@
     }
     .pc-scroll-container::-webkit-scrollbar { width: 6px; }
     .pc-scroll-container::-webkit-scrollbar-track { background: transparent; }
-    .pc-scroll-container::-webkit-scrollbar-thumb { background-color: rgba(16, 185, 129, 0.3); border-radius: 999px; }
+    .pc-scroll-container::-webkit-scrollbar-thumb { background-color: rgba(20, 184, 166, 0.3); border-radius: 999px; }
 
-    .data-row {
-        display: grid;
-        grid-template-columns: 24px minmax(220px, 1.2fr) minmax(180px, 1fr) minmax(180px, 1fr) 140px;
-        gap: 16px;
-        align-items: center;
+    /* Squircle Row Styles */
+    .pc-row {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 1.75rem; 
+    }
+    .pc-row:hover {
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 8px 25px rgba(20, 184, 166, 0.08); 
+        transform: translateY(-2px);
     }
 
-    .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .action-box { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-
-    .row-action {
-        height: 32px; display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 8px; border: 1px solid transparent; font-size: 10px; font-weight: 800;
-        text-transform: uppercase; letter-spacing: 0.05em; transition: all .2s ease; cursor: pointer; text-decoration: none;
-    }
-    .row-action:hover { transform: translateY(-1px); }
-    
-    .action-detail { background: #f8fafc; border-color: #e2e8f0; color: #475569; }
-    .action-detail:hover { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
-    
-    .action-edit { background: #f8fafc; border-color: #e2e8f0; color: #475569; }
-    .action-edit:hover { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
-    
-    .action-sync { grid-column: span 2; background: #fffbeb; border-color: #fde68a; color: #d97706; }
-    .action-sync:hover { background: #fef3c7; }
-
-    .action-delete { grid-column: span 2; background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
-    .action-delete:hover { background: #ffe4e6; }
-
+    /* Modal Full Screen */
     .pc-modal-backdrop {
         position: fixed; inset: 0; z-index: 999999; display: none; align-items: center; justify-content: center;
         background: rgba(15, 23, 42, .5); backdrop-filter: blur(8px); padding: 1rem; width: 100vw; height: 100vh;
     }
     .pc-modal-backdrop.is-open { display: flex; }
     .pc-modal-card {
-        width: 100%; max-width: 420px; background: white; border-radius: 2rem; padding: 0; overflow: hidden;
+        width: 100%; max-width: 420px; background: white; border-radius: 2.5rem; padding: 0; overflow: hidden;
         transform: scale(0.95) translateY(15px); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
     }
     .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
-
-    @media (max-width: 1280px) {
-        .data-row { grid-template-columns: 24px minmax(0, 1fr); align-items: start; }
-        .col-hidden-mobile { display: none; }
-        .col-stack-mobile { display: flex; flex-direction: column; gap: 10px; }
-    }
 </style>
 @endpush
 
@@ -262,18 +241,18 @@
             }
         @endphp
         
-        <div id="clean-friendly-alert" class="w-full bg-white border border-slate-100 rounded-[1.5rem] p-4 sm:px-5 sm:py-4 mb-8 flex items-center justify-between gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300">
+        <div id="clean-friendly-alert" class="w-full bg-white/90 backdrop-blur-md border border-slate-100 rounded-[2rem] p-4 sm:px-5 sm:py-4 mb-6 flex items-center justify-between gap-4 shadow-lg transition-all duration-300 z-50 relative">
             <div class="flex items-center gap-4 flex-1">
-                <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center {{ $flashConfig['iconBg'] }} {{ $flashConfig['iconColor'] }}">
+                <div class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center {{ $flashConfig['iconBg'] }} border border-white {{ $flashConfig['iconColor'] }} shadow-inner">
                     <i class="fa-solid {{ $flashConfig['icon'] }} text-xl"></i>
                 </div>
                 <div>
-                    <h3 class="text-[15px] font-bold text-slate-800 tracking-tight leading-tight mb-0.5">{{ $flashConfig['title'] }}</h3>
+                    <h3 class="text-[15px] font-black text-slate-800 tracking-tight leading-tight mb-0.5">{{ $flashConfig['title'] }}</h3>
                     <p class="text-[13px] font-medium text-slate-500 leading-snug">{{ $flashMessage }}</p>
                 </div>
             </div>
             
-            <button type="button" onclick="closeCleanAlert()" class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors" title="Tutup Notifikasi">
+            <button type="button" onclick="closeCleanAlert()" class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Tutup Notifikasi">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
         </div>
@@ -292,42 +271,42 @@
     @endif
 
     {{-- HERO WIDGET --}}
-    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[3rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20">
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-20"></div>
-        <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
+    <section class="bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 mb-6 sm:mb-8 relative overflow-hidden shadow-2xl shadow-teal-500/30 border-[3px] sm:border-[4px] border-white/50">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
 
-        <div class="relative z-10 flex flex-col lg:flex-row gap-8 lg:items-center justify-between">
+        <div class="relative z-10 flex flex-col lg:flex-row gap-6 sm:gap-8 lg:items-center justify-between">
             <div class="flex-1 text-center lg:text-left">
-                <div class="inline-flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-widest mb-4">
-                    <span class="bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
-                        <span class="h-2 w-2 rounded-full bg-amber-300 animate-pulse"></span>
+                <div class="inline-flex justify-center lg:justify-start items-center gap-2 text-white/90 text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-3 sm:mb-4">
+                    <span class="btn-pill bg-white/20 border border-white/30 px-3 sm:px-4 py-1 sm:py-1.5 shadow-inner flex items-center gap-2 backdrop-blur-md">
+                        <span class="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-300 animate-pulse"></span>
                         Master Data Sasaran
                     </span>
                 </div>
 
-                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-3">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow-md mb-2 sm:mb-3">
                     Data Lansia
                 </h1>
 
-                <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    Kelola data Lansia untuk pemantauan kesehatan berkala, cek tensi, asam urat, dan pelaporan Posbindu. Lakukan sinkronisasi akun agar keluarga dapat memantau kesehatan lansia secara mandiri.
+                <p class="text-teal-50 text-[11px] sm:text-sm font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0 drop-shadow-sm">
+                    Kelola data Lansia untuk pemantauan kesehatan berkala, cek tensi, asam urat, dan pelaporan Posbindu. Lakukan sinkronisasi akun agar keluarga dapat memantau kesehatan lansia secara mandiri.[cite: 12]
                 </p>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto shrink-0 justify-center">
+            <div class="grid grid-cols-2 sm:flex sm:flex-row gap-2.5 sm:gap-3 w-full lg:w-auto shrink-0 justify-center">
                 @if($templateRoute)
-                    <a href="{{ $templateRoute }}" download class="btn-pill bg-white/20 hover:bg-white/30 text-white border border-white/30 px-6 py-3.5 text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all shadow-sm">
+                    <a href="{{ $templateRoute }}" download class="btn-pill bg-white/20 hover:bg-white/30 text-white border border-white/30 px-4 sm:px-6 py-2.5 sm:py-3.5 text-xs sm:text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all shadow-sm">
                         <i class="fa-solid fa-download"></i> Template
                     </a>
                 @endif
                 
                 @if($importRoute)
-                    <a href="{{ $importRoute }}" class="btn-pill bg-teal-800/40 hover:bg-teal-800/60 text-white border border-teal-300/30 px-6 py-3.5 text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all shadow-sm">
+                    <a href="{{ $importRoute }}" class="btn-pill bg-black/10 hover:bg-black/20 text-white border border-white/30 px-4 sm:px-6 py-2.5 sm:py-3.5 text-xs sm:text-sm font-bold backdrop-blur-md flex items-center justify-center gap-2 transition-all shadow-sm">
                         <i class="fa-solid fa-cloud-arrow-up"></i> Import
                     </a>
                 @endif
                 
-                <a href="{{ $createRoute }}" class="btn-pill bg-white hover:bg-emerald-50 text-emerald-600 px-6 py-3.5 text-sm font-black shadow-[0_8px_20px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5">
+                <a href="{{ $createRoute }}" class="col-span-2 sm:col-auto btn-pill bg-white hover:bg-teal-50 text-teal-600 px-4 sm:px-6 py-2.5 sm:py-3.5 text-xs sm:text-sm font-black shadow-[0_8px_20px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5">
                     <i class="fa-solid fa-plus"></i> Tambah Data
                 </a>
             </div>
@@ -335,54 +314,54 @@
     </section>
 
     {{-- STATISTIK GRID --}}
-    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Sasaran</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statTotal) }}</p>
+    <section class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 mb-6 sm:mb-8">
+        <div class="widget-card p-4 sm:p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300 min-w-0">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Total Sasaran</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($statTotal) }}</p>
             </div>
-            <div class="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center text-lg sm:text-2xl shadow-inner group-hover:rotate-6 transition-transform shrink-0">
                 <i class="fa-solid fa-users"></i>
             </div>
         </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-sky-600">Laki-laki</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statLaki) }}</p>
+        <div class="widget-card p-4 sm:p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300 min-w-0">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-sky-600 truncate">Laki-laki</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($statLaki) }}</p>
             </div>
-            <div class="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 text-sky-500 flex items-center justify-center text-2xl shadow-inner group-hover:-rotate-6 transition-transform">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-sky-50 border border-sky-100 text-sky-500 flex items-center justify-center text-lg sm:text-2xl shadow-inner group-hover:-rotate-6 transition-transform shrink-0">
                 <i class="fa-solid fa-mars"></i>
             </div>
         </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-rose-600">Perempuan</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statPerempuan) }}</p>
+        <div class="widget-card p-4 sm:p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300 min-w-0">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-rose-600 truncate">Perempuan</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($statPerempuan) }}</p>
             </div>
-            <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center text-lg sm:text-2xl shadow-inner group-hover:rotate-6 transition-transform shrink-0">
                 <i class="fa-solid fa-venus"></i>
             </div>
         </div>
-        <div class="widget-card p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Terhubung</p>
-                <p class="mt-1 text-3xl font-black text-slate-800">{{ number_format($statTerhubung) }}</p>
+        <div class="widget-card p-4 sm:p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300 min-w-0">
+            <div class="min-w-0">
+                <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-600 truncate">Terhubung</p>
+                <p class="mt-0.5 sm:mt-1 text-xl sm:text-3xl font-black text-slate-800">{{ number_format($statTerhubung) }}</p>
             </div>
-            <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-500 flex items-center justify-center text-2xl shadow-inner group-hover:-rotate-6 transition-transform">
+            <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-500 flex items-center justify-center text-lg sm:text-2xl shadow-inner group-hover:-rotate-6 transition-transform shrink-0">
                 <i class="fa-solid fa-link"></i>
             </div>
         </div>
     </section>
 
     {{-- FILTER WIDGET --}}
-    <form id="liveSearchForm" action="{{ $indexRoute }}" method="GET" class="widget-card p-4 sm:p-5 flex flex-col lg:flex-row gap-4 items-center z-20 relative mb-8">
+    <form id="liveSearchForm" action="{{ $indexRoute }}" method="GET" class="widget-card p-3 sm:p-5 flex flex-col lg:flex-row gap-3 sm:gap-4 items-center z-20 relative mb-6 sm:mb-8">
         <input type="hidden" name="jenis_kelamin" value="{{ $jenisKelamin }}">
 
         <div class="w-full lg:flex-1 relative flex items-center">
             <i class="fa-solid fa-magnifying-glass absolute left-4 text-slate-400 z-10 pointer-events-none"></i>
-            <input type="text" id="liveSearchInput" name="search" value="{{ $search }}" autocomplete="off" placeholder="Ketik nama lansia atau NIK..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3.5 pl-11 pr-12 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 shadow-inner">
+            <input type="text" id="liveSearchInput" name="search" value="{{ $search }}" autocomplete="off" placeholder="Ketik nama lansia atau NIK..." class="w-full btn-pill border border-slate-200 bg-white/80 py-3 sm:py-3.5 pl-11 pr-12 text-sm font-semibold text-slate-800 outline-none transition focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner">
             <div id="liveSearchState" class="absolute right-4 hidden pointer-events-none">
-                <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-sm"></i>
+                <i class="fa-solid fa-circle-notch fa-spin text-teal-500 text-sm"></i>
             </div>
         </div>
 
@@ -393,15 +372,15 @@
                 @endforeach
             </select>
 
-            <button type="button" id="customSelectTrigger" class="w-full btn-pill border border-slate-200 bg-white/90 px-5 py-3.5 text-sm font-bold text-slate-700 outline-none transition hover:border-emerald-300 focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 shadow-inner flex justify-between items-center cursor-pointer">
-                <span id="customSelectLabel">{{ $statusOptions[$statusAkun] ?? 'Semua Status' }}</span>
+            <button type="button" id="customSelectTrigger" class="w-full btn-pill border border-slate-200 bg-white/90 px-4 sm:px-5 py-3 sm:py-3.5 text-sm font-bold text-slate-700 outline-none transition hover:border-teal-300 focus:bg-white focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 shadow-inner flex justify-between items-center cursor-pointer">
+                <span id="customSelectLabel" class="truncate mr-2">{{ $statusOptions[$statusAkun] ?? 'Semua Status' }}</span>
                 <i class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-300" id="customSelectIcon"></i>
             </button>
 
-            <ul id="customSelectMenu" class="absolute z-[100] w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl opacity-0 invisible transform -translate-y-2 transition-all duration-200 overflow-hidden py-1.5">
+            <ul id="customSelectMenu" class="absolute z-[100] w-full mt-2 bg-white border border-slate-100 rounded-[1.5rem] shadow-xl opacity-0 invisible transform -translate-y-2 transition-all duration-200 overflow-hidden py-1.5">
                 @foreach($statusOptions as $key => $label)
                     <li>
-                        <button type="button" class="custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors {{ $statusAkun === $key ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}" data-value="{{ $key }}">
+                        <button type="button" class="custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors {{ $statusAkun === $key ? 'bg-teal-50 text-teal-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}" data-value="{{ $key }}">
                             {{ $label }}
                         </button>
                     </li>
@@ -410,11 +389,11 @@
         </div>
 
         <div class="flex gap-2 w-full lg:w-auto">
-            <button type="submit" class="flex-1 lg:flex-none btn-pill bg-slate-800 hover:bg-slate-700 px-6 py-3.5 text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2">
+            <button type="submit" class="flex-1 lg:flex-none btn-pill bg-slate-800 hover:bg-slate-700 px-5 sm:px-6 py-3 sm:py-3.5 text-sm font-bold text-white shadow-md transition flex items-center justify-center gap-2">
                 <i class="fa-solid fa-filter"></i> Filter
             </button>
             @if($activeFilterCount > 0)
-                <a href="{{ $indexRoute }}" id="resetSearchButton" class="btn-pill border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 w-12 flex items-center justify-center text-slate-400 shadow-sm transition" title="Reset filter">
+                <a href="{{ $indexRoute }}" id="resetSearchButton" class="btn-pill border border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 w-12 sm:w-[52px] flex items-center justify-center text-slate-400 shadow-sm transition" title="Reset filter">
                     <i class="fa-solid fa-rotate-right"></i>
                 </a>
             @endif
@@ -422,17 +401,17 @@
     </form>
 
     {{-- MAIN DATA WIDGET --}}
-    <section id="lansiaLiveRegion" data-live-region class="w-full">
+    <section id="lansiaLiveRegion" data-live-region class="w-full widget-card p-4 sm:p-6">
         
-        <div class="px-2 py-2 mb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="pb-4 mb-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-                <h2 class="text-xl font-black text-slate-900">Daftar Sasaran Lansia</h2>
-                <p id="listRangeText" class="mt-1 text-xs font-semibold text-slate-500">{{ $rangeText }}</p>
+                <h2 class="text-base sm:text-xl font-black text-slate-900">Daftar Sasaran Lansia</h2>
+                <p id="listRangeText" class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs font-semibold text-slate-500">{{ $rangeText }}</p>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-3">
-                <label class="btn-pill border border-slate-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors">
-                    <input type="checkbox" id="selectAllLansia" class="h-4 w-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-400 cursor-pointer transition">
+            <div class="flex flex-row gap-2 sm:gap-3">
+                <label class="btn-pill flex-1 sm:flex-none border border-slate-200 bg-white/50 px-4 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input type="checkbox" id="selectAllLansia" class="h-4 w-4 rounded border-slate-300 text-teal-500 focus:ring-teal-400 cursor-pointer transition">
                     Pilih Semua
                 </label>
 
@@ -442,14 +421,14 @@
                             data-confirm-title="Hapus Data Terpilih?" 
                             data-confirm-message="Lansia yang dicentang akan dihapus secara permanen dari sistem. Pastikan pilihan sudah benar." 
                             data-confirm-tone="danger" 
-                            class="btn-pill bg-white border border-rose-200 text-rose-600 px-4 py-2 text-[11px] font-black uppercase tracking-wider shadow-sm transition opacity-50 cursor-not-allowed hover:bg-rose-500 hover:text-white">
-                        <i class="fa-solid fa-trash-can mr-1"></i> Hapus Terpilih
+                            class="btn-pill flex-1 sm:flex-none bg-white border border-rose-200 text-rose-600 px-4 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-sm transition opacity-50 cursor-not-allowed hover:bg-rose-500 hover:text-white">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Hapus
                     </button>
                 @endif
             </div>
         </div>
 
-        <div class="pc-scroll-container max-h-[600px] py-2 space-y-3">
+        <div class="pc-scroll-container max-h-[60vh] lg:max-h-[600px] py-2 space-y-3">
             @forelse($items as $item)
                 @php
                     $name = $item->nama_lengkap ?? '-';
@@ -457,104 +436,111 @@
                     $connected = $isConnected($item);
                 @endphp
 
-                <article class="bg-white border border-slate-100 rounded-[1.25rem] p-4 shadow-sm hover:shadow-md hover:border-emerald-200 transition duration-300 transform translate-z-0">
-                    <div class="data-row col-stack-mobile">
+                <article class="pc-row p-4 sm:p-5 relative overflow-hidden">
+                    <div class="flex flex-col xl:flex-row gap-4 xl:items-center">
                         
-                        <div class="pt-2 xl:pt-0 flex items-center justify-center relative z-10">
-                            <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="bulkDeleteForm" class="lansia-check h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
-                        </div>
-
-                        <div class="flex items-start gap-4 min-w-0 relative z-10">
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 border border-slate-100 text-lg font-black text-slate-700 shadow-sm mt-0.5">
+                        {{-- 1. Area Profil & Checkbox --}}
+                        <div class="flex items-start gap-3 sm:gap-4 xl:w-[35%] shrink-0">
+                            <div class="mt-1 xl:mt-0">
+                                <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="bulkDeleteForm" class="lansia-check h-4 w-4 sm:h-5 sm:w-5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer">
+                            </div>
+                            <div class="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-base sm:text-lg font-black text-slate-700 shadow-sm">
                                 {{ $initial($name) }}
                             </div>
-                            <div class="min-w-0">
-                                <h3 class="truncate text-[15px] font-bold text-slate-800 leading-tight" title="{{ $name }}">{{ $name }}</h3>
-                                <p class="mt-1 truncate text-[11px] font-bold text-slate-400 uppercase tracking-wide">NIK {{ $nik }}</p>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="truncate text-sm sm:text-base font-black text-slate-800 leading-tight" title="{{ $name }}">{{ $name }}</h3>
+                                <p class="mt-0.5 sm:mt-1 truncate text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wide"><i class="fa-solid fa-id-card opacity-70 mr-1"></i> {{ $nik }}</p>
                                 <div class="mt-2 flex flex-wrap gap-1.5">
-                                    <span class="rounded-[6px] border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $genderClass($item->jenis_kelamin) }}">{{ $genderLabel($item->jenis_kelamin) }}</span>
-                                    <span class="rounded-[6px] border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider {{ $accountClass($item) }}">{{ $accountLabel($item) }}</span>
+                                    <span class="rounded-full border px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm {{ $genderClass($item->jenis_kelamin) }}">{{ $genderLabel($item->jenis_kelamin) }}</span>
+                                    <span class="rounded-full border px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider shadow-sm {{ $accountClass($item) }}">{{ $accountLabel($item) }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-hidden-mobile min-w-0 relative z-10">
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Status & Usia</p>
-                            <p class="text-[13px] font-bold text-slate-700 leading-snug" title="{{ $item->pekerjaan ?? '-' }}">{{ $item->pekerjaan ?? 'Lansia' }}</p>
-                            <p class="text-[11px] font-semibold text-slate-500 mt-1">{{ $getAge($item) }}</p>
+                        {{-- 2. Area Informasi Tambahan --}}
+                        <div class="grid grid-cols-2 gap-3 xl:flex xl:w-[45%] shrink-0 xl:gap-4 border-t border-slate-100 pt-3 xl:border-0 xl:pt-0">
+                            <div class="bg-slate-50/50 p-2.5 sm:p-3 rounded-2xl border border-slate-100 xl:flex-1">
+                                <p class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Status & Usia</p>
+                                <p class="text-[11px] sm:text-xs font-bold text-slate-700 leading-snug truncate" title="{{ $item->pekerjaan ?? '-' }}">{{ $item->pekerjaan ?? 'Lansia' }}</p>
+                                <p class="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-0.5 truncate"><i class="fa-solid fa-clock opacity-50 mr-1"></i> {{ $getAge($item) }}</p>
+                            </div>
+                            <div class="bg-slate-50/50 p-2.5 sm:p-3 rounded-2xl border border-slate-100 xl:flex-1">
+                                <p class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Pendamping / Keluarga</p>
+                                <p class="text-[11px] sm:text-xs font-bold text-slate-700 truncate" title="{{ $item->nama_keluarga ?? '-' }}">Kel: {{ $item->nama_keluarga ?? '-' }}</p>
+                                <p class="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-0.5 truncate" title="{{ $item->alamat }}"><i class="fa-solid fa-location-dot opacity-50 mr-1"></i> {{ $item->alamat ?: '-' }}</p>
+                            </div>
                         </div>
 
-                        <div class="col-hidden-mobile min-w-0 relative z-10">
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Pendamping / Keluarga</p>
-                            <p class="text-[13px] font-bold text-slate-700 truncate" title="{{ $item->nama_keluarga ?? '-' }}">Kel: {{ $item->nama_keluarga ?? '-' }}</p>
-                            <p class="text-[11px] font-semibold text-slate-500 mt-1 line-clamp-2 leading-snug" title="{{ $item->alamat }}">{{ $item->alamat ?: '-' }}</p>
-                        </div>
-
-                        <div class="action-box relative z-20">
+                        {{-- 3. Area Tombol Aksi --}}
+                        <div class="flex flex-wrap xl:flex-nowrap gap-2 pt-3 border-t border-slate-100 xl:border-0 xl:pt-0 xl:w-[20%] xl:justify-end shrink-0">
                             @if($routeHas('kader.data.lansia.show'))
-                                <a href="{{ route('kader.data.lansia.show', $item->id) }}" class="row-action action-detail" title="Lihat Detail"><i class="fa-solid fa-eye"></i></a>
+                                <a href="{{ route('kader.data.lansia.show', $item->id) }}" class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-[11px] sm:text-xs font-bold text-slate-600 shadow-sm hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="Lihat Detail">
+                                    <i class="fa-solid fa-eye"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Detail</span>
+                                </a>
                             @endif
 
                             @if($routeHas('kader.data.lansia.edit'))
-                                <a href="{{ route('kader.data.lansia.edit', $item->id) }}" class="row-action action-edit" title="Edit Data"><i class="fa-solid fa-pen"></i></a>
+                                <a href="{{ route('kader.data.lansia.edit', $item->id) }}" class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-[11px] sm:text-xs font-bold text-slate-600 shadow-sm hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit Data">
+                                    <i class="fa-solid fa-pen"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Edit</span>
+                                </a>
                             @endif
 
                             @if(! $connected)
-                                @php
-                                    $syncUrl = $routeHas('kader.data.lansia.sync') ? route('kader.data.lansia.sync', $item->id) : url('/kader/data/lansia/' . $item->id . '/sync');
-                                @endphp
+                                @php $syncUrl = $routeHas('kader.data.lansia.sync') ? route('kader.data.lansia.sync', $item->id) : url('/kader/data/lansia/' . $item->id . '/sync'); @endphp
                                 <button type="button" 
-                                        class="row-action action-sync" 
-                                        data-confirm-submit
+                                        class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-amber-200 bg-amber-50 text-[11px] sm:text-xs font-bold text-amber-600 shadow-sm hover:bg-amber-500 hover:text-white transition-colors"
+                                        data-confirm-submit 
                                         data-action-url="{{ $syncUrl }}"
                                         data-action-method="POST"
                                         data-confirm-title="Sinkronkan Akun?" 
                                         data-confirm-message="Sistem akan mencoba menghubungkan data Lansia ini dengan akun keluarga berdasarkan NIK yang sama." 
-                                        data-confirm-tone="gold">
-                                    <i class="fa-solid fa-rotate mr-1"></i> Sinkron
+                                        data-confirm-tone="gold" title="Sinkronkan Akun">
+                                    <i class="fa-solid fa-rotate"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Sync</span>
                                 </button>
                             @endif
 
                             @if($routeHas('kader.data.lansia.destroy'))
                                 <button type="button" 
-                                        class="row-action action-delete" 
-                                        data-confirm-submit
+                                        class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-rose-200 bg-rose-50 text-[11px] sm:text-xs font-bold text-rose-500 shadow-sm hover:bg-rose-500 hover:text-white transition-colors"
+                                        data-confirm-submit 
                                         data-action-url="{{ route('kader.data.lansia.destroy', $item->id) }}"
                                         data-action-method="DELETE"
                                         data-confirm-title="Hapus Data Lansia?" 
                                         data-confirm-message="Data Lansia ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan." 
-                                        data-confirm-tone="danger">
-                                    <i class="fa-solid fa-trash-can mr-1"></i> Hapus
+                                        data-confirm-tone="danger" title="Hapus Data">
+                                    <i class="fa-solid fa-trash-can"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Hapus</span>
                                 </button>
                             @endif
                         </div>
+                        
                     </div>
                 </article>
             @empty
-                <div class="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center transition-all">
-                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-3xl font-black text-slate-300 shadow-sm mb-4">
+                <div class="rounded-[2rem] border-2 border-dashed border-slate-200 bg-white/50 p-8 sm:p-12 text-center transition-all">
+                    <div class="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-slate-100 text-2xl sm:text-3xl font-black text-slate-400 shadow-inner mb-4">
                         <i class="fa-solid fa-person-cane"></i>
                     </div>
-                    <h3 class="text-xl font-black text-slate-800">Data Lansia Kosong</h3>
-                    <p class="mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-slate-500">Tidak ada sasaran yang cocok dengan pencarian, atau database masih kosong.</p>
+                    <h3 class="text-lg sm:text-xl font-black text-slate-800">Data Lansia Kosong</h3>
+                    <p class="mx-auto mt-1 max-w-sm text-xs sm:text-sm font-semibold leading-relaxed text-slate-500">Tidak ada sasaran yang cocok dengan pencarian, atau database masih kosong.</p>
                 </div>
             @endforelse
         </div>
 
+        {{-- CUSTOM PAGINATION (LINGKARAN HIJAU TEAL) --}}
         @if(method_exists($items, 'hasPages') && $items->hasPages())
-            <div id="lansiaPagination" class="px-2 py-6 mt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div id="lansiaPagination" class="pt-5 sm:pt-6 mt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Halaman <span class="text-slate-900">{{ $items->currentPage() }}</span> dari <span class="text-slate-900">{{ $items->lastPage() }}</span>
+                    Halaman <span class="text-slate-800">{{ $items->currentPage() }}</span> dari <span class="text-slate-800">{{ $items->lastPage() }}</span>
                 </p>
                 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 sm:gap-2">
                     @if ($items->onFirstPage())
-                        <button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60">
-                            <i class="fas fa-chevron-left text-xs"></i>
+                        <button type="button" disabled class="inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed">
+                            <i class="fas fa-chevron-left text-[10px] sm:text-xs"></i>
                         </button>
                     @else
-                        <a href="{{ $items->previousPageUrl() }}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">
-                            <i class="fas fa-chevron-left text-xs"></i>
+                        <a href="{{ $items->previousPageUrl() }}" class="inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 shadow-sm hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all">
+                            <i class="fas fa-chevron-left text-[10px] sm:text-xs"></i>
                         </a>
                     @endif
 
@@ -564,23 +550,23 @@
                     @endphp
                     @for ($page = $start; $page <= $end; $page++)
                         @if ($page == $items->currentPage())
-                            <span class="btn-pill w-10 h-10 flex items-center justify-center bg-emerald-500 text-white font-black text-sm shadow-md pointer-events-none">
+                            <span class="inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-teal-500 text-white font-black text-xs sm:text-sm shadow-md shadow-teal-500/30 pointer-events-none">
                                 {{ $page }}
                             </span>
                         @else
-                            <a href="{{ $items->url($page) }}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 font-bold text-sm shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">
+                            <a href="{{ $items->url($page) }}" class="inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 font-bold text-xs sm:text-sm shadow-sm hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all">
                                 {{ $page }}
                             </a>
                         @endif
                     @endfor
 
                     @if ($items->hasMorePages())
-                        <a href="{{ $items->nextPageUrl() }}" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all">
-                            <i class="fas fa-chevron-right text-xs"></i>
+                        <a href="{{ $items->nextPageUrl() }}" class="inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 shadow-sm hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all">
+                            <i class="fas fa-chevron-right text-[10px] sm:text-xs"></i>
                         </a>
                     @else
-                        <button type="button" disabled class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-100 text-slate-300 bg-slate-50 cursor-not-allowed opacity-60">
-                            <i class="fas fa-chevron-right text-xs"></i>
+                        <button type="button" disabled class="inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed">
+                            <i class="fas fa-chevron-right text-[10px] sm:text-xs"></i>
                         </button>
                     @endif
                 </div>
@@ -605,23 +591,23 @@
 @push('modals')
 <div id="nexusConfirmModal" class="pc-modal-backdrop">
     <div class="pc-modal-card">
-        <div id="nexusConfirmHeader" class="relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-emerald-600 to-teal-700">
+        <div id="nexusConfirmHeader" class="relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-teal-500 to-emerald-600">
             <div class="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-white/10 pointer-events-none"></div>
-            <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-t-[80px] bg-amber-300/15 pointer-events-none"></div>
+            <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-[40px] bg-white/10 pointer-events-none"></div>
 
             <div class="relative z-10">
-                <i id="nexusConfirmIcon" class="fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90"></i>
-                <h3 id="nexusConfirmTitle" class="text-xl font-black tracking-tight mb-1">Konfirmasi Aksi</h3>
-                <p id="nexusConfirmMessage" class="text-xs font-semibold leading-relaxed opacity-80 px-4">
+                <i id="nexusConfirmIcon" class="fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90 drop-shadow-md"></i>
+                <h3 id="nexusConfirmTitle" class="text-lg sm:text-xl font-black tracking-tight mb-1">Konfirmasi Aksi</h3>
+                <p id="nexusConfirmMessage" class="text-[11px] sm:text-xs font-semibold leading-relaxed opacity-90 px-4">
                     Pastikan data sudah benar sebelum melanjutkan.
                 </p>
             </div>
         </div>
 
         <div class="p-6 bg-white text-center">
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button" id="nexusConfirmCancel" class="btn-pill h-11 border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Batal</button>
-                <button type="button" id="nexusConfirmOk" class="btn-pill h-11 bg-emerald-600 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors">Lanjutkan</button>
+            <div class="flex gap-3">
+                <button type="button" id="nexusConfirmCancel" class="w-full flex-1 btn-pill border border-slate-200 bg-white text-slate-700 px-4 py-3 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">Batal</button>
+                <button type="button" id="nexusConfirmOk" class="w-full flex-1 btn-pill bg-teal-500 text-white px-4 py-3 text-sm font-bold shadow-md hover:bg-teal-600 transition-all">Lanjutkan</button>
             </div>
         </div>
     </div>
@@ -666,9 +652,9 @@
                 if (!isOpen) {
                     customSelectMenu.classList.add('dropdown-open');
                     customSelectIcon.classList.add('dropdown-icon-rotate');
-                    customSelectTrigger.classList.add('border-emerald-400', 'ring-4', 'ring-emerald-500/10');
+                    customSelectTrigger.classList.add('border-teal-400', 'ring-4', 'ring-teal-500/10');
                 } else {
-                    customSelectTrigger.classList.remove('border-emerald-400', 'ring-4', 'ring-emerald-500/10');
+                    customSelectTrigger.classList.remove('border-teal-400', 'ring-4', 'ring-teal-500/10');
                 }
             });
 
@@ -676,7 +662,7 @@
                 if (!customSelectTrigger.contains(e.target) && !customSelectMenu.contains(e.target)) {
                     customSelectMenu.classList.remove('dropdown-open');
                     customSelectIcon.classList.remove('dropdown-icon-rotate');
-                    customSelectTrigger.classList.remove('border-emerald-400', 'ring-4', 'ring-emerald-500/10');
+                    customSelectTrigger.classList.remove('border-teal-400', 'ring-4', 'ring-teal-500/10');
                 }
             });
 
@@ -690,7 +676,7 @@
                     customSelectOptions.forEach(btn => {
                         btn.className = 'custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors text-slate-600 hover:bg-slate-50 hover:text-slate-900';
                     });
-                    this.className = 'custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors bg-emerald-50 text-emerald-600';
+                    this.className = 'custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors bg-teal-50 text-teal-600';
 
                     if (statusInput) {
                         statusInput.value = val;
@@ -699,7 +685,7 @@
 
                     customSelectMenu.classList.remove('dropdown-open');
                     customSelectIcon.classList.remove('dropdown-icon-rotate');
-                    customSelectTrigger.classList.remove('border-emerald-400', 'ring-4', 'ring-emerald-500/10');
+                    customSelectTrigger.classList.remove('border-teal-400', 'ring-4', 'ring-teal-500/10');
                 });
             });
         }
@@ -718,22 +704,22 @@
 
         function openConfirm(options) {
             if (!confirmModal) return;
-            var tone = options.tone || 'emerald';
+            var tone = options.tone || 'teal';
             confirmTitle.textContent = options.title || 'Konfirmasi Aksi';
             confirmMessage.textContent = options.message || 'Pastikan data sudah benar sebelum melanjutkan.';
 
             if (tone === 'danger') {
-                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-rose-600 to-rose-800';
-                confirmIcon.className = 'fa-solid fa-trash-can text-4xl mb-3 opacity-90';
-                confirmOk.className = 'btn-pill h-11 bg-rose-600 text-sm font-bold text-white shadow-md hover:bg-rose-700 transition-colors';
+                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-rose-500 to-rose-700';
+                confirmIcon.className = 'fa-solid fa-trash-can text-4xl mb-3 opacity-90 drop-shadow-md';
+                confirmOk.className = 'w-full flex-1 btn-pill bg-rose-500 text-sm font-bold text-white shadow-md hover:bg-rose-600 transition-colors py-3';
             } else if (tone === 'gold') {
-                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-amber-500 to-orange-600';
-                confirmIcon.className = 'fa-solid fa-rotate text-4xl mb-3 opacity-90';
-                confirmOk.className = 'btn-pill h-11 bg-amber-500 text-sm font-bold text-amber-950 shadow-md hover:bg-amber-400 transition-colors';
+                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-amber-500 to-orange-500';
+                confirmIcon.className = 'fa-solid fa-rotate text-4xl mb-3 opacity-90 drop-shadow-md';
+                confirmOk.className = 'w-full flex-1 btn-pill bg-amber-500 text-sm font-bold text-white shadow-md hover:bg-amber-600 transition-colors py-3';
             } else {
-                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-emerald-600 to-teal-700';
-                confirmIcon.className = 'fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90';
-                confirmOk.className = 'btn-pill h-11 bg-emerald-600 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors';
+                confirmHeader.className = 'relative overflow-hidden px-6 py-6 text-white text-center bg-gradient-to-br from-teal-500 to-emerald-500';
+                confirmIcon.className = 'fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90 drop-shadow-md';
+                confirmOk.className = 'w-full flex-1 btn-pill bg-teal-500 text-sm font-bold text-white shadow-md hover:bg-teal-600 transition-colors py-3';
             }
             confirmModal.classList.add('is-open');
             document.body.style.overflow = 'hidden';
@@ -918,7 +904,7 @@
                 if(customSelectOptions) {
                     customSelectOptions.forEach(btn => {
                         if (btn.getAttribute('data-value') === 'semua') {
-                            btn.className = 'custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors bg-emerald-50 text-emerald-600';
+                            btn.className = 'custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors bg-teal-50 text-teal-600';
                         } else {
                             btn.className = 'custom-select-option w-full text-left px-5 py-2.5 text-sm font-semibold transition-colors text-slate-600 hover:bg-slate-50 hover:text-slate-900';
                         }

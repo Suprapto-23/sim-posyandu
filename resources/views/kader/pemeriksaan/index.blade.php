@@ -80,17 +80,17 @@
                 'label' => 'Remaja',
                 'desc' => 'Sasaran usia remaja',
                 'icon' => 'fa-user-graduate',
-                'badge' => 'border-violet-200 bg-violet-50 text-violet-800',
-                'soft' => 'border-violet-200 bg-gradient-to-br from-violet-50 via-fuchsia-50 to-white',
-                'solid' => 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white',
+                'badge' => 'border-amber-200 bg-amber-50 text-amber-800',
+                'soft' => 'border-amber-200 bg-gradient-to-br from-amber-50 via-yellow-50 to-white',
+                'solid' => 'bg-gradient-to-br from-amber-500 to-orange-500 text-white',
             ],
             'lansia' => [
                 'label' => 'Lansia',
                 'desc' => 'Sasaran usia lanjut',
                 'icon' => 'fa-person-cane',
-                'badge' => 'border-sky-200 bg-sky-50 text-sky-800',
-                'soft' => 'border-sky-200 bg-gradient-to-br from-sky-50 via-cyan-50 to-white',
-                'solid' => 'bg-gradient-to-br from-sky-500 to-cyan-500 text-white',
+                'badge' => 'border-blue-200 bg-blue-50 text-blue-800',
+                'soft' => 'border-blue-200 bg-gradient-to-br from-blue-50 via-cyan-50 to-white',
+                'solid' => 'bg-gradient-to-br from-blue-500 to-cyan-500 text-white',
             ],
             default => [
                 'label' => 'Umum',
@@ -207,7 +207,7 @@
     }
     
     .widget-card {
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.9);
@@ -229,11 +229,11 @@
         transition: all 0.3s ease;
         border: 1px solid rgba(255, 255, 255, 0.8);
         background: rgba(255, 255, 255, 0.6);
-        border-radius: 1.5rem;
+        border-radius: 1.75rem;
     }
     .pc-row:hover {
         background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 8px 25px rgba(20, 184, 166, 0.08);
         transform: translateY(-2px);
     }
 
@@ -252,6 +252,15 @@
     .pc-table-wrap::-webkit-scrollbar-thumb {
         background-color: rgba(20, 184, 166, 0.3);
         border-radius: 999px;
+    }
+
+    /* Hide Scrollbar for Horizontal Scroll Areas */
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
     /* Modal Styling */
@@ -310,101 +319,27 @@
     /* =========================================
        CUSTOM PAGINATION (LINGKARAN HIJAU)
        ========================================= */
-    /* Menyembunyikan tampilan mobile default */
-    .pc-pagination > nav > div:first-child {
-        display: none !important;
-    }
-    
-    /* Memaksa flexbox sejajar Kiri-Kanan */
+    .pc-pagination > nav > div:first-child { display: none !important; }
     .pc-pagination nav .hidden.sm\:flex-1 {
-        display: flex !important;
-        flex-direction: column;
-        gap: 1.5rem;
-        align-items: center;
-        width: 100%;
+        display: flex !important; flex-direction: column; gap: 1.5rem; align-items: center; width: 100%;
     }
-    @media (min-width: 640px) {
-        .pc-pagination nav .hidden.sm\:flex-1 {
-            flex-direction: row;
-            justify-content: space-between;
-        }
-    }
-
-    /* Styling Teks Keterangan (Kiri) */
-    .pc-pagination p.text-sm.text-gray-700 {
-        color: #64748b !important;
-        font-weight: 700 !important;
-        font-size: 0.75rem !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
-    }
-    .pc-pagination p.text-sm.text-gray-700 span.font-medium {
-        color: #0f172a !important;
-        font-weight: 900 !important;
-        font-size: 0.85rem !important;
-    }
-
-    /* Modifikasi wrapper tombol agar tidak saling menempel (Kanan) */
-    .pc-pagination .relative.z-0.inline-flex {
-        box-shadow: none !important;
-        gap: 0.5rem !important; /* Jarak antar tombol */
-    }
-
-    /* Styling Dasar Tombol (Lingkaran Sempurna) */
+    @media (min-width: 640px) { .pc-pagination nav .hidden.sm\:flex-1 { flex-direction: row; justify-content: space-between; } }
+    .pc-pagination p.text-sm.text-gray-700 { color: #64748b !important; font-weight: 700 !important; font-size: 0.75rem !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
+    .pc-pagination p.text-sm.text-gray-700 span.font-medium { color: #0f172a !important; font-weight: 900 !important; font-size: 0.85rem !important; }
+    .pc-pagination .relative.z-0.inline-flex { box-shadow: none !important; gap: 0.5rem !important; }
     .pc-pagination .relative.inline-flex {
-        border-radius: 50% !important; /* Membuat bulat */
-        width: 40px !important;
-        height: 40px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border: 1px solid #e2e8f0 !important;
-        background: #ffffff !important;
-        color: #334155 !important;
-        font-weight: 800 !important;
-        font-size: 0.875rem !important;
-        transition: all 0.2s ease !important;
-        margin-left: 0 !important; /* Hapus margin negatif bawaan Tailwind */
+        border-radius: 50% !important; width: 40px !important; height: 40px !important; padding: 0 !important; margin: 0 !important;
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        border: 1px solid #e2e8f0 !important; background: #ffffff !important; color: #334155 !important;
+        font-weight: 800 !important; font-size: 0.875rem !important; transition: all 0.2s ease !important; margin-left: 0 !important;
     }
-
-    /* Hover State untuk tombol yang bisa diklik */
-    .pc-pagination a.relative.inline-flex:hover {
-        background: #f8fafc !important;
-        border-color: #cbd5e1 !important;
-        color: #10b981 !important;
-    }
-
-    /* Active State (Halaman saat ini - Hijau Solid) */
+    .pc-pagination a.relative.inline-flex:hover { background: #f8fafc !important; border-color: #cbd5e1 !important; color: #14b8a6 !important; }
     .pc-pagination span[aria-current="page"] > span {
-        background: #10b981 !important; /* Hijau solid sesuai gambar */
-        color: #ffffff !important;
-        border-color: #10b981 !important;
-        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2) !important;
+        background: #14b8a6 !important; color: #ffffff !important; border-color: #14b8a6 !important; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.2) !important;
     }
-
-    /* Disabled State (Tombol panah mati) */
-    .pc-pagination span[aria-disabled="true"] > span {
-        background: #f8fafc !important;
-        color: #cbd5e1 !important;
-        border-color: #f1f5f9 !important;
-        cursor: not-allowed !important;
-        box-shadow: none !important;
-    }
-
-    /* Sembunyikan pemisah "..." agar tidak berupa kotak */
-    .pc-pagination span[aria-disabled="true"]:not([aria-label]) > span {
-        border: none !important;
-        background: transparent !important;
-        color: #94a3b8 !important;
-    }
-
-    /* Perbaiki posisi icon panah SVG */
-    .pc-pagination .relative.inline-flex svg {
-        width: 1.25rem !important;
-        height: 1.25rem !important;
-    }
+    .pc-pagination span[aria-disabled="true"] > span { background: #f8fafc !important; color: #cbd5e1 !important; border-color: #f1f5f9 !important; cursor: not-allowed !important; box-shadow: none !important; }
+    .pc-pagination span[aria-disabled="true"]:not([aria-label]) > span { border: none !important; background: transparent !important; color: #94a3b8 !important; }
+    .pc-pagination .relative.inline-flex svg { width: 1.25rem !important; height: 1.25rem !important; }
 </style>
 @endpush
 
@@ -413,7 +348,7 @@
 
     {{-- SYSTEM ALERT --}}
     @if(session('success') || session('error') || $errors->any())
-        <div class="rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 shadow-sm border-2 flex items-center gap-3 sm:gap-4 {{ session('success') ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800' }}">
+        <div class="rounded-[2rem] p-4 sm:p-6 shadow-sm border-2 flex items-center gap-3 sm:gap-4 {{ session('success') ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800' }}">
             <div class="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shrink-0 shadow-inner">
                 <i class="fa-solid {{ session('success') ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-rose-500' }} text-base sm:text-xl"></i>
             </div>
@@ -430,7 +365,7 @@
     @endif
 
     {{-- 1. HEADER / HERO WIDGET --}}
-    <div class="relative overflow-hidden rounded-[1.75rem] sm:rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-5 sm:p-10 shadow-2xl shadow-teal-500/30 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-5 sm:gap-8 border-[3px] sm:border-[4px] border-white/50">
+    <div class="relative overflow-hidden rounded-[2.5rem] sm:rounded-[3rem] bg-gradient-to-r from-teal-500 via-teal-400 to-emerald-400 p-5 sm:p-10 shadow-2xl shadow-teal-500/30 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-5 sm:gap-8 border-[3px] sm:border-[4px] border-white/50">
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50"></div>
         <div class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent"></div>
         
@@ -462,7 +397,7 @@
         </div>
 
         <div id="hero-stats" class="relative z-10 w-full xl:w-auto flex flex-col sm:flex-row gap-4 justify-center">
-            <div class="widget-card !rounded-[1.5rem] sm:!rounded-[2.5rem] !bg-white/90 p-4 sm:p-6 flex flex-col justify-center gap-2 sm:min-w-[220px]">
+            <div class="widget-card !rounded-[2rem] sm:!rounded-[2.5rem] !bg-white/90 p-4 sm:p-6 flex flex-col justify-center gap-2 sm:minw-[220px]">
                 <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Total Data Ditemukan</p>
                 <div class="flex items-center justify-center gap-3 sm:gap-4 mt-1 sm:mt-2">
                     <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-teal-100 text-teal-500 flex items-center justify-center text-lg sm:text-2xl shadow-inner shrink-0">
@@ -520,19 +455,19 @@
         </div>
         <div class="widget-card p-3 sm:p-6 flex flex-col sm:flex-row justify-between items-center sm:items-center gap-1.5 sm:gap-0 group hover:-translate-y-1 text-center sm:text-left min-w-0">
             <div class="min-w-0 w-full">
-                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-violet-600 truncate">Total Remaja</p>
+                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 truncate">Total Remaja</p>
                 <p class="mt-0.5 sm:mt-1 text-lg sm:text-2xl font-black text-slate-800">{{ number_format($remajaCount) }}</p>
             </div>
-            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-violet-50 text-violet-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
+            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
                 <i class="fa-solid fa-user-graduate"></i>
             </div>
         </div>
         <div class="widget-card p-3 sm:p-6 flex flex-col sm:flex-row justify-between items-center sm:items-center gap-1.5 sm:gap-0 group hover:-translate-y-1 text-center sm:text-left min-w-0">
             <div class="min-w-0 w-full">
-                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-sky-600 truncate">Total Lansia</p>
+                <p class="text-[8px] sm:text-[11px] font-bold uppercase tracking-wider text-blue-600 truncate">Total Lansia</p>
                 <p class="mt-0.5 sm:mt-1 text-lg sm:text-2xl font-black text-slate-800">{{ number_format($lansiaCount) }}</p>
             </div>
-            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
+            <div class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-sm sm:text-lg shadow-inner shrink-0">
                 <i class="fa-solid fa-person-cane"></i>
             </div>
         </div>
@@ -542,11 +477,11 @@
     <form id="filterForm" method="GET" action="{{ route('kader.pemeriksaan.index') }}" class="flex flex-col gap-3 sm:gap-4 relative z-20">
         
         {{-- Kategori Tabs --}}
-        <div class="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full w-full sm:w-fit shadow-[0_8px_20px_-4px_rgba(0,0,0,0.05)]">
+        <div class="flex overflow-x-auto hide-scrollbar gap-1.5 sm:gap-2 p-1.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-full w-full sm:w-fit shadow-[0_8px_20px_-4px_rgba(0,0,0,0.05)] relative z-20">
             @foreach($kategoriOptions as $key => $label)
-                <label class="cursor-pointer relative flex-1 sm:flex-none">
+                <label class="cursor-pointer flex-none">
                     <input type="radio" name="kategori" value="{{ $key }}" class="peer sr-only" @checked($kategori === $key)>
-                    <div class="px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold text-slate-500 text-center peer-checked:bg-white peer-checked:text-teal-600 peer-checked:shadow-sm transition-all duration-300">
+                    <div class="px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold text-slate-500 text-center peer-checked:bg-white peer-checked:text-teal-600 peer-checked:shadow-sm transition-all duration-300 whitespace-nowrap">
                         {{ $label }}
                     </div>
                 </label>
@@ -604,7 +539,7 @@
                         @endphp
 
                         <tr class="pc-row">
-                            <td class="rounded-l-3xl px-4 py-4">
+                            <td class="rounded-l-[1.75rem] px-4 py-4">
                                 <div class="flex items-center gap-3">
                                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full {{ $km['badge'] }} text-sm font-black shadow-inner">
                                         {{ Str::upper(Str::substr($nama, 0, 1)) }}
@@ -635,17 +570,17 @@
                                     </div>
                                 @elseif(strtolower($item->kategori_pasien) === 'remaja')
                                     <div class="grid grid-cols-2 gap-1">
-                                        <div><span class="text-violet-600 font-bold">IMT:</span> {{ $item->imt ?? '-' }}</div>
-                                        <div><span class="text-violet-600 font-bold">Tensi:</span> {{ $item->tekanan_darah ?? '-' }}</div>
-                                        <div><span class="text-violet-600 font-bold">LiLA:</span> {{ $item->lingkar_lengan ?? '-' }} cm</div>
-                                        <div><span class="text-violet-600 font-bold">LP:</span> {{ $item->lingkar_perut ?? '-' }} cm</div>
+                                        <div><span class="text-amber-600 font-bold">IMT:</span> {{ $item->imt ?? '-' }}</div>
+                                        <div><span class="text-amber-600 font-bold">Tensi:</span> {{ $item->tekanan_darah ?? '-' }}</div>
+                                        <div><span class="text-amber-600 font-bold">LiLA:</span> {{ $item->lingkar_lengan ?? '-' }} cm</div>
+                                        <div><span class="text-amber-600 font-bold">LP:</span> {{ $item->lingkar_perut ?? '-' }} cm</div>
                                     </div>
                                 @elseif(strtolower($item->kategori_pasien) === 'lansia')
                                     <div class="grid grid-cols-2 gap-1">
-                                        <div><span class="text-sky-600 font-bold">IMT:</span> {{ $item->imt ?? '-' }}</div>
-                                        <div><span class="text-sky-600 font-bold">Tensi:</span> {{ $item->tekanan_darah ?? '-' }}</div>
-                                        <div><span class="text-sky-600 font-bold">LP:</span> {{ $item->lingkar_perut ?? '-' }} cm</div>
-                                        <div class="col-span-2"><span class="text-sky-600 font-bold">Kemandirian:</span> <span class="capitalize">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</span></div>
+                                        <div><span class="text-blue-600 font-bold">IMT:</span> {{ $item->imt ?? '-' }}</div>
+                                        <div><span class="text-blue-600 font-bold">Tensi:</span> {{ $item->tekanan_darah ?? '-' }}</div>
+                                        <div><span class="text-blue-600 font-bold">LP:</span> {{ $item->lingkar_perut ?? '-' }} cm</div>
+                                        <div class="col-span-2"><span class="text-blue-600 font-bold">Kemandirian:</span> <span class="capitalize">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</span></div>
                                     </div>
                                 @endif
                             </td>
@@ -654,7 +589,7 @@
                                     <span class="h-1.5 w-1.5 rounded-full {{ $sm['dot'] }}"></span> {{ $sm['label'] }}
                                 </span>
                             </td>
-                            <td class="rounded-r-3xl px-4 py-4 text-right">
+                            <td class="rounded-r-[1.75rem] px-4 py-4 text-right">
                                 <div class="flex justify-end gap-2">
                                     <a href="{{ route('kader.pemeriksaan.show', $item->id) }}" class="btn-pill w-8 h-8 flex items-center justify-center border border-slate-200 bg-white text-slate-500 hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50" title="Detail">
                                         <i class="fa-solid fa-eye text-xs"></i>
@@ -698,113 +633,116 @@
         </div>
 
         {{-- Mobile Card View --}}
-        <div class="space-y-2.5 sm:space-y-3 lg:hidden">
+        <div class="space-y-3 sm:space-y-4 lg:hidden">
             @forelse($pemeriksaans as $item)
                 @php
                     $nama = $pasienNama($item);
                     $nik = $pasienNik($item);
                     $km = $kategoriMeta($item->kategori_pasien);
                     $sm = $statusMeta($item->status_verifikasi ?? null);
-                    
-                    // Mengambil catatan bidan langsung dari relasi/kolom
                     $note = $item->catatan_validasi ?? $item->catatan_bidan ?? $item->catatan_review ?? null;
                 @endphp
 
-                <article class="pc-row p-3 sm:p-4">
-                    <div class="flex items-start gap-3 sm:gap-4">
-                        <div class="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full {{ $km['badge'] }} text-xs sm:text-sm font-black shadow-inner">
+                <article class="pc-row p-4 sm:p-5 flex flex-col gap-3.5">
+                    {{-- Bagian 1: Header (Avatar, Nama, NIK, Tanggal) --}}
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full {{ $km['badge'] }} text-sm font-black shadow-inner">
                             {{ Str::upper(Str::substr($nama, 0, 1)) }}
                         </div>
-
                         <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <h3 class="line-clamp-1 text-sm sm:text-base font-black text-slate-800">{{ $nama }}</h3>
-                            </div>
-                            
-                            <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2.5 sm:mb-3">
-                                <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider {{ $km['badge'] }}">
-                                    <i class="fa-solid {{ $km['icon'] }}"></i> {{ $km['label'] }}
-                                </span>
-                                <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider {{ $sm['badge'] }}">
-                                    <span class="h-1.5 w-1.5 rounded-full {{ $sm['dot'] }}"></span> {{ $sm['label'] }}
-                                </span>
-                            </div>
-
-                            <div class="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs font-semibold text-slate-500 mb-3 sm:mb-4">
+                            <h3 class="truncate text-sm sm:text-base font-black text-slate-800">{{ $nama }}</h3>
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[10px] sm:text-xs font-semibold text-slate-500">
                                 <span class="flex items-center gap-1"><i class="fa-solid fa-id-card opacity-70"></i> {{ $nik }}</span>
+                                <span class="hidden sm:inline text-slate-300">•</span>
                                 <span class="flex items-center gap-1"><i class="fa-solid fa-calendar-day opacity-70"></i> {{ $formatTanggal($item) }}</span>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-xs mb-3 sm:mb-4">
-                                <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                    <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">BB</p>
-                                    <p class="font-black text-slate-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->berat_badan, 'kg') }}</p>
-                                </div>
-                                <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                    <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">TB</p>
-                                    <p class="font-black text-slate-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tinggi_badan, 'cm') }}</p>
-                                </div>
-                                
-                                @if(strtolower($item->kategori_pasien) === 'balita')
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">L.Kepala</p>
-                                        <p class="font-black text-emerald-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->lingkar_kepala, 'cm') }}</p>
-                                    </div>
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">LiLA</p>
-                                        <p class="font-black text-emerald-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->lingkar_lengan, 'cm') }}</p>
-                                    </div>
-                                @elseif(strtolower($item->kategori_pasien) === 'remaja')
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">IMT</p>
-                                        <p class="font-black text-violet-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->imt) }}</p>
-                                    </div>
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
-                                        <p class="font-black text-violet-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tekanan_darah) }}</p>
-                                    </div>
-                                @elseif(strtolower($item->kategori_pasien) === 'lansia')
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Tensi</p>
-                                        <p class="font-black text-sky-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tekanan_darah) }}</p>
-                                    </div>
-                                    <div class="bg-white/50 border border-slate-100 rounded-xl p-1.5 sm:p-2 text-center">
-                                        <p class="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase">Kemandirian</p>
-                                        <p class="font-black text-sky-700 mt-0.5 capitalize text-[9px] sm:text-[10px]">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</p>
-                                    </div>
-                                @endif
+                    {{-- Bagian 2: Badges --}}
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider {{ $km['badge'] }}">
+                            <i class="fa-solid {{ $km['icon'] }}"></i> {{ $km['label'] }}
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider {{ $sm['badge'] }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $sm['dot'] }}"></span> {{ $sm['label'] }}
+                        </span>
+                    </div>
+
+                    {{-- Bagian 3: Pengukuran Metrik Grid --}}
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">BB</p>
+                            <p class="font-black text-slate-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->berat_badan, 'kg') }}</p>
+                        </div>
+                        <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">TB</p>
+                            <p class="font-black text-slate-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tinggi_badan, 'cm') }}</p>
+                        </div>
+                        
+                        @if(strtolower($item->kategori_pasien) === 'balita')
+                            <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">L.Kepala</p>
+                                <p class="font-black text-emerald-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->lingkar_kepala, 'cm') }}</p>
                             </div>
+                            <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">LiLA</p>
+                                <p class="font-black text-emerald-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->lingkar_lengan, 'cm') }}</p>
+                            </div>
+                        @elseif(strtolower($item->kategori_pasien) === 'remaja')
+                            <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">IMT</p>
+                                <p class="font-black text-amber-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->imt) }}</p>
+                            </div>
+                            <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tensi</p>
+                                <p class="font-black text-amber-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tekanan_darah) }}</p>
+                            </div>
+                        @elseif(strtolower($item->kategori_pasien) === 'lansia')
+                            <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tensi</p>
+                                <p class="font-black text-blue-700 mt-0.5 text-xs sm:text-sm">{{ $metric($item->tekanan_darah) }}</p>
+                            </div>
+                            <div class="bg-slate-50/70 border border-slate-100 rounded-[1rem] p-2.5 flex flex-col items-center justify-center text-center">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Kemandirian</p>
+                                <p class="font-black text-blue-700 mt-0.5 text-[10px] sm:text-xs capitalize truncate w-full">{{ str_replace('_', ' ', $item->tingkat_kemandirian ?? '-') }}</p>
+                            </div>
+                        @endif
+                    </div>
 
-                            @if($note)
-                                <div class="mb-3 sm:mb-4 rounded-xl border border-rose-200 bg-rose-50/50 p-2.5 sm:p-3">
-                                    <p class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-rose-600 mb-1">Catatan Bidan</p>
-                                    <p class="text-[11px] sm:text-xs font-medium text-rose-800 leading-relaxed">{{ $note }}</p>
-                                </div>
-                            @endif
-
-                            <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-                                <a href="{{ route('kader.pemeriksaan.show', $item->id) }}" class="btn-pill flex-1 py-2 text-center border border-slate-200 bg-white text-xs font-bold text-slate-600 shadow-sm">
-                                    <i class="fa-solid fa-eye mr-1"></i> Detail
-                                </a>
-
-                                @if($sm['editable'])
-                                    <a href="{{ route('kader.pemeriksaan.edit', $item->id) }}" class="btn-pill flex-1 py-2 text-center border border-slate-200 bg-white text-xs font-bold text-slate-600 shadow-sm">
-                                        <i class="fa-solid fa-pen mr-1"></i> Edit
-                                    </a>
-                                    <form action="{{ route('kader.pemeriksaan.destroy', $item->id) }}" method="POST" data-delete-form class="flex-none">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn-pill px-4 py-2 border border-rose-200 bg-rose-50 text-xs font-bold text-rose-600 shadow-sm">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                @else
-                                    <span class="btn-pill flex-1 py-2 text-center border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 cursor-not-allowed">
-                                        <i class="fa-solid fa-lock mr-1"></i> Dikunci
-                                    </span>
-                                @endif
+                    {{-- Bagian 4: Catatan Bidan --}}
+                    @if($note)
+                        <div class="rounded-[1rem] border border-rose-200 bg-rose-50 p-3 sm:p-4 flex gap-2.5 items-start">
+                            <i class="fa-solid fa-notes-medical text-rose-500 mt-0.5"></i>
+                            <div>
+                                <p class="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-0.5">Catatan Bidan</p>
+                                <p class="text-[11px] sm:text-xs font-medium text-rose-800 leading-relaxed">{{ $note }}</p>
                             </div>
                         </div>
+                    @endif
+
+                    {{-- Bagian 5: Action Buttons --}}
+                    <div class="flex gap-2 pt-3 border-t border-slate-100 mt-1">
+                        <a href="{{ route('kader.pemeriksaan.show', $item->id) }}" class="btn-pill flex-1 flex justify-center items-center gap-1.5 py-2.5 border border-slate-200 bg-white text-[11px] sm:text-xs font-bold text-slate-600 shadow-sm hover:border-teal-300 hover:text-teal-600">
+                            <i class="fa-solid fa-eye"></i> Detail
+                        </a>
+
+                        @if($sm['editable'])
+                            <a href="{{ route('kader.pemeriksaan.edit', $item->id) }}" class="btn-pill flex-1 flex justify-center items-center gap-1.5 py-2.5 border border-slate-200 bg-white text-[11px] sm:text-xs font-bold text-slate-600 shadow-sm hover:border-amber-300 hover:text-amber-600">
+                                <i class="fa-solid fa-pen"></i> Edit
+                            </a>
+                            <form action="{{ route('kader.pemeriksaan.destroy', $item->id) }}" method="POST" data-delete-form class="flex-1 block">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-pill w-full flex justify-center items-center gap-1.5 py-2.5 border border-rose-200 bg-rose-50 text-[11px] sm:text-xs font-bold text-rose-600 shadow-sm hover:bg-rose-500 hover:text-white transition-colors">
+                                    <i class="fa-solid fa-trash"></i> Hapus
+                                </button>
+                            </form>
+                        @else
+                            <span class="btn-pill flex-[2] flex justify-center items-center gap-1.5 py-2.5 border border-emerald-200 bg-emerald-50 text-[11px] sm:text-xs font-bold text-emerald-700 cursor-not-allowed">
+                                <i class="fa-solid fa-lock"></i> Tervalidasi (Dikunci)
+                            </span>
+                        @endif
                     </div>
                 </article>
             @empty
@@ -829,19 +767,19 @@
     {{-- 5. MODAL HAPUS DATA --}}
     <div id="pcDeleteModal" class="nexus-modal z-[9999] flex items-center justify-center p-4" hidden>
         <div class="nexus-modal-backdrop bg-slate-900/40 backdrop-blur-sm" id="nexusAlertBackdrop"></div>
-        <div class="widget-card bg-white w-full max-w-sm p-5 sm:p-6 relative z-10 scale-95 transform transition-transform duration-300 max-h-[90dvh] overflow-y-auto">
-            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-3 sm:mb-4 text-rose-500 shadow-inner">
-                <i class="fa-solid fa-triangle-exclamation text-xl sm:text-2xl"></i>
+        <div class="widget-card !rounded-[2.5rem] bg-white w-full max-w-sm p-6 sm:p-8 relative z-10 scale-95 transform transition-transform duration-300 max-h-[90dvh] overflow-y-auto">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 sm:mb-5 text-rose-500 shadow-inner">
+                <i class="fa-solid fa-triangle-exclamation text-2xl sm:text-3xl"></i>
             </div>
             <h3 class="text-lg sm:text-xl font-black text-slate-800 text-center mb-2">Hapus Data?</h3>
-            <p class="text-xs sm:text-sm font-medium text-slate-500 text-center mb-5 sm:mb-6 leading-relaxed">
+            <p class="text-xs sm:text-sm font-medium text-slate-500 text-center mb-6 sm:mb-8 leading-relaxed">
                 Data yang belum direview Bidan dapat dihapus secara permanen. Lanjutkan?
             </p>
             <div class="flex gap-3">
-                <button type="button" id="pcCancelDelete" class="w-full flex-1 btn-pill border border-slate-200 bg-white text-slate-700 px-4 py-2.5 sm:py-3 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
+                <button type="button" id="pcCancelDelete" class="w-full flex-1 btn-pill border border-slate-200 bg-white text-slate-700 px-4 py-3 sm:py-3.5 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all">
                     Batal
                 </button>
-                <button type="button" id="pcConfirmDelete" class="w-full flex-1 btn-pill bg-gradient-to-r from-rose-500 to-rose-600 text-white px-4 py-2.5 sm:py-3 text-sm font-bold shadow-md hover:from-rose-600 hover:to-rose-700 transition-all flex items-center justify-center gap-2">
+                <button type="button" id="pcConfirmDelete" class="w-full flex-1 btn-pill bg-gradient-to-r from-rose-500 to-rose-600 text-white px-4 py-3 sm:py-3.5 text-sm font-bold shadow-md hover:from-rose-600 hover:to-rose-700 transition-all flex items-center justify-center gap-2">
                     <i class="fa-solid fa-trash"></i> Hapus
                 </button>
             </div>
@@ -859,9 +797,6 @@
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', fn);
         } else {
-            // DOM is already parsed (e.g. script executed late, or injected
-            // after the DOMContentLoaded event already fired) — run immediately
-            // instead of waiting forever for an event that will never come.
             fn();
         }
     }
@@ -883,7 +818,6 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Array ID element yang akan diperbarui datanya
                 const targetIds = ['hero-stats', 'stats-row-1', 'stats-row-2', 'data-table-section'];
                 
                 targetIds.forEach(id => {
@@ -894,14 +828,12 @@
                     }
                 });
                 
-                // Update URL di browser history secara halus (tanpa reload)
                 window.history.pushState({}, '', url);
             } else {
-                // Fallback jika API bermasalah
                 window.location.href = url;
             }
         } catch (error) {
-            window.location.href = url; // Fallback jika gagal terhubung
+            window.location.href = url; 
         } finally {
             if (dataContainer) dataContainer.classList.remove('is-loading');
         }
@@ -917,10 +849,7 @@
         
         fetchDataByUrl(url);
     }
-
-    // EVENT DELEGATION: Listener di document agar tetap jalan meski elemen diganti AJAX
     
-    // 1. Ketik pada input search (Debounce 500ms)
     document.addEventListener('input', function(e) {
         if (e.target.matches('input[name="search"]')) {
             clearTimeout(debounceTimer);
@@ -928,14 +857,12 @@
         }
     });
 
-    // 2. Ubah Select Status atau Tab Kategori (Langsung ganti)
     document.addEventListener('change', function(e) {
         if (e.target.matches('select[name="status"], input[name="kategori"]')) {
             submitFilter();
         }
     });
 
-    // 3. Mencegah user tekan "Enter" yang me-reload penuh
     document.addEventListener('submit', function(e) {
         if (e.target.id === 'filterForm') {
             e.preventDefault();
@@ -943,7 +870,6 @@
         }
     });
 
-    // 4. Mencegat klik pada pagination laravel agar menggunakan AJAX
     document.addEventListener('click', function(e) {
         const pageLink = e.target.closest('.pagination a, nav[role="navigation"] a');
         if (pageLink && pageLink.href) {
@@ -972,8 +898,6 @@
         if (!modal) return;
 
         modal.hidden = false;
-        // Force a reflow so the browser registers the un-hidden state
-        // before the opacity/visibility transition starts (smooth fade-in).
         void modal.offsetWidth;
         modal.classList.add('is-open');
         modal.querySelector('.widget-card').classList.remove('scale-95');
@@ -990,8 +914,6 @@
         modal.querySelector('.widget-card').classList.add('scale-95');
         unlockBody();
 
-        // Wait for the fade-out transition to finish before fully hiding,
-        // so it never flashes closed abruptly.
         window.setTimeout(function () {
             if (!modal.classList.contains('is-open')) {
                 modal.hidden = true;
@@ -999,7 +921,6 @@
         }, 300);
     }
 
-    // Tangkap klik tombol hapus (menggunakan event delegation)
     document.addEventListener('submit', function (event) {
         const form = event.target.closest('[data-delete-form]');
         if (!form) return;
@@ -1030,7 +951,7 @@
             HTMLFormElement.prototype.submit.call(targetDeleteForm);
         });
     }
-    }); // end ready()
+    }); 
 })();
 </script>
 @endpush

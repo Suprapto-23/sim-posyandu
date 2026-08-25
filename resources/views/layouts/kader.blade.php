@@ -34,8 +34,8 @@
             --sb-width: 280px;
             --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
             --border: #f1f5f9; --bg-app: #fcfcfd;
-            --transition-speed: 0.2s; 
-            --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); 
+            --transition-speed: 0.12s; 
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1); 
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -51,17 +51,6 @@
 
         html.locked, body.locked { overflow: hidden !important; }
 
-        /* ── SPA LOADER BAR (Progress Bar Atas) ── */
-        #spa-loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399, #059669);
-            background-size: 200% 100%; z-index: 9999999;
-            transform-origin: left; transform: scaleX(0); opacity: 0;
-            transition: transform 0.2s ease-out, opacity 0.2s ease; pointer-events: none;
-        }
-        @keyframes loadingBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        #spa-loader.is-loading { animation: loadingBar 1s infinite linear; }
-
         /* ── SIDEBAR ── */
         .kader-sidebar {
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
@@ -73,7 +62,7 @@
         html.sb-open .kader-sidebar { transform: translateX(0) translateZ(0); }
         
         .pc-sidebar {
-            height: 100%; border-radius: 24px; padding: 24px 16px; 
+            height: 100%; border-radius: 2rem; padding: 24px 16px; 
             overflow-y: auto; overflow-x: hidden; background: #ffffff;
             border: 1px solid var(--border); 
             box-shadow: 0 4px 6px -4px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
@@ -83,7 +72,7 @@
 
         .pc-sidebar a {
             display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px; border-radius: 12px; color: var(--slate-500);
+            padding: 10px 14px; border-radius: 14px; color: var(--slate-500);
             font-weight: 700; font-size: 13px; text-decoration: none;
             transition: all 0.1s ease; cursor: pointer;
         }
@@ -101,10 +90,10 @@
 
         /* ── TOPBAR ── */
         .topbar-wrapper { padding: 16px 24px 0; flex-shrink: 0; position: relative; z-index: 40; }
-.btn-notif { position: relative; z-index: 2; }
+        .btn-notif { position: relative; z-index: 2; }
 
         .kader-topbar {
-            min-height: 68px; padding: 8px 16px; border-radius: 24px; 
+            min-height: 68px; padding: 8px 16px; border-radius: 2rem; 
             display: flex; align-items: center; gap: 12px; 
             background: rgba(255, 255, 255, 0.85); 
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -150,25 +139,25 @@
         .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .profile-name { font-size: 13px; font-weight: 800; color: var(--slate-700); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* ── DROPDOWNS ── */
+        /* ── DROPDOWNS SQUIRCLE ── */
         .kader-dropdown { 
             position: absolute; right: 0; top: calc(100% + 12px); width: 240px; z-index: 90; 
-            border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border); 
-            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04); 
+            border-radius: 2rem; padding: 8px; background: #ffffff; border: 1px solid var(--border); 
+            box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.1); 
             transform-origin: top right; 
         }
         .notif-dropdown {
             position: absolute; right: 0; top: calc(100% + 12px); width: 360px; z-index: 100;
-            border-radius: 24px; padding: 8px; background: #ffffff; border: 1px solid var(--border);
-            box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08), 0 20px 25px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 2rem; padding: 10px; background: #ffffff; border: 1px solid var(--border);
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.12);
             transform-origin: top right;
         }
         @media (max-width: 1023px) {
-            .notif-dropdown { position: fixed; top: 76px; left: 16px; right: 16px; width: auto; border-radius: 20px; padding: 6px; }
+            .notif-dropdown { position: fixed; top: 76px; left: 16px; right: 16px; width: auto; border-radius: 2rem; padding: 10px; }
             .kader-dropdown { width: 220px; right: -8px; }
         }
         
-        .notif-scroll { max-height: 340px; overflow-y: auto; padding: 4px; }
+        .notif-scroll { max-height: 320px; overflow-y: auto; padding: 4px; scrollbar-width: thin; }
         .notif-scroll::-webkit-scrollbar { width: 4px; }
         .notif-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
 
@@ -176,7 +165,7 @@
         .dropdown-name { color: var(--slate-900); font-size: 14px; font-weight: 800; line-height: 1.2; }
         .dropdown-role { color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;}
         .dropdown-link, .dropdown-logout { 
-            width: 100%; border: 0; border-radius: 16px; padding: 12px 14px; 
+            width: 100%; border: 0; border-radius: 1rem; padding: 12px 14px; 
             background: transparent; cursor: pointer; display: flex; align-items: center; gap: 12px; 
             color: var(--slate-700); font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.1s ease; 
         }
@@ -188,31 +177,32 @@
         .main-scroll-area {
             flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px;
             scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+            position: relative;
         }
         .main-scroll-area::-webkit-scrollbar { width: 6px; }
         .main-scroll-area::-webkit-scrollbar-track { background: transparent; }
         .main-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* ── SPA ANIMATION (SMOOTH FADE IN/OUT - ZERO DELAY) ── */
+        /* ── SPA CROSSFADE OPTIMAL ── */
         .kader-main {
             opacity: 1; 
-            transform: translateY(0) scale(1);
-            transition: opacity 0.25s ease-out, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transform: translateY(0);
+            transition: opacity 0.12s var(--ease-out), transform 0.12s var(--ease-out);
             will-change: opacity, transform;
-            transform-origin: top center;
         }
-
-        .kader-main.is-loading-state { 
-            opacity: 0.5; 
-            transform: scale(0.995); 
+        .kader-main.is-hidden-instant { 
+            opacity: 0; 
+            transform: translateY(2px); 
+            transition: none !important;
             pointer-events: none;
         }
 
-        .kader-main.is-entering-state { 
-            opacity: 0; 
-            transform: translateY(15px); 
-            transition: none !important;
+        .kader-main-ghost {
+            position: fixed; overflow: hidden;
+            opacity: 1; pointer-events: none; z-index: 30;
+            transition: opacity 0.12s var(--ease-out);
         }
+        .kader-main-ghost.is-out { opacity: 0; }
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
@@ -242,7 +232,7 @@
         div.swal2-container .swal2-popup { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
         
         .nexus-swal { 
-            border-radius: 32px !important; padding: 32px !important; 
+            border-radius: 2rem !important; padding: 32px !important; 
             font-family: "Plus Jakarta Sans", sans-serif !important; 
             border: 1px solid rgba(255,255,255,0.4) !important; 
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3) !important;
@@ -251,15 +241,15 @@
         .nexus-title { font-size: 22px !important; font-weight: 800 !important; color: var(--slate-900) !important; margin-bottom: 8px !important;}
         .nexus-html { font-size: 14px !important; color: #475569 !important; line-height: 1.6 !important; }
         
-        .nexus-ok { border-radius: 14px !important; background: #0f172a !important; color: #fff !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important; border: 0 !important;}
+        .nexus-ok { border-radius: 1rem !important; background: #0f172a !important; color: #fff !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important; border: 0 !important;}
         .nexus-ok:hover { background: #1e293b !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(15,23,42,0.2) !important; }
-        .nexus-danger { border-radius: 14px !important; background: #e11d48 !important; color: #fff !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important; border: 0 !important;}
+        .nexus-danger { border-radius: 1rem !important; background: #e11d48 !important; color: #fff !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important; border: 0 !important;}
         .nexus-danger:hover { background: #be123c !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(225,29,72,0.2) !important; }
-        .nexus-cancel { border-radius: 14px !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #475569 !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important;}
+        .nexus-cancel { border-radius: 1rem !important; background: #f8fafc !important; border: 1px solid #e2e8f0 !important; color: #475569 !important; font-weight: 700 !important; padding: 12px 26px !important; transition: all 0.15s ease !important;}
         .nexus-cancel:hover { background: #f1f5f9 !important; color: #0f172a !important; }
 
         @media (max-width: 480px) {
-            .nexus-swal { padding: 24px !important; border-radius: 24px !important; }
+            .nexus-swal { padding: 24px !important; border-radius: 1.75rem !important; }
             .nexus-title { font-size: 18px !important; }
             .nexus-ok, .nexus-danger, .nexus-cancel { padding: 12px 20px !important; font-size: 13px !important; width: 100% !important; margin-bottom: 8px !important;}
             .swal2-actions { flex-direction: column; width: 100%; }
@@ -279,8 +269,6 @@
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
 
-    <div id="spa-loader"></div>
-
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
     <aside class="kader-sidebar">
@@ -297,23 +285,52 @@
                 </button>
 
                 <div class="topbar-right">
-                    <!-- Bagian Notifikasi & Profil tidak diubah... -->
+                    <!-- Tombol Lonceng Notifikasi Real-Time -->
                     <div class="relative">
-                        <button @click="notifOpen = !notifOpen; profileOpen = false" class="btn-notif">
+                        <button @click="toggleNotif(); profileOpen = false" class="btn-notif">
                             <i class="fa-regular fa-bell text-[18px]"></i>
                             <span x-cloak x-show="unreadCount > 0" class="absolute top-[10px] right-[10px] flex h-[10px] w-[10px]">
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                                 <span class="relative inline-flex rounded-full h-[10px] w-[10px] bg-rose-500 border-2 border-white"></span>
                             </span>
                         </button>
+                        
+                        <!-- Dropdown Notifikasi -->
                         <div x-cloak x-show="notifOpen" @click.outside="notifOpen = false" class="notif-dropdown">
-                            <!-- Konten dropdown notif... -->
-                            <div class="p-3 border-b border-slate-100 flex items-center justify-between">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notifikasi</p>
+                            <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
+                                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Notifikasi Terbaru</p>
+                                <span x-show="unreadCount > 0" class="text-[10px] font-extrabold bg-rose-100 text-rose-600 px-2.5 py-0.5 rounded-full" x-text="unreadCount + ' Baru'"></span>
+                            </div>
+                            
+                            <div class="notif-scroll p-1.5 space-y-1.5">
+                                <template x-if="notifList.length === 0">
+                                    <div class="p-8 text-center text-slate-400 text-xs font-semibold">Tidak ada notifikasi baru</div>
+                                </template>
+                                <template x-for="item in notifList" :key="item.id">
+                                    <a :href="item.url || '#'" class="block p-3.5 rounded-2xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100 group">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-2 h-2 rounded-full bg-teal-500 mt-1.5 shrink-0" x-show="!item.is_read"></div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-bold text-slate-800 group-hover:text-teal-600 transition-colors" x-text="item.title || item.judul || 'Pemberitahuan'"></p>
+                                                <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2 leading-relaxed" x-text="item.message || item.pesan || ''"></p>
+                                                <span class="text-[9px] text-slate-400 mt-1.5 block font-semibold" x-text="item.time || item.created_at || ''"></span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+
+                            <!-- Tombol Lihat Semua Notifikasi -->
+                            <div class="p-2 border-t border-slate-100 mt-1">
+                                <a href="{{ \Illuminate\Support\Facades\Route::has('kader.notifikasi.index') ? route('kader.notifikasi.index') : url('/kader/notifikasi') }}" class="w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-teal-50 text-slate-600 hover:text-teal-600 text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                                    <span>Lihat Semua Notifikasi</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Dropdown Profil -->
                     <div class="relative">
                         <button @click="profileOpen = !profileOpen; notifOpen = false" class="profile-button">
                             <div class="profile-avatar">
@@ -356,7 +373,6 @@
         </div>
     </div>
 
-    <!-- WRAPPER UNTUK STACK AGAR IKUT TER-UPDATE SAAT NAVIGASI SPA -->
     <div id="spa-scripts">
         @stack('scripts')
     </div>
@@ -418,6 +434,12 @@
             });
         }
 
+        window.addEventListener('unhandledrejection', function (event) {
+            if (event.reason && event.reason.name === 'AbortError' && /transition was skipped/i.test(event.reason.message || '')) {
+                event.preventDefault();
+            }
+        });
+
         let currentAbortController = null;
         let isNavigating = false;
 
@@ -436,16 +458,23 @@
 
             const mainEl = document.getElementById('kaderMain') || document.querySelector('main');
             const scrollArea = document.getElementById('mainScrollArea') || window;
-            const loader = document.getElementById('spa-loader');
 
             if (!mainEl) { window.location.href = url; return; }
 
             updateSidebarActive(url);
-            loader.style.opacity = '1';
-            loader.style.transform = 'scaleX(0.3)';
-            loader.classList.add('is-loading');
-            
-            mainEl.classList.add('is-loading-state');
+
+            const rect = mainEl.getBoundingClientRect();
+            const ghost = document.createElement('div');
+            ghost.className = 'kader-main-ghost';
+            ghost.style.top = rect.top + 'px';
+            ghost.style.left = rect.left + 'px';
+            ghost.style.width = rect.width + 'px';
+            ghost.style.maxHeight = (window.innerHeight - rect.top) + 'px';
+            ghost.innerHTML = mainEl.innerHTML;
+            document.body.appendChild(ghost);
+
+            mainEl.classList.add('is-hidden-instant');
+            if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
 
             try {
                 const res = await fetch(url, { 
@@ -456,15 +485,11 @@
                 
                 if (!res.ok) throw new Error('Network error'); 
 
-                loader.style.transform = 'scaleX(0.7)';
                 const html = await res.text();
-                loader.style.transform = 'scaleX(1)';
-
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const title = doc.querySelector('title');
                 if (title) document.title = title.textContent;
 
-                // --- FIX TAMBAHAN MULAI: SINKRONISASI CSS & TAG STYLE ---
                 const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
                 doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
                     if (newLink.href && !currentLinks.includes(newLink.href)) {
@@ -483,16 +508,11 @@
                         document.head.appendChild(styleNode);
                     }
                 });
-                // --- FIX TAMBAHAN SELESAI ---
 
                 const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
                 if (!newContent) throw new Error('DOM Mismatch');
 
-                mainEl.classList.remove('is-loading-state');
-                mainEl.classList.add('is-entering-state'); 
-                
                 mainEl.innerHTML = newContent.innerHTML;
-                if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
 
                 mainEl.querySelectorAll('script').forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -501,7 +521,6 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
 
-                // --- FIX TAMBAHAN MULAI: SINKRONISASI MODALS & STACK SCRIPTS ---
                 const newModals = doc.getElementById('spa-modals');
                 if (newModals) document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
 
@@ -517,28 +536,23 @@
                         oldScript.parentNode.replaceChild(newScript, oldScript);
                     });
                 }
-                // --- FIX TAMBAHAN SELESAI ---
 
                 if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
 
-                void mainEl.offsetWidth; 
-                mainEl.classList.remove('is-entering-state'); 
+                void mainEl.offsetWidth;
+                ghost.classList.add('is-out');
+                mainEl.classList.remove('is-hidden-instant');
+                setTimeout(() => ghost.remove(), 130);
 
                 document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
                 window.history.pushState({}, '', url);
 
             } catch (err) {
+                ghost.remove();
                 if (err.name !== 'AbortError') window.location.href = url;
             } finally {
-                mainEl.style.pointerEvents = 'auto';
                 isNavigating = false;
                 currentAbortController = null;
-                
-                setTimeout(() => {
-                    loader.style.opacity = '0';
-                    loader.classList.remove('is-loading');
-                    setTimeout(() => loader.style.transform = 'scaleX(0)', 200);
-                }, 100);
 
                 if (matchMedia('(max-width:1023px)').matches && root.classList.contains('sb-open')) {
                     setSidebar(false);
@@ -589,29 +603,41 @@
                 profileOpen: false,
                 notifOpen: false,
                 unreadCount: {{ $unreadCount }},
+                notifList: [],
                 initApp() {
                     updateSidebarActive(window.location.href);
+                    this.fetchNotifications();
+                    setInterval(() => this.fetchNotifications(), 6000); 
+                },
+                async fetchNotifications() {
                     const url = '{{ Route::has("kader.notifikasi.count") ? route("kader.notifikasi.count") : "" }}';
                     if (!url) return;
-                    
-                    setInterval(async () => {
-                        try {
-                            const fetchUrl = new URL(url, window.location.origin);
-                            fetchUrl.searchParams.append('_t', new Date().getTime()); 
+                    try {
+                        const fetchUrl = new URL(url, window.location.origin);
+                        fetchUrl.searchParams.append('_t', new Date().getTime()); 
 
-                            const res = await fetch(fetchUrl.toString(), { 
-                                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                            });
-                            
-                            if (res.ok) {
-                                const contentType = res.headers.get("content-type");
-                                if(contentType && contentType.includes("application/json")){
-                                    const data = await res.json();
-                                    if (data.unread !== undefined) this.unreadCount = data.unread;
-                                }
+                        const res = await fetch(fetchUrl.toString(), { 
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.unread !== undefined) this.unreadCount = data.unread;
+                            else if (data.count !== undefined) this.unreadCount = data.count;
+
+                            const foundList = data.notifications || data.data || data.items || data.notifikasi || data.list || Object.values(data).find(v => Array.isArray(v));
+                            if (foundList && Array.isArray(foundList)) {
+                                this.notifList = foundList;
                             }
-                        } catch (e) {}
-                    }, 8000); 
+                        }
+                    } catch (e) {}
+                },
+                toggleNotif() {
+                    this.notifOpen = !this.notifOpen;
+                    if (this.notifOpen) {
+                        this.fetchNotifications();
+                        this.profileOpen = false;
+                    }
                 }
             }));
         });

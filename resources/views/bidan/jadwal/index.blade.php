@@ -64,7 +64,7 @@
         } catch (\Throwable $e) { return false; }
     };
 
-    // TEMA WARNA BAGE
+    // TEMA WARNA BADGE
     $statusTheme = function ($value) {
         return match (strtolower((string) $value)) {
             'aktif' => ['label' => 'Aktif', 'badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'dot' => 'bg-emerald-500', 'icon' => 'fa-circle-check'],
@@ -146,6 +146,9 @@
         border-radius: 1.2rem; padding: 12px 16px; font-size: 13px;
         font-weight: 700; color: #1e293b; outline: none; transition: all .25s ease;
     }
+    .input-soft-icon {
+        padding-left: 2.75rem !important;
+    }
     .input-soft:focus {
         background: #ffffff; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, .15);
     }
@@ -162,15 +165,15 @@
     .animate-pop-in { animation: popIn .45s cubic-bezier(.16, 1, .3, 1) forwards; opacity: 0; }
     @keyframes popIn { from { opacity: 0; transform: scale(.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-    /* Nexus Modal Styles (Disempurnakan untuk Full Screen Blur) */
+    /* Nexus Modal Styles */
     .pc-modal-backdrop {
         position: fixed !important; 
         inset: 0 !important; 
-        z-index: 9999999 !important; /* Ditingkatkan agar di atas sidebar/topbar */
+        z-index: 9999999 !important; 
         display: none;
         align-items: center; 
         justify-content: center; 
-        background: rgba(15, 23, 42, 0.45) !important; /* Sedikit digelapkan agar blur kentara */
+        background: rgba(15, 23, 42, 0.45) !important; 
         backdrop-filter: blur(8px) !important; 
         -webkit-backdrop-filter: blur(8px) !important; 
         padding: 1rem; 
@@ -183,7 +186,7 @@
         width: 100%; max-width: 440px; background: white; border-radius: 2.5rem; padding: 2.5rem 2rem;
         transform: scale(0.9) translateY(20px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; overflow: hidden;
-        backdrop-filter: none !important; /* Mencegah modal ikut nge-blur */
+        backdrop-filter: none !important; 
         -webkit-backdrop-filter: none !important;
     }
     .pc-modal-backdrop.is-open .pc-modal-card { transform: scale(1) translateY(0); opacity: 1; }
@@ -200,7 +203,7 @@
         <div class="absolute inset-0 bg-white/10 backdrop-blur-[2px]"></div>
         <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[60px] rounded-full pointer-events-none"></div>
 
-        <div class="relative z-10 w-full lg:w-2/3 flex flex-col gap-4 text-center lg:text-left">
+        <div class="relative z-10 w-full lg:w-2/3 flex flex-col items-center lg:items-start text-center lg:text-left gap-4">
             <div class="inline-flex justify-center lg:justify-start items-center gap-2 mb-2">
                 <span class="btn-pill bg-white/20 border border-white/30 text-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-inner flex items-center gap-2">
                     <i class="fa-solid fa-calendar-check"></i> Agenda Pelayanan
@@ -223,12 +226,12 @@
         </div>
 
         <div class="relative z-10 w-full lg:w-1/3 flex justify-center lg:justify-end">
-            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/20 border border-white/30 backdrop-blur-md px-6 py-4 flex items-center gap-5">
+            <div class="widget-card !rounded-[2rem] !shadow-none bg-white/90 border border-white/50 backdrop-blur-md px-6 py-4 flex items-center justify-between gap-5 shadow-lg w-full max-w-xs mx-auto lg:ml-auto">
                 <div>
-                    <span class="block text-[10px] font-black uppercase tracking-widest text-white/90">Total Tampil</span>
-                    <span class="block text-3xl font-black text-white mt-0.5" id="jadwalVisibleCounter">{{ $currentCount }}</span>
+                    <span class="block text-[10px] font-black uppercase tracking-widest text-emerald-800">Total Tampil</span>
+                    <span class="block text-3xl font-black text-slate-900 mt-0.5" id="jadwalVisibleCounter">{{ $currentCount }}</span>
                 </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-500 shadow-lg">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-md shrink-0">
                     <i class="fa-solid fa-calendar-day text-2xl"></i>
                 </div>
             </div>
@@ -252,16 +255,16 @@
 
     {{-- 3. FILTER FORM --}}
     <section class="widget-card p-6">
-        <form method="GET" action="{{ route('bidan.jadwal.index') }}" id="jadwalFilterForm" class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_180px_180px_180px_auto_auto] items-end">
+        <form method="GET" action="{{ route('bidan.jadwal.index') }}" id="jadwalFilterForm" class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_180px_180px_180px_auto_auto] items-end">
             <div>
-                <label class="form-label" for="jadwalSearch">Pencarian</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5" for="jadwalSearch">Pencarian</label>
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input id="jadwalSearch" type="search" name="search" value="{{ $search }}" autocomplete="off" class="input-soft pl-10" placeholder="Cari judul / lokasi...">
+                    <input id="jadwalSearch" type="search" name="search" value="{{ $search }}" autocomplete="off" class="input-soft input-soft-icon" placeholder="Cari judul / lokasi...">
                 </div>
             </div>
             <div>
-                <label class="form-label" for="jadwalStatus">Status</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5" for="jadwalStatus">Status</label>
                 <select id="jadwalStatus" name="status" class="input-soft cursor-pointer">
                     @foreach($statusOptions as $key => $option)
                         <option value="{{ $key }}" @selected($status === $key)>{{ $option['label'] }}</option>
@@ -269,7 +272,7 @@
                 </select>
             </div>
             <div>
-                <label class="form-label" for="jadwalKategori">Kategori</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5" for="jadwalKategori">Kategori</label>
                 <select id="jadwalKategori" name="kategori" class="input-soft cursor-pointer">
                     @foreach($kategoriOptions as $key => $option)
                         <option value="{{ $key }}" @selected($kategori === $key)>{{ $option['label'] }}</option>
@@ -277,7 +280,7 @@
                 </select>
             </div>
             <div>
-                <label class="form-label" for="jadwalTarget">Sasaran</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5" for="jadwalTarget">Sasaran</label>
                 <select id="jadwalTarget" name="target" class="input-soft cursor-pointer">
                     @foreach($targetOptions as $key => $option)
                         <option value="{{ $key }}" @selected($target === $key)>{{ $option['label'] }}</option>
@@ -463,7 +466,7 @@
             </div>
         </div>
 
-        {{-- PAGINATION CUSTOM UI (Rounded/Membulat) --}}
+        {{-- PAGINATION CUSTOM UI --}}
         @if(method_exists($jadwals, 'hasPages') && $jadwals->hasPages())
             <div id="jadwalPagination" class="bg-white p-6 border-t border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shrink-0 rounded-b-[2rem]">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -471,14 +474,12 @@
                 </p>
                 
                 <div class="flex items-center gap-1.5">
-                    {{-- Previous --}}
                     @if ($jadwals->onFirstPage())
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-100"><i class="fa-solid fa-chevron-left text-[10px]"></i></span>
                     @else
                         <a href="{{ $jadwals->previousPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-left text-[10px]"></i></a>
                     @endif
 
-                    {{-- Page Numbers --}}
                     @php
                         $start = max(1, $jadwals->currentPage() - 1);
                         $end = min($jadwals->lastPage(), $jadwals->currentPage() + 1);
@@ -502,7 +503,6 @@
                         <a href="{{ $jadwals->url($jadwals->lastPage()) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm text-xs font-bold">{{ $jadwals->lastPage() }}</a>
                     @endif
 
-                    {{-- Next --}}
                     @if ($jadwals->hasMorePages())
                         <a href="{{ $jadwals->nextPageUrl() }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm"><i class="fa-solid fa-chevron-right text-[10px]"></i></a>
                     @else
@@ -513,9 +513,8 @@
         @endif
     </section>
 </div>
-@endsection {{-- INI PENTING: @section('content') diakhiri di sini, SEBELUM MODAL --}}
+@endsection
 
-{{-- INI PENTING: Pindahkan modal ke @stack('modals') agar posisinya berada di lapisan terluar body --}}
 @push('modals')
 <div id="pcJadwalDeleteModal" class="pc-modal-backdrop">
     <div class="pc-modal-card text-center">
@@ -537,7 +536,6 @@
 (function () {
     'use strict';
 
-    // Live Search Filter
     const searchInput = document.querySelector('#jadwalSearch');
     const statusInput = document.querySelector('#jadwalStatus');
     const kategoriInput = document.querySelector('#jadwalKategori');
@@ -581,7 +579,6 @@
     if (searchInput) searchInput.addEventListener('input', filterRows);
     [statusInput, kategoriInput, targetInput].forEach(inp => { if(inp) inp.addEventListener('change', filterRows); });
 
-    // Modal Logic
     let modal = document.querySelector('#pcJadwalDeleteModal');
     const modalCancel = document.querySelector('#pcJadwalDeleteCancel');
     const modalSubmit = document.querySelector('#pcJadwalDeleteSubmit');
