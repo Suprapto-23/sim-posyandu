@@ -42,18 +42,9 @@
     $totalHadir = $details->where('hadir', true)->count();
     $totalTidakHadir = $details->where('hadir', false)->count();
 
-    $kodeAbsensi = $absensi?->kode_absensi ?? 'ABS-' . str_pad($absensi?->id ?? 0, 4, '0', STR_PAD_LEFT);
+    $kodeAbsensi = $absensi?->kode_absensi ?? 'ABS-' . strtoupper(substr($kategori, 0, 3)) . '-' . now()->format('Ymd') . '-P01';
 
     $routeHas = fn ($name) => Route::has($name);
-
-    $formatTanggal = function ($date, $format = 'd M Y') {
-        if (!$date) return '-';
-        try {
-            return Carbon::parse($date)->translatedFormat($format);
-        } catch (\Throwable $e) {
-            return '-';
-        }
-    };
 
     try {
         $tanggalYmd = $absensi?->tanggal_posyandu
@@ -66,7 +57,6 @@
 
 @push('styles')
 <style>
-    /* Background identik dengan halaman index */
     body { 
         background-color: #f1f5f9; 
         background-image: 
@@ -77,12 +67,14 @@
     }
     
     .widget-card {
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 1);
         border-radius: 2.5rem; 
-        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+        opacity: 0;
+        animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .btn-pill {
@@ -90,137 +82,114 @@
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         cursor: pointer;
     }
-    .btn-pill:active {
-        transform: scale(0.95);
-    }
+    .btn-pill:active { transform: scale(0.96); }
 
-    .success-orb-container {
-        position: relative;
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        width: 100px;
-        height: 100px;
-    }
-
-    .success-orb-bg {
-        position: absolute;
-        inset: 0;
-        background: #10b981;
-        border-radius: 50%;
-        opacity: 0.2;
-        animation: pulse-glow 2s infinite ease-in-out;
-    }
-
-    .success-orb {
-        position: relative;
-        width: 76px;
-        height: 76px;
-        background: linear-gradient(135deg, #14b8a6, #10b981);
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-size: 2rem;
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
-        z-index: 10;
-        animation: pop-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    }
-
-    @keyframes pulse-glow {
-        0%, 100% { transform: scale(1); opacity: 0.2; }
-        50% { transform: scale(1.3); opacity: 0; }
-    }
-
-    @keyframes pop-in {
-        0% { transform: scale(0); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
+    @keyframes fadeInUp {
+        0% { opacity: 0; transform: translateY(30px); }
+        100% { opacity: 1; transform: translateY(0); }
     }
 </style>
 @endpush
 
 @section('content')
-<div class="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+<div class="min-h-[85vh] flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
     
-    <div class="widget-card w-full max-w-2xl p-8 sm:p-12 text-center relative overflow-hidden">
+    <div class="widget-card w-full max-w-[500px] p-8 sm:p-12 text-center relative overflow-hidden">
         
         {{-- Dekorasi Latar Belakang Card --}}
-        <div class="absolute -top-24 -right-24 w-48 h-48 bg-teal-400/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -top-32 -right-32 w-64 h-64 bg-teal-400/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        {{-- Icon Sukses --}}
-        <div class="success-orb-container mb-6">
-            <div class="success-orb-bg"></div>
-            <div class="success-orb">
-                <i class="fa-solid fa-check"></i>
-            </div>
-        </div>
+        {{-- ANIMASI ICON CUSTOM (Murni SVG & CSS) --}}
+        <div class="w-32 h-32 mx-auto mb-6 relative flex items-center justify-center">
+            {{-- Gelombang Latar (Ripple) --}}
+            <div class="absolute inset-0 bg-emerald-400 rounded-full animate-[ping_2.5s_ease-in-out_infinite] opacity-20"></div>
+            <div class="absolute inset-2 bg-teal-300 rounded-full animate-[ping_3s_ease-in-out_infinite_0.5s] opacity-20"></div>
 
-        {{-- Teks Utama --}}
-        <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Tersimpan
+            {{-- SVG Core Icon --}}
+            <svg class="relative z-10 w-24 h-24 drop-shadow-[0_10px_20px_rgba(16,185,129,0.4)]" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle class="svg-circle" cx="50" cy="50" r="46" fill="url(#gradColor)" />
+                <path class="svg-check" d="M32 52 L45 65 L70 36" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+                <defs>
+                    <linearGradient id="gradColor" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#34d399" />
+                        <stop offset="100%" stop-color="#059669" />
+                    </linearGradient>
+                </defs>
+                <style>
+                    .svg-circle {
+                        transform-origin: center;
+                        animation: popBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                    }
+                    .svg-check {
+                        stroke-dasharray: 100;
+                        stroke-dashoffset: 100;
+                        animation: drawCheck 0.5s cubic-bezier(0.65, 0, 0.45, 1) 0.3s forwards;
+                    }
+                    @keyframes popBounce {
+                        0% { transform: scale(0); opacity: 0; }
+                        100% { transform: scale(1); opacity: 1; }
+                    }
+                    @keyframes drawCheck {
+                        100% { stroke-dashoffset: 0; }
+                    }
+                </style>
+            </svg>
         </div>
         
-        <h1 class="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight mb-3">
-            Presensi Berhasil Disimpan.
+        {{-- Teks Utama --}}
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mb-3 leading-tight">
+            Presensi Berhasil<br>Disimpan.
         </h1>
         
-        <p class="text-sm font-medium text-slate-500 max-w-md mx-auto leading-relaxed mb-8">
+        <p class="text-[13px] sm:text-sm font-medium text-slate-500 max-w-sm mx-auto leading-relaxed mb-8">
             Data absensi sasaran <strong class="text-teal-600">{{ $kategoriLabel }}</strong> untuk sesi pertemuan ini telah masuk ke dalam sistem.
         </p>
 
-        {{-- Kotak Ringkasan Singkat --}}
-        <div class="bg-slate-50/80 border border-slate-100 rounded-3xl p-5 mb-8 flex flex-wrap justify-center sm:justify-between items-center gap-4 shadow-inner max-w-lg mx-auto">
-            <div class="text-center sm:text-left">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Kode Sesi</p>
-                <p class="text-sm font-black text-slate-800">{{ $kodeAbsensi }}</p>
+        {{-- Kotak Ringkasan --}}
+        <div class="bg-slate-50 border border-slate-100 rounded-[1.5rem] p-5 mb-8 flex flex-col items-center gap-4 shadow-sm w-full">
+            <div class="w-full text-center pb-4 border-b border-slate-200 border-dashed">
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Kode Sesi</p>
+                <p class="text-sm sm:text-base font-black text-slate-700 tracking-wider">{{ $kodeAbsensi }}</p>
             </div>
-            <div class="hidden sm:block w-px h-8 bg-slate-200"></div>
-            <div class="text-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Sasaran</p>
-                <p class="text-sm font-black text-slate-800">{{ $totalPeserta }}</p>
-            </div>
-            <div class="hidden sm:block w-px h-8 bg-slate-200"></div>
-            <div class="text-center sm:text-right">
-                <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-0.5">Hadir</p>
-                <p class="text-sm font-black text-emerald-600">{{ $totalHadir }}</p>
+            
+            <div class="grid grid-cols-2 w-full text-center divide-x divide-slate-200">
+                <div class="px-2">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Sasaran</p>
+                    <p class="text-lg font-black text-slate-800">{{ $totalPeserta }}</p>
+                </div>
+                <div class="px-2">
+                    <p class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Hadir</p>
+                    <p class="text-lg font-black text-emerald-600">{{ $totalHadir }}</p>
+                </div>
             </div>
         </div>
 
         {{-- Tombol Aksi --}}
-        <div class="flex flex-col sm:flex-row justify-center items-center gap-3">
+        <div class="flex flex-col gap-3 w-full">
             @if($routeHas('kader.absensi.riwayat'))
                 <a href="{{ route('kader.absensi.riwayat', ['kategori' => $kategori, 'bulan' => $absensi?->bulan ?? now('Asia/Jakarta')->month, 'tahun' => $absensi?->tahun ?? now('Asia/Jakarta')->year]) }}" 
-                   class="btn-pill w-full sm:w-auto bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white px-8 py-3.5 text-sm font-bold shadow-[0_8px_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
+                   class="btn-pill w-full bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-bold shadow-[0_10px_25px_rgba(20,184,166,0.35)] flex items-center justify-center gap-2 hover:-translate-y-1">
                     <i class="fa-solid fa-clock-rotate-left"></i> Lihat Riwayat
                 </a>
             @endif
 
             @if($routeHas('kader.absensi.index'))
                 <a href="{{ route('kader.absensi.index', ['kategori' => $kategori, 'tanggal' => $tanggalYmd]) }}" 
-                   class="btn-pill w-full sm:w-auto bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-teal-600 hover:border-teal-200 px-8 py-3.5 text-sm font-bold shadow-sm flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-pen-to-square"></i> Update Presensi
+                   class="btn-pill w-full bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-teal-600 px-8 py-3 text-xs font-bold shadow-sm flex items-center justify-center gap-2 mt-2">
+                    <i class="fa-solid fa-pen-to-square"></i> Update Sesi Lain
                 </a>
             @endif
         </div>
 
-        {{-- Link Opsional Ekstra (Kembali / Detail) --}}
-        <div class="mt-8 flex justify-center items-center gap-4">
-            @if($routeHas('kader.dashboard'))
-                <a href="{{ route('kader.dashboard') }}" class="text-[11px] font-bold text-slate-400 hover:text-teal-500 transition-colors flex items-center gap-1.5 uppercase tracking-wider">
-                    <i class="fa-solid fa-arrow-left"></i> Dashboard
+        {{-- Link Kembali ke Dashboard --}}
+        @if($routeHas('kader.dashboard'))
+            <div class="mt-8">
+                <a href="{{ route('kader.dashboard') }}" class="text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-teal-500 transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard
                 </a>
-            @endif
-
-            @if($routeHas('kader.absensi.show') && $absensi)
-                <span class="text-slate-300">•</span>
-                <a href="{{ route('kader.absensi.show', $absensi->id) }}" class="text-[11px] font-bold text-slate-400 hover:text-teal-500 transition-colors flex items-center gap-1.5 uppercase tracking-wider">
-                    Detail <i class="fa-solid fa-arrow-right"></i>
-                </a>
-            @endif
-        </div>
+            </div>
+        @endif
 
     </div>
 </div>

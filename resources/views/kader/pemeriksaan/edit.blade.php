@@ -51,6 +51,14 @@
     $isRevisi = in_array($status, ['ditolak', 'revisi', 'perlu_revisi', 'needs_revision', 'rejected', 'dikembalikan'], true);
 
     $catatanBidan = $pemeriksaan->catatan_validasi ?? $pemeriksaan->catatan_bidan ?? $pemeriksaan->catatan_review ?? null;
+    
+    // PERBAIKAN BUG REDIRECT: Pastikan return_url tidak pernah menangkap halaman edit itu sendiri
+    $rawReturnUrl = request('return_url');
+    if (empty($rawReturnUrl) || Str::contains($rawReturnUrl, '/edit')) {
+        $returnUrl = route('kader.pemeriksaan.index');
+    } else {
+        $returnUrl = $rawReturnUrl;
+    }
 @endphp
 
 @push('styles')
@@ -122,7 +130,7 @@
     .pc-modal-backdrop {
         position: fixed;
         inset: 0;
-        z-index: 9999;
+        z-index: 9999999;
         display: none;
         align-items: center;
         justify-content: center;
@@ -165,9 +173,9 @@
 
         <div class="relative z-10">
             <div class="inline-flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-widest mb-4">
-                <a href="{{ route('kader.pemeriksaan.index') }}" class="hover:text-white transition-colors">Daftar Pengukuran</a>
+                <a href="{{ $returnUrl }}" data-no-spa="1" class="hover:text-white transition-colors">Data Pengukuran</a>
                 <i class="fas fa-chevron-right text-[8px]"></i>
-                <span class="text-white">Edit Pengukuran</span>
+                <span class="text-white">Edit</span>
             </div>
 
             <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
@@ -179,17 +187,17 @@
             </p>
             
             <div class="flex flex-wrap justify-center gap-3 mt-5">
-                <a href="{{ route('kader.pemeriksaan.index') }}" class="px-6 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white text-[11px] font-bold uppercase tracking-widest transition-all shadow-sm">
+                <a href="{{ $returnUrl }}" data-no-spa="1" class="px-6 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white text-[11px] font-bold uppercase tracking-widest transition-all shadow-sm flex items-center justify-center">
                     <i class="fas fa-arrow-left mr-1"></i> Kembali
                 </a>
-                <a href="{{ route('kader.pemeriksaan.show', $pemeriksaan->id) }}" class="px-6 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-teal-600 text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg hover:-translate-y-0.5">
+                <a href="{{ route('kader.pemeriksaan.show', $pemeriksaan->id) }}" class="px-6 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-teal-600 text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg hover:-translate-y-0.5 flex items-center justify-center">
                     <i class="fas fa-eye mr-1"></i> Detail
                 </a>
             </div>
         </div>
     </section>
 
-    {{-- System Alerts (Nexus Premium Style) --}}
+    {{-- System Alerts --}}
     @if(session('success') || session('error') || $errors->any() || ($isRevisi && $catatanBidan))
         <div class="mb-8 space-y-4">
             @if(session('success'))
@@ -238,9 +246,12 @@
         </div>
     @endif
 
-    <form id="measurementEditForm" method="POST" action="{{ route('kader.pemeriksaan.update', $pemeriksaan->id) }}">
+    <form id="measurementEditForm" method="POST" action="{{ route('kader.pemeriksaan.update', $pemeriksaan->id) }}" data-kategori="{{ $kategori }}">
         @csrf
         @method('PUT')
+        
+        {{-- Menerapkan nilai return_url yang sudah divalidasi ke input hidden --}}
+        <input type="hidden" name="return_url" value="{{ $returnUrl }}">
 
         {{-- CARD 1: Identitas Sasaran (Locked) --}}
         <section class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-6">
@@ -265,7 +276,7 @@
 
                 <div>
                     <label class="form-label">Tanggal Pengukuran <span class="req-star">*</span></label>
-                    <input type="date" name="tanggal_periksa" value="{{ $tanggalValue }}" max="{{ $today }}" class="input-soft cursor-pointer">
+                    <input type="date" name="tanggal_periksa" value="{{ $tanggalValue }}" max="{{ $today }}" class="input-soft cursor-pointer" required>
                 </div>
             </div>
         </section>
@@ -286,7 +297,7 @@
                     <div class="space-y-2">
                         <label class="form-label">Berat Badan <span class="req-star">*</span></label>
                         <div class="relative">
-                            <input type="number" step="0.1" min="0.1" max="300" name="berat_badan" value="{{ old('berat_badan', $pemeriksaan->berat_badan) }}" placeholder="Cth: 12.5" class="input-soft pr-12" data-imt-source>
+                            <input type="number" step="0.1" min="0.1" max="300" name="berat_badan" value="{{ old('berat_badan', $pemeriksaan->berat_badan) }}" placeholder="Cth: 12.5" class="input-soft pr-12" data-imt-source required>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">Kg</span>
                         </div>
                     </div>
@@ -294,7 +305,7 @@
                     <div class="space-y-2">
                         <label class="form-label">Tinggi / Panjang <span class="req-star">*</span></label>
                         <div class="relative">
-                            <input type="number" step="0.1" min="10" max="250" name="tinggi_badan" value="{{ old('tinggi_badan', $pemeriksaan->tinggi_badan) }}" placeholder="Cth: 85.0" class="input-soft pr-12" data-imt-source>
+                            <input type="number" step="0.1" min="10" max="250" name="tinggi_badan" value="{{ old('tinggi_badan', $pemeriksaan->tinggi_badan) }}" placeholder="Cth: 85.0" class="input-soft pr-12" data-imt-source required>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">Cm</span>
                         </div>
                     </div>
@@ -314,7 +325,7 @@
                     <div class="space-y-2 {{ $kategori !== 'balita' ? 'hidden' : '' }}">
                         <label class="form-label">Lingkar Kepala <span class="req-star">*</span></label>
                         <div class="relative">
-                            <input type="number" step="0.1" min="10" max="100" name="lingkar_kepala" value="{{ old('lingkar_kepala', $pemeriksaan->lingkar_kepala) }}" placeholder="Wajib Balita" class="input-soft pr-12" @disabled($kategori !== 'balita')>
+                            <input type="number" step="0.1" min="10" max="100" name="lingkar_kepala" value="{{ old('lingkar_kepala', $pemeriksaan->lingkar_kepala) }}" placeholder="Wajib Balita" class="input-soft pr-12" @disabled($kategori !== 'balita') {{ $kategori === 'balita' ? 'required' : '' }}>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">Cm</span>
                         </div>
                     </div>
@@ -323,7 +334,7 @@
                     <div class="space-y-2 {{ !in_array($kategori, ['balita', 'remaja']) ? 'hidden' : '' }}">
                         <label class="form-label">Lingkar Lengan (LiLA) <span class="req-star">*</span></label>
                         <div class="relative">
-                            <input type="number" step="0.1" min="5" max="100" name="lingkar_lengan" value="{{ old('lingkar_lengan', $pemeriksaan->lingkar_lengan) }}" placeholder="LiLA" class="input-soft pr-12" @disabled(!in_array($kategori, ['balita', 'remaja']))>
+                            <input type="number" step="0.1" min="5" max="100" name="lingkar_lengan" value="{{ old('lingkar_lengan', $pemeriksaan->lingkar_lengan) }}" placeholder="LiLA" class="input-soft pr-12" @disabled(!in_array($kategori, ['balita', 'remaja'])) {{ in_array($kategori, ['balita', 'remaja']) ? 'required' : '' }}>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">Cm</span>
                         </div>
                     </div>
@@ -332,20 +343,20 @@
                     <div class="space-y-2 {{ !in_array($kategori, ['remaja', 'lansia']) ? 'hidden' : '' }}">
                         <label class="form-label">Lingkar Perut <span class="req-star">*</span></label>
                         <div class="relative">
-                            <input type="number" step="0.1" min="20" max="200" name="lingkar_perut" value="{{ old('lingkar_perut', $pemeriksaan->lingkar_perut) }}" placeholder="Wajib" class="input-soft pr-12" @disabled(!in_array($kategori, ['remaja', 'lansia']))>
+                            <input type="number" step="0.1" min="20" max="200" name="lingkar_perut" value="{{ old('lingkar_perut', $pemeriksaan->lingkar_perut) }}" placeholder="Wajib" class="input-soft pr-12" @disabled(!in_array($kategori, ['remaja', 'lansia'])) {{ in_array($kategori, ['remaja', 'lansia']) ? 'required' : '' }}>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">Cm</span>
                         </div>
                     </div>
                     
                     <div class="space-y-2 {{ !in_array($kategori, ['remaja', 'lansia']) ? 'hidden' : '' }}">
                         <label class="form-label">Tekanan Darah <span class="req-star">*</span></label>
-                        <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah', $pemeriksaan->tekanan_darah) }}" placeholder="Cth: 120/80" class="input-soft" @disabled(!in_array($kategori, ['remaja', 'lansia']))>
+                        <input type="text" name="tekanan_darah" value="{{ old('tekanan_darah', $pemeriksaan->tekanan_darah) }}" placeholder="Cth: 120/80" class="input-soft" @disabled(!in_array($kategori, ['remaja', 'lansia'])) pattern="^\d{2,3}\/\d{2,3}$" title="Format tensi darah harus benar, contoh: 120/80" {{ in_array($kategori, ['remaja', 'lansia']) ? 'required' : '' }}>
                     </div>
 
                     {{-- Lansia --}}
                     <div class="space-y-2 {{ $kategori !== 'lansia' ? 'hidden' : '' }} sm:col-span-2 md:col-span-1">
                         <label class="form-label">Kemandirian <span class="req-star">*</span></label>
-                        <select name="tingkat_kemandirian" class="input-soft cursor-pointer" @disabled($kategori !== 'lansia')>
+                        <select name="tingkat_kemandirian" class="input-soft cursor-pointer" @disabled($kategori !== 'lansia') {{ $kategori === 'lansia' ? 'required' : '' }}>
                             <option value="">Pilih Status</option>
                             <option value="mandiri" @selected(old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'mandiri')>Mandiri</option>
                             <option value="bantuan_sebagian" @selected(old('tingkat_kemandirian', $pemeriksaan->tingkat_kemandirian) === 'bantuan_sebagian')>Bantuan Sebagian</option>
@@ -421,7 +432,7 @@
 
         {{-- BUTTONS --}}
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="{{ route('kader.pemeriksaan.index') }}" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
+            <a href="{{ $returnUrl }}" data-no-spa="1" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
                 <i class="fas fa-times mr-1"></i>
                 Batal
             </a>
@@ -464,85 +475,139 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
     'use strict';
 
-    const form = document.querySelector('#measurementEditForm');
-    const summaryImt = document.querySelector('#imtDisplay');
-    const category = @json($kategori);
-    
-    const submitBtn = document.querySelector('#openSubmitModalBtn');
-    const modal = document.querySelector('#pcSubmitModal');
-    const cancelSubmit = document.querySelector('#pcCancelSubmit');
-    const confirmSubmit = document.querySelector('#pcConfirmSubmit');
+    if (!window.pcEditFisikDelegated) {
+        document.addEventListener('click', function(e) {
+            
+            // --- BUKA MODAL SIMPAN ---
+            const submitBtn = e.target.closest('#openSubmitModalBtn');
+            if (submitBtn) {
+                e.preventDefault();
+                const form = document.getElementById('measurementEditForm');
+                // Validasi HTML5 agar Error tertangkap sebelum Modal terbuka
+                if (form && form.reportValidity()) {
+                    const modal = document.getElementById('pcSubmitModal');
+                    if (modal) {
+                        modal.classList.add('is-open');
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+                return;
+            }
 
-    function calculateImt() {
-        if (!summaryImt) return;
-        const bb = parseFloat(document.querySelector('[name="berat_badan"]')?.value || 0);
-        const tb = parseFloat(document.querySelector('[name="tinggi_badan"]')?.value || 0);
+            // --- BATAL/TUTUP MODAL ---
+            const cancelSubmit = e.target.closest('#pcCancelSubmit');
+            if (cancelSubmit) {
+                e.preventDefault();
+                const modal = document.getElementById('pcSubmitModal');
+                if (modal) {
+                    modal.classList.remove('is-open');
+                    document.body.style.overflow = '';
+                }
+                return;
+            }
 
-        if (category === 'balita') {
-            summaryImt.textContent = '-';
-            return;
-        }
+            // --- KONFIRMASI SIMPAN ---
+            const confirmSubmit = e.target.closest('#pcConfirmSubmit');
+            if (confirmSubmit) {
+                e.preventDefault();
+                const form = document.getElementById('measurementEditForm');
+                if (form) {
+                    // Validasi akhir
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        const modal = document.getElementById('pcSubmitModal');
+                        if (modal) {
+                            modal.classList.remove('is-open');
+                            document.body.style.overflow = '';
+                        }
+                        return;
+                    }
 
-        if (!bb || !tb) {
-            summaryImt.textContent = '-';
-            return;
-        }
+                    confirmSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                    confirmSubmit.disabled = true;
+                    
+                    const mainBtn = document.getElementById('openSubmitModalBtn');
+                    if(mainBtn) mainBtn.disabled = true;
+                    
+                    form.submit();
+                }
+                return;
+            }
 
-        const meter = tb / 100;
-        const imt = bb / (meter * meter);
-        summaryImt.textContent = isFinite(imt) ? imt.toFixed(2) : '-';
+            // --- TUTUP MODAL JIKA KLIK BACKDROP ---
+            if (e.target.matches('.pc-modal-backdrop.is-open')) {
+                e.target.classList.remove('is-open');
+                document.body.style.overflow = '';
+            }
+        });
+
+        document.addEventListener('keydown', e => { 
+            if (e.key === 'Escape') { 
+                const modal = document.getElementById('pcSubmitModal');
+                if(modal && modal.classList.contains('is-open')) {
+                    modal.classList.remove('is-open');
+                    document.body.style.overflow = '';
+                }
+            } 
+        });
+
+        window.pcEditFisikDelegated = true;
     }
 
-    // Modal Submit
-    function openModal() {
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
+    // INISIASI LOGIKA HALAMAN (IMT Kalkulator)
+    function initEditFisik() {
+        const form = document.getElementById('measurementEditForm');
+        if (!form) return;
+
+        const submitModal = document.getElementById('pcSubmitModal');
+        if (submitModal && submitModal.parentElement !== document.body) {
+            document.querySelectorAll('body > #pcSubmitModal').forEach(el => el.remove());
+            document.body.appendChild(submitModal);
         }
+
+        const category = form.dataset.kategori || 'balita';
         
-        if (!modal) { form.submit(); return; }
-        modal.classList.add('is-open');
-        document.body.style.overflow = 'hidden';
-    }
+        function calculateImt() {
+            const summaryImt = form.querySelector('#imtDisplay');
+            if (!summaryImt) return;
+            
+            const bb = parseFloat(form.querySelector('[name="berat_badan"]')?.value || 0);
+            const tb = parseFloat(form.querySelector('[name="tinggi_badan"]')?.value || 0);
 
-    function closeModal() {
-        if (!modal) return;
-        modal.classList.remove('is-open');
-        document.body.style.overflow = '';
-    }
+            if (category === 'balita') {
+                summaryImt.textContent = '-';
+                return;
+            }
 
-    document.querySelectorAll('[data-imt-source]').forEach(input => input.addEventListener('input', calculateImt));
+            if (!bb || !tb) {
+                summaryImt.textContent = '-';
+                return;
+            }
 
-    if (submitBtn) {
-        submitBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            openModal();
+            const meter = tb / 100;
+            const imt = bb / (meter * meter);
+            summaryImt.textContent = isFinite(imt) ? imt.toFixed(2) : '-';
+        }
+
+        form.querySelectorAll('[data-imt-source]').forEach(input => {
+            input.removeEventListener('input', calculateImt);
+            input.addEventListener('input', calculateImt);
         });
+
+        calculateImt();
     }
 
-    if (cancelSubmit) cancelSubmit.addEventListener('click', closeModal);
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if(e.target === modal) closeModal();
-        });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initEditFisik);
+    } else {
+        initEditFisik();
     }
 
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.addEventListener('spa:loaded', initEditFisik);
 
-    if (confirmSubmit) {
-        confirmSubmit.addEventListener('click', function () {
-            confirmSubmit.disabled = true;
-            confirmSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-            if (submitBtn) submitBtn.disabled = true;
-            form.submit();
-        });
-    }
-
-    // Init state on page load
-    calculateImt();
-});
+})();
 </script>
 @endpush

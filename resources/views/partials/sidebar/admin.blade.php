@@ -125,12 +125,7 @@
     .pc-admin-leaf-4 { right: 25px; bottom: 11px; transform: rotate(46deg) scale(.72); }
 
     /* ANIMATION */
-    .pc-admin-top, .pc-admin-menu-group { opacity: 0; transform: translateY(16px); animation: pcAdminSidebarIn .85s cubic-bezier(.22, 1, .36, 1) forwards; }
-    .pc-admin-bottom-decor { opacity: 0; animation: pcAdminDecorIn .85s ease forwards; }
-    .pc-admin-top { animation-delay: .06s; }
-    .pc-admin-menu-group:nth-child(1) { animation-delay: .14s; }
-    .pc-admin-menu-group:nth-child(2) { animation-delay: .22s; }
-    .pc-admin-bottom-decor { animation-delay: .30s; }
+    /* Animasi masuk sidebar dihapus: tiap pindah halaman = muat ulang, animasi akan berulang & berkedip */
 
     @keyframes pcAdminSidebarIn { to { opacity: 1; transform: translateY(0); } }
     @keyframes pcAdminDecorIn { to { opacity: 1; } }
@@ -224,6 +219,7 @@
 
 @once
     <script>
+        if (window.PC && PC.restoreSb) PC.restoreSb();
         document.addEventListener('DOMContentLoaded', function () {
             const scrollArea = document.getElementById('adminSidebarScrollArea');
             if (!scrollArea) return;

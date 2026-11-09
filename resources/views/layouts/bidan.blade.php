@@ -18,14 +18,11 @@
     <link rel="icon" type="image/webp" href="{{ asset('img/logo.webp') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"></noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
 
     <style>
         :root {
@@ -57,17 +54,6 @@
             background-color: var(--bg-app);
             -webkit-font-smoothing: antialiased; font-synthesis: none;
         }
-
-        /* ── SPA LOADER BAR ── */
-        #spa-loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 3px;
-            background: linear-gradient(90deg, #10b981, #34d399, #059669);
-            background-size: 200% 100%; z-index: 9999999;
-            transform-origin: left; transform: scaleX(0); opacity: 0;
-            transition: transform 0.2s var(--ease-out), opacity 0.2s ease; pointer-events: none;
-        }
-        @keyframes loadingBar { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-        #spa-loader.is-loading { animation: loadingBar 1s infinite linear; }
 
         /* ── SIDEBAR ── */
         .bidan-sidebar {
@@ -289,17 +275,8 @@
         .main-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .main-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* ── SPA - Butter Smooth (anti-reload) ── */
-        .main-inner {
-            width: 100%; min-height: 100%;
-            opacity: 1; transform: translateY(0);
-            transition: opacity var(--transition-speed) var(--ease-out), transform var(--transition-speed) var(--ease-out);
-            will-change: opacity, transform;
-        }
-        .main-inner.is-leaving { opacity: 0; transform: translateY(-6px); }
-        .main-inner.is-entering { opacity: 0; transform: translateY(6px); }
-        .main-inner.is-enter-done { opacity: 1; transform: translateY(0); }
-        .main-inner.is-loading-state { opacity: 0.5; pointer-events: none; }
+        /* ── KONTEN UTAMA (tanpa transform/will-change agar modal fixed tidak terjebak) ── */
+        .main-inner { width: 100%; min-height: 100%; }
 
         @media (max-width: 1023px) { .main-scroll { padding: 16px; } }
         @media (max-width: 480px) { .main-scroll { padding: 12px; } }
@@ -349,6 +326,7 @@
             .nexus-ok, .nexus-danger, .nexus-cancel { padding: 10px 18px !important; font-size: 13px !important; }
         }
     </style>
+    @include('layouts.partials.fast-nav')
     @stack('styles')
 </head>
 
@@ -381,9 +359,6 @@
 
 <body x-data="layoutApp()" x-init="initApp()" class="antialiased">
         
-    <!-- SPA Loader -->
-    <div id="spa-loader"></div>
-
     <button type="button" class="mobile-overlay" aria-label="Tutup Sidebar" onclick="setSidebar(false)"></button>
 
     <aside class="bidan-sidebar">
@@ -537,7 +512,7 @@
         }
 
         function nexusToast(title, text, icon) {
-            if (!window.Swal) return;
+            if (!window.Swal) { window.addEventListener('load', () => nexusToast(title, text, icon), { once: true }); return; }
             Swal.fire({
                 toast: true, position: 'top-end', title: title, html: text || '', icon: icon || 'success',
                 showConfirmButton: false, timer: 1400, timerProgressBar: true, customClass: { popup: 'nexus-swal' }
@@ -545,174 +520,6 @@
         }
         window.nexusConfirm = nexusConfirm;
         window.nexusToast = nexusToast;
-
-        function updateSidebarActive(currentUrl) {
-            const url = currentUrl || window.location.href;
-            const currentPath = new URL(url).pathname;
-            document.querySelectorAll('.pc-sidebar a').forEach(link => {
-                const href = link.getAttribute('href');
-                if (href) {
-                    const linkPath = new URL(href, window.location.origin).pathname;
-                    link.classList.toggle('active', linkPath === currentPath);
-                }
-            });
-        }
-
-        document.addEventListener('click', function(e) {
-            const link = e.target.closest('a');
-            if (!link || !link.href || link.target || link.host !== window.location.host) return;
-            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay') || link.hasAttribute('data-no-spa')) return;
-            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-
-            e.preventDefault();
-            navigateTo(link.href);
-        });
-
-        let currentAbortController = null;
-        let isNavigating = false;
-
-        async function navigateTo(url) {
-            if (isNavigating) {
-                if (currentAbortController) currentAbortController.abort();
-            }
-
-            const currentUrl = new URL(window.location.href);
-            const targetUrl = new URL(url, window.location.origin);
-            if (currentUrl.pathname + currentUrl.search === targetUrl.pathname + targetUrl.search) return;
-
-            isNavigating = true;
-            const controller = new AbortController();
-            currentAbortController = controller;
-
-            const mainEl = document.getElementById('adminMain') || document.getElementById('bidanMain') || document.getElementById('kaderMain') || document.querySelector('main');
-            const scrollArea = document.getElementById('mainScrollArea') || window;
-            const loader = document.getElementById('spa-loader');
-
-            if (!mainEl) { window.location.href = url; return; }
-
-            updateSidebarActive(url);
-            
-            if (loader) {
-                loader.style.opacity = '1';
-                loader.style.transform = 'scaleX(0.3)';
-                loader.classList.add('is-loading');
-            }
-            
-            mainEl.classList.remove('is-enter-done', 'is-entering');
-            mainEl.classList.add('is-leaving');
-            document.body.style.cursor = 'wait';
-            mainEl.style.pointerEvents = 'none';
-
-            try {
-                const res = await fetch(url, { 
-                    signal: controller.signal, 
-                    cache: 'no-store',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-                });
-                
-                if (!res.ok) throw new Error('Network error'); 
-
-                if (loader) loader.style.transform = 'scaleX(0.7)';
-                const html = await res.text();
-                if (loader) loader.style.transform = 'scaleX(1)';
-
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-                const title = doc.querySelector('title');
-                if (title) document.title = title.textContent;
-
-                // --- SINKRONISASI CSS & TAG STYLE ---
-                const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
-                doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
-                    if (newLink.href && !currentLinks.includes(newLink.href)) {
-                        const linkNode = document.createElement('link');
-                        Array.from(newLink.attributes).forEach(attr => linkNode.setAttribute(attr.name, attr.value));
-                        document.head.appendChild(linkNode);
-                    }
-                });
-
-                const currentStyles = Array.from(document.querySelectorAll('head style')).map(el => el.innerHTML.trim());
-                doc.querySelectorAll('head style').forEach(newStyle => {
-                    if (!currentStyles.includes(newStyle.innerHTML.trim())) {
-                        const styleNode = document.createElement('style');
-                        Array.from(newStyle.attributes).forEach(attr => styleNode.setAttribute(attr.name, attr.value));
-                        styleNode.innerHTML = newStyle.innerHTML;
-                        document.head.appendChild(styleNode);
-                    }
-                });
-
-                const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
-                if (!newContent) throw new Error('DOM Mismatch');
-
-                // Jeda sebentar mengikuti durasi CSS transition untuk `is-leaving` (kira-kira 100ms)
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                mainEl.classList.remove('is-leaving');
-                mainEl.classList.add('is-entering'); 
-                
-                mainEl.innerHTML = newContent.innerHTML;
-                if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
-
-                mainEl.querySelectorAll('script').forEach(oldScript => {
-                    const newScript = document.createElement('script');
-                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    newScript.textContent = oldScript.textContent;
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                });
-
-                // --- SINKRONISASI MODALS & STACK SCRIPTS ---
-                const newModals = doc.getElementById('spa-modals');
-                if (newModals) {
-                    document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
-                }
-
-                const newScripts = doc.getElementById('spa-scripts');
-                if (newScripts) {
-                    const scriptContainer = document.getElementById('spa-scripts');
-                    scriptContainer.innerHTML = newScripts.innerHTML;
-                    
-                    scriptContainer.querySelectorAll('script').forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        newScript.textContent = oldScript.textContent;
-                        oldScript.parentNode.replaceChild(newScript, oldScript);
-                    });
-                }
-
-                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
-
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        mainEl.classList.remove('is-entering');
-                        mainEl.classList.add('is-enter-done');
-                        document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                    }, 30);
-                });
-
-                window.history.pushState({}, '', url);
-
-            } catch (err) {
-                if (err.name !== 'AbortError') window.location.href = url;
-            } finally {
-                document.body.style.cursor = 'default';
-                mainEl.style.pointerEvents = 'auto';
-                isNavigating = false;
-                currentAbortController = null;
-                
-                if (loader) {
-                    setTimeout(() => {
-                        loader.style.opacity = '0';
-                        loader.classList.remove('is-loading');
-                        setTimeout(() => loader.style.transform = 'scaleX(0)', 200);
-                    }, 100);
-                }
-
-                if (matchMedia('(max-width:1023px)').matches && root.classList.contains('sb-open')) {
-                    setSidebar(false);
-                }
-            }
-        }
-
-        window.addEventListener('popstate', function() { navigateTo(window.location.href); });
 
         document.addEventListener('submit', function (event) {
             const form = event.target;
@@ -733,23 +540,17 @@
         });
 
         window.addEventListener('pageshow', function (event) {
-            if (event.persisted) {
-                document.body.classList.remove('content-leave');
-                const mainEl = document.getElementById('bidanMain');
-                if (mainEl) { mainEl.classList.remove('is-leaving', 'is-entering'); mainEl.classList.add('is-enter-done'); }
-                updateSidebarActive(window.location.href);
-            }
+            // Dipulihkan dari bfcache (tombol Back/Forward): bersihkan sisa state animasi logout
+            if (event.persisted) document.body.classList.remove('content-leave');
         });
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('layoutApp', () => ({
                 profileOpen: false, notifOpen: false, unreadCount: {{ $notifCount }}, notifItems: [],
                 initApp() {
-                    updateSidebarActive(window.location.href);
-                    this.fetchNotifikasi();
                     const url = '{{ Route::has("bidan.notifikasi.fetch") ? route("bidan.notifikasi.fetch") : "" }}';
                     if (!url) return;
-                    setInterval(() => { this.fetchNotifikasi(); }, 30000);
+                    PC.poll(() => this.fetchNotifikasi(), 30000);   // fetch awal + jeda saat tab tersembunyi
                 },
                 async fetchNotifikasi() {
                     const url = '{{ Route::has("bidan.notifikasi.fetch") ? route("bidan.notifikasi.fetch") : "" }}';

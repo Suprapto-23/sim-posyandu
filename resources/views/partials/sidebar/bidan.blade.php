@@ -166,12 +166,7 @@
     .pc-bidan-leaf-4 { right: 25px; bottom: 11px; transform: rotate(46deg) scale(.72); }
 
     /* ANIMATION */
-    .pc-bidan-top, .pc-bidan-menu-group { opacity: 0; transform: translateY(16px); animation: pcBidanSidebarIn .85s cubic-bezier(.22, 1, .36, 1) forwards; }
-    .pc-bidan-bottom-decor { opacity: 0; animation: pcBidanDecorIn .85s ease forwards; }
-    .pc-bidan-top { animation-delay: .06s; }
-    .pc-bidan-menu-group:nth-child(1) { animation-delay: .14s; }
-    .pc-bidan-menu-group:nth-child(2) { animation-delay: .22s; }
-    .pc-bidan-bottom-decor { animation-delay: .30s; }
+    /* Animasi masuk sidebar dihapus: tiap pindah halaman = muat ulang, animasi akan berulang & berkedip */
 
     @keyframes pcBidanSidebarIn { to { opacity: 1; transform: translateY(0); } }
     @keyframes pcBidanDecorIn { to { opacity: 1; } }
@@ -288,6 +283,7 @@
 
 @once
 <script>
+        if (window.PC && PC.restoreSb) PC.restoreSb();
     document.addEventListener('DOMContentLoaded', function () {
         const scrollArea = document.getElementById('bidanSidebarScrollArea');
         if (!scrollArea) return;

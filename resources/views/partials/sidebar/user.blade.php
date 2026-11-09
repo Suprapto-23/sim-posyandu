@@ -428,28 +428,7 @@
     .pc-user-leaf-3 { right: 7px; bottom: 36px; transform: rotate(28deg) scale(.86); }
     .pc-user-leaf-4 { right: 25px; bottom: 11px; transform: rotate(46deg) scale(.72); }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ANIMATION
-    |--------------------------------------------------------------------------
-    */
-
-    .pc-user-top,
-    .pc-user-menu-group {
-        opacity: 0;
-        transform: translateY(16px);
-        animation: pcUserSidebarIn .85s cubic-bezier(.22, 1, .36, 1) forwards;
-    }
-
-    .pc-user-bottom-decor {
-        opacity: 0;
-        animation: pcUserDecorIn .85s ease forwards;
-    }
-
-    .pc-user-top { animation-delay: .06s; }
-    .pc-user-menu-group:nth-child(1) { animation-delay: .14s; }
-    .pc-user-menu-group:nth-child(2) { animation-delay: .22s; }
-    .pc-user-bottom-decor { animation-delay: .30s; }
+    /* Animasi masuk sidebar dihapus: tiap pindah halaman = muat ulang, animasi akan berulang & berkedip */
 
     @keyframes pcUserSidebarIn {
         to { opacity: 1; transform: translateY(0); }
@@ -561,6 +540,7 @@
 
 @once
     <script>
+        if (window.PC && PC.restoreSb) PC.restoreSb();
         document.addEventListener('DOMContentLoaded', function () {
             const scrollArea = document.getElementById('userSidebarScrollArea');
 

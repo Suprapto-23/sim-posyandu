@@ -20,22 +20,19 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"></noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'" referrerpolicy="no-referrer">
-    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"></noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
 
     <style>
         :root {
             --sb-width: 280px;
             --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
             --border: #f1f5f9; --bg-app: #fcfcfd;
-            --transition-speed: 0.12s; 
-            --ease-out: cubic-bezier(0.16, 1, 0.3, 1); 
+            --transition-speed: 0.15s; 
+            --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1); 
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -56,7 +53,7 @@
             position: fixed; top: 0; bottom: 0; left: 0; z-index: 50;
             width: var(--sb-width); padding: 16px;
             transform: translateX(-100%) translateZ(0); 
-            transition: transform var(--transition-speed) var(--ease-out);
+            transition: transform 0.2s var(--ease-out);
             will-change: transform; backface-visibility: hidden;
         }
         html.sb-open .kader-sidebar { transform: translateX(0) translateZ(0); }
@@ -83,7 +80,7 @@
         /* ── LAYOUT ── */
         .app-wrapper {
             display: flex; flex-direction: column; height: 100vh; padding-left: 0;
-            transition: padding-left var(--transition-speed) var(--ease-out);
+            transition: padding-left 0.2s var(--ease-out);
             will-change: padding-left; z-index: 10;
         }
         @media (min-width: 1024px) { html.sb-open .app-wrapper { padding-left: var(--sb-width); } }
@@ -183,26 +180,7 @@
         .main-scroll-area::-webkit-scrollbar-track { background: transparent; }
         .main-scroll-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* ── SPA CROSSFADE OPTIMAL ── */
-        .kader-main {
-            opacity: 1; 
-            transform: translateY(0);
-            transition: opacity 0.12s var(--ease-out), transform 0.12s var(--ease-out);
-            will-change: opacity, transform;
-        }
-        .kader-main.is-hidden-instant { 
-            opacity: 0; 
-            transform: translateY(2px); 
-            transition: none !important;
-            pointer-events: none;
-        }
-
-        .kader-main-ghost {
-            position: fixed; overflow: hidden;
-            opacity: 1; pointer-events: none; z-index: 30;
-            transition: opacity 0.12s var(--ease-out);
-        }
-        .kader-main-ghost.is-out { opacity: 0; }
+        /* ── KONTEN UTAMA (tanpa transform/will-change agar modal fixed tidak terjebak) ── */
 
         /* ── MOBILE OVERLAY ── */
         .mobile-overlay {
@@ -220,14 +198,13 @@
             .main-scroll-area { padding: 16px; }
         }
 
-        /* ── FULL SCREEN SWEETALERT FIX ── */
-        div.swal2-container {
+        /* ── FULL SCREEN SWEETALERT FIX (ANTI FREEZE) ── */
+        div.swal2-container.swal2-shown {
             z-index: 9999999 !important; 
             background: rgba(15, 23, 42, 0.45) !important; 
             backdrop-filter: blur(10px) !important; -webkit-backdrop-filter: blur(10px) !important;
             position: fixed !important; inset: 0 !important;
             width: 100vw !important; height: 100vh !important;
-            display: flex !important; align-items: center !important; justify-content: center !important;
         }
         div.swal2-container .swal2-popup { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
         
@@ -255,6 +232,7 @@
             .swal2-actions { flex-direction: column; width: 100%; }
         }
     </style>
+    @include('layouts.partials.fast-nav')
     @stack('styles')
 </head>
 
@@ -422,156 +400,6 @@
             });
         }
 
-        function updateSidebarActive(currentUrl) {
-            const url = currentUrl || window.location.href;
-            const currentPath = new URL(url).pathname;
-            document.querySelectorAll('.pc-sidebar a').forEach(link => {
-                const href = link.getAttribute('href');
-                if (href) {
-                    const linkPath = new URL(href, window.location.origin).pathname;
-                    link.classList.toggle('active', linkPath === currentPath);
-                }
-            });
-        }
-
-        window.addEventListener('unhandledrejection', function (event) {
-            if (event.reason && event.reason.name === 'AbortError' && /transition was skipped/i.test(event.reason.message || '')) {
-                event.preventDefault();
-            }
-        });
-
-        let currentAbortController = null;
-        let isNavigating = false;
-
-        async function navigateTo(url) {
-            if (isNavigating) {
-                if (currentAbortController) currentAbortController.abort();
-            }
-
-            const currentPath = new URL(window.location.href).pathname + new URL(window.location.href).search;
-            const targetPath = new URL(url, window.location.origin).pathname + new URL(url, window.location.origin).search;
-            if (currentPath === targetPath) return;
-
-            isNavigating = true;
-            const controller = new AbortController();
-            currentAbortController = controller;
-
-            const mainEl = document.getElementById('kaderMain') || document.querySelector('main');
-            const scrollArea = document.getElementById('mainScrollArea') || window;
-
-            if (!mainEl) { window.location.href = url; return; }
-
-            updateSidebarActive(url);
-
-            const rect = mainEl.getBoundingClientRect();
-            const ghost = document.createElement('div');
-            ghost.className = 'kader-main-ghost';
-            ghost.style.top = rect.top + 'px';
-            ghost.style.left = rect.left + 'px';
-            ghost.style.width = rect.width + 'px';
-            ghost.style.maxHeight = (window.innerHeight - rect.top) + 'px';
-            ghost.innerHTML = mainEl.innerHTML;
-            document.body.appendChild(ghost);
-
-            mainEl.classList.add('is-hidden-instant');
-            if (scrollArea.scrollTo) scrollArea.scrollTo({ top: 0, behavior: 'instant' });
-
-            try {
-                const res = await fetch(url, { 
-                    signal: controller.signal, 
-                    cache: 'no-store',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } 
-                });
-                
-                if (!res.ok) throw new Error('Network error'); 
-
-                const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-                const title = doc.querySelector('title');
-                if (title) document.title = title.textContent;
-
-                const currentLinks = Array.from(document.querySelectorAll('head link[rel="stylesheet"]')).map(el => el.href);
-                doc.querySelectorAll('head link[rel="stylesheet"]').forEach(newLink => {
-                    if (newLink.href && !currentLinks.includes(newLink.href)) {
-                        const linkNode = document.createElement('link');
-                        Array.from(newLink.attributes).forEach(attr => linkNode.setAttribute(attr.name, attr.value));
-                        document.head.appendChild(linkNode);
-                    }
-                });
-
-                const currentStyles = Array.from(document.querySelectorAll('head style')).map(el => el.innerHTML.trim());
-                doc.querySelectorAll('head style').forEach(newStyle => {
-                    if (!currentStyles.includes(newStyle.innerHTML.trim())) {
-                        const styleNode = document.createElement('style');
-                        Array.from(newStyle.attributes).forEach(attr => styleNode.setAttribute(attr.name, attr.value));
-                        styleNode.innerHTML = newStyle.innerHTML;
-                        document.head.appendChild(styleNode);
-                    }
-                });
-
-                const newContent = doc.getElementById(mainEl.id) || doc.querySelector('main');
-                if (!newContent) throw new Error('DOM Mismatch');
-
-                mainEl.innerHTML = newContent.innerHTML;
-
-                mainEl.querySelectorAll('script').forEach(oldScript => {
-                    const newScript = document.createElement('script');
-                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    newScript.textContent = oldScript.textContent;
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                });
-
-                const newModals = doc.getElementById('spa-modals');
-                if (newModals) document.getElementById('spa-modals').innerHTML = newModals.innerHTML;
-
-                const newScripts = doc.getElementById('spa-scripts');
-                if (newScripts) {
-                    const scriptContainer = document.getElementById('spa-scripts');
-                    scriptContainer.innerHTML = newScripts.innerHTML;
-                    
-                    scriptContainer.querySelectorAll('script').forEach(oldScript => {
-                        const newScript = document.createElement('script');
-                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                        newScript.textContent = oldScript.textContent;
-                        oldScript.parentNode.replaceChild(newScript, oldScript);
-                    });
-                }
-
-                if (window.Alpine && typeof Alpine.initTree === 'function') Alpine.initTree(mainEl);
-
-                void mainEl.offsetWidth;
-                ghost.classList.add('is-out');
-                mainEl.classList.remove('is-hidden-instant');
-                setTimeout(() => ghost.remove(), 130);
-
-                document.dispatchEvent(new CustomEvent('spa:loaded', { detail: { url } }));
-                window.history.pushState({}, '', url);
-
-            } catch (err) {
-                ghost.remove();
-                if (err.name !== 'AbortError') window.location.href = url;
-            } finally {
-                isNavigating = false;
-                currentAbortController = null;
-
-                if (matchMedia('(max-width:1023px)').matches && root.classList.contains('sb-open')) {
-                    setSidebar(false);
-                }
-            }
-        }
-
-        window.addEventListener('popstate', function() { navigateTo(window.location.href); });
-
-        document.addEventListener('click', function(e) {
-            const link = e.target.closest('a');
-            if (!link || !link.href || link.target || link.host !== window.location.host) return;
-            if (link.hasAttribute('download') || link.hasAttribute('data-no-delay') || link.hasAttribute('data-no-spa')) return;
-            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-
-            e.preventDefault();
-            navigateTo(link.href);
-        });
-
         document.addEventListener('submit', function (event) {
             const form = event.target;
             if (form.dataset.confirmed === '1') return;
@@ -588,16 +416,27 @@
                     }
                 });
             }
+            
+            // Konfirmasi Hapus Data Global
             if (form.classList.contains('delete-form') || form.classList.contains('dynamic-form-delete')) {
                 event.preventDefault();
                 nexusConfirm({ 
-                    title: 'Hapus Data?', text: 'Data yang belum direview Bidan dapat dihapus secara permanen. Lanjutkan?', icon: 'warning', iconColor: '#e11d48', yes: 'Ya, Hapus', danger: true 
+                    title: 'Hapus Data?', text: 'Data yang dihapus tidak dapat dikembalikan. Lanjutkan?', icon: 'warning', iconColor: '#e11d48', yes: 'Ya, Hapus', danger: true 
                 }).then(r => {
-                    if(r.isConfirmed) { form.dataset.confirmed = '1'; form.submit(); }
+                    if(r.isConfirmed) { 
+                        form.dataset.confirmed = '1'; 
+                        form.submit(); 
+                    }
                 });
             }
         });
 
+        window.addEventListener('pageshow', function (event) {
+            // Dipulihkan dari bfcache (tombol Back/Forward): bersihkan sisa state animasi logout
+            if (event.persisted) document.body.classList.remove('content-leave');
+        });
+
+        // Inisiasi Notifikasi Real-time & Dropdown Profil lewat Alpine.js
         document.addEventListener('alpine:init', () => {
             Alpine.data('layoutApp', () => ({
                 profileOpen: false,
@@ -605,9 +444,7 @@
                 unreadCount: {{ $unreadCount }},
                 notifList: [],
                 initApp() {
-                    updateSidebarActive(window.location.href);
-                    this.fetchNotifications();
-                    setInterval(() => this.fetchNotifications(), 6000); 
+                    PC.poll(() => this.fetchNotifications(), 30000);   // fetch awal + jeda saat tab tersembunyi
                 },
                 async fetchNotifications() {
                     const url = '{{ Route::has("kader.notifikasi.count") ? route("kader.notifikasi.count") : "" }}';

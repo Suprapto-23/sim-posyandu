@@ -19,6 +19,12 @@
         : url('/kader/data/remaja');
 
     $selectedGender = old('jenis_kelamin');
+
+    $sessionType = session('success')
+        ? 'success'
+        : (session('warning') ? 'warning' : (session('error') ? 'error' : null));
+
+    $sessionMessage = session('success') ?? session('warning') ?? session('error');
 @endphp
 
 @push('styles')
@@ -62,14 +68,14 @@
 
     .input-soft:focus {
         background: #ffffff;
-        border-color: #10b981; /* Emerald 500 */
+        border-color: #10b981; 
         box-shadow: 0 0 0 4px rgba(16, 185, 129, .12);
     }
 
     .input-soft::placeholder { color: #94a3b8; font-weight: 600; }
 
     .form-error {
-        border-color: #f43f5e !important; /* Rose 500 */
+        border-color: #f43f5e !important; 
         box-shadow: 0 0 0 4px rgba(244, 63, 94, .12) !important;
     }
 
@@ -113,37 +119,88 @@
 
 <div class="max-w-[1080px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 mt-6">
 
-    {{-- Hero Section (Warna Kader: Emerald/Teal) --}}
-    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[2.5rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20 text-center">
+    {{-- Hero Section --}}
+    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[2.5rem] p-6 sm:p-8 md:p-10 mb-6 sm:mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20 text-center lg:text-left">
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-20 pointer-events-none"></div>
         <div class="absolute -right-16 -top-16 w-56 h-56 bg-white/15 blur-[70px] rounded-full pointer-events-none"></div>
 
-        <div class="relative z-10">
-            <div class="inline-flex items-center gap-2 text-white/85 text-[10px] font-black uppercase tracking-widest mb-4">
-                <a href="{{ $backRoute }}" class="hover:text-white transition-colors">Data Sasaran</a>
-                <i class="fas fa-chevron-right text-[8px]"></i>
-                <span class="text-white">Tambah Baru</span>
+        <div class="relative z-10 flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-center justify-between">
+            <div class="flex-1 text-center lg:text-left">
+                <div class="inline-flex items-center justify-center lg:justify-start gap-2 text-white/85 text-[10px] font-black uppercase tracking-widest mb-3 sm:mb-4">
+                    <a href="{{ $backRoute }}" class="hover:text-white transition-colors">Data Sasaran</a>
+                    <i class="fas fa-chevron-right text-[8px]"></i>
+                    <span class="text-white">Tambah Baru</span>
+                </div>
+
+                <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
+                    Registrasi Remaja
+                </h1>
+
+                <p class="text-teal-50 text-xs sm:text-sm font-medium max-w-xl mx-auto lg:mx-0 mt-2 sm:mt-3 leading-relaxed">
+                    Tambahkan data sasaran Remaja baru untuk keperluan pemantauan kesehatan, edukasi, dan pelaporan Posyandu.
+                </p>
             </div>
 
-            <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight">
-                Registrasi Remaja
-            </h1>
-
-            <p class="text-teal-50 text-sm font-medium max-w-xl mx-auto mt-3 leading-relaxed">
-                Tambahkan data sasaran Remaja baru untuk keperluan pemantauan kesehatan, edukasi, dan pelaporan Posyandu.
-            </p>
+            <div class="flex w-full lg:w-auto shrink-0 justify-center">
+                <a href="{{ $backRoute }}" class="inline-flex items-center justify-center w-full lg:w-auto bg-white/20 hover:bg-white/30 text-white border border-white/30 px-6 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm font-bold backdrop-blur-md transition-all shadow-sm">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Kembali
+                </a>
+            </div>
         </div>
     </section>
 
-    {{-- VALIDATION ALERT --}}
+    {{-- SYSTEM ALERT & FIX REDIRECT BACKEND --}}
+    @if($sessionType && $sessionMessage)
+        @php
+            $alertClass = match ($sessionType) {
+                'error' => 'border-rose-200 bg-rose-50 text-rose-800',
+                'warning' => 'border-amber-200 bg-amber-50 text-amber-800',
+                default => 'border-emerald-200 bg-emerald-50 text-emerald-800',
+            };
+            $alertIcon = match ($sessionType) {
+                'error' => 'fa-triangle-exclamation text-rose-500',
+                'warning' => 'fa-circle-exclamation text-amber-500',
+                default => 'fa-circle-check text-emerald-500',
+            };
+            $alertTitle = match ($sessionType) {
+                'error' => 'Gagal Disimpan',
+                'warning' => 'Perhatian',
+                default => 'Berhasil Disimpan!',
+            };
+        @endphp
+
+        <div class="rounded-2xl p-4 sm:p-5 shadow-sm border flex items-center gap-3 sm:gap-4 {{ $alertClass }} mb-6 sm:mb-8">
+            <div class="bg-white rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 shadow-inner">
+                <i class="fa-solid {{ $alertIcon }} text-base sm:text-lg"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-black text-xs sm:text-sm">{{ $alertTitle }}</h3>
+                <p class="font-medium text-[11px] sm:text-xs mt-0.5 opacity-80">{{ $sessionMessage }}</p>
+            </div>
+            
+            @if($sessionType === 'success')
+                <div class="shrink-0">
+                    <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-lg"></i>
+                </div>
+            @endif
+        </div>
+
+        @if($sessionType === 'success')
+            <script>
+                setTimeout(function() { window.location.href = "{{ $backRoute }}"; }, 1500); 
+            </script>
+        @endif
+    @endif
+
+    {{-- VALIDATION ERROR ALERT --}}
     @if($errors->any())
-        <div class="bg-rose-50 border border-rose-200 rounded-2xl p-5 mb-8 flex items-start gap-4 shadow-sm">
-            <div class="bg-white rounded-full w-10 h-10 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
-                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-lg"></i>
+        <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8 flex items-start gap-3 sm:gap-4 shadow-sm">
+            <div class="bg-white rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-base sm:text-lg"></i>
             </div>
             <div>
-                <h3 class="font-black text-sm text-rose-800">Data belum bisa disimpan</h3>
-                <ul class="text-xs font-medium mt-1.5 text-rose-700/80 space-y-1">
+                <h3 class="font-black text-xs sm:text-sm text-rose-800">Data belum bisa disimpan</h3>
+                <ul class="text-[11px] sm:text-xs font-medium mt-1.5 text-rose-700/80 space-y-1">
                     @foreach($errors->all() as $error)
                         <li>- {{ $error }}</li>
                     @endforeach
@@ -157,59 +214,59 @@
         @csrf
 
         {{-- BAGIAN 1: IDENTITAS REMAJA --}}
-        <section class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
-            <div class="bg-slate-50/70 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
+        <section class="bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-6 sm:mb-8">
+            <div class="bg-slate-50/70 px-5 py-4 sm:px-8 sm:py-6 border-b border-slate-100 flex items-center justify-between">
+                <h5 class="font-black text-slate-700 text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
                     <i class="fas fa-user-graduate text-emerald-500"></i>
                     1. Identitas Remaja
                 </h5>
-                <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-3 py-1 rounded-full">* Wajib Diisi</span>
+                <span class="text-[9px] sm:text-[10px] font-bold text-rose-500 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">* Wajib Diisi</span>
             </div>
 
-            <div class="p-6 sm:p-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-5 sm:p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
 
-                    <div class="space-y-2 md:col-span-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2 md:col-span-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Nama Lengkap <span class="text-rose-500">*</span>
                         </label>
                         <input type="text" name="nama_lengkap" value="{{ old('nama_lengkap') }}" required class="input-soft @error('nama_lengkap') form-error @enderror" placeholder="Contoh: Ahmad Rizki Pratama">
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             NIK Remaja <span class="text-rose-500">*</span>
                         </label>
                         <input type="text" id="nik" name="nik" value="{{ old('nik') }}" required maxlength="16" inputmode="numeric" class="input-soft @error('nik') form-error @enderror" placeholder="16 Digit NIK">
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Jenis Kelamin <span class="text-rose-500">*</span>
                         </label>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
                             <label class="gender-card">
                                 <input type="radio" name="jenis_kelamin" value="L" class="peer sr-only" {{ $selectedGender === 'L' ? 'checked' : '' }} required>
                                 <span class="gender-dot bg-sky-50 text-sky-600 peer-checked:bg-sky-500 peer-checked:text-white"><i class="fa-solid fa-mars"></i></span>
-                                <span class="text-xs font-bold text-slate-700">Laki-laki</span>
+                                <span class="text-[11px] sm:text-xs font-bold text-slate-700">Laki-laki</span>
                             </label>
                             <label class="gender-card">
                                 <input type="radio" name="jenis_kelamin" value="P" class="peer sr-only" {{ $selectedGender === 'P' ? 'checked' : '' }} required>
                                 <span class="gender-dot bg-rose-50 text-rose-500 peer-checked:bg-rose-500 peer-checked:text-white"><i class="fa-solid fa-venus"></i></span>
-                                <span class="text-xs font-bold text-slate-700">Perempuan</span>
+                                <span class="text-[11px] sm:text-xs font-bold text-slate-700">Perempuan</span>
                             </label>
                         </div>
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Tempat Lahir <span class="text-rose-500">*</span>
                         </label>
                         <input type="text" name="tempat_lahir" value="{{ old('tempat_lahir') }}" required class="input-soft @error('tempat_lahir') form-error @enderror" placeholder="Kota/Kabupaten Lahir">
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Tanggal Lahir <span class="text-rose-500">*</span>
                         </label>
                         <input type="date" name="tanggal_lahir" value="{{ old('tanggal_lahir') }}" max="{{ now()->format('Y-m-d') }}" required class="input-soft @error('tanggal_lahir') form-error @enderror">
@@ -220,33 +277,33 @@
         </section>
 
         {{-- BAGIAN 2: PENDIDIKAN & DOMISILI --}}
-        <section class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
-            <div class="bg-slate-50/70 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
+        <section class="bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-6 sm:mb-8">
+            <div class="bg-slate-50/70 px-5 py-4 sm:px-8 sm:py-6 border-b border-slate-100 flex items-center justify-between">
+                <h5 class="font-black text-slate-700 text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
                     <i class="fas fa-school text-emerald-500"></i>
                     2. Pendidikan & Domisili
                 </h5>
             </div>
 
-            <div class="p-6 sm:p-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-5 sm:p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Nama Sekolah
                         </label>
                         <input type="text" name="sekolah" value="{{ old('sekolah') }}" class="input-soft @error('sekolah') form-error @enderror" placeholder="Contoh: SMP Negeri 1">
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Kelas
                         </label>
                         <input type="text" name="kelas" value="{{ old('kelas') }}" class="input-soft @error('kelas') form-error @enderror" placeholder="Contoh: 8A / XI IPA">
                     </div>
 
-                    <div class="space-y-2 md:col-span-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2 md:col-span-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Alamat Tinggal <span class="text-rose-500">*</span>
                         </label>
                         <textarea name="alamat" required class="input-soft @error('alamat') form-error @enderror" placeholder="Tuliskan nama jalan, RT/RW, dan Desa">{{ old('alamat') }}</textarea>
@@ -257,26 +314,26 @@
         </section>
 
         {{-- BAGIAN 3: DATA ORANG TUA --}}
-        <section class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-8">
-            <div class="bg-slate-50/70 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-                <h5 class="font-black text-slate-700 text-sm uppercase tracking-widest flex items-center gap-2">
+        <section class="bg-white rounded-[1.5rem] sm:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-6 sm:mb-8">
+            <div class="bg-slate-50/70 px-5 py-4 sm:px-8 sm:py-6 border-b border-slate-100 flex items-center justify-between">
+                <h5 class="font-black text-slate-700 text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
                     <i class="fas fa-users text-emerald-500"></i>
                     3. Kontak Keluarga
                 </h5>
             </div>
 
-            <div class="p-6 sm:p-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-5 sm:p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             Nama Orang Tua / Wali <span class="text-rose-500">*</span>
                         </label>
                         <input type="text" name="nama_ortu" value="{{ old('nama_ortu') }}" required class="input-soft @error('nama_ortu') form-error @enderror" placeholder="Nama wali/orang tua">
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+                    <div class="space-y-1.5 sm:space-y-2">
+                        <label class="text-[10px] sm:text-[11px] font-black text-slate-500 uppercase tracking-widest">
                             No. HP Orang Tua / Wali
                         </label>
                         <input type="text" id="telepon_ortu" name="telepon_ortu" value="{{ old('telepon_ortu') }}" class="input-soft @error('telepon_ortu') form-error @enderror" placeholder="Contoh: 08xxxxxxxxxx">
@@ -287,12 +344,12 @@
         </section>
 
         {{-- ACTION BUTTONS --}}
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-            <a href="{{ $backRoute }}" class="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-sm text-center">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-8 sm:mt-10">
+            <a href="{{ $backRoute }}" class="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-bold text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-700 transition-all shadow-sm text-xs sm:text-sm text-center">
                 Batal
             </a>
 
-            <button type="button" id="openCreateConfirm" class="w-full sm:w-auto px-10 py-3.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all shadow-[0_4px_15px_rgba(16,185,129,.30)] text-sm flex items-center justify-center gap-2">
+            <button type="button" id="openCreateConfirm" class="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-3.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all shadow-[0_4px_15px_rgba(16,185,129,.30)] text-xs sm:text-sm flex items-center justify-center gap-2">
                 <i class="fas fa-save"></i>
                 Simpan Data Remaja
             </button>
@@ -302,7 +359,7 @@
 @endsection
 
 @push('modals')
-{{-- MODAL KONFIRMASI (Z-Index Absolut Menutupi Layar Penuh) --}}
+{{-- MODAL KONFIRMASI --}}
 <div id="nexusCreateConfirm" class="pc-modal-backdrop">
     <div class="pc-modal-card">
         <div class="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 px-6 py-6 text-white text-center">
@@ -310,24 +367,24 @@
             <div class="absolute -bottom-16 left-8 h-28 w-44 rounded-t-[80px] bg-amber-300/15 pointer-events-none"></div>
 
             <div class="relative z-10">
-                <i class="fa-solid fa-circle-exclamation text-4xl mb-3 opacity-90"></i>
-                <h3 class="text-xl font-black tracking-tight mb-1">Simpan Data Remaja?</h3>
-                <p class="text-xs font-semibold leading-relaxed opacity-80 px-4">
+                <i class="fa-solid fa-circle-exclamation text-3xl sm:text-4xl mb-2 sm:mb-3 opacity-90"></i>
+                <h3 class="text-lg sm:text-xl font-black tracking-tight mb-1">Simpan Data Remaja?</h3>
+                <p class="text-[11px] sm:text-xs font-semibold leading-relaxed opacity-80 px-2 sm:px-4">
                     Sistem akan menyimpan dan memeriksa ketersediaan akun warga terkait.
                 </p>
             </div>
         </div>
 
-        <div class="p-6 bg-white text-center">
-            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold leading-6 text-amber-800 mb-5 text-left">
+        <div class="p-5 sm:p-6 bg-white text-center">
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] sm:text-xs font-bold leading-5 sm:leading-6 text-amber-800 mb-4 sm:mb-5 text-left">
                 <i class="fa-solid fa-triangle-exclamation mr-1"></i> Pastikan NIK, nama, dan tanggal lahir sudah sesuai dengan kartu identitas (KK/KIA).
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button" id="nexusCreateCancel" class="w-full h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <button type="button" id="nexusCreateCancel" class="w-full h-10 sm:h-11 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
                     Periksa Lagi
                 </button>
-                <button type="button" id="nexusCreateOk" class="w-full h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors">
+                <button type="button" id="nexusCreateOk" class="w-full h-10 sm:h-11 rounded-xl bg-emerald-600 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-colors">
                     Ya, Simpan
                 </button>
             </div>
@@ -338,70 +395,81 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const form = document.getElementById('remajaCreateForm');
-        const nikInput = document.getElementById('nik');
-        const telpInput = document.getElementById('telepon_ortu');
+    if (!window.createRemajaDelegationBound) {
+        window.createRemajaDelegationBound = true;
 
-        const modal = document.getElementById('nexusCreateConfirm');
-        const openButton = document.getElementById('openCreateConfirm');
-        const cancelButton = document.getElementById('nexusCreateCancel');
-        const okButton = document.getElementById('nexusCreateOk');
+        document.addEventListener('click', function(event) {
+            // 1. Buka Modal
+            const openBtn = event.target.closest('#openCreateConfirm');
+            if (openBtn) {
+                event.preventDefault();
+                const form = document.getElementById('remajaCreateForm');
+                if (form && form.checkValidity()) {
+                    const modal = document.getElementById('nexusCreateConfirm');
+                    if (modal) {
+                        if (modal.parentElement !== document.body) { document.body.appendChild(modal); }
+                        modal.classList.add('is-open');
+                        document.body.style.overflow = 'hidden';
+                    }
+                } else if (form) { form.reportValidity(); }
+                return;
+            }
 
-        // Pindahkan modal ke body untuk menghindari bug stack
-        if (modal && modal.parentElement !== document.body) {
-            document.body.appendChild(modal);
-        }
+            // 2. Batal (Tutup Modal)
+            const cancelBtn = event.target.closest('#nexusCreateCancel');
+            if (cancelBtn) {
+                const modal = document.getElementById('nexusCreateConfirm');
+                if (modal) {
+                    modal.classList.remove('is-open');
+                    document.body.style.overflow = '';
+                }
+                return;
+            }
 
-        function openModal() {
-            modal?.classList.add('is-open');
-            document.body.style.overflow = 'hidden'; 
-        }
+            // 3. Simpan Action
+            const okBtn = event.target.closest('#nexusCreateOk');
+            if (okBtn) {
+                const form = document.getElementById('remajaCreateForm');
+                if (form) {
+                    const modal = document.getElementById('nexusCreateConfirm');
+                    if (modal) {
+                        modal.classList.remove('is-open');
+                        document.body.style.overflow = '';
+                    }
+                    okBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Proses...';
+                    okBtn.disabled = true;
+                    HTMLFormElement.prototype.submit.call(form);
+                }
+                return;
+            }
 
-        function closeModal() {
-            modal?.classList.remove('is-open');
-            document.body.style.overflow = ''; 
-        }
-
-        // Filter NIK
-        nikInput?.addEventListener('input', function () {
-            this.value = this.value.replace(/\D/g, '').slice(0, 16);
-        });
-
-        // Filter Telepon
-        telpInput?.addEventListener('input', function () {
-            this.value = this.value.replace(/\D/g, '').slice(0, 15);
-        });
-
-        // Trigger validasi saat tombol simpan ditekan
-        openButton?.addEventListener('click', function (event) {
-            event.preventDefault();
-            if (form.checkValidity()) {
-                openModal();
-            } else {
-                form.reportValidity();
+            // 4. Tutup Jika Klik di Luar Modal
+            if (event.target.classList.contains('pc-modal-backdrop') && event.target.id === 'nexusCreateConfirm') {
+                event.target.classList.remove('is-open');
+                document.body.style.overflow = '';
             }
         });
 
-        cancelButton?.addEventListener('click', closeModal);
-        modal?.addEventListener('click', function (event) {
-            if (event.target === modal) { closeModal(); }
-        });
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && modal?.classList.contains('is-open')) {
-                closeModal();
+        // Filter validasi karakter NIK (hanya angka 16 digit)
+        document.addEventListener('input', function(event) {
+            if (event.target && event.target.id === 'nik') {
+                event.target.value = event.target.value.replace(/\D/g, '').slice(0, 16);
+            }
+            if (event.target && event.target.id === 'telepon_ortu') {
+                event.target.value = event.target.value.replace(/\D/g, '').slice(0, 15);
             }
         });
 
-        okButton?.addEventListener('click', function () {
-            closeModal();
-            
-            // Ubah teks tombol jadi loading state
-            okButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
-            okButton.disabled = true;
-
-            HTMLFormElement.prototype.submit.call(form);
+        // Event Keyboard Escape
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('nexusCreateConfirm');
+                if (modal && modal.classList.contains('is-open')) {
+                    modal.classList.remove('is-open');
+                    document.body.style.overflow = '';
+                }
+            }
         });
-    });
+    }
 </script>
 @endpush

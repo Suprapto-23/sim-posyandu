@@ -320,7 +320,7 @@
     </section>
 
     {{-- STATISTIK GRID --}}
-    <section class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 mb-6 sm:mb-8">
+    <section class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-6 sm:mb-8">
         <div class="widget-card p-4 sm:p-6 flex justify-between items-center group hover:-translate-y-1 transition-transform duration-300 min-w-0">
             <div class="min-w-0">
                 <p class="text-[9px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Total Sasaran</p>
@@ -443,11 +443,11 @@
                 @endphp
 
                 <article class="pc-row p-4 sm:p-5 relative overflow-hidden">
-                    <div class="flex flex-col xl:flex-row gap-4 xl:items-center">
+                    <div class="flex flex-col lg:grid lg:grid-cols-12 gap-4 lg:items-center">
                         
                         {{-- 1. Area Profil & Checkbox --}}
-                        <div class="flex items-start gap-3 sm:gap-4 xl:w-[35%] shrink-0">
-                            <div class="mt-1 xl:mt-0">
+                        <div class="flex items-start gap-3 sm:gap-4 lg:col-span-4 min-w-0">
+                            <div class="mt-1 lg:mt-0 shrink-0">
                                 <input type="checkbox" name="ids[]" value="{{ $item->id }}" form="bulkDeleteForm" class="balita-check h-4 w-4 sm:h-5 sm:w-5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer">
                             </div>
                             <div class="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-slate-50 border border-slate-200 text-base sm:text-lg font-black text-slate-700 shadow-sm">
@@ -463,58 +463,58 @@
                             </div>
                         </div>
 
-                        {{-- 2. Area Informasi Tambahan (Grid di Mobile, Flex di Desktop) --}}
-                        <div class="grid grid-cols-2 gap-3 xl:flex xl:w-[45%] shrink-0 xl:gap-4 border-t border-slate-100 pt-3 xl:border-0 xl:pt-0">
-                            <div class="bg-slate-50/50 p-2.5 sm:p-3 rounded-2xl border border-slate-100 xl:flex-1">
+                        {{-- 2. Area Informasi Tambahan --}}
+                        <div class="grid grid-cols-2 gap-3 lg:flex lg:col-span-5 lg:gap-4 border-t border-slate-100 pt-3 lg:border-0 lg:pt-0 min-w-0">
+                            <div class="bg-slate-50/50 p-2.5 sm:p-3 rounded-2xl border border-slate-100 flex-1 min-w-0">
                                 <p class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Usia & TTL</p>
                                 <p class="text-[11px] sm:text-xs font-bold text-slate-700 leading-snug truncate" title="{{ $getAge($item) }}">{{ $getAge($item) }}</p>
                                 <p class="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-0.5 truncate"><i class="fa-solid fa-calendar-day opacity-50 mr-1"></i> {{ $formatDate($item->tanggal_lahir) }}</p>
                             </div>
-                            <div class="bg-slate-50/50 p-2.5 sm:p-3 rounded-2xl border border-slate-100 xl:flex-1">
+                            <div class="bg-slate-50/50 p-2.5 sm:p-3 rounded-2xl border border-slate-100 flex-1 min-w-0">
                                 <p class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Orang Tua / Wali</p>
-                                <p class="text-[11px] sm:text-xs font-bold text-slate-700 truncate" title="{{ $item->nama_ibu }}">Ibu: {{ $item->nama_ibu ?: '-' }}</p>
-                                <p class="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-0.5 truncate" title="{{ $item->alamat }}"><i class="fa-solid fa-location-dot opacity-50 mr-1"></i> {{ $item->alamat ?: '-' }}</p>
+                                <p class="text-[11px] sm:text-xs font-bold text-slate-700 truncate" title="Ibu: {{ $item->nama_ibu ?: '-' }}">Ibu: {{ $item->nama_ibu ?: '-' }}</p>
+                                <p class="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-0.5 truncate" title="{{ $item->alamat ?: '-' }}"><i class="fa-solid fa-location-dot opacity-50 mr-1"></i> {{ $item->alamat ?: '-' }}</p>
                             </div>
                         </div>
 
-                        {{-- 3. Area Tombol Aksi (Melebar di Mobile, Icon Only di Desktop) --}}
-                        <div class="flex flex-wrap xl:flex-nowrap gap-2 pt-3 border-t border-slate-100 xl:border-0 xl:pt-0 xl:w-[20%] xl:justify-end shrink-0">
+                        {{-- 3. Area Tombol Aksi (Dibuat Grid/Flex Sempurna Simetris) --}}
+                        <div class="grid grid-cols-2 sm:flex lg:grid lg:grid-cols-2 xl:flex gap-2 pt-3 border-t border-slate-100 lg:border-0 lg:pt-0 lg:col-span-3 lg:justify-end shrink-0 min-w-0">
                             @if($routeHas('kader.data.balita.show'))
-                                <a href="{{ route('kader.data.balita.show', $item->id) }}" class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-[11px] sm:text-xs font-bold text-slate-600 shadow-sm hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="Lihat Detail">
-                                    <i class="fa-solid fa-eye"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Detail</span>
+                                <a href="{{ route('kader.data.balita.show', $item->id) }}" class="btn-pill w-full flex-1 flex items-center justify-center border border-slate-200 bg-white px-2 py-2 sm:px-3 text-[10px] sm:text-[11px] font-bold text-slate-600 shadow-sm hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="Lihat Detail">
+                                    <i class="fa-solid fa-eye mr-1.5"></i> <span class="uppercase tracking-wider">Detail</span>
                                 </a>
                             @endif
 
                             @if($routeHas('kader.data.balita.edit'))
-                                <a href="{{ route('kader.data.balita.edit', $item->id) }}" class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-[11px] sm:text-xs font-bold text-slate-600 shadow-sm hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit Data">
-                                    <i class="fa-solid fa-pen"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Edit</span>
+                                <a href="{{ route('kader.data.balita.edit', $item->id) }}" class="btn-pill w-full flex-1 flex items-center justify-center border border-slate-200 bg-white px-2 py-2 sm:px-3 text-[10px] sm:text-[11px] font-bold text-slate-600 shadow-sm hover:border-amber-300 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit Data">
+                                    <i class="fa-solid fa-pen mr-1.5"></i> <span class="uppercase tracking-wider">Edit</span>
                                 </a>
                             @endif
 
                             @if(! $connected)
                                 @php $syncUrl = $routeHas('kader.data.balita.sync') ? route('kader.data.balita.sync', $item->id) : url('/kader/data/balita/' . $item->id . '/sync'); @endphp
                                 <button type="button" 
-                                        class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-amber-200 bg-amber-50 text-[11px] sm:text-xs font-bold text-amber-600 shadow-sm hover:bg-amber-500 hover:text-white transition-colors"
+                                        class="btn-pill w-full flex-1 flex items-center justify-center border border-amber-200 bg-amber-50 px-2 py-2 sm:px-3 text-[10px] sm:text-[11px] font-bold text-amber-600 shadow-sm hover:bg-amber-500 hover:text-white transition-colors"
                                         data-confirm-submit 
                                         data-action-url="{{ $syncUrl }}"
                                         data-action-method="POST"
                                         data-confirm-title="Sinkronkan Akun?" 
                                         data-confirm-message="Sistem akan mencoba menghubungkan data Balita ini dengan akun orang tua berdasarkan NIK yang sama." 
                                         data-confirm-tone="gold" title="Sinkronkan Akun">
-                                    <i class="fa-solid fa-rotate"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Sync</span>
+                                    <i class="fa-solid fa-rotate mr-1.5"></i> <span class="uppercase tracking-wider">Sync</span>
                                 </button>
                             @endif
 
                             @if($routeHas('kader.data.balita.destroy'))
                                 <button type="button" 
-                                        class="btn-pill flex-1 xl:flex-none w-auto xl:w-10 h-10 flex items-center justify-center border border-rose-200 bg-rose-50 text-[11px] sm:text-xs font-bold text-rose-500 shadow-sm hover:bg-rose-500 hover:text-white transition-colors"
+                                        class="btn-pill w-full flex-1 flex items-center justify-center border border-rose-200 bg-rose-50 px-2 py-2 sm:px-3 text-[10px] sm:text-[11px] font-bold text-rose-500 shadow-sm hover:bg-rose-500 hover:text-white transition-colors"
                                         data-confirm-submit 
                                         data-action-url="{{ route('kader.data.balita.destroy', $item->id) }}"
                                         data-action-method="DELETE"
                                         data-confirm-title="Hapus Data Balita?" 
                                         data-confirm-message="Data Balita ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan." 
                                         data-confirm-tone="danger" title="Hapus Data">
-                                    <i class="fa-solid fa-trash-can"></i> <span class="xl:hidden ml-1.5 uppercase tracking-wider">Hapus</span>
+                                    <i class="fa-solid fa-trash-can mr-1.5"></i> <span class="uppercase tracking-wider">Hapus</span>
                                 </button>
                             @endif
                         </div>

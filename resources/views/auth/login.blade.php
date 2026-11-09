@@ -64,18 +64,31 @@
     .submit-btn:disabled { opacity: 0.9; cursor: default; }
     .submit-btn .icon { width: 18px; height: 18px; }
 
-    /* SPINNER SUPER KILAT (0.1s) */
-    .btn-spinner {
-        width: 18px; height: 18px; border-radius: 50%; display: inline-block;
-        border: 2.5px solid rgba(255,255,255,0.35); border-top-color: #fff;
-        animation: fluentSpin 0.1s linear infinite; 
-    }
-    @keyframes fluentSpin { 100% { transform: rotate(360deg); } }
-
     .info-note { margin-top: 24px; padding: 16px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; display: flex; align-items: flex-start; gap: 12px; }
     .info-icon { color: var(--green-700); width: 20px; height: 20px; flex-shrink: 0; }
     .info-title { color: var(--green-900); font-size: 13px; font-weight: 700; margin: 0 0 4px; }
     .info-text { color: var(--slate-700); font-size: 12px; margin: 0; line-height: 1.5; font-weight: 500; }
+
+    /* === STATE LOGIN: spinner, sukses, error, transisi keluar === */
+    .submit-btn { position: relative; }
+    .submit-btn .spinner { display: none; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: btnSpin .6s linear infinite; }
+    .submit-btn.is-loading .spinner { display: block; }
+    .submit-btn.is-loading .btn-arrow { display: none; }
+    .submit-btn.is-success { background: var(--green-700); }
+    .submit-btn:disabled { opacity: 1; }
+    @keyframes btnSpin { to { transform: rotate(360deg); } }
+
+    .field-input.is-invalid { border-color: var(--rose-500); box-shadow: 0 0 0 4px rgba(244,63,94,0.10); }
+    .login-card.shake { animation: cardShake .38s cubic-bezier(.36,.07,.19,.97); }
+    @keyframes cardShake { 10%,90% { transform: translateX(-2px); } 20%,80% { transform: translateX(4px); } 30%,50%,70% { transform: translateX(-6px); } 40%,60% { transform: translateX(6px); } }
+
+    .login-card { transition: opacity .18s ease, transform .18s ease; }
+    .login-shell.is-leaving .login-card { opacity: .55; transform: scale(.985); pointer-events: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .login-card.shake { animation: none; }
+        .login-card, .submit-btn .spinner { transition: none; }
+    }
 
     /* MOBILE */
     @media (max-width: 992px) {
@@ -128,7 +141,7 @@
                 <p class="login-subtitle">Masuk untuk melanjutkan ke Portal PosyanduCare</p>
             </div>
 
-            <form id="loginForm" method="POST" action="{{ route('login.post') }}" class="login-form">
+            <form id="loginForm" method="POST" action="{{ route('login.post') }}" class="login-form" data-no-overlay>
                 @csrf
                 <div class="field-group">
                     <label class="field-label" for="login">Email atau NIK</label>
@@ -150,8 +163,9 @@
                 </div>
 
                 <button type="submit" id="submitBtn" class="submit-btn">
-                    <span>Masuk</span>
-                    <svg class="icon"><use href="#icon-arrow-right"></use></svg>
+                    <span id="btnLabel">Masuk</span>
+                    <svg class="icon btn-arrow" id="btnIcon"><use href="#icon-arrow-right"></use></svg>
+                    <span class="spinner" aria-hidden="true"></span>
                 </button>
             </form>
 
@@ -170,50 +184,126 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const pwInput = document.getElementById('password');
+    const form      = document.getElementById('loginForm');
+    const shell     = document.querySelector('.login-shell');
+    const card      = document.querySelector('.login-card');
+    const loginInp  = document.getElementById('login');
+    const pwInp     = document.getElementById('password');
+    const btn       = document.getElementById('submitBtn');
+    const btnLabel  = document.getElementById('btnLabel');
+    const btnIconUse = document.querySelector('#btnIcon use');
     const pwIconUse = document.querySelector('#pwIcon use');
-    
+    const csrf      = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    let busy = false;
+
+    // Intip password
     document.getElementById('pwToggle').addEventListener('click', function () {
-        const isPassword = pwInput.type === 'password';
-        pwInput.type = isPassword ? 'text' : 'password';
-        pwIconUse.setAttribute('href', isPassword ? '#icon-eye' : '#icon-eye-slash');
+        const show = pwInp.type === 'password';
+        pwInp.type = show ? 'text' : 'password';
+        pwIconUse.setAttribute('href', show ? '#icon-eye' : '#icon-eye-slash');
     });
 
-    const form = document.getElementById('loginForm');
-    const loginInput = document.getElementById('login');
-    const submitBtn = document.getElementById('submitBtn');
+    // Hapus tanda error begitu user mengetik lagi
+    [loginInp, pwInp].forEach(el => el.addEventListener('input', () => el.classList.remove('is-invalid')));
 
-    form.addEventListener('submit', function (e) {
-        const loginVal = loginInput.value.trim();
+    // ---- helper state tombol ----
+    function setLoading(on) {
+        busy = on;
+        btn.disabled = on;
+        btn.classList.toggle('is-loading', on);
+        btnLabel.textContent = on ? 'Memeriksa...' : 'Masuk';
+        if (on) { window.startProgress && window.startProgress(); }
+        else    { window.stopProgress && window.stopProgress(); }
+    }
+
+    function resetUI() {
+        setLoading(false);
+        btn.classList.remove('is-success');
+        btnIconUse.setAttribute('href', '#icon-arrow-right');
+        shell.classList.remove('is-leaving');
+    }
+
+    function fail(message, field) {
+        setLoading(false);
+        card.classList.remove('shake');
+        void card.offsetWidth;            // restart animasi
+        card.classList.add('shake');
+        if (field) { field.classList.add('is-invalid'); field.focus(); field.select && field.select(); }
+        window.showModernAlert(message, 'error');
+    }
+
+    function success(url) {
+        window.finishProgress && window.finishProgress();
+        btn.classList.remove('is-loading');
+        btn.classList.add('is-success');
+        btnLabel.textContent = 'Berhasil';
+        btnIconUse.setAttribute('href', '#icon-check');
+        shell.classList.add('is-leaving');
+        // Pindah SEKETIKA. Halaman lama tetap tampil (transisi halus) sampai dashboard siap.
+        window.location.replace(url);
+    }
+
+    // ---- submit via fetch ----
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (busy) return;
+
+        const loginVal = loginInp.value.trim();
+        const pwVal    = pwInp.value;
+
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginVal);
-        const isNumeric = /^\d+$/.test(loginVal);
-        const isNIK = isNumeric && loginVal.length === 16;
-
+        const isNIK   = /^\d{16}$/.test(loginVal);
         if (!isEmail && !isNIK) {
-            e.preventDefault(); 
-            let errorMsg = 'Format tidak dikenali. Harap masukkan <b>Email yang valid</b> atau <b>16 Digit NIK</b>.';
-            if (isNumeric && loginVal.length !== 16) {
-                errorMsg = `Format NIK tidak tepat. NIK harus persis 16 digit angka.<br><br><i>(Saat ini Anda memasukkan ${loginVal.length} digit)</i>`;
-            }
-            window.showAuthAlert('Format Tidak Valid', errorMsg, 'warning');
-            loginInput.focus();
-            return;
+            return fail('Masukkan email yang valid atau NIK 16 digit.', loginInp);
+        }
+        if (!pwVal) {
+            return fail('Password wajib diisi.', pwInp);
         }
 
-        // Validasi lolos: cegah submit instan, mainkan fade-out singkat (.15s),
-        // baru kirim form. Total delay tambahan hanya ~150ms, tetap terasa cepat.
-        e.preventDefault();
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="btn-spinner"></span><span style="margin-left:8px;">Masuk</span>';
+        setLoading(true);                 // feedback instan: spinner di tombol + progress bar tipis
 
-        window.fadeNavigate(function () {
-            HTMLFormElement.prototype.submit.call(form);
-        });
+        const ctrl  = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 15000);   // jaga-jaga: tidak pernah loading selamanya
+
+        try {
+            const res = await fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                signal: ctrl.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf
+                },
+                body: JSON.stringify({ login: loginVal, password: pwVal })
+            });
+            clearTimeout(timer);
+
+            const data = await res.json().catch(() => ({}));
+
+            if (res.ok && data.success && data.redirect) {
+                return success(data.redirect);
+            }
+
+            if (res.status === 419) {      // sesi/CSRF kedaluwarsa
+                window.showModernAlert('Sesi berakhir. Memuat ulang halaman...', 'error');
+                return setTimeout(() => window.location.reload(), 700);
+            }
+
+            fail(data.message || 'Kredensial tidak ditemukan atau password salah.',
+                 data.field === 'login' ? loginInp : pwInp);
+        } catch (err) {
+            clearTimeout(timer);
+            fail(err.name === 'AbortError'
+                ? 'Server terlalu lama merespons. Silakan coba lagi.'
+                : 'Gagal terhubung ke server. Periksa koneksi Anda.');
+        }
     });
 
-    @if($errors->any())
-        window.showAuthAlert('Otentikasi Gagal', @json($errors->first()), 'error');
-    @endif
+    // Tombol "Back" dari dashboard (bfcache) → pastikan halaman tidak tersangkut di status loading
+    window.addEventListener('pageshow', function (ev) { if (ev.persisted) resetUI(); });
 });
 </script>
 @endpush

@@ -41,6 +41,9 @@
     ];
 
     $totalSemua = collect($kategori)->sum('total');
+    
+    // Perbaikan: Pastikan Riwayat Bulanan digenerate ulang jika kosong
+    $riwayatBulanan = $riwayatBulanan ?? [];
     $totalRiwayat = is_countable($riwayatBulanan) ? count($riwayatBulanan) : 0;
 @endphp
 
@@ -85,7 +88,6 @@
         transform: scale(0.95);
     }
     
-    /* Menyembunyikan elemen sebelum Alpine termuat penuh */
     [x-cloak] { display: none !important; }
 </style>
 @endpush
@@ -95,18 +97,29 @@
         activeTab: 'balita',
         yearType: 'balita',
         kategori: @js($kategori),
+        riwayat: @js($riwayatBulanan),
         dropdownOpen: false,
         currentPage: 1,
         itemsPerPage: 5,
-        totalItems: {{ $totalRiwayat }},
+        
         get activeMeta() {
             return this.kategori[this.activeTab] ?? this.kategori.balita
         },
-        count(row) {
-            return Number(row?.data?.[this.activeTab] ?? 0)
+        get filteredRiwayat() {
+            // Karena satu baris riwayat bulan memiliki field untuk balita/remaja/lansia,
+            // kita pastikan kita merender baris tersebut.
+            return this.riwayat;
+        },
+        get totalItems() {
+            return this.filteredRiwayat.length;
         },
         get totalPages() {
             return Math.max(1, Math.ceil(this.totalItems / this.itemsPerPage));
+        },
+        get paginatedRiwayat() {
+            const start = (this.currentPage - 1) * this.itemsPerPage;
+            const end = start + this.itemsPerPage;
+            return this.filteredRiwayat.slice(start, end);
         },
         get paginationArray() {
             let windowSize = 2;
@@ -145,6 +158,9 @@
         scrollToTop() {
             document.getElementById('arsip-bulanan-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
         },
+        count(row) {
+            return Number(row?.data?.[this.activeTab] ?? 0)
+        },
         statusClass(status) {
             return status === 'Bulan Berjalan'
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
@@ -173,13 +189,14 @@
     }"
     class="max-w-[1180px] mx-auto animate-pop-in pb-20 px-4 sm:px-6 lg:px-8 mt-6"
 >
-    {{-- Hero Section --}}
-    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[2.5rem] p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20">
+    {{-- 1. HERO SECTION & UNDUH TAHUNAN --}}
+    <section class="bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 rounded-[2.5rem] p-6 sm:p-8 md:p-10 mb-8 relative overflow-hidden shadow-[0_20px_40px_-12px_rgba(16,185,129,.35)] border border-white/20">
         <div class="hero-grid absolute inset-0 opacity-20 pointer-events-none"></div>
         <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 blur-[80px] rounded-full pointer-events-none"></div>
         <div class="absolute -bottom-16 -left-16 w-40 h-40 bg-white/10 blur-[60px] rounded-full pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col lg:flex-row gap-8 lg:items-center justify-between">
+            
             <div class="flex-1 text-center lg:text-left">
                 <div class="inline-flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-widest mb-4">
                     <span class="bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5">
@@ -188,33 +205,30 @@
                     </span>
                 </div>
 
-                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-3">
+                <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3">
                     Pusat Laporan Posyandu
                 </h1>
 
-                <p class="text-teal-50 text-sm font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                <p class="text-teal-50 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
                     Kelola pratinjau dan unduhan laporan Balita, Remaja, serta Lansia berdasarkan periode bulanan maupun tahunan secara praktis dan terstruktur.
                 </p>
 
                 <div class="mt-6 flex flex-wrap justify-center lg:justify-start gap-3">
-                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[11px] uppercase tracking-widest px-4 py-2 rounded-full shadow-sm flex items-center gap-1.5">
-                        <i class="fas fa-calendar-alt"></i>
-                        Tahun {{ $tahun }}
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-widest px-3 sm:px-4 py-2 rounded-full shadow-sm flex items-center gap-1.5">
+                        <i class="fas fa-calendar-alt"></i> Tahun {{ $tahun }}
                     </span>
-
-                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[11px] uppercase tracking-widest px-4 py-2 rounded-full shadow-sm flex items-center gap-1.5">
-                        <i class="fas fa-chart-pie"></i>
-                        {{ number_format($totalSemua, 0, ',', '.') }} Pemeriksaan
+                    <span class="bg-white/20 backdrop-blur-md border border-white/30 text-white font-bold text-[10px] sm:text-[11px] uppercase tracking-widest px-3 sm:px-4 py-2 rounded-full shadow-sm flex items-center gap-1.5">
+                        <i class="fas fa-chart-pie"></i> {{ number_format($totalSemua, 0, ',', '.') }} Pemeriksaan
                     </span>
                 </div>
             </div>
 
-            {{-- Unduh Laporan Tahunan Form (DENGAN DROPDOWN CUSTOM) --}}
-            <form action="{{ route('kader.laporan.preview') }}" method="POST" class="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg border border-white/50 p-6 w-full lg:w-80 shrink-0">
+            {{-- Unduh Laporan Tahunan Form --}}
+            <form action="{{ route('kader.laporan.preview') }}" method="POST" class="bg-white/90 backdrop-blur-md rounded-3xl shadow-lg border border-white/50 p-5 sm:p-6 w-full lg:w-80 shrink-0 relative z-20">
                 @csrf
-                <p class="text-[11px] font-black uppercase tracking-widest text-teal-600 mb-4 text-center"><i class="fas fa-download mr-1"></i> Rekap Tahunan</p>
+                <p class="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-teal-600 mb-4 text-center"><i class="fas fa-download mr-1"></i> Rekap Tahunan</p>
                 
-                {{-- Custom Alpine Dropdown --}}
+                {{-- Custom Dropdown --}}
                 <div class="relative w-full mb-4">
                     <input type="hidden" name="jenis_laporan" :value="yearType">
                     
@@ -237,7 +251,7 @@
                         x-transition:leave="transition ease-in duration-100" 
                         x-transition:leave-start="opacity-100 scale-100" 
                         x-transition:leave-end="opacity-0 scale-95" 
-                        class="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-100 py-1.5 px-1.5 flex flex-col gap-1 origin-top"
+                        class="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-slate-100 py-1.5 px-1.5 flex flex-col gap-1 origin-top"
                     >
                         <template x-for="(item, key) in kategori" :key="key">
                             <button 
@@ -262,203 +276,174 @@
         </div>
     </section>
 
-    {{-- Rekap Bulanan Content --}}
-    <section id="arsip-bulanan-section" class="pc-glass rounded-[2.5rem] p-6 sm:p-8">
-        <div class="mb-8 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between border-b border-slate-100 pb-6">
+    {{-- 2. ARSIP BULANAN SECTION --}}
+    <section id="arsip-bulanan-section" class="pc-glass rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8">
+        <div class="mb-6 sm:mb-8 flex flex-col gap-4 sm:gap-6 xl:flex-row xl:items-end xl:justify-between border-b border-slate-100 pb-5 sm:pb-6">
             <div>
-                <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-200 shadow-sm mb-3">
+                <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-200 shadow-sm mb-2 sm:mb-3">
                     <i class="fas fa-folder-open"></i> Arsip Bulanan
                 </div>
 
-                <h2 class="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+                <h2 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
                     Laporan <span x-text="activeMeta.label" class="text-teal-600"></span>
                 </h2>
 
-                <p class="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-500">
+                <p class="mt-1 sm:mt-2 max-w-2xl text-xs sm:text-sm font-medium leading-relaxed text-slate-500">
                     Pilih kategori laporan dari tab di bawah, lalu buka pratinjau atau unduh PDF resmi sesuai periode bulanan.
                 </p>
             </div>
 
-            {{-- Tabs --}}
-            <div class="flex flex-wrap gap-2 rounded-2xl bg-slate-100/80 p-2 border border-slate-200/60 shadow-inner shrink-0">
-                @foreach($kategori as $key => $item)
+            {{-- Tabs Control --}}
+            <div class="flex flex-wrap gap-1.5 sm:gap-2 rounded-[1.25rem] sm:rounded-2xl bg-slate-100/80 p-1.5 sm:p-2 border border-slate-200/60 shadow-inner shrink-0 overflow-x-auto">
+                <template x-for="(item, key) in kategori" :key="key">
                     <button
                         type="button"
-                        @click="activeTab = '{{ $key }}'; currentPage = 1"
-                        class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black uppercase tracking-widest transition-all"
-                        :class="activeTab === '{{ $key }}'
-                            ? '{{ $item['active'] }} shadow-md transform scale-[1.02]'
+                        @click="activeTab = key; currentPage = 1"
+                        class="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-3 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap"
+                        :class="activeTab === key
+                            ? item.active + ' shadow-md transform scale-[1.02]'
                             : 'bg-transparent text-slate-500 hover:bg-white hover:text-slate-800 hover:shadow-sm'"
                     >
-                        <i class="fas {{ $item['icon'] }} text-sm"></i>
-                        <span>{{ $item['label'] }}</span>
-
+                        <i class="fas text-[11px] sm:text-sm" :class="item.icon"></i>
+                        <span x-text="item.label"></span>
                         <span
-                            class="rounded-full px-2 py-0.5 text-[10px] font-black ml-1 border"
-                            :class="activeTab === '{{ $key }}' ? 'bg-white/20 text-white border-white/30' : '{{ $item['pill'] }}'"
-                        >
-                            {{ number_format($item['total'], 0, ',', '.') }}
-                        </span>
+                            class="rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-black ml-0.5 sm:ml-1 border"
+                            :class="activeTab === key ? 'bg-white/20 text-white border-white/30' : item.pill"
+                            x-text="new Intl.NumberFormat('id-ID').format(item.total)"
+                        ></span>
                     </button>
-                @endforeach
+                </template>
             </div>
         </div>
 
-        {{-- Table Header Simulation --}}
+        {{-- Table Header Simulation (Desktop Only) --}}
         <div class="mb-4 hidden grid-cols-12 gap-4 rounded-2xl bg-slate-50/80 px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-100 shadow-sm lg:grid">
             <div class="col-span-5">Periode Pemeriksaan</div>
             <div class="col-span-3">Jumlah Data</div>
             <div class="col-span-4 text-right">Aksi Laporan</div>
         </div>
 
-        {{-- Daftar Bulan --}}
-        <div class="space-y-4">
-            @forelse($riwayatBulanan as $index => $row)
-                <div 
-                    x-show="Math.ceil({{ $index + 1 }} / itemsPerPage) === currentPage" 
-                    x-transition.opacity.duration.300ms
-                    class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 hover:shadow-md hover:border-emerald-100 transition-all p-4 sm:p-5"
-                >
-                    <div class="grid gap-5 lg:grid-cols-12 lg:items-center">
+        {{-- List Arsip Bulanan (Dibuat Dinamis Berdasarkan Alpine Array) --}}
+        <div class="space-y-4 relative min-h-[300px]">
+            <template x-if="paginatedRiwayat.length > 0">
+                <template x-for="row in paginatedRiwayat" :key="row.periode">
+                    <div 
+                        x-transition.opacity.duration.300ms
+                        class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 hover:shadow-md hover:border-emerald-100 transition-all p-4 sm:p-5"
+                    >
+                        <div class="grid gap-4 sm:gap-5 lg:grid-cols-12 lg:items-center">
 
-                        {{-- Periode --}}
-                        <div class="lg:col-span-5 flex items-center gap-4">
-                            <div
-                                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl"
-                                :class="periodIconClass('{{ $row['status'] ?? 'Selesai' }}')"
-                            >
-                                <i class="fas fa-calendar-check"></i>
-                            </div>
-
-                            <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2 mb-1">
-                                    <h3 class="text-lg font-black tracking-tight text-slate-800">
-                                        {{ $row['bulan'] }}
-                                    </h3>
-
-                                    <span
-                                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider border shadow-sm"
-                                        :class="statusClass('{{ $row['status'] ?? 'Selesai' }}')"
-                                    >
-                                        <span
-                                            class="h-1.5 w-1.5 rounded-full"
-                                            :class="statusDotClass('{{ $row['status'] ?? 'Selesai' }}')"
-                                        ></span>
-                                        {{ $row['status'] ?? 'Selesai' }}
-                                    </span>
+                            {{-- Info Periode --}}
+                            <div class="lg:col-span-5 flex items-center gap-3 sm:gap-4">
+                                <div class="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-[1rem] sm:rounded-2xl text-lg sm:text-xl"
+                                    :class="periodIconClass(row.status || 'Selesai')">
+                                    <i class="fas fa-calendar-check"></i>
                                 </div>
-
-                                <p class="text-xs font-semibold text-slate-500">
-                                    Arsip bulanan <span class="font-black text-slate-600 uppercase" x-text="activeMeta.label"></span>
-                                </p>
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                                        <h3 class="text-base sm:text-lg font-black tracking-tight text-slate-800" x-text="row.bulan"></h3>
+                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2 sm:px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-wider border shadow-sm"
+                                            :class="statusClass(row.status || 'Selesai')">
+                                            <span class="h-1.5 w-1.5 rounded-full" :class="statusDotClass(row.status || 'Selesai')"></span>
+                                            <span x-text="row.status || 'Selesai'"></span>
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] sm:text-xs font-semibold text-slate-500">
+                                        Arsip bulanan <span class="font-black text-slate-600 uppercase" x-text="activeMeta.label"></span>
+                                    </p>
+                                </div>
                             </div>
-                        </div>
 
-                        {{-- Jumlah --}}
-                        <div class="lg:col-span-3">
-                            <div
-                                class="rounded-2xl border px-4 py-3 transition-all"
-                                :class="metricWrapClass(count(@js($row)))"
-                            >
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0">
-                                        <p class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                                            Jumlah Pemeriksaan
-                                        </p>
-                                        <div class="flex items-end gap-1.5">
-                                            <span
-                                                class="text-2xl font-black leading-none"
-                                                :class="metricNumberClass(count(@js($row)))"
-                                                x-text="count(@js($row))"
-                                            ></span>
-                                            <span class="text-[10px] font-bold text-slate-500 mb-0.5 uppercase">Data</span>
+                            {{-- Grafik Metrik Pemeriksaan --}}
+                            <div class="lg:col-span-3">
+                                <div class="rounded-xl sm:rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3 transition-all"
+                                    :class="metricWrapClass(count(row))">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5 sm:mb-1">
+                                                Pemeriksaan
+                                            </p>
+                                            <div class="flex items-end gap-1.5">
+                                                <span class="text-xl sm:text-2xl font-black leading-none"
+                                                    :class="metricNumberClass(count(row))"
+                                                    x-text="count(row)"></span>
+                                                <span class="text-[9px] sm:text-[10px] font-bold text-slate-500 mb-0.5 sm:mb-1 uppercase">Data</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full text-xs sm:text-sm"
+                                            :class="count(row) > 0 ? 'bg-white text-emerald-500 border border-emerald-100 shadow-sm' : 'bg-white text-slate-300 border border-slate-100'">
+                                            <i class="fas fa-file-medical"></i>
                                         </div>
                                     </div>
-                                    <div
-                                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm"
-                                        :class="count(@js($row)) > 0
-                                            ? 'bg-white text-emerald-500 border border-emerald-100 shadow-sm'
-                                            : 'bg-white text-slate-300 border border-slate-100'"
-                                    >
-                                        <i class="fas fa-file-medical"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-white border border-slate-100 shadow-inner">
-                                        <div
-                                            class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500"
-                                            :style="`width:${progressWidth(count(@js($row)))} `"
-                                        ></div>
+                                    <div class="mt-2 sm:mt-3">
+                                        <div class="h-1 sm:h-1.5 w-full overflow-hidden rounded-full bg-white border border-slate-100 shadow-inner">
+                                            <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500"
+                                                :style="`width:${progressWidth(count(row))} `"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {{-- Aksi --}}
-                        <div class="lg:col-span-4 flex justify-end">
-                            <form action="{{ route('kader.laporan.preview') }}" method="POST" class="flex w-full sm:w-auto gap-2">
-                                @csrf
-                                <input type="hidden" name="jenis_laporan" :value="activeTab">
-                                <input type="hidden" name="periode_bulan" value="{{ $row['periode'] }}">
+                            {{-- Tombol Aksi (Formulir Generasi PDF) --}}
+                            <div class="lg:col-span-4 flex justify-end">
+                                <form action="{{ route('kader.laporan.preview') }}" method="POST" class="flex w-full lg:w-auto gap-2">
+                                    @csrf
+                                    <input type="hidden" name="jenis_laporan" :value="activeTab">
+                                    <input type="hidden" name="periode_bulan" :value="row.periode">
 
-                                <button
-                                    type="submit"
-                                    name="mode"
-                                    value="preview"
-                                    class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm transition-all hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200"
-                                    title="Lihat Pratinjau"
-                                >
-                                    <i class="fas fa-eye text-sm"></i> Preview
-                                </button>
+                                    <button type="submit" name="mode" value="preview"
+                                        class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-slate-200 bg-white px-3 sm:px-5 py-2.5 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm transition-all hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200" title="Lihat Pratinjau">
+                                        <i class="fas fa-eye text-[11px] sm:text-sm"></i> Preview
+                                    </button>
 
-                                <button
-                                    type="submit"
-                                    name="mode"
-                                    value="download"
-                                    class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-teal-600 text-white px-5 py-2.5 text-xs font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5"
-                                    title="Unduh PDF"
-                                >
-                                    <i class="fas fa-download text-sm"></i> PDF
-                                </button>
-                            </form>
+                                    <button type="submit" name="mode" value="download"
+                                        class="flex-1 lg:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl bg-slate-800 hover:bg-teal-600 text-white px-3 sm:px-5 py-2.5 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-md transition-all hover:-translate-y-0.5" title="Unduh PDF">
+                                        <i class="fas fa-download text-[11px] sm:text-sm"></i> PDF
+                                    </button>
+                                </form>
+                            </div>
+
                         </div>
                     </div>
-                </div>
-            @empty
-                <div class="rounded-[2rem] border-2 border-dashed border-slate-200 bg-white/50 px-6 py-12 text-center">
-                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-2xl text-slate-400 shadow-inner mb-4">
+                </template>
+            </template>
+
+            {{-- Empty State Tampil Jika Tidak Ada Data Sama Sekali --}}
+            <template x-if="paginatedRiwayat.length === 0">
+                <div class="rounded-[2rem] border-2 border-dashed border-slate-200 bg-white/50 px-6 py-10 sm:py-12 text-center absolute inset-0 flex flex-col items-center justify-center">
+                    <div class="mx-auto flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-slate-50 text-xl sm:text-2xl text-slate-400 shadow-inner mb-3 sm:mb-4 border border-slate-100">
                         <i class="fas fa-folder-open"></i>
                     </div>
-                    <p class="text-lg font-black text-slate-800">Belum ada arsip laporan</p>
-                    <p class="mt-1 text-sm font-medium text-slate-500 max-w-sm mx-auto">Data bulanan akan tampil di sini setelah pemeriksaan di input dan diverifikasi.</p>
+                    <p class="text-base sm:text-lg font-black text-slate-800">Belum ada arsip laporan</p>
+                    <p class="mt-1 text-xs sm:text-sm font-medium text-slate-500 max-w-xs sm:max-w-sm mx-auto">Data bulanan akan tampil di sini setelah pemeriksaan di input dan diverifikasi.</p>
                 </div>
-            @endforelse
+            </template>
         </div>
 
-        {{-- PAGINATION CUSTOM TERBATAS 5 ANGKA (PILL EMERALD) --}}
-        <div x-cloak x-show="totalPages > 1" x-transition class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-6">
-            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        {{-- PAGINATION CUSTOM (PILL EMERALD) --}}
+        <div x-cloak x-show="totalPages > 1" x-transition class="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-5 sm:pt-6">
+            <p class="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400">
                 Halaman <span x-text="currentPage" class="text-slate-700"></span> dari <span x-text="totalPages" class="text-slate-700"></span>
             </p>
             
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2">
                 {{-- Tombol Previous --}}
-                <button @click="prevPage()" :disabled="currentPage === 1" type="button" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 hover:text-emerald-600 transition-all">
-                    <i class="fas fa-chevron-left text-xs"></i>
+                <button @click="prevPage()" :disabled="currentPage === 1" type="button" class="btn-pill w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 hover:text-emerald-600 transition-all">
+                    <i class="fas fa-chevron-left text-[10px] sm:text-xs"></i>
                 </button>
 
                 {{-- Nomor Halaman Dinamis (Maksimal 5) --}}
                 <template x-for="page in paginationArray" :key="page">
                     <button @click="setPage(page)" type="button"
-                        class="btn-pill w-10 h-10 flex items-center justify-center text-sm font-bold transition-all shadow-sm"
+                        class="btn-pill w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-xs sm:text-sm font-bold transition-all shadow-sm"
                         :class="page === currentPage ? 'bg-emerald-500 text-white border-transparent shadow-md pointer-events-none' : 'border border-slate-200 bg-white text-slate-600 hover:bg-emerald-50 hover:text-emerald-600'">
                         <span x-text="page"></span>
                     </button>
                 </template>
 
                 {{-- Tombol Next --}}
-                <button @click="nextPage()" :disabled="currentPage === totalPages" type="button" class="btn-pill w-10 h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 hover:text-emerald-600 transition-all">
-                    <i class="fas fa-chevron-right text-xs"></i>
+                <button @click="nextPage()" :disabled="currentPage === totalPages" type="button" class="btn-pill w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center border border-slate-200 bg-white text-slate-600 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-50 hover:text-emerald-600 transition-all">
+                    <i class="fas fa-chevron-right text-[10px] sm:text-xs"></i>
                 </button>
             </div>
         </div>
